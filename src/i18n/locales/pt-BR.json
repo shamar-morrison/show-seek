@@ -1159,16 +1159,21 @@
     "localListEditWarning": "Esta lista é espelhada do Trakt. Alterações locais podem ser sobrescritas na próxima sincronização.",
     "localRatingEditWarning": "As avaliações são espelhadas do Trakt enquanto você estiver conectado. Alterações locais podem ser sobrescritas na próxima sincronização.",
     "localWatchedEditWarning": "O histórico assistido é espelhado do Trakt enquanto você estiver conectado. Alterações locais podem ser sobrescritas na próxima sincronização.",
+    "zipImportRunningTitle": "Importação Zip do Trakt em andamento",
+    "zipImportRunningDescription": "Um arquivo zip do Trakt está sendo importado. Aguarde a conclusão antes de iniciar uma sincronização.",
     "zipImportCard": {
       "title": "Importar exportação do Trakt (.zip)",
       "subtitleDisconnected": "Tem um backup do Trakt? Envie seu arquivo zip diretamente sem conectar sua conta.",
       "subtitleConnected": "Tem um backup do Trakt? Envie seu arquivo zip diretamente para importar histórico adicional.",
-      "subtitleSynced": "Importe ou restaure manualmente sua biblioteca a partir de um arquivo zip do Trakt."
+      "subtitleSynced": "Importe ou restaure manualmente sua biblioteca a partir de um arquivo zip do Trakt.",
+      "subtitleImporting": "Uma importação está em andamento. Toque para ver o progresso."
     },
     "zipImport": {
       "title": "Importação Zip do Trakt",
       "heroTitle": "Importação Zip do Trakt",
       "heroSubtitle": "Importe seu histórico completo de filmes, séries, episódios, avaliações e listas diretamente de um arquivo do Trakt.",
+      "syncRunningTitle": "Sincronização do Trakt em andamento",
+      "syncRunningDescription": "Uma sincronização do Trakt está em andamento. Aguarde a conclusão antes de iniciar uma importação zip.",
       "selectFile": "Selecionar exportação do Trakt (.zip)",
       "selectFileSubtitle": "Toque para procurar o arquivo zip do Trakt no seu dispositivo",
       "replaceFile": "Trocar arquivo",

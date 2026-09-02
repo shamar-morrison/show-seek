@@ -15,7 +15,18 @@ import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { auth, db } from '@/src/firebase/config';
 import { TraktRequestError } from '@/src/services/TraktService';
 import * as TraktService from '@/src/services/TraktService';
-import type { SyncStatus, TraktContextValue } from '@/src/types/trakt';
+import {
+  generateImportId,
+  SelectedZipFile,
+  traktZipImportService,
+  TraktZipImportProgressDoc,
+  TraktZipUploadError,
+} from '@/src/services/TraktZipImportService';
+import type {
+  SyncStatus,
+  TraktContextValue,
+  TraktZipImportUIState,
+} from '@/src/types/trakt';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
@@ -47,10 +58,78 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
 
+  // Zip Import state
+  const [zipImportUiState, setZipImportUiState] = useState<TraktZipImportUIState>('idle');
+  const [selectedZipFile, setSelectedZipFile] = useState<SelectedZipFile | null>(null);
+  const [zipUploadProgress, setZipUploadProgress] = useState(0);
+  const [zipImportDoc, setZipImportDoc] = useState<TraktZipImportProgressDoc | null>(null);
+  const [zipImportError, setZipImportError] = useState<string | null>(null);
+
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasAttemptedAutoSync = useRef(false);
   const prevEnrichmentStatusRef = useRef<string | undefined>(undefined);
+  const activeZipImportSubscriptionRef = useRef<(() => void) | null>(null);
+  const activeZipImportIdRef = useRef<string | null>(null);
+
+  const isZipImporting = zipImportUiState === 'uploading' || zipImportUiState === 'processing';
+
+  const invalidateUserLibraryQueries = useCallback(async () => {
+    if (!user?.uid) {
+      return;
+    }
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['lists', user.uid] }),
+      queryClient.invalidateQueries({
+        queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, user.uid],
+      }),
+      queryClient.invalidateQueries({ queryKey: ['ratings', user.uid] }),
+      queryClient.invalidateQueries({ queryKey: ['watchedMovies', user.uid] }),
+      queryClient.invalidateQueries({ queryKey: ['episodeTracking'] }),
+    ]);
+  }, [queryClient, user?.uid]);
+
+  const subscribeToZipProgress = useCallback(
+    (userId: string, importId: string) => {
+      if (activeZipImportIdRef.current === importId && activeZipImportSubscriptionRef.current) {
+        return;
+      }
+
+      if (activeZipImportSubscriptionRef.current) {
+        activeZipImportSubscriptionRef.current();
+        activeZipImportSubscriptionRef.current = null;
+      }
+
+      activeZipImportIdRef.current = importId;
+
+      const unsubscribe = traktZipImportService.subscribeToProgress(
+        userId,
+        importId,
+        (data) => {
+          setZipImportDoc(data);
+
+          if (data.status === 'completed') {
+            setZipImportUiState('completed');
+            void invalidateUserLibraryQueries();
+          } else if (data.status === 'failed') {
+            setZipImportUiState('failed');
+            setZipImportError(data.error || 'Import failed.');
+          } else if (data.status === 'pending' || data.status === 'processing') {
+            setZipImportUiState('processing');
+          }
+        },
+        (subError) => {
+          console.error('[TraktContext] Progress subscription error:', subError);
+          setZipImportUiState('failed');
+          setZipImportError(subError.message || 'Failed to track import progress.');
+        }
+      );
+
+      activeZipImportSubscriptionRef.current = unsubscribe;
+    },
+    [invalidateUserLibraryQueries]
+  );
 
   // Monitor auth state
   useEffect(() => {
@@ -58,10 +137,20 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     return () => unsubscribe();
   }, []);
 
-  // Real-time observer for background TMDB enrichment status on the user document
+  // Real-time observer for background TMDB enrichment and zip import status on the user document
   useEffect(() => {
     if (!hasEligibleTraktUser(user)) {
+      if (activeZipImportSubscriptionRef.current) {
+        activeZipImportSubscriptionRef.current();
+        activeZipImportSubscriptionRef.current = null;
+      }
+      activeZipImportIdRef.current = null;
       setIsEnriching(false);
+      setZipImportUiState('idle');
+      setSelectedZipFile(null);
+      setZipUploadProgress(0);
+      setZipImportDoc(null);
+      setZipImportError(null);
       return;
     }
 
@@ -103,25 +192,48 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
           // If transitioning from an active state (queued/in_progress) to completed, invalidate library queries
           if (prevStatus && prevStatus !== 'completed') {
             console.log('[Trakt] Background enrichment completed. Invalidating library queries.');
-            void Promise.all([
-              queryClient.invalidateQueries({ queryKey: ['lists', user.uid] }),
-              queryClient.invalidateQueries({
-                queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, user.uid],
-              }),
-              queryClient.invalidateQueries({ queryKey: ['ratings', user.uid] }),
-              queryClient.invalidateQueries({ queryKey: ['watchedMovies', user.uid] }),
-              queryClient.invalidateQueries({ queryKey: ['episodeTracking'] }),
-            ]);
+            void invalidateUserLibraryQueries();
+          }
+        }
+
+        // Observer for active Trakt zip import on user document
+        const zipStatus = data?.traktZipImportStatus;
+        if (zipStatus) {
+          const zipImportId = zipStatus.id || (zipStatus as any).activeImportId;
+          const isZipActive = zipStatus.status === 'pending' || zipStatus.status === 'processing';
+          if (isZipActive) {
+            setZipImportUiState('processing');
+            if (zipImportId) {
+              subscribeToZipProgress(user.uid, zipImportId);
+            }
+          } else if (zipStatus.status === 'completed') {
+            setZipImportUiState('completed');
+            void invalidateUserLibraryQueries();
+          } else if (zipStatus.status === 'failed') {
+            setZipImportUiState('failed');
+            setZipImportError(zipStatus.error || 'Import failed.');
           }
         }
       },
       (error) => {
-        console.warn('[Trakt] Error observing user document for enrichment status:', error);
+        console.warn('[Trakt] Error observing user document:', error);
       }
     );
 
-    return () => unsubscribe();
-  }, [user, queryClient]);
+    return () => {
+      unsubscribe();
+      if (activeZipImportSubscriptionRef.current) {
+        activeZipImportSubscriptionRef.current();
+        activeZipImportSubscriptionRef.current = null;
+      }
+      activeZipImportIdRef.current = null;
+      setZipImportUiState('idle');
+      setSelectedZipFile(null);
+      setZipUploadProgress(0);
+      setZipImportDoc(null);
+      setZipImportError(null);
+    };
+  }, [user, invalidateUserLibraryQueries, subscribeToZipProgress]);
 
   // Load persisted state from AsyncStorage
   useEffect(() => {
@@ -409,6 +521,11 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       return;
     }
 
+    if (isZipImporting) {
+      console.log('[Trakt] Zip import already in progress');
+      throw new Error('A Trakt zip import is currently in progress.');
+    }
+
     try {
       setIsSyncing(true);
       setSyncStatus((currentStatus) => ({
@@ -453,7 +570,69 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
 
       throw error;
     }
-  }, [ensureEligibleUser, isSyncing, pollSyncStatus]);
+  }, [ensureEligibleUser, isSyncing, isZipImporting, pollSyncStatus]);
+
+  const startZipImport = useCallback(
+    async (file: SelectedZipFile) => {
+      const eligibleUser = ensureEligibleUser('Must be logged in to import Trakt archive');
+
+      if (isSyncing) {
+        throw new Error('A Trakt sync is already in progress.');
+      }
+
+      if (isZipImporting) {
+        throw new Error('A Trakt zip import is already in progress.');
+      }
+
+      setSelectedZipFile(file);
+      setZipImportUiState('uploading');
+      setZipUploadProgress(0);
+      setZipImportError(null);
+
+      const importId = generateImportId();
+
+      try {
+        await traktZipImportService.uploadZipFile(
+          eligibleUser.uid,
+          importId,
+          file.uri,
+          (progress) => {
+            setZipUploadProgress(progress);
+          }
+        );
+
+        setZipImportUiState('processing');
+        subscribeToZipProgress(eligibleUser.uid, importId);
+        await traktZipImportService.startImport(importId);
+      } catch (error) {
+        console.error('[TraktContext] Zip import error:', error);
+        setZipImportUiState('failed');
+
+        if (error instanceof TraktZipUploadError) {
+          setZipImportError('Upload failed: Network error while uploading archive.');
+        } else {
+          setZipImportError(
+            error instanceof Error ? error.message : 'Import failed.'
+          );
+        }
+        throw error;
+      }
+    },
+    [ensureEligibleUser, isSyncing, isZipImporting, subscribeToZipProgress]
+  );
+
+  const dismissZipImport = useCallback(() => {
+    if (activeZipImportSubscriptionRef.current) {
+      activeZipImportSubscriptionRef.current();
+      activeZipImportSubscriptionRef.current = null;
+    }
+    activeZipImportIdRef.current = null;
+    setZipImportUiState('idle');
+    setSelectedZipFile(null);
+    setZipUploadProgress(0);
+    setZipImportDoc(null);
+    setZipImportError(null);
+  }, []);
 
   const disconnectTrakt = useCallback(async () => {
     ensureEligibleUser('Must be logged in to disconnect');
@@ -509,14 +688,23 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     isConnected,
     isSyncing,
     isEnriching,
+    isZipImporting,
     lastSyncedAt,
     lastEnrichedAt,
     syncStatus,
+    zipImportUiState,
+    zipUploadProgress,
+    zipImportDoc,
+    zipImportError,
+    selectedZipFile,
     isLoading,
     connectTrakt,
     disconnectTrakt,
     syncNow,
     checkSyncStatus,
     enrichData,
+    startZipImport,
+    dismissZipImport,
+    setSelectedZipFile,
   };
 });

@@ -211,4 +211,166 @@ describe('TraktContext', () => {
       expect.objectContaining({ queryKey: ['watchedMovies', 'user-enrich-1'] })
     );
   });
+
+  it('rejects startZipImport for anonymous users', async () => {
+    mockCurrentUser = { isAnonymous: true, uid: 'anon-1' };
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await expect(
+      result.current.startZipImport({
+        name: 'export.zip',
+        size: 1024,
+        uri: 'file:///export.zip',
+      })
+    ).rejects.toThrow('Must be logged in to import Trakt archive');
+  });
+
+  it('handles zip import flow and subscribes to progress doc', async () => {
+    const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+    const uploadSpy = jest.spyOn(traktZipImportService, 'uploadZipFile').mockResolvedValue('path/to/file.zip');
+    let capturedProgressCallback: any = null;
+    const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
+      (_userId: string, _importId: string, onProgress: any) => {
+        capturedProgressCallback = onProgress;
+        return jest.fn();
+      }
+    );
+    const startImportSpy = jest.spyOn(traktZipImportService, 'startImport').mockResolvedValue({ importId: 'zip_123' });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-1' };
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.startZipImport({
+        name: 'test.zip',
+        size: 2048,
+        uri: 'file:///test.zip',
+      });
+    });
+
+    expect(uploadSpy).toHaveBeenCalledWith(
+      'user-zip-1',
+      expect.any(String),
+      'file:///test.zip',
+      expect.any(Function)
+    );
+    expect(subscribeSpy).toHaveBeenCalledWith(
+      'user-zip-1',
+      expect.any(String),
+      expect.any(Function),
+      expect.any(Function)
+    );
+    expect(startImportSpy).toHaveBeenCalled();
+    expect(result.current.zipImportUiState).toBe('processing');
+
+    // Simulate progress callback with completed status
+    await act(async () => {
+      capturedProgressCallback?.({
+        id: 'zip_123',
+        progress: { current: 100, phase: 'completed', total: 100 },
+        stats: { movies: 10 },
+        status: 'completed',
+        userId: 'user-zip-1',
+      });
+    });
+
+    expect(result.current.zipImportUiState).toBe('completed');
+    expect(result.current.zipImportDoc?.stats?.movies).toBe(10);
+
+    // Dismiss zip import
+    act(() => {
+      result.current.dismissZipImport();
+    });
+
+    expect(result.current.zipImportUiState).toBe('idle');
+    expect(result.current.zipImportDoc).toBeNull();
+  });
+
+  it('restores in-flight zip import state from user document and invalidates queries on completion', async () => {
+    let capturedSnapshotCallback: ((snapshot: any) => void) | null = null;
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      capturedSnapshotCallback = callback;
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-restore' };
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // 1. Initial snapshot: zip import is processing in background
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: {
+            activeImportId: 'import_active_999',
+            status: 'processing',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.isZipImporting).toBe(true);
+    expect(result.current.zipImportUiState).toBe('processing');
+
+    // Trying to start an OAuth sync while zip import is active throws
+    await expect(result.current.syncNow()).rejects.toThrow('A Trakt zip import is currently in progress.');
+
+    // Trying to start another zip import while zip import is active throws
+    await expect(
+      result.current.startZipImport({
+        name: 'another.zip',
+        size: 500,
+        uri: 'file:///another.zip',
+      })
+    ).rejects.toThrow('A Trakt zip import is already in progress.');
+
+    // 2. Snapshot transitions to completed
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: {
+            activeImportId: 'import_active_999',
+            completedAt: { toDate: () => new Date() },
+            status: 'completed',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.isZipImporting).toBe(false);
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['lists', 'user-zip-restore'] })
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['ratings', 'user-zip-restore'] })
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['watchedMovies', 'user-zip-restore'] })
+    );
+  });
 });

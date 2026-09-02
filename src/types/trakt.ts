@@ -2,6 +2,11 @@
  * Trakt Integration Types
  */
 
+import type {
+  SelectedZipFile,
+  TraktZipImportProgressDoc,
+} from '@/src/services/TraktZipImportService';
+
 export interface TraktSyncItems {
   movies: number;
   shows: number;
@@ -50,13 +55,21 @@ export interface SyncStatus {
   };
 }
 
+export type TraktZipImportUIState = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed';
+
 export interface TraktState {
   isConnected: boolean;
   isSyncing: boolean;
   isEnriching: boolean;
+  isZipImporting: boolean;
   lastSyncedAt: Date | null;
   lastEnrichedAt: Date | null;
   syncStatus: SyncStatus | null;
+  zipImportUiState: TraktZipImportUIState;
+  zipUploadProgress: number;
+  zipImportDoc: TraktZipImportProgressDoc | null;
+  zipImportError: string | null;
+  selectedZipFile: SelectedZipFile | null;
 }
 
 export interface TraktContextValue extends TraktState {
@@ -66,6 +79,9 @@ export interface TraktContextValue extends TraktState {
   syncNow: () => Promise<void>;
   checkSyncStatus: () => Promise<SyncStatus | undefined>;
   enrichData: () => Promise<void>;
+  startZipImport: (file: SelectedZipFile) => Promise<void>;
+  dismissZipImport: () => void;
+  setSelectedZipFile: (file: SelectedZipFile | null) => void;
 }
 
 /**

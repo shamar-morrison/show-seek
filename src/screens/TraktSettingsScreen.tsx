@@ -66,6 +66,7 @@ export default function TraktSettingsScreen() {
     isConnected,
     isSyncing,
     isEnriching,
+    isZipImporting,
     lastSyncedAt,
     lastEnrichedAt,
     syncStatus,
@@ -178,6 +179,17 @@ export default function TraktSettingsScreen() {
   }, [isPremium, isPremiumLoading, router]);
 
   const handleSync = useCallback(async () => {
+    if (isZipImporting) {
+      Alert.alert(
+        t('trakt.zipImportRunningTitle', { defaultValue: 'Trakt Zip Import In Progress' }),
+        t('trakt.zipImportRunningDescription', {
+          defaultValue:
+            'A Trakt zip archive is currently being imported. Please wait for it to finish before starting a sync.',
+        })
+      );
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await syncNow();
@@ -194,7 +206,7 @@ export default function TraktSettingsScreen() {
 
       Alert.alert(t('trakt.syncFailedTitle'), t('trakt.syncFailedMessage'));
     }
-  }, [getPreferredMessage, showRateLimitAlert, syncNow, t]);
+  }, [getPreferredMessage, isZipImporting, showRateLimitAlert, syncNow, t]);
 
   const handleDisconnect = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -325,6 +337,29 @@ export default function TraktSettingsScreen() {
       </View>
     ) : null;
 
+  const zipImportBanner = isZipImporting ? (
+    <View
+      style={[
+        styles.errorsContainer,
+        styles.lockedStateContainer,
+        { backgroundColor: hexToRGBA(COLORS.trakt, 0.12) },
+      ]}
+    >
+      <View style={styles.lockedStateHeader}>
+        <FileArchive size={18} color={COLORS.trakt} />
+        <Text style={[styles.errorsTitle, { color: COLORS.trakt }]}>
+          {t('trakt.zipImportRunningTitle', { defaultValue: 'Trakt Zip Import In Progress' })}
+        </Text>
+      </View>
+      <Text style={[styles.errorText, { color: COLORS.trakt }]}>
+        {t('trakt.zipImportRunningDescription', {
+          defaultValue:
+            'A Trakt zip archive is currently being imported. Please wait for it to finish before starting a sync.',
+        })}
+      </Text>
+    </View>
+  ) : null;
+
   // State: Syncing
   if (isSyncing) {
     return (
@@ -449,7 +484,11 @@ export default function TraktSettingsScreen() {
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </View>
               <Text style={styles.zipImportCardSubtitle}>
-                {t('trakt.zipImportCard.subtitleDisconnected')}
+                {isZipImporting
+                  ? t('trakt.zipImportCard.subtitleImporting', {
+                      defaultValue: 'An import is currently in progress. Tap to view live progress.',
+                    })
+                  : t('trakt.zipImportCard.subtitleDisconnected')}
               </Text>
             </View>
             <ChevronRight size={20} color={COLORS.textSecondary} />
@@ -525,6 +564,7 @@ export default function TraktSettingsScreen() {
           </View>
 
           {syncStatusBanner}
+          {zipImportBanner}
 
           {isInitialSyncFailure ? (
             <View
@@ -544,12 +584,23 @@ export default function TraktSettingsScreen() {
           ) : null}
 
           <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: isZipImporting ? COLORS.surfaceLight : COLORS.trakt },
+            ]}
             onPress={handleSync}
             activeOpacity={ACTIVE_OPACITY}
+            disabled={isZipImporting}
           >
-            <RefreshCw size={20} color={COLORS.white} />
-            <Text style={styles.primaryButtonText}>{t('trakt.importButton')}</Text>
+            <RefreshCw size={20} color={isZipImporting ? COLORS.textSecondary : COLORS.white} />
+            <Text
+              style={[
+                styles.primaryButtonText,
+                isZipImporting && { color: COLORS.textSecondary },
+              ]}
+            >
+              {t('trakt.importButton')}
+            </Text>
           </TouchableOpacity>
 
           {/* Alternative Zip Import Card */}
@@ -568,7 +619,11 @@ export default function TraktSettingsScreen() {
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </View>
               <Text style={styles.zipImportCardSubtitle}>
-                {t('trakt.zipImportCard.subtitleConnected')}
+                {isZipImporting
+                  ? t('trakt.zipImportCard.subtitleImporting', {
+                      defaultValue: 'An import is currently in progress. Tap to view live progress.',
+                    })
+                  : t('trakt.zipImportCard.subtitleConnected')}
               </Text>
             </View>
             <ChevronRight size={20} color={COLORS.textSecondary} />
@@ -664,6 +719,7 @@ export default function TraktSettingsScreen() {
         )}
 
         {syncStatusBanner}
+        {zipImportBanner}
 
         {!isLockedAccount && !isRateLimited && syncStatus?.errors && syncStatus.errors.length > 0 && (
           <View style={[styles.errorsContainer, { backgroundColor: hexToRGBA(accentColor, 0.1) }]}>
@@ -682,12 +738,23 @@ export default function TraktSettingsScreen() {
         )}
 
         <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
+          style={[
+            styles.primaryButton,
+            { backgroundColor: isZipImporting ? COLORS.surfaceLight : COLORS.trakt },
+          ]}
           onPress={handleSync}
           activeOpacity={ACTIVE_OPACITY}
+          disabled={isZipImporting}
         >
-          <RefreshCw size={20} color={COLORS.white} />
-          <Text style={styles.primaryButtonText}>{t('trakt.syncNowButton')}</Text>
+          <RefreshCw size={20} color={isZipImporting ? COLORS.textSecondary : COLORS.white} />
+          <Text
+            style={[
+              styles.primaryButtonText,
+              isZipImporting && { color: COLORS.textSecondary },
+            ]}
+          >
+            {t('trakt.syncNowButton')}
+          </Text>
         </TouchableOpacity>
 
         {/* Enrichment Section - show if synced but not enriched yet, or always in dev mode */}
@@ -755,7 +822,11 @@ export default function TraktSettingsScreen() {
               {!isPremium && !isPremiumLoading && <PremiumBadge />}
             </View>
             <Text style={styles.zipImportCardSubtitle}>
-              {t('trakt.zipImportCard.subtitleSynced')}
+              {isZipImporting
+                ? t('trakt.zipImportCard.subtitleImporting', {
+                    defaultValue: 'An import is currently in progress. Tap to view live progress.',
+                  })
+                : t('trakt.zipImportCard.subtitleSynced')}
             </Text>
           </View>
           <ChevronRight size={20} color={COLORS.textSecondary} />

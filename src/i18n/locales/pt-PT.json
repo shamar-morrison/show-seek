@@ -1159,16 +1159,21 @@
     "localListEditWarning": "Esta lista é espelhada do Trakt. As alterações locais podem ser substituídas na próxima sincronização.",
     "localRatingEditWarning": "As avaliações são espelhadas do Trakt enquanto estiver ligado. As alterações locais podem ser substituídas na próxima sincronização.",
     "localWatchedEditWarning": "O histórico de visualização é espelhado do Trakt enquanto estiver ligado. As alterações locais podem ser substituídas na próxima sincronização.",
+    "zipImportRunningTitle": "Importação Zip do Trakt em curso",
+    "zipImportRunningDescription": "Um ficheiro zip do Trakt está a ser importado. Aguarde a conclusão antes de iniciar uma sincronização.",
     "zipImportCard": {
       "title": "Importar exportação do Trakt (.zip)",
       "subtitleDisconnected": "Tem uma cópia de segurança do Trakt? Envie o seu ficheiro zip diretamente sem ligar a sua conta.",
       "subtitleConnected": "Tem uma cópia de segurança do Trakt? Envie o seu ficheiro zip diretamente para importar histórico adicional.",
-      "subtitleSynced": "Importe ou restaure manualmente a sua biblioteca a partir de um ficheiro zip do Trakt."
+      "subtitleSynced": "Importe ou restaure manualmente a sua biblioteca a partir de um ficheiro zip do Trakt.",
+      "subtitleImporting": "Uma importação está em curso. Toque para ver o progresso."
     },
     "zipImport": {
       "title": "Importação Zip do Trakt",
       "heroTitle": "Importação Zip do Trakt",
       "heroSubtitle": "Importe o seu histórico completo de filmes, séries, episódios, avaliações e listas diretamente de um ficheiro de exportação do Trakt.",
+      "syncRunningTitle": "Sincronização do Trakt em curso",
+      "syncRunningDescription": "Uma sincronização do Trakt está em curso. Aguarde a conclusão antes de iniciar uma importação zip.",
       "selectFile": "Selecionar exportação do Trakt (.zip)",
       "selectFileSubtitle": "Toque para procurar o ficheiro zip do Trakt no seu dispositivo",
       "replaceFile": "Substituir ficheiro",

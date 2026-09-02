@@ -4,7 +4,6 @@ import {
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
-import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -14,20 +13,14 @@ import {
   hexToRGBA,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useTrakt } from '@/src/context/TraktContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import {
-  generateImportId,
-  SelectedZipFile,
   traktZipImportService,
-  TraktZipImportProgressDoc,
   TraktZipImportStats,
-  TraktZipUploadError,
 } from '@/src/services/TraktZipImportService';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -49,7 +42,7 @@ import {
   UploadCloud,
   X,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -61,8 +54,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type ImportUIState = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed';
 
 const formatFileSize = (bytes?: number): string => {
   if (!bytes || bytes <= 0) {
@@ -94,21 +85,23 @@ function StatTile({ icon, label, value }: StatTileProps) {
 export default function TraktZipImportScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
   const requireAccount = useAccountRequired();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { accentColor } = useAccentColor();
-  const { isEnriching } = useTrakt();
+  const {
+    isEnriching,
+    isSyncing,
+    zipImportUiState: uiState,
+    zipUploadProgress: uploadProgress,
+    zipImportDoc: progressDoc,
+    zipImportError: errorMessage,
+    selectedZipFile: selectedFile,
+    setSelectedZipFile: setSelectedFile,
+    startZipImport,
+    dismissZipImport,
+  } = useTrakt();
 
-  const [uiState, setUiState] = useState<ImportUIState>('idle');
-  const [selectedFile, setSelectedFile] = useState<SelectedZipFile | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [progressDoc, setProgressDoc] = useState<TraktZipImportProgressDoc | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPickingFile, setIsPickingFile] = useState(false);
-
-  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (requireAccount()) {
@@ -116,17 +109,8 @@ export default function TraktZipImportScreen() {
     }
   }, [requireAccount, router]);
 
-  useEffect(() => {
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-    };
-  }, []);
-
   const handlePickFile = async () => {
-    if (isPickingFile || isPremiumLoading) {
+    if (isPickingFile || isPremiumLoading || isSyncing) {
       return;
     }
 
@@ -137,7 +121,6 @@ export default function TraktZipImportScreen() {
     }
 
     setIsPickingFile(true);
-    setErrorMessage(null);
 
     try {
       const file = await traktZipImportService.pickZipFile();
@@ -157,24 +140,8 @@ export default function TraktZipImportScreen() {
     }
   };
 
-  const invalidateUserLibraryQueries = useCallback(async () => {
-    if (!user?.uid) {
-      return;
-    }
-
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['lists', user.uid] }),
-      queryClient.invalidateQueries({
-        queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, user.uid],
-      }),
-      queryClient.invalidateQueries({ queryKey: ['ratings', user.uid] }),
-      queryClient.invalidateQueries({ queryKey: ['episodeTracking'] }),
-      queryClient.invalidateQueries({ queryKey: ['watchedMovies', user.uid] }),
-    ]);
-  }, [queryClient, user?.uid]);
-
   const handleStartImport = async () => {
-    if (!selectedFile || !user?.uid) {
+    if (!selectedFile || isSyncing) {
       return;
     }
 
@@ -184,88 +151,17 @@ export default function TraktZipImportScreen() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setUiState('uploading');
-    setUploadProgress(0);
-    setErrorMessage(null);
-
-    const importId = generateImportId();
 
     try {
-      // Step 1: Upload zip archive directly to Firebase Storage
-      await traktZipImportService.uploadZipFile(
-        user.uid,
-        importId,
-        selectedFile.uri,
-        (progress) => {
-          setUploadProgress(progress);
-        }
-      );
-
-      // Step 2: Switch to processing state and subscribe to Firestore progress doc
-      setUiState('processing');
-
-      const unsubscribe = traktZipImportService.subscribeToProgress(
-        user.uid,
-        importId,
-        (data) => {
-          setProgressDoc(data);
-
-          if (data.status === 'completed') {
-            setUiState('completed');
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            void invalidateUserLibraryQueries();
-          } else if (data.status === 'failed') {
-            setUiState('failed');
-            setErrorMessage(
-              data.error || t('trakt.zipImport.failedFallback')
-            );
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          }
-        },
-        (subscriptionError) => {
-          console.error('[TraktZipImportScreen] Progress subscription error:', subscriptionError);
-          setUiState('failed');
-          setErrorMessage(
-            subscriptionError instanceof Error && subscriptionError.message
-              ? subscriptionError.message
-              : t('trakt.zipImport.failedFallback')
-          );
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        }
-      );
-
-      unsubscribeRef.current = unsubscribe;
-
-      // Step 3: Trigger the backend Cloud Function
-      await traktZipImportService.startImport(importId);
+      await startZipImport(selectedFile);
     } catch (error) {
-      console.error('[TraktZipImportScreen] Import error:', error);
-      setUiState('failed');
-
-      if (error instanceof TraktZipUploadError) {
-        setErrorMessage(t('trakt.zipImport.uploadFailed'));
-      } else {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : t('trakt.zipImport.failedFallback')
-        );
-      }
-
+      console.error('[TraktZipImportScreen] Start import error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
   const handleReset = () => {
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-    setUiState('idle');
-    setSelectedFile(null);
-    setUploadProgress(0);
-    setProgressDoc(null);
-    setErrorMessage(null);
+    dismissZipImport();
   };
 
   const getPhaseText = (phase?: string): string => {
@@ -300,6 +196,29 @@ export default function TraktZipImportScreen() {
         <Text style={styles.heroSubtitle}>{t('trakt.zipImport.heroSubtitle')}</Text>
       </View>
 
+      {/* If an OAuth sync is running, show in-flight banner */}
+      {isSyncing && (
+        <View
+          style={[
+            styles.syncRunningBanner,
+            { backgroundColor: hexToRGBA(COLORS.trakt, 0.12) },
+          ]}
+        >
+          <View style={styles.syncRunningHeader}>
+            <RefreshCw size={18} color={COLORS.trakt} />
+            <Text style={[styles.syncRunningTitle, { color: COLORS.trakt }]}>
+              {t('trakt.zipImport.syncRunningTitle', { defaultValue: 'Trakt Sync In Progress' })}
+            </Text>
+          </View>
+          <Text style={[styles.syncRunningDescription, { color: COLORS.trakt }]}>
+            {t('trakt.zipImport.syncRunningDescription', {
+              defaultValue:
+                'A Trakt sync is currently in progress. Please wait for it to finish before starting a zip import.',
+            })}
+          </Text>
+        </View>
+      )}
+
       {/* File Picker Box / Selected File Preview */}
       {selectedFile ? (
         <View style={styles.selectedFileCard}>
@@ -319,6 +238,7 @@ export default function TraktZipImportScreen() {
             style={({ pressed }) => [styles.removeFileButton, pressed && { opacity: ACTIVE_OPACITY }]}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityLabel={t('trakt.zipImport.removeFile')}
+            disabled={isSyncing}
           >
             <X size={20} color={COLORS.textSecondary} />
           </Pressable>
@@ -327,16 +247,17 @@ export default function TraktZipImportScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.pickerBox,
-            pressed && { borderColor: accentColor, opacity: ACTIVE_OPACITY },
+            pressed && !isSyncing && { borderColor: accentColor, opacity: ACTIVE_OPACITY },
+            isSyncing && { opacity: 0.6 },
           ]}
           onPress={handlePickFile}
-          disabled={isPickingFile || isPremiumLoading}
+          disabled={isPickingFile || isPremiumLoading || isSyncing}
         >
           {isPickingFile ? (
             <ActivityIndicator color={accentColor} size="small" />
           ) : (
             <>
-              <UploadCloud size={40} color={accentColor} />
+              <UploadCloud size={40} color={isSyncing ? COLORS.textSecondary : accentColor} />
               <View style={styles.pickerTitleRow}>
                 <Text style={styles.pickerBoxTitle}>{t('trakt.zipImport.selectFile')}</Text>
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
@@ -354,18 +275,18 @@ export default function TraktZipImportScreen() {
         style={({ pressed }) => [
           styles.primaryButton,
           {
-            backgroundColor: selectedFile ? COLORS.trakt : COLORS.surfaceLight,
+            backgroundColor: selectedFile && !isSyncing ? COLORS.trakt : COLORS.surfaceLight,
           },
-          pressed && selectedFile ? { opacity: ACTIVE_OPACITY } : null,
+          pressed && selectedFile && !isSyncing ? { opacity: ACTIVE_OPACITY } : null,
         ]}
         onPress={handleStartImport}
-        disabled={!selectedFile}
+        disabled={!selectedFile || isSyncing}
       >
-        <Upload size={20} color={selectedFile ? COLORS.white : COLORS.textSecondary} />
+        <Upload size={20} color={selectedFile && !isSyncing ? COLORS.white : COLORS.textSecondary} />
         <Text
           style={[
             styles.primaryButtonText,
-            !selectedFile && { color: COLORS.textSecondary },
+            (!selectedFile || isSyncing) && { color: COLORS.textSecondary },
           ]}
         >
           {t('trakt.zipImport.startImport')}
@@ -541,7 +462,10 @@ export default function TraktZipImportScreen() {
             { backgroundColor: accentColor },
             pressed && { opacity: ACTIVE_OPACITY },
           ]}
-          onPress={() => router.push('/(tabs)/library')}
+          onPress={() => {
+            dismissZipImport();
+            router.push('/(tabs)/library');
+          }}
         >
           <Text style={styles.primaryButtonText}>{t('trakt.zipImport.viewLibrary')}</Text>
         </Pressable>
@@ -551,7 +475,10 @@ export default function TraktZipImportScreen() {
             styles.secondaryButton,
             pressed && { opacity: ACTIVE_OPACITY },
           ]}
-          onPress={() => router.back()}
+          onPress={() => {
+            dismissZipImport();
+            router.back();
+          }}
         >
           <Text style={styles.secondaryButtonText}>{t('trakt.zipImport.done')}</Text>
         </Pressable>
@@ -590,7 +517,10 @@ export default function TraktZipImportScreen() {
           { width: '100%' },
           pressed && { opacity: ACTIVE_OPACITY },
         ]}
-        onPress={() => router.back()}
+        onPress={() => {
+          dismissZipImport();
+          router.back();
+        }}
       >
         <Text style={styles.secondaryButtonText}>{t('trakt.zipImport.backToSettings')}</Text>
       </Pressable>
@@ -919,5 +849,24 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
     fontWeight: '500',
+  },
+  syncRunningBanner: {
+    borderRadius: BORDER_RADIUS.m,
+    gap: SPACING.xs,
+    marginBottom: SPACING.l,
+    padding: SPACING.m,
+  },
+  syncRunningDescription: {
+    fontSize: FONT_SIZE.s,
+    lineHeight: 20,
+  },
+  syncRunningHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACING.s,
+  },
+  syncRunningTitle: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: 'bold',
   },
 });

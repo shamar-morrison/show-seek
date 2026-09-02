@@ -355,6 +355,7 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
         email: 'free@example.com',
         premium: { isPremium: false },
       });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
 
       await expect(
         startTraktZipImportHandler({
@@ -442,6 +443,126 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
           id: `zip_import_${importId}`,
         })
       );
+    });
+
+    it('rejects when a Trakt sync is already active', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktSyncStatus: { status: 'in_progress' },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'already-exists',
+        message: 'A Trakt sync is already in progress.',
+      });
+
+      expect(mockEnqueue).not.toHaveBeenCalled();
+    });
+
+    it('rejects when another Trakt zip import is already active', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: { id: 'zip_old_1', status: 'processing' },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'already-exists',
+        message: 'A Trakt zip import is already in progress.',
+      });
+
+      expect(mockEnqueue).not.toHaveBeenCalled();
+    });
+
+    it('recovers and starts a new import if previous pending import is stale (> 5 minutes)', async () => {
+      const staleTime = MockTimestamp.fromMillis(Date.now() - 6 * 60 * 1000);
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: staleTime,
+          id: 'zip_stale_1',
+          status: 'pending',
+          updatedAt: staleTime,
+        },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      const response = await startTraktZipImportHandler({
+        auth: { uid: userId },
+        data: { importId },
+      } as any);
+
+      expect(response).toEqual({ importId });
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        status: 'pending',
+      });
+    });
+
+    it('recovers and starts a new import if previous processing import is stale (> 35 minutes)', async () => {
+      const staleTime = MockTimestamp.fromMillis(Date.now() - 40 * 60 * 1000);
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: staleTime,
+          id: 'zip_stale_2',
+          status: 'processing',
+          updatedAt: staleTime,
+        },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      const response = await startTraktZipImportHandler({
+        auth: { uid: userId },
+        data: { importId },
+      } as any);
+
+      expect(response).toEqual({ importId });
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    });
+
+    it('cleans up and marks progress and user doc failed when task enqueue fails', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      mockEnqueue.mockRejectedValueOnce(new Error('Task queue unavailable'));
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'internal',
+        message: 'Failed to start background import task. Please try again.',
+      });
+
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        phase: 'failed',
+        status: 'failed',
+      });
+
+      const progressDoc = store.get(progressDocPath);
+      expect(progressDoc?.status).toBe('failed');
+      expect(progressDoc?.error).toContain('Failed to enqueue');
     });
   });
 
@@ -691,6 +812,156 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
 
       // Storage cleanup occurred
       expect(fileDeleteCalls).toContain(storagePath);
+    });
+
+    it('skips obsolete task immediately and preserves newer import status when zip_old is replaced by zip_new', async () => {
+      const oldImportId = 'zip_old_111111111_aaaaaa';
+      const newImportId = 'zip_new_222222222_bbbbbb';
+      const oldStoragePath = `users/${userId}/imports/${oldImportId}.zip`;
+
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(oldStoragePath, { content: zipBuffer, exists: true });
+
+      // User document already has zip_new active
+      store.set(`users/${userId}`, {
+        email: 'pro@example.com',
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: MockTimestamp.now(),
+          id: newImportId,
+          phase: 'pending',
+          status: 'pending',
+          updatedAt: MockTimestamp.now(),
+        },
+      });
+
+      // Execute delayed runTraktZipImport task for oldImportId
+      await runTraktZipImportHandler({
+        data: { importId: oldImportId, userId },
+      } as any);
+
+      // Verify user document status was NOT overwritten by oldImportId
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: newImportId,
+        status: 'pending',
+      });
+
+      // Verify old progress doc was NOT marked completed
+      const oldProgressDoc = store.get(`users/${userId}/trakt_imports/${oldImportId}`);
+      expect(oldProgressDoc?.status).toBeUndefined();
+
+      // Verify obsolete storage zip file was cleaned up
+      expect(fileDeleteCalls).toContain(oldStoragePath);
+    });
+
+    it('rejects duplicate same-ID tasks when an active processing lease already exists', async () => {
+      const recentTime = MockTimestamp.fromMillis(Date.now() - 30_000);
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      store.set(`users/${userId}`, {
+        email: 'pro@example.com',
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: recentTime,
+          id: importId,
+          leaseToken: 'lease_active_worker_1',
+          phase: 'syncing',
+          status: 'processing',
+          updatedAt: recentTime,
+        },
+      });
+
+      // Execute duplicate runTraktZipImport task for same importId
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      // Verify the active worker's leaseToken was NOT overwritten
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        leaseToken: 'lease_active_worker_1',
+        phase: 'syncing',
+        status: 'processing',
+      });
+    });
+
+    it('allows a new same-ID task to replace a paused worker when the processing lease is explicitly stale (> 35 minutes)', async () => {
+      const staleTime = MockTimestamp.fromMillis(Date.now() - 40 * 60 * 1000);
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      store.set(`users/${userId}`, {
+        email: 'pro@example.com',
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: staleTime,
+          id: importId,
+          leaseToken: 'lease_stale_paused_worker',
+          phase: 'downloading',
+          status: 'processing',
+          updatedAt: staleTime,
+        },
+      });
+
+      // Execute new runTraktZipImport task for same importId
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      // Verify new worker acquired lease and completed successfully
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        phase: 'completed',
+        status: 'completed',
+      });
+      expect(userDoc?.traktZipImportStatus?.leaseToken).not.toBe('lease_stale_paused_worker');
+    });
+
+    it('aborts worker without writes when lease ownership is lost before syncTraktZipImport', async () => {
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      store.set(`users/${userId}`, {
+        email: 'pro@example.com',
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: MockTimestamp.now(),
+          id: importId,
+          phase: 'pending',
+          status: 'pending',
+          updatedAt: MockTimestamp.now(),
+        },
+      });
+
+      // In the middle of processing, another task claims the lease
+      const originalDocSet = store.set.bind(store);
+      store.set = jest.fn((key: string, value: Record<string, unknown>) => {
+        if (key === `users/${userId}` && (value as any)?.traktZipImportStatus?.phase === 'parsing') {
+          // Simulate a newer worker taking over the lease before syncing
+          const hijacked = {
+            ...value,
+            traktZipImportStatus: {
+              ...(value as any).traktZipImportStatus,
+              leaseToken: 'lease_newer_takeover_token',
+            },
+          };
+          return originalDocSet(key, hijacked);
+        }
+        return originalDocSet(key, value);
+      });
+
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      // Verify the user doc was NOT completed by the lost worker
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus?.leaseToken).toBe('lease_newer_takeover_token');
+      expect(userDoc?.traktZipImportStatus?.status).not.toBe('completed');
     });
   });
 });
