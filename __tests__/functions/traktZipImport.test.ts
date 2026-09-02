@@ -813,5 +813,46 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       // Storage cleanup occurred
       expect(fileDeleteCalls).toContain(storagePath);
     });
+
+    it('skips obsolete task immediately and preserves newer import status when zip_old is replaced by zip_new', async () => {
+      const oldImportId = 'zip_old_111111111_aaaaaa';
+      const newImportId = 'zip_new_222222222_bbbbbb';
+      const oldStoragePath = `users/${userId}/imports/${oldImportId}.zip`;
+
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(oldStoragePath, { content: zipBuffer, exists: true });
+
+      // User document already has zip_new active
+      store.set(`users/${userId}`, {
+        email: 'pro@example.com',
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: MockTimestamp.now(),
+          id: newImportId,
+          phase: 'pending',
+          status: 'pending',
+          updatedAt: MockTimestamp.now(),
+        },
+      });
+
+      // Execute delayed runTraktZipImport task for oldImportId
+      await runTraktZipImportHandler({
+        data: { importId: oldImportId, userId },
+      } as any);
+
+      // Verify user document status was NOT overwritten by oldImportId
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: newImportId,
+        status: 'pending',
+      });
+
+      // Verify old progress doc was NOT marked completed
+      const oldProgressDoc = store.get(`users/${userId}/trakt_imports/${oldImportId}`);
+      expect(oldProgressDoc?.status).toBeUndefined();
+
+      // Verify obsolete storage zip file was cleaned up
+      expect(fileDeleteCalls).toContain(oldStoragePath);
+    });
   });
 });

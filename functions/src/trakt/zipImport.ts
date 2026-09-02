@@ -206,31 +206,63 @@ export const runTraktZipImportHandler = async (
   const bucket = admin.storage().bucket();
   const file = bucket.file(storagePath);
 
-  try {
-    // Phase 1: Downloading
+  // Atomically claim the import task and verify it is not obsolete
+  const claimResult = await db.runTransaction(async (transaction) => {
+    const userSnapshot = await transaction.get(userDocRef);
+    const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
+    const currentZipStatus = userData.traktZipImportStatus;
+
+    if (currentZipStatus?.id && currentZipStatus.id !== importId) {
+      return { currentId: currentZipStatus.id, obsolete: true };
+    }
+
     const downloadTime = Timestamp.now();
-    await Promise.all([
-      progressDocRef.set(
-        {
-          progress: { current: 10, phase: 'downloading', total: 100 },
+    transaction.set(
+      progressDocRef,
+      {
+        progress: { current: 10, phase: 'downloading', total: 100 },
+        status: 'processing',
+        updatedAt: downloadTime,
+      },
+      { merge: true }
+    );
+    transaction.set(
+      userDocRef,
+      {
+        traktZipImportStatus: {
+          id: importId,
+          phase: 'downloading',
           status: 'processing',
           updatedAt: downloadTime,
         },
-        { merge: true }
-      ),
-      userDocRef.set(
-        {
-          traktZipImportStatus: {
-            id: importId,
-            phase: 'downloading',
-            status: 'processing',
-            updatedAt: downloadTime,
-          },
-        },
-        { merge: true }
-      ),
-    ]);
+      },
+      { merge: true }
+    );
 
+    return { obsolete: false };
+  });
+
+  if (claimResult.obsolete) {
+    console.info('[runTraktZipImport] Skipping obsolete import task', {
+      activeImportId: claimResult.currentId,
+      importId,
+      userId,
+    });
+    try {
+      const [exists] = await file.exists();
+      if (exists) {
+        await file.delete();
+      }
+    } catch (cleanupError) {
+      console.warn(
+        `[runTraktZipImport] Failed to clean up obsolete zip file at ${storagePath}:`,
+        cleanupError
+      );
+    }
+    return;
+  }
+
+  try {
     const [metadata] = await file.getMetadata();
     const rawSize = metadata.size;
     const size = typeof rawSize === 'number' ? rawSize : parseInt(String(rawSize || '0'), 10);
