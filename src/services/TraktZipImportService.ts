@@ -88,10 +88,12 @@ export const createEmptyTraktZipStats = (): TraktZipImportStats => ({
   watchlist: 0,
 });
 
+const DEV_SYNC_BYPASS_HEADER = 'X-ShowSeek-Dev-Sync';
+
 export class TraktZipImportService {
   private documentPickerModulePromise: Promise<DocumentPickerModule> | null = null;
   private readonly startImportCallable = httpsCallable<
-    { importId: string },
+    { importId: string; [key: string]: unknown },
     { importId: string }
   >(functions, 'startTraktZipImport');
 
@@ -187,7 +189,11 @@ export class TraktZipImportService {
 
   async startImport(importId: string): Promise<{ importId: string }> {
     try {
-      const result = await this.startImportCallable({ importId });
+      const payload: { importId: string; [key: string]: unknown } = { importId };
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
+        payload[DEV_SYNC_BYPASS_HEADER] = 'true';
+      }
+      const result = await this.startImportCallable(payload);
       return result.data;
     } catch (error) {
       const code = (error as { code?: string } | null)?.code;

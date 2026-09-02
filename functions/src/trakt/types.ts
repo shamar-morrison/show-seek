@@ -463,6 +463,7 @@ export interface StartTraktZipImportRequest {
 
 export interface TraktZipImportTaskPayload {
   importId: string;
+  isCooldownBypassed?: boolean;
   userId: string;
 }
 
@@ -476,6 +477,7 @@ export interface TraktZipImportProgressDoc {
   error?: string;
   failedAt?: FirebaseFirestore.Timestamp;
   id: string;
+  isCooldownBypassed?: boolean;
   nextAllowedImportAt?: FirebaseFirestore.Timestamp;
   progress: {
     current: number;

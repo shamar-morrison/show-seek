@@ -214,6 +214,36 @@ describe('TraktZipImportService', () => {
       expect(mockCallable).toHaveBeenCalledWith({ importId: 'import-abc' });
     });
 
+    it('attaches the dev sync bypass flag in __DEV__ builds', async () => {
+      const originalDev = (global as { __DEV__?: boolean }).__DEV__;
+      (global as { __DEV__?: boolean }).__DEV__ = true;
+
+      const mockCallable = jest.fn().mockResolvedValue({ data: { importId: 'import-dev' } });
+      const mockHttpsCallable = jest.fn(() => mockCallable);
+
+      jest.doMock('@/src/firebase/config', () => ({
+        db: {},
+        functions: {},
+        storage: {},
+      }));
+      jest.doMock('firebase/functions', () => ({
+        httpsCallable: mockHttpsCallable,
+      }));
+
+      try {
+        const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+        const result = await traktZipImportService.startImport('import-dev');
+
+        expect(result).toEqual({ importId: 'import-dev' });
+        expect(mockCallable).toHaveBeenCalledWith({
+          importId: 'import-dev',
+          'X-ShowSeek-Dev-Sync': 'true',
+        });
+      } finally {
+        (global as { __DEV__?: boolean }).__DEV__ = originalDev;
+      }
+    });
+
     it('throws TraktZipImportError when callable throws', async () => {
       const mockCallable = jest.fn().mockRejectedValue(new Error('User is not premium'));
       const mockHttpsCallable = jest.fn(() => mockCallable);

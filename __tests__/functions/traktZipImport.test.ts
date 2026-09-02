@@ -34,6 +34,7 @@ jest.mock(
       }
     },
     onCall: mockOnCall,
+    onRequest: jest.fn((_options, handler) => handler),
   }),
   { virtual: true }
 );
@@ -319,6 +320,13 @@ jest.mock(
 
 import AdmZip = require('adm-zip');
 import {
+  TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS,
+  TRAKT_ZIP_IMPORT_COOLDOWN_MS,
+} from '../../functions/src/trakt/constants';
+import {
+  completeZipImportWithLease,
+  failZipImportWithLease,
+  getZipImportCooldownBypassSource,
   runTraktZipImportHandler,
   startTraktZipImportHandler,
 } from '../../functions/src/trakt/zipImport';
@@ -337,6 +345,8 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
   const progressDocPath = `users/${userId}/trakt_imports/${importId}`;
 
   beforeEach(() => {
+    delete process.env.FUNCTIONS_EMULATOR;
+    delete process.env.TRAKT_SYNC_BYPASS_UIDS;
     store = new Map<string, Record<string, unknown>>();
     storageFiles = new Map<string, { exists: boolean; content: Buffer }>();
     fileDeleteCalls = [];
@@ -446,11 +456,80 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
 
       // Verify Cloud Task was enqueued with correct payload
       expect(mockEnqueue).toHaveBeenCalledWith(
-        { importId, userId },
+        { importId, isCooldownBypassed: false, userId },
         expect.objectContaining({
           dispatchDeadlineSeconds: 1800,
           id: `zip_import_${importId}`,
         })
+      );
+    });
+
+    it('attaches isCooldownBypassed: true to task payload and progress doc for allowlisted users with dev header', async () => {
+      process.env.TRAKT_SYNC_BYPASS_UIDS = 'tester-1, user-premium-123';
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      const response = await startTraktZipImportHandler({
+        auth: { uid: userId },
+        data: { importId },
+        rawRequest: {
+          header: (name: string) => (name.toLowerCase() === 'x-showseek-dev-sync' ? 'true' : undefined),
+        },
+      } as any);
+
+      expect(response).toEqual({ importId });
+      expect(store.get(progressDocPath)?.isCooldownBypassed).toBe(true);
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        { importId, isCooldownBypassed: true, userId },
+        expect.any(Object)
+      );
+    });
+
+    it('attaches isCooldownBypassed: true in emulator when dev header or payload flag is present', async () => {
+      process.env.FUNCTIONS_EMULATOR = 'true';
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      const response = await startTraktZipImportHandler({
+        auth: { uid: userId },
+        data: {
+          importId,
+          'X-ShowSeek-Dev-Sync': 'true',
+        },
+      } as any);
+
+      expect(response).toEqual({ importId });
+      expect(store.get(progressDocPath)?.isCooldownBypassed).toBe(true);
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        { importId, isCooldownBypassed: true, userId },
+        expect.any(Object)
+      );
+    });
+
+    it('keeps isCooldownBypassed: false for non-allowlisted users even when dev header is present', async () => {
+      process.env.TRAKT_SYNC_BYPASS_UIDS = 'someone-else-123';
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      const response = await startTraktZipImportHandler({
+        auth: { uid: userId },
+        data: { importId },
+        rawRequest: {
+          header: (name: string) => (name.toLowerCase() === 'x-showseek-dev-sync' ? 'true' : undefined),
+        },
+      } as any);
+
+      expect(response).toEqual({ importId });
+      expect(store.get(progressDocPath)?.isCooldownBypassed).toBe(false);
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        { importId, isCooldownBypassed: false, userId },
+        expect.any(Object)
       );
     });
 
@@ -1164,6 +1243,285 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
         expect(error).not.toBeInstanceOf(TraktZipSizeLimitError);
         expect((error as Error).message).toContain('integrity check failed');
       }
+    });
+  });
+
+  describe('test-only cooldown bypass and duration enforcement', () => {
+    describe('getZipImportCooldownBypassSource', () => {
+      it('returns undefined when dev header is absent', () => {
+        process.env.FUNCTIONS_EMULATOR = 'true';
+        const request = { rawRequest: { header: () => undefined } } as any;
+        expect(getZipImportCooldownBypassSource(request, userId)).toBeUndefined();
+      });
+
+      it('returns emulator when dev header is present and FUNCTIONS_EMULATOR is true', () => {
+        process.env.FUNCTIONS_EMULATOR = 'true';
+        const request = {
+          rawRequest: {
+            header: (name: string) => (name.toLowerCase() === 'x-showseek-dev-sync' ? 'true' : undefined),
+          },
+        } as any;
+        expect(getZipImportCooldownBypassSource(request, userId)).toBe('emulator');
+      });
+
+      it('returns allowlist when dev header is present and user is allowlisted in non-emulator env', () => {
+        process.env.TRAKT_SYNC_BYPASS_UIDS = 'alice, user-premium-123, bob';
+        const request = {
+          rawRequest: {
+            header: (name: string) => (name.toLowerCase() === 'x-showseek-dev-sync' ? 'true' : undefined),
+          },
+        } as any;
+        expect(getZipImportCooldownBypassSource(request, userId)).toBe('allowlist');
+      });
+
+      it('returns undefined when dev header is present but user is not in TRAKT_SYNC_BYPASS_UIDS', () => {
+        process.env.TRAKT_SYNC_BYPASS_UIDS = 'alice, bob';
+        const request = {
+          rawRequest: {
+            header: (name: string) => (name.toLowerCase() === 'x-showseek-dev-sync' ? 'true' : undefined),
+          },
+        } as any;
+        expect(getZipImportCooldownBypassSource(request, userId)).toBeUndefined();
+      });
+
+      it('supports dev bypass header passed via callable data payload', () => {
+        process.env.FUNCTIONS_EMULATOR = 'true';
+        const request = {
+          data: {
+            'X-ShowSeek-Dev-Sync': 'true',
+          },
+        } as any;
+        expect(getZipImportCooldownBypassSource(request, userId)).toBe('emulator');
+      });
+    });
+
+    describe('completeZipImportWithLease', () => {
+      it('writes 10-second test cooldown when isCooldownBypassed is true', async () => {
+        const leaseToken = 'lease_test_bypass_1';
+        store.set(`users/${userId}`, {
+          traktZipImportStatus: {
+            id: importId,
+            leaseToken,
+            phase: 'syncing',
+            status: 'processing',
+          },
+        });
+
+        const completedAt = MockTimestamp.now();
+        const success = await completeZipImportWithLease(mockFirestore as any, userId, importId, leaseToken, {
+          completedAt: completedAt as any,
+          isCooldownBypassed: true,
+          stats: {
+            customLists: 0,
+            episodes: 0,
+            favorites: 0,
+            movies: 5,
+            movieWatches: 5,
+            ratings: 0,
+            shows: 0,
+            watchlist: 0,
+          },
+        });
+
+        expect(success).toBe(true);
+
+        const expectedCooldown = completedAt.toMillis() + TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS;
+        const progressDoc = store.get(progressDocPath) as any;
+        expect(progressDoc?.nextAllowedImportAt?.toMillis?.()).toBe(expectedCooldown);
+
+        const userDoc = store.get(`users/${userId}`) as any;
+        expect(userDoc?.traktZipImportStatus?.nextAllowedImportAt?.toMillis?.()).toBe(expectedCooldown);
+      });
+
+      it('writes normal 6-hour cooldown when isCooldownBypassed is false or omitted', async () => {
+        const leaseToken = 'lease_test_normal_1';
+        store.set(`users/${userId}`, {
+          traktZipImportStatus: {
+            id: importId,
+            leaseToken,
+            phase: 'syncing',
+            status: 'processing',
+          },
+        });
+
+        const completedAt = MockTimestamp.now();
+        const success = await completeZipImportWithLease(mockFirestore as any, userId, importId, leaseToken, {
+          completedAt: completedAt as any,
+          isCooldownBypassed: false,
+          stats: {
+            customLists: 0,
+            episodes: 0,
+            favorites: 0,
+            movies: 5,
+            movieWatches: 5,
+            ratings: 0,
+            shows: 0,
+            watchlist: 0,
+          },
+        });
+
+        expect(success).toBe(true);
+
+        const expectedCooldown = completedAt.toMillis() + TRAKT_ZIP_IMPORT_COOLDOWN_MS;
+        const progressDoc = store.get(progressDocPath) as any;
+        expect(progressDoc?.nextAllowedImportAt?.toMillis?.()).toBe(expectedCooldown);
+
+        const userDoc = store.get(`users/${userId}`) as any;
+        expect(userDoc?.traktZipImportStatus?.nextAllowedImportAt?.toMillis?.()).toBe(expectedCooldown);
+      });
+    });
+
+    describe('failZipImportWithLease', () => {
+      it('writes 10-second test cooldown for in_flight failure when isCooldownBypassed is true', async () => {
+        const leaseToken = 'lease_fail_bypass_1';
+        store.set(`users/${userId}`, {
+          traktZipImportStatus: {
+            id: importId,
+            leaseToken,
+            phase: 'syncing',
+            status: 'processing',
+          },
+        });
+
+        const failedAt = MockTimestamp.now();
+        const success = await failZipImportWithLease(mockFirestore as any, userId, importId, leaseToken, {
+          error: 'Network timeout during sync',
+          errorCategory: 'in_flight',
+          failedAt: failedAt as any,
+          isCooldownBypassed: true,
+        });
+
+        expect(success).toBe(true);
+
+        const expectedCooldown = failedAt.toMillis() + TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS;
+        const userDoc = store.get(`users/${userId}`) as any;
+        expect(userDoc?.traktZipImportStatus?.nextAllowedImportAt?.toMillis?.()).toBe(expectedCooldown);
+      });
+
+      it('writes normal 6-hour cooldown for in_flight failure when isCooldownBypassed is false', async () => {
+        const leaseToken = 'lease_fail_normal_1';
+        store.set(`users/${userId}`, {
+          traktZipImportStatus: {
+            id: importId,
+            leaseToken,
+            phase: 'syncing',
+            status: 'processing',
+          },
+        });
+
+        const failedAt = MockTimestamp.now();
+        const success = await failZipImportWithLease(mockFirestore as any, userId, importId, leaseToken, {
+          error: 'Network timeout during sync',
+          errorCategory: 'in_flight',
+          failedAt: failedAt as any,
+          isCooldownBypassed: false,
+        });
+
+        expect(success).toBe(true);
+
+        const expectedCooldown = failedAt.toMillis() + TRAKT_ZIP_IMPORT_COOLDOWN_MS;
+        const userDoc = store.get(`users/${userId}`) as any;
+        expect(userDoc?.traktZipImportStatus?.nextAllowedImportAt?.toMillis?.()).toBe(expectedCooldown);
+      });
+
+      it('deletes nextAllowedImportAt for pre_flight failure even when isCooldownBypassed is true', async () => {
+        const leaseToken = 'lease_fail_preflight_1';
+        store.set(`users/${userId}`, {
+          traktZipImportStatus: {
+            id: importId,
+            leaseToken,
+            nextAllowedImportAt: MockTimestamp.fromMillis(Date.now() + 60_000),
+            phase: 'parsing',
+            status: 'processing',
+          },
+        });
+
+        const failedAt = MockTimestamp.now();
+        const success = await failZipImportWithLease(mockFirestore as any, userId, importId, leaseToken, {
+          error: 'Corrupt archive header',
+          errorCategory: 'pre_flight',
+          failedAt: failedAt as any,
+          isCooldownBypassed: true,
+        });
+
+        expect(success).toBe(true);
+
+        const userDoc = store.get(`users/${userId}`) as any;
+        expect('nextAllowedImportAt' in (userDoc?.traktZipImportStatus ?? {})).toBe(false);
+      });
+    });
+
+    describe('runTraktZipImportHandler end-to-end with bypass', () => {
+      it('writes 10-second cooldown on completed import when task payload has isCooldownBypassed: true', async () => {
+        const zip = new SafeAdmZip();
+        zip.addFile(
+          'history-movies-1.json',
+          Buffer.from(
+            JSON.stringify([
+              {
+                action: 'watch',
+                movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+                watched_at: '2023-01-01T12:00:00.000Z',
+              },
+            ])
+          )
+        );
+        storageFiles.set(storagePath, { content: zip.toBuffer(), exists: true });
+        store.set(`users/${userId}`, {
+          email: 'tester@example.com',
+          premium: { isPremium: true },
+          traktZipImportStatus: {
+            createdAt: MockTimestamp.now(),
+            id: importId,
+            phase: 'pending',
+            status: 'pending',
+            updatedAt: MockTimestamp.now(),
+          },
+        });
+
+        await runTraktZipImportHandler({
+          data: { importId, isCooldownBypassed: true, userId },
+        } as any);
+
+        const userDoc = store.get(`users/${userId}`) as any;
+        expect(userDoc?.traktZipImportStatus?.status).toBe('completed');
+        const cooldown = userDoc?.traktZipImportStatus?.nextAllowedImportAt?.toMillis?.();
+        expect(cooldown).toBeGreaterThanOrEqual(Date.now() + 9_000);
+        expect(cooldown).toBeLessThanOrEqual(Date.now() + 11_000);
+
+        const progressDoc = store.get(progressDocPath) as any;
+        expect(progressDoc?.nextAllowedImportAt?.toMillis?.()).toBe(cooldown);
+      });
+
+      it('writes 10-second cooldown on in-flight download failure when task payload has isCooldownBypassed: true', async () => {
+        mockFileDownloadOverride = async () => {
+          throw new Error('Network connection timeout during Storage download');
+        };
+        storageFiles.set(storagePath, { content: Buffer.from('test-content'), exists: true });
+
+        store.set(`users/${userId}`, {
+          email: 'tester@example.com',
+          premium: { isPremium: true },
+          traktZipImportStatus: {
+            createdAt: MockTimestamp.now(),
+            id: importId,
+            phase: 'pending',
+            status: 'pending',
+            updatedAt: MockTimestamp.now(),
+          },
+        });
+
+        await runTraktZipImportHandler({
+          data: { importId, isCooldownBypassed: true, userId },
+        } as any);
+
+        const userDoc = store.get(`users/${userId}`) as any;
+        expect(userDoc?.traktZipImportStatus?.status).toBe('failed');
+        expect(userDoc?.traktZipImportStatus?.errorCategory).toBe('in_flight');
+        const cooldown = userDoc?.traktZipImportStatus?.nextAllowedImportAt?.toMillis?.();
+        expect(cooldown).toBeGreaterThanOrEqual(Date.now() + 9_000);
+        expect(cooldown).toBeLessThanOrEqual(Date.now() + 11_000);
+      });
     });
   });
 });
