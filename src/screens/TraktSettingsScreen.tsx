@@ -555,11 +555,6 @@ export default function TraktSettingsScreen() {
               icon="information-circle-outline"
             />
           </CollapsibleCategory>
-
-          <View style={styles.privacyNote}>
-            <AlertCircle size={16} color={COLORS.textSecondary} />
-            <Text style={styles.privacyNoteText}>{t('trakt.privacyNote')}</Text>
-          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -968,22 +963,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: 'bold',
     color: COLORS.white,
-  },
-
-  privacyNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.s,
-    marginTop: SPACING.l,
-    padding: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  privacyNoteText: {
-    flex: 1,
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    lineHeight: 18,
   },
   disconnectButton: {
     flexDirection: 'row',
