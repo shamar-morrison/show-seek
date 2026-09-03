@@ -152,8 +152,8 @@ async function main() {
       const ref = target.type === 'collection' ? db.collection(target.name) : db.collectionGroup(target.name);
       const countSnapshot = await ref.count().get();
       const count = countSnapshot.data().count;
-      // Firestore charges 1 document read per 1,000 index entries matched
-      const chargedReads = Math.ceil(count / 1000) || (count > 0 ? 1 : 0);
+      // Firestore charges 1 document read per 1,000 index entries matched (minimum 1 read per query)
+      const chargedReads = Math.max(1, Math.ceil(count / 1000));
 
       totalDocs += count;
       totalAggregationReads += chargedReads;
@@ -209,6 +209,22 @@ async function main() {
   console.log('Step 2: Processing Document Scan Request...');
 
   if (options.sample) {
+    let totalPlannedSampleReads = 0;
+    for (const r of results) {
+      if (!r.ref || typeof r.count !== 'number' || r.count === 0) continue;
+      totalPlannedSampleReads += Math.min(options.sample, r.count);
+    }
+
+    if (totalPlannedSampleReads > options.maxReads && !options.confirm) {
+      console.error('\n' + '!'.repeat(70));
+      console.error(`[SAFETY ABORT] Sample scan would perform ${totalPlannedSampleReads.toLocaleString()} document reads!`);
+      console.error(`This exceeds the safety threshold of ${options.maxReads.toLocaleString()} reads.`);
+      console.error('To proceed with this sample scan, you must explicitly pass --confirm.');
+      console.error(`Example: node scripts/firestore-db-audit.mjs --full --sample=${options.sample} --confirm`);
+      console.error('!'.repeat(70) + '\n');
+      process.exit(1);
+    }
+
     console.log(`[Safety Guard] Sample mode active: Reading max ${options.sample} docs per collection (safe limit).\n`);
     for (const r of results) {
       if (!r.ref || typeof r.count !== 'number' || r.count === 0) continue;

@@ -87,6 +87,7 @@ export default function EmailAuthSection({
       await seedNewAccountPersonalOnboarding(userCredential.user);
       await completeEmailAuth(userCredential.user);
     } catch (error: any) {
+      void trackAuthInteraction({ option: 'email', action: 'error' });
       if (error?.code === 'auth/email-already-in-use') {
         showExistingAccountMessage();
         return;
@@ -157,6 +158,7 @@ export default function EmailAuthSection({
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       await completeEmailAuth(userCredential.user);
     } catch (error: any) {
+      void trackAuthInteraction({ option: 'email', action: 'error' });
       if (error?.code === 'auth/user-not-found' || error?.code === 'auth/invalid-credential') {
         promptCreateAccount(normalizedEmail, password);
         return;

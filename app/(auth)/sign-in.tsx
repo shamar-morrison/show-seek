@@ -8,8 +8,9 @@ import { createUserDocument } from '@/src/firebase/user';
 import { trackAuthInteraction, trackLogin } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
+import { useFocusEffect } from 'expo-router';
 import { User } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -39,18 +40,20 @@ export default function SignIn() {
     configureGoogleAuth().catch(console.error);
   }, []);
 
-  // Track dismiss when hardware back button is pressed on Android
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
+  // Track dismiss when hardware back button is pressed on Android while focused
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return;
 
-    const onBackPress = (): boolean => {
-      void trackAuthInteraction({ option: 'screen', action: 'dismiss' });
-      return false; // allows default navigation back to onboarding intro
-    };
+      const onBackPress = (): boolean => {
+        void trackAuthInteraction({ option: 'screen', action: 'dismiss' });
+        return false; // allows default navigation back to onboarding intro
+      };
 
-    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => subscription.remove();
-  }, []);
+      const subscription = BackHandler?.addEventListener?.('hardwareBackPress', onBackPress);
+      return () => subscription?.remove?.();
+    }, [])
+  );
 
   const handleGoogleSignIn = async () => {
     void trackAuthInteraction({ option: 'google', action: 'tap' });
@@ -63,7 +66,7 @@ export default function SignIn() {
         // Create/update user document with Google profile info
         await createUserDocument(result.user);
         // Router will automatically redirect based on auth state
-      } else if (result.cancelled) {
+      } else if (result.cancelled || result.errorType === 'CANCELLED') {
         void trackAuthInteraction({ option: 'google', action: 'dismiss' });
       } else if (result.error) {
         void trackAuthInteraction({ option: 'google', action: 'error' });
