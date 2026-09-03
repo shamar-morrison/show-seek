@@ -9,6 +9,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -16,15 +17,19 @@ interface WelcomeIntroScreenProps {
   onComplete: () => void;
 }
 
-const TITLE_DURATION = 700;
-const SUBTITLE_DELAY = 800;
-const SUBTITLE_DURATION = 700;
-const BUTTON_DELAY = SUBTITLE_DELAY + SUBTITLE_DURATION + 200;
+const POPCORN_DURATION = 500;
+const TITLE_DELAY = 300;
+const TITLE_DURATION = 600;
+const SUBTITLE_DELAY = TITLE_DELAY + 450;
+const SUBTITLE_DURATION = 600;
+const BUTTON_DELAY = SUBTITLE_DELAY + 450;
 const BUTTON_DURATION = 500;
 
 export default function WelcomeIntroScreen({ onComplete }: WelcomeIntroScreenProps) {
   const { t } = useTranslation();
 
+  const popcornOpacity = useSharedValue(0);
+  const popcornScale = useSharedValue(0.4);
   const titleOpacity = useSharedValue(0);
   const titleTranslateY = useSharedValue(20);
   const subtitleOpacity = useSharedValue(0);
@@ -33,11 +38,15 @@ export default function WelcomeIntroScreen({ onComplete }: WelcomeIntroScreenPro
   const buttonTranslateY = useSharedValue(16);
 
   useEffect(() => {
-    // Title animates in
-    titleOpacity.value = withTiming(1, { duration: TITLE_DURATION });
-    titleTranslateY.value = withTiming(0, { duration: TITLE_DURATION });
+    // Popcorn pops in first
+    popcornOpacity.value = withTiming(1, { duration: POPCORN_DURATION });
+    popcornScale.value = withSpring(1, { damping: 12, stiffness: 120 });
 
-    // Subtitle animates in after a delay
+    // Title cascades in
+    titleOpacity.value = withDelay(TITLE_DELAY, withTiming(1, { duration: TITLE_DURATION }));
+    titleTranslateY.value = withDelay(TITLE_DELAY, withTiming(0, { duration: TITLE_DURATION }));
+
+    // Subtitle animates in after title
     subtitleOpacity.value = withDelay(
       SUBTITLE_DELAY,
       withTiming(1, { duration: SUBTITLE_DURATION })
@@ -51,6 +60,8 @@ export default function WelcomeIntroScreen({ onComplete }: WelcomeIntroScreenPro
     buttonOpacity.value = withDelay(BUTTON_DELAY, withTiming(1, { duration: BUTTON_DURATION }));
     buttonTranslateY.value = withDelay(BUTTON_DELAY, withTiming(0, { duration: BUTTON_DURATION }));
   }, [
+    popcornOpacity,
+    popcornScale,
     titleOpacity,
     titleTranslateY,
     subtitleOpacity,
@@ -58,6 +69,11 @@ export default function WelcomeIntroScreen({ onComplete }: WelcomeIntroScreenPro
     buttonOpacity,
     buttonTranslateY,
   ]);
+
+  const popcornStyle = useAnimatedStyle(() => ({
+    opacity: popcornOpacity.value,
+    transform: [{ scale: popcornScale.value }],
+  }));
 
   const titleStyle = useAnimatedStyle(() => ({
     opacity: titleOpacity.value,
@@ -88,16 +104,32 @@ export default function WelcomeIntroScreen({ onComplete }: WelcomeIntroScreenPro
       />
 
       <View style={styles.content}>
-        <Animated.Text style={[styles.title, titleStyle]}>
-          {t('personalOnboarding.welcomePrefix')}
-          <Text style={styles.titleAccent}>{t('personalOnboarding.welcomeAppName')}</Text>
-        </Animated.Text>
+        <Animated.View style={[styles.popcornWrapper, popcornStyle]}>
+          <Text style={styles.popcornEmoji} accessibilityLabel="popcorn">
+            🍿
+          </Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.titleContainer, titleStyle]}>
+          <Text style={styles.eyebrow}>
+            {t('personalOnboarding.welcomePrefix').trim()}
+          </Text>
+          <Text style={styles.heroTitle}>
+            {t('personalOnboarding.welcomeAppName')}
+          </Text>
+        </Animated.View>
+
         <Animated.Text style={[styles.subtitle, subtitleStyle]}>
           {t('personalOnboarding.welcomeSubtitle')}
         </Animated.Text>
 
         <Animated.View style={[buttonStyle, styles.buttonWrapper]}>
-          <Pressable style={styles.button} onPress={onComplete}>
+          <Pressable
+            style={styles.button}
+            onPress={onComplete}
+            accessibilityRole="button"
+            accessibilityLabel={t('personalOnboarding.letsGo')}
+          >
             <Text style={styles.buttonText}>{t('personalOnboarding.letsGo')}</Text>
             <ArrowRight size={20} color={COLORS.white} />
           </Pressable>
@@ -120,15 +152,35 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
     gap: SPACING.m,
   },
-  title: {
-    fontSize: 42,
-    fontWeight: '800',
-    color: COLORS.text,
+  popcornWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.xs,
+  },
+  popcornEmoji: {
+    fontSize: 44,
+    lineHeight: 52,
+    textAlign: 'center',
+  },
+  titleContainer: {
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  eyebrow: {
+    fontSize: FONT_SIZE.s,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 3,
+    textAlign: 'center',
+  },
+  heroTitle: {
+    fontSize: 50,
+    fontWeight: '900',
+    color: COLORS.primary,
     textAlign: 'center',
     letterSpacing: -0.5,
-  },
-  titleAccent: {
-    color: COLORS.primary,
+    lineHeight: 56,
   },
   subtitle: {
     fontSize: FONT_SIZE.l,
