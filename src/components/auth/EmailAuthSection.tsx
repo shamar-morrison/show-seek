@@ -2,7 +2,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
-import { trackLogin } from '@/src/services/analytics';
+import { trackAuthInteraction, trackLogin } from '@/src/services/analytics';
 import { persistPersonalOnboardingCache } from '@/src/utils/personalOnboardingCache';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
@@ -133,6 +133,7 @@ export default function EmailAuthSection({
   };
 
   const handleEmailContinue = async () => {
+    void trackAuthInteraction({ option: 'email', action: 'tap' });
     const normalizedEmail = email.trim();
 
     if (!normalizedEmail) {

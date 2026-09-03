@@ -21,6 +21,8 @@ import {
   type TrackAddToListParams,
   type TrackCreateReminderParams,
   type TrackSaveRatingParams,
+  type TrackAuthInteractionParams,
+  type TrackOnboardingStepViewParams,
 } from './analytics.shared';
 
 export type {
@@ -50,6 +52,10 @@ export type {
   TrackSaveRatingParams,
   TraktSyncCompleteParams,
   TraktSyncFailureParams,
+  AnalyticsAuthAction,
+  AnalyticsAuthOption,
+  TrackAuthInteractionParams,
+  TrackOnboardingStepViewParams,
 } from './analytics.shared';
 
 export { getAnalyticsScreenName, normalizeListKind } from './analytics.shared';
@@ -437,3 +443,24 @@ export const trackPaywallWinbackDecision = async ({
 
   await trackNamedEvent('paywall_winback_decision', 'paywall_winback_decision', eventParams);
 };
+
+export const trackAuthInteraction = async ({
+  option,
+  action,
+}: TrackAuthInteractionParams): Promise<void> => {
+  await trackNamedEvent('auth_option_interaction', 'auth_option_interaction', {
+    auth_option: option,
+    auth_action: action,
+  });
+};
+
+export const trackOnboardingStepView = async ({
+  stepIndex,
+  stepId,
+}: TrackOnboardingStepViewParams): Promise<void> => {
+  await trackNamedEvent('onboarding_step_view', 'onboarding_step_view', {
+    step_index: stepIndex,
+    step_id: stepId,
+  });
+};
+

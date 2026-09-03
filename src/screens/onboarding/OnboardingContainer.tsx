@@ -8,6 +8,7 @@ import { useRegion } from '@/src/context/RegionProvider';
 import { useOnboardingExitGuard } from '@/src/hooks/useOnboardingExitGuard';
 import { useOnboardingReengagement } from '@/src/hooks/useOnboardingReengagement';
 import { onboardingService } from '@/src/services/OnboardingService';
+import { trackOnboardingComplete, trackOnboardingStepView } from '@/src/services/analytics';
 import { ONBOARDING_STEPS, EMPTY_ONBOARDING_SELECTIONS } from '@/src/types/onboarding';
 import type { OnboardingSelections } from '@/src/types/onboarding';
 import type { HomeScreenListItem } from '@/src/types/preferences';
@@ -302,6 +303,14 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
     const nextIndex = currentStepIndex + 1;
     setCurrentStepIndex(nextIndex);
     updateProgress(nextIndex);
+
+    const nextStep = ONBOARDING_STEPS[nextIndex];
+    if (nextStep) {
+      void trackOnboardingStepView({
+        stepIndex: nextIndex,
+        stepId: nextStep.id,
+      });
+    }
   }, [
     currentStep?.id,
     currentStepIndex,
@@ -361,6 +370,13 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
 
     try {
       await completePersonalOnboarding();
+      void trackOnboardingComplete({
+        language: selections.language,
+        region: selections.region ?? 'unknown',
+        favoriteMovieGenreCount: selections.selectedGenreIds?.length ?? 0,
+        favoriteTVGenreCount: selections.selectedTVGenreIds?.length ?? 0,
+        favoriteShowCount: selections.selectedTVShows?.length ?? 0,
+      });
       router.replace('/(tabs)/home' as any);
     } catch (e) {
       console.error('[OnboardingContainer] Personal onboarding completion failed:', e);
@@ -372,6 +388,11 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
     queryClient,
     router,
     selections.homeScreenLists,
+    selections.language,
+    selections.region,
+    selections.selectedGenreIds,
+    selections.selectedTVGenreIds,
+    selections.selectedTVShows,
     t,
     user?.uid,
   ]);
@@ -384,6 +405,21 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   React.useEffect(() => {
     setSelections((prev) => (prev.language === language ? prev : { ...prev, language }));
   }, [language]);
+
+  // Track initial step view once welcome intro is dismissed / on initial entry
+  const hasTrackedInitialStepRef = useRef(false);
+  useEffect(() => {
+    if (!showWelcome && !isPersonalizing && !hasTrackedInitialStepRef.current) {
+      hasTrackedInitialStepRef.current = true;
+      const initialStep = ONBOARDING_STEPS[currentStepIndex];
+      if (initialStep) {
+        void trackOnboardingStepView({
+          stepIndex: currentStepIndex,
+          stepId: initialStep.id,
+        });
+      }
+    }
+  }, [currentStepIndex, isPersonalizing, showWelcome]);
 
   // Check if there's a meaningful selection for the current step
   const hasSelection = useMemo(() => {

@@ -18,6 +18,8 @@ import type {
   TrackSaveRatingParams,
   TraktSyncCompleteParams,
   TraktSyncFailureParams,
+  TrackAuthInteractionParams,
+  TrackOnboardingStepViewParams,
 } from './analytics.shared';
 
 export type {
@@ -47,6 +49,10 @@ export type {
   TrackSaveRatingParams,
   TraktSyncCompleteParams,
   TraktSyncFailureParams,
+  AnalyticsAuthAction,
+  AnalyticsAuthOption,
+  TrackAuthInteractionParams,
+  TrackOnboardingStepViewParams,
 } from './analytics.shared';
 
 export { getAnalyticsScreenName, normalizeListKind } from './analytics.shared';
@@ -120,3 +126,12 @@ export const trackPaywallWinbackShown = async (
 export const trackPaywallWinbackDecision = async (
   _params: PaywallWinbackDecisionParams
 ): Promise<void> => {};
+
+export const trackAuthInteraction = async (
+  _params: TrackAuthInteractionParams
+): Promise<void> => {};
+
+export const trackOnboardingStepView = async (
+  _params: TrackOnboardingStepViewParams
+): Promise<void> => {};
+

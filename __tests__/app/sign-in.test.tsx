@@ -9,6 +9,7 @@ const mockSignInWithGoogle = jest.fn();
 const mockSignInAsGuest = jest.fn();
 const mockCreateUserDocument = jest.fn((_: unknown) => Promise.resolve());
 const mockTrackLogin = jest.fn();
+const mockTrackAuthInteraction = jest.fn();
 const mockSignInWithEmailAndPassword = jest.fn();
 const mockCreateUserWithEmailAndPassword = jest.fn();
 
@@ -24,6 +25,7 @@ jest.mock('@/src/firebase/user', () => ({
 
 jest.mock('@/src/services/analytics', () => ({
   trackLogin: (...args: unknown[]) => mockTrackLogin(...args),
+  trackAuthInteraction: (...args: unknown[]) => mockTrackAuthInteraction(...args),
 }));
 
 jest.mock('firebase/auth', () => ({
@@ -97,11 +99,27 @@ describe('SignIn', () => {
 
     fireEvent.press(getByText('auth.google'));
 
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'google', action: 'tap' });
+
     await waitFor(() => {
       expect(mockCreateUserDocument).toHaveBeenCalledWith(user);
     });
     await waitFor(() => {
       expect(mockTrackLogin).toHaveBeenCalledWith('google');
+    });
+  });
+
+  it('tracks Google dismiss when Google sign-in is cancelled', async () => {
+    mockSignInWithGoogle.mockResolvedValue({ success: false, cancelled: true });
+
+    const { getByText } = render(<SignIn />);
+
+    fireEvent.press(getByText('auth.google'));
+
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'google', action: 'tap' });
+
+    await waitFor(() => {
+      expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'google', action: 'dismiss' });
     });
   });
 
@@ -111,6 +129,8 @@ describe('SignIn', () => {
     const { getByText } = render(<SignIn />);
 
     fireEvent.press(getByText('auth.continueAsGuest'));
+
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'guest', action: 'tap' });
 
     await waitFor(() => {
       expect(mockSignInAsGuest).toHaveBeenCalled();

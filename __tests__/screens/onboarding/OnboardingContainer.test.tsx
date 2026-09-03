@@ -108,6 +108,14 @@ jest.mock('@/src/context/LanguageProvider', () => ({
   }),
 }));
 
+const mockTrackOnboardingStepView = jest.fn();
+const mockTrackOnboardingComplete = jest.fn();
+
+jest.mock('@/src/services/analytics', () => ({
+  trackOnboardingStepView: (...args: unknown[]) => mockTrackOnboardingStepView(...args),
+  trackOnboardingComplete: (...args: unknown[]) => mockTrackOnboardingComplete(...args),
+}));
+
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
 }));
@@ -572,5 +580,29 @@ describe('OnboardingContainer', () => {
     // Continue is enabled because hasInteractedWithNotifications was rehydrated as true
     fireEvent.press(getByText('Continue'));
     expect(getByText('TV Genres step')).toBeTruthy();
+  });
+
+  it('tracks onboarding_step_view for step 0 on start and step 1 on continue', async () => {
+    const { getByText } = render(<OnboardingContainer />);
+
+    // Dismiss welcome screen
+    fireEvent.press(getByText('Begin onboarding'));
+
+    await waitFor(() => {
+      expect(mockTrackOnboardingStepView).toHaveBeenCalledWith({
+        stepIndex: 0,
+        stepId: 'region',
+      });
+    });
+
+    // Advance to step 1
+    fireEvent.press(getByText('Skip'));
+
+    await waitFor(() => {
+      expect(mockTrackOnboardingStepView).toHaveBeenCalledWith({
+        stepIndex: 1,
+        stepId: 'display-name',
+      });
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
+import type { ExternalRatings } from '@/src/api/omdb';
 import { render } from '@testing-library/react-native';
 import React from 'react';
 
@@ -19,8 +20,14 @@ describe('ExternalRatingsSection', () => {
   });
 
   it('renders a single SectionSeparator when ratings object has no ratings', () => {
+    const emptyRatings: ExternalRatings = {
+      imdb: null,
+      rottenTomatoes: null,
+      metacritic: null,
+      awards: null,
+    };
     const { getAllByTestId, queryByText } = render(
-      <ExternalRatingsSection ratings={{}} isLoading={false} />
+      <ExternalRatingsSection ratings={emptyRatings} isLoading={false} />
     );
     const separators = getAllByTestId('section-separator');
     expect(separators.length).toBe(1);
@@ -28,10 +35,11 @@ describe('ExternalRatingsSection', () => {
   });
 
   it('renders ratings and two separators when ratings are provided', () => {
-    const ratings = {
+    const ratings: ExternalRatings = {
       imdb: { rating: '7.8', votes: '10,000' },
       rottenTomatoes: '85%',
       metacritic: '75',
+      awards: null,
     };
 
     const { getAllByTestId, getByText } = render(
@@ -50,8 +58,11 @@ describe('ExternalRatingsSection', () => {
   });
 
   it('renders only available ratings when partial ratings are provided', () => {
-    const ratings = {
+    const ratings: ExternalRatings = {
       imdb: { rating: '8.2', votes: '5,000' },
+      rottenTomatoes: null,
+      metacritic: null,
+      awards: null,
     };
 
     const { getAllByTestId, getByText, queryByText } = render(

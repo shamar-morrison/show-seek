@@ -64,6 +64,8 @@ describe('analytics.android wrappers', () => {
       processedEntities: 6,
     });
     await analytics.trackImdbImportFailure({ errorCode: 'UPLOAD_FAILED' });
+    await analytics.trackAuthInteraction({ option: 'google', action: 'tap' });
+    await analytics.trackOnboardingStepView({ stepIndex: 0, stepId: 'region' });
 
     expect(mockLogEvent.mock.calls.map(([eventName]) => eventName)).toEqual([
       'sign_out',
@@ -77,6 +79,8 @@ describe('analytics.android wrappers', () => {
       'trakt_sync_failure',
       'imdb_import_complete',
       'imdb_import_failure',
+      'auth_option_interaction',
+      'onboarding_step_view',
     ]);
   });
 
@@ -118,6 +122,8 @@ describe('analytics.android wrappers', () => {
       processedEntities: 7,
     });
     await analytics.trackImdbImportFailure({ errorCode: 'PARSE_FAILED' });
+    await analytics.trackAuthInteraction({ option: 'screen', action: 'dismiss' });
+    await analytics.trackOnboardingStepView({ stepIndex: 7, stepId: 'notifications' });
 
     expect(mockLogEvent).toHaveBeenNthCalledWith(1, 'purchase_success', {
       currency: 'USD',
@@ -158,6 +164,14 @@ describe('analytics.android wrappers', () => {
     });
     expect(mockLogEvent).toHaveBeenNthCalledWith(9, 'imdb_import_failure', {
       error_code: 'PARSE_FAILED',
+    });
+    expect(mockLogEvent).toHaveBeenNthCalledWith(10, 'auth_option_interaction', {
+      auth_option: 'screen',
+      auth_action: 'dismiss',
+    });
+    expect(mockLogEvent).toHaveBeenNthCalledWith(11, 'onboarding_step_view', {
+      step_index: 7,
+      step_id: 'notifications',
     });
   });
 
