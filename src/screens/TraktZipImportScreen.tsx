@@ -259,7 +259,7 @@ export default function TraktZipImportScreen() {
             </Text>
           </View>
           <Text style={[styles.syncRunningDescription, { color: COLORS.warning }]}>
-            {nextAllowedZipImportAt
+            {nextAllowedZipImportAt && nextAllowedZipImportAt.getTime() > Date.now()
               ? t('trakt.zipImport.rateLimitedWithTime', {
                   defaultValue: 'You can start another import {{time}}.',
                   time: formatDistanceToNow(nextAllowedZipImportAt, {

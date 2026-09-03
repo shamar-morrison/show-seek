@@ -49,14 +49,16 @@ const isLockedAccountStatus = (status?: SyncStatus | null): boolean =>
 
 const hasEligibleTraktUser = (user: User | null): user is User => Boolean(user && !user.isAnonymous);
 
+const ZIP_COOLDOWN_TICK_INTERVAL_MS = 15000;
+
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
   const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [lastEnrichedAt, setLastEnrichedAt] = useState<Date | null>(null);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
 
@@ -67,6 +69,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const [zipImportDoc, setZipImportDoc] = useState<TraktZipImportProgressDoc | null>(null);
   const [zipImportError, setZipImportError] = useState<string | null>(null);
   const [nextAllowedZipImportAt, setNextAllowedZipImportAt] = useState<Date | null>(null);
+  const [zipCooldownTick, setZipCooldownTick] = useState(0);
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -78,6 +81,23 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const isZipImporting = zipImportUiState === 'uploading' || zipImportUiState === 'processing';
   const isZipImportRateLimited =
     nextAllowedZipImportAt !== null && nextAllowedZipImportAt.getTime() > Date.now();
+
+  useEffect(() => {
+    if (!nextAllowedZipImportAt || nextAllowedZipImportAt.getTime() <= Date.now()) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setZipCooldownTick((t) => t + 1);
+      if (nextAllowedZipImportAt.getTime() <= Date.now()) {
+        clearInterval(interval);
+      }
+    }, ZIP_COOLDOWN_TICK_INTERVAL_MS);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [nextAllowedZipImportAt]);
 
   const invalidateUserLibraryQueries = useCallback(async () => {
     if (!user?.uid) {
@@ -625,6 +645,9 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         setZipImportUiState('failed');
 
         if (error instanceof TraktZipRateLimitedError) {
+          if (error.nextAllowedImportAt) {
+            setNextAllowedZipImportAt(new Date(error.nextAllowedImportAt));
+          }
           setZipImportError(
             error.nextAllowedImportAt
               ? `Import cooldown active. You can start another import ${formatDistanceToNow(
