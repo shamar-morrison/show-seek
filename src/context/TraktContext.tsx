@@ -92,6 +92,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const [zipImportError, setZipImportError] = useState<string | null>(null);
   const [nextAllowedZipImportAt, setNextAllowedZipImportAt] = useState<Date | null>(null);
   const [zipCooldownTick, setZipCooldownTick] = useState(0);
+  // Import id the user has explicitly dismissed via Done. Terminal server
+  // statuses for this id are ignored so the summary can't resurrect (with
+  // null stats) on later snapshots. Persisted so dismissal survives restarts.
+  const [dismissedZipImportId, setDismissedZipImportId] = useState<string | null>(null);
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -99,6 +103,18 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const prevEnrichmentStatusRef = useRef<string | undefined>(undefined);
   const activeZipImportSubscriptionRef = useRef<(() => void) | null>(null);
   const activeZipImportIdRef = useRef<string | null>(null);
+  const dismissedZipImportIdRef = useRef<string | null>(null);
+  const lastSeenZipImportIdRef = useRef<string | null>(null);
+  const zipImportDocIdRef = useRef<string | null>(null);
+
+  // Keep refs in sync without adding state deps to the snapshot observer.
+  useEffect(() => {
+    dismissedZipImportIdRef.current = dismissedZipImportId;
+  }, [dismissedZipImportId]);
+
+  useEffect(() => {
+    zipImportDocIdRef.current = zipImportDoc?.id ?? null;
+  }, [zipImportDoc]);
 
   const isZipImporting = zipImportUiState === 'uploading' || zipImportUiState === 'processing';
   const isZipImportRateLimited =
@@ -247,19 +263,56 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         // Observer for active Trakt zip import on user document
         const zipStatus = data?.traktZipImportStatus;
         if (zipStatus) {
-          const zipImportId = zipStatus.id || (zipStatus as any).activeImportId;
+          const zipImportId: string | null =
+            zipStatus.id || (zipStatus as any).activeImportId || null;
+          if (zipImportId) {
+            lastSeenZipImportIdRef.current = zipImportId;
+          }
+          const wasDismissed =
+            !!zipImportId && dismissedZipImportIdRef.current === zipImportId;
           const isZipActive = zipStatus.status === 'pending' || zipStatus.status === 'processing';
           if (isZipActive) {
+            if (wasDismissed) {
+              // Import became active again (e.g. retried server-side):
+              // the previous dismissal no longer applies.
+              dismissedZipImportIdRef.current = null;
+              setDismissedZipImportId(null);
+              void AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID);
+            }
             setZipImportUiState('processing');
             if (zipImportId) {
               subscribeToZipProgress(user.uid, zipImportId);
             }
           } else if (zipStatus.status === 'completed') {
-            setZipImportUiState('completed');
-            void invalidateUserLibraryQueries();
+            if (!wasDismissed) {
+              const haveDocForSnapshot =
+                !zipImportId ||
+                zipImportDocIdRef.current === zipImportId ||
+                activeZipImportIdRef.current === zipImportId;
+              if (haveDocForSnapshot) {
+                setZipImportUiState('completed');
+                void invalidateUserLibraryQueries();
+              } else {
+                // Terminal status without a local progress doc (e.g. fresh
+                // launch): hydrate stats first instead of rendering zeros.
+                setZipImportUiState('processing');
+                subscribeToZipProgress(user.uid, zipImportId);
+              }
+            }
           } else if (zipStatus.status === 'failed') {
-            setZipImportUiState('failed');
-            setZipImportError(zipStatus.error || 'Import failed.');
+            if (!wasDismissed) {
+              const haveDocForSnapshot =
+                !zipImportId ||
+                zipImportDocIdRef.current === zipImportId ||
+                activeZipImportIdRef.current === zipImportId;
+              if (haveDocForSnapshot) {
+                setZipImportUiState('failed');
+                setZipImportError(zipStatus.error || 'Import failed.');
+              } else {
+                setZipImportUiState('processing');
+                subscribeToZipProgress(user.uid, zipImportId);
+              }
+            }
           }
 
           const zipNextAllowedAt = zipStatus.nextAllowedImportAt;
@@ -300,12 +353,19 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   useEffect(() => {
     const loadPersistedState = async () => {
       try {
-        const [connectedStr, lastSyncedStr, syncStatusStr, lastEnrichedStr] = await Promise.all([
-          AsyncStorage.getItem(TRAKT_STORAGE_KEYS.CONNECTED),
-          AsyncStorage.getItem(TRAKT_STORAGE_KEYS.LAST_SYNCED),
-          AsyncStorage.getItem(TRAKT_STORAGE_KEYS.SYNC_STATUS),
-          AsyncStorage.getItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED),
-        ]);
+        const [connectedStr, lastSyncedStr, syncStatusStr, lastEnrichedStr, dismissedZipId] =
+          await Promise.all([
+            AsyncStorage.getItem(TRAKT_STORAGE_KEYS.CONNECTED),
+            AsyncStorage.getItem(TRAKT_STORAGE_KEYS.LAST_SYNCED),
+            AsyncStorage.getItem(TRAKT_STORAGE_KEYS.SYNC_STATUS),
+            AsyncStorage.getItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED),
+            AsyncStorage.getItem(TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID),
+          ]);
+
+        if (dismissedZipId) {
+          dismissedZipImportIdRef.current = dismissedZipId;
+          setDismissedZipImportId(dismissedZipId);
+        }
 
         if (connectedStr === 'true') {
           setIsConnected(true);
@@ -649,6 +709,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setZipImportUiState('uploading');
       setZipUploadProgress(0);
       setZipImportError(null);
+      // A new import supersedes any previous dismissal.
+      dismissedZipImportIdRef.current = null;
+      setDismissedZipImportId(null);
+      void AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID);
 
       const importId = generateImportId();
 
@@ -711,6 +775,18 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     if (activeZipImportSubscriptionRef.current) {
       activeZipImportSubscriptionRef.current();
       activeZipImportSubscriptionRef.current = null;
+    }
+    // Remember which import was acknowledged so later user-doc snapshots
+    // for the same (still-persisted server-side) terminal status can't
+    // resurrect the summary with null stats.
+    const dismissedId =
+      activeZipImportIdRef.current ??
+      zipImportDocIdRef.current ??
+      lastSeenZipImportIdRef.current;
+    if (dismissedId) {
+      dismissedZipImportIdRef.current = dismissedId;
+      setDismissedZipImportId(dismissedId);
+      void AsyncStorage.setItem(TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID, dismissedId);
     }
     activeZipImportIdRef.current = null;
     setZipImportUiState('idle');

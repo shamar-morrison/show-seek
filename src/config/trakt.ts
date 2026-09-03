@@ -44,4 +44,5 @@ export const TRAKT_STORAGE_KEYS = {
   LAST_SYNCED: '@trakt_last_synced',
   SYNC_STATUS: '@trakt_sync_status',
   LAST_ENRICHED: '@trakt_last_enriched',
+  DISMISSED_ZIP_IMPORT_ID: '@trakt_dismissed_zip_import_id',
 } as const;
