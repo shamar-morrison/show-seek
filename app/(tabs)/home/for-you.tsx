@@ -90,9 +90,9 @@ export default function ForYouScreen() {
     <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Recommendation sections based on user's high-rated content */}
-        {sections.map((section, index) => (
+        {sections.map((section) => (
           <RecommendationSection
-            key={`${section.seed.mediaType}-${section.seed.id}-${index}`}
+            key={`${section.seed.mediaType}-${section.seed.id}`}
             title={t('forYou.becauseYouLoved', { title: section.seed.title })}
             items={section.recommendations}
             mediaType={section.seed.mediaType}
@@ -191,7 +191,7 @@ const RecommendationSection = memo(function RecommendationSection({
           horizontal
           data={items}
           renderItem={renderItem}
-          keyExtractor={(item, index) => `${mediaType}-${item.id}-${index ?? 0}`}
+          keyExtractor={(item) => `${mediaType}-${item.id}`}
           extraData={listExtraData}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
