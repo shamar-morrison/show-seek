@@ -1,8 +1,10 @@
 import { Movie, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { useAuth } from '@/src/context/auth';
 import { RatingItem } from '@/src/services/RatingService';
+import { hasListItemInMap } from '@/src/utils/listItemKeys';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useLists } from './useLists';
 import { useRatings } from './useRatings';
 
 const MIN_RATING_THRESHOLD = 8;
@@ -97,8 +99,38 @@ function extractPreliminarySeeds(
 export function useForYouRecommendations(): UseForYouRecommendationsResult {
   const { user } = useAuth();
   const { data: ratings, isLoading: isLoadingRatings } = useRatings();
+  const { data: lists, isLoading: isLoadingLists } = useLists({ enabled: !!user });
 
   const isAuthenticated = !!user;
+
+  const ratedMovieIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const rating of ratings ?? []) {
+      if (rating.mediaType !== 'movie') continue;
+      const id = parseInt(rating.id, 10);
+      if (!Number.isNaN(id)) ids.add(id);
+    }
+    return ids;
+  }, [ratings]);
+
+  const alreadyWatchedItems = useMemo(() => {
+    const alreadyWatchedList = lists?.find((list) => list.id === 'already-watched');
+    return alreadyWatchedList?.items;
+  }, [lists]);
+
+  const excludeWatchedMovies = useCallback(
+    <T extends { id: number }>(items: T[]): T[] => {
+      if (ratedMovieIds.size === 0 && !alreadyWatchedItems) return items;
+      return items.filter((item) => {
+        if (ratedMovieIds.has(item.id)) return false;
+        if (alreadyWatchedItems && hasListItemInMap(alreadyWatchedItems, 'movie', item.id)) {
+          return false;
+        }
+        return true;
+      });
+    },
+    [alreadyWatchedItems, ratedMovieIds]
+  );
 
   // Extract preliminary seeds (may have null titles for legacy ratings)
   const preliminarySeeds = useMemo(() => {
@@ -168,21 +200,22 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
     })),
   });
 
-  // Build sections from query results, deduping items within each section
   const sections: RecommendationSection[] = useMemo(() => {
     return seeds.map((seed, index) => {
       const query = recommendationQueries[index];
+      const isMovieSection = seed.mediaType === 'movie';
+      const deduped = dedupeById((query?.data?.results || []) as (Movie | TVShow)[]);
       return {
         seed,
-        recommendations: dedupeById((query?.data?.results || []) as (Movie | TVShow)[]),
-        isLoading: query?.isLoading ?? true,
+        recommendations: isMovieSection ? excludeWatchedMovies(deduped) : deduped,
+        isLoading: (query?.isLoading ?? true) || (isMovieSection && isLoadingLists),
         error: query?.error as Error | null,
       };
     });
-  }, [seeds, recommendationQueries]);
+  }, [seeds, recommendationQueries, excludeWatchedMovies, isLoadingLists]);
 
   // Fetch Hidden Gems - high quality but low popularity movies
-  const { data: hiddenGemsData, isLoading: isLoadingHiddenGems } = useQuery({
+  const { data: hiddenGemsData, isLoading: isLoadingHiddenGemsQuery } = useQuery({
     queryKey: ['hidden-gems'],
     queryFn: async () => {
       const response = await tmdbApi.discoverMovies({
@@ -214,11 +247,16 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
   });
 
   const isLoadingRecommendations = recommendationQueries.some((q) => q.isLoading);
-  const isLoadingTrending = isLoadingTrendingMovies || isLoadingTrendingTV;
+  const isLoadingTrending = isLoadingTrendingMovies || isLoadingTrendingTV || isLoadingLists;
+
+  const hiddenGems = useMemo(
+    () => excludeWatchedMovies(dedupeById(hiddenGemsData || [])),
+    [excludeWatchedMovies, hiddenGemsData]
+  );
 
   const trendingMovies = useMemo(
-    () => dedupeById(trendingMoviesData?.results || []),
-    [trendingMoviesData]
+    () => excludeWatchedMovies(dedupeById(trendingMoviesData?.results || [])),
+    [excludeWatchedMovies, trendingMoviesData]
   );
   const trendingTV = useMemo(() => dedupeById(trendingTVData?.results || []), [trendingTVData]);
 
@@ -231,8 +269,8 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
     hasEnoughData,
     isLoading: isLoadingRatings || isLoadingTitles || isLoadingRecommendations,
     isLoadingRatings,
-    hiddenGems: hiddenGemsData || [],
-    isLoadingHiddenGems,
+    hiddenGems,
+    isLoadingHiddenGems: isLoadingHiddenGemsQuery || isLoadingLists,
     trendingMovies,
     trendingTV,
     isLoadingTrending,
