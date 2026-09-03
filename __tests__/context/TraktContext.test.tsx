@@ -306,6 +306,16 @@ describe('TraktContext', () => {
       capturedSnapshotCallback = callback;
       return jest.fn();
     });
+    // Terminal user-doc snapshots require a matching progress doc before the
+    // summary shows, so capture the progress subscription to deliver it.
+    const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+    let capturedProgressCallback: any = null;
+    const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
+      (...args: Parameters<typeof traktZipImportService.subscribeToProgress>) => {
+        capturedProgressCallback = args[2];
+        return jest.fn();
+      }
+    );
 
     mockCurrentUser = { isAnonymous: false, uid: 'user-zip-restore' };
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
@@ -348,7 +358,18 @@ describe('TraktContext', () => {
       })
     ).rejects.toThrow('A Trakt zip import is already in progress.');
 
-    // 2. Snapshot transitions to completed
+    // 2. Progress doc arrives with the terminal state and real stats.
+    await act(async () => {
+      capturedProgressCallback?.({
+        id: 'import_active_999',
+        progress: { current: 100, phase: 'completed', total: 100 },
+        stats: { customLists: 0, episodes: 0, favorites: 0, movies: 5, movieWatches: 0, ratings: 0, shows: 0, watchlist: 0 },
+        status: 'completed',
+        userId: 'user-zip-restore',
+      });
+    });
+
+    // 3. User-doc snapshot transitions to completed (now with doc present).
     await act(async () => {
       capturedSnapshotCallback?.({
         exists: () => true,
@@ -362,6 +383,7 @@ describe('TraktContext', () => {
       });
     });
 
+    expect(result.current.zipImportDoc?.stats?.movies).toBe(5);
     expect(result.current.isZipImporting).toBe(false);
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ['lists', 'user-zip-restore'] })
@@ -372,6 +394,8 @@ describe('TraktContext', () => {
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ['watchedMovies', 'user-zip-restore'] })
     );
+
+    subscribeSpy.mockRestore();
   });
 
   it('exposes nextAllowedZipImportAt date and isZipImportRateLimited from user document snapshot', async () => {
@@ -857,5 +881,380 @@ describe('TraktContext', () => {
 
     expect(result.current.zipImportUiState).toBe('idle');
     expect(result.current.zipImportDoc).toBeNull();
+  });
+
+  it('holds at processing when a completed snapshot arrives before the progress doc', async () => {
+    const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+    let capturedServiceProgressCallback: any = null;
+    const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
+      (...args: Parameters<typeof traktZipImportService.subscribeToProgress>) => {
+        capturedServiceProgressCallback = args[2];
+        return jest.fn();
+      }
+    );
+
+    const userDocSnapshots: ((snapshot: any) => void)[] = [];
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      userDocSnapshots.push(callback);
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-hold' };
+    const { result, unmount } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Terminal user-doc snapshot wins the race: no progress doc yet.
+    await act(async () => {
+      userDocSnapshots[0]?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: { id: 'zip_hold_1', phase: 'completed', status: 'completed' },
+        }),
+      });
+    });
+
+    // Must not show completed with zeroed stats; hold at processing instead.
+    expect(subscribeSpy).toHaveBeenCalledWith(
+      'user-zip-hold',
+      'zip_hold_1',
+      expect.any(Function),
+      expect.any(Function)
+    );
+    expect(result.current.zipImportUiState).toBe('processing');
+    expect(result.current.zipImportDoc).toBeNull();
+
+    // Progress doc arrives with real stats: now the summary may show.
+    await act(async () => {
+      capturedServiceProgressCallback?.({
+        id: 'zip_hold_1',
+        progress: { current: 100, phase: 'completed', total: 100 },
+        stats: { customLists: 1, episodes: 2, favorites: 3, movies: 11, movieWatches: 5, ratings: 6, shows: 7, watchlist: 8 },
+        status: 'completed',
+        userId: 'user-zip-hold',
+      });
+    });
+
+    expect(result.current.zipImportUiState).toBe('completed');
+    expect(result.current.zipImportDoc?.stats?.movies).toBe(11);
+
+    subscribeSpy.mockRestore();
+    unmount();
+  });
+
+  it('holds at processing when a failed snapshot arrives before the progress doc', async () => {
+    const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+    let capturedServiceProgressCallback: any = null;
+    const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
+      (...args: Parameters<typeof traktZipImportService.subscribeToProgress>) => {
+        capturedServiceProgressCallback = args[2];
+        return jest.fn();
+      }
+    );
+
+    const userDocSnapshots: ((snapshot: any) => void)[] = [];
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      userDocSnapshots.push(callback);
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-hold-fail' };
+    const { result, unmount } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      userDocSnapshots[0]?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: { id: 'zip_hold_2', error: 'Boom.', phase: 'failed', status: 'failed' },
+        }),
+      });
+    });
+
+    expect(result.current.zipImportUiState).toBe('processing');
+    expect(result.current.zipImportDoc).toBeNull();
+
+    await act(async () => {
+      capturedServiceProgressCallback?.({
+        error: 'Boom.',
+        id: 'zip_hold_2',
+        progress: { current: 50, phase: 'failed', total: 100 },
+        status: 'failed',
+        userId: 'user-zip-hold-fail',
+      });
+    });
+
+    expect(result.current.zipImportUiState).toBe('failed');
+    expect(result.current.zipImportError).toBe('Boom.');
+
+    subscribeSpy.mockRestore();
+    unmount();
+  });
+
+  it('falls back to the failed view when the held-for progress doc never arrives', async () => {
+    const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+    const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
+      () => jest.fn()
+    );
+
+    const userDocSnapshots: ((snapshot: any) => void)[] = [];
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      userDocSnapshots.push(callback);
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-hold-timeout' };
+    const { result, unmount } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    jest.useFakeTimers();
+    try {
+      // Terminal snapshot with no progress doc: hold begins, 60s timer armed.
+      await act(async () => {
+        userDocSnapshots[0]?.({
+          exists: () => true,
+          data: () => ({
+            traktZipImportStatus: { id: 'zip_ghost_1', phase: 'failed', status: 'failed' },
+          }),
+        });
+      });
+
+      expect(result.current.zipImportUiState).toBe('processing');
+
+      // Just before the timeout: still holding.
+      await act(async () => {
+        jest.advanceTimersByTime(59999);
+      });
+      expect(result.current.zipImportUiState).toBe('processing');
+
+      // Timeout fires: failed view with a localized retry message.
+      await act(async () => {
+        jest.advanceTimersByTime(1);
+      });
+      expect(result.current.zipImportUiState).toBe('failed');
+      expect(result.current.zipImportError).toContain('unavailable');
+
+      // Retry path stays available: dismissing returns to idle.
+      act(() => {
+        result.current.dismissZipImport();
+      });
+      expect(result.current.zipImportUiState).toBe('idle');
+    } finally {
+      jest.useRealTimers();
+    }
+
+    subscribeSpy.mockRestore();
+    unmount();
+  });
+
+  it('catches AsyncStorage dismissal-write failures without breaking session state', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+    let capturedServiceProgressCallback: any = null;
+    const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
+      (...args: Parameters<typeof traktZipImportService.subscribeToProgress>) => {
+        capturedServiceProgressCallback = args[2];
+        return jest.fn();
+      }
+    );
+    const uploadSpy = jest.spyOn(traktZipImportService, 'uploadZipFile').mockResolvedValue('path/to/file.zip');
+    const startImportSpy = jest.spyOn(traktZipImportService, 'startImport').mockResolvedValue({ importId: 'zip_storage_1' });
+
+    const userDocSnapshots: ((snapshot: any) => void)[] = [];
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      userDocSnapshots.push(callback);
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-storage' };
+    const { result, unmount } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Reach completed via the progress doc.
+    await act(async () => {
+      userDocSnapshots[0]?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: { id: 'zip_storage_1', status: 'processing' },
+        }),
+      });
+    });
+    await act(async () => {
+      capturedServiceProgressCallback?.({
+        id: 'zip_storage_1',
+        progress: { current: 100, phase: 'completed', total: 100 },
+        stats: { customLists: 0, episodes: 0, favorites: 0, movies: 3, movieWatches: 0, ratings: 0, shows: 0, watchlist: 0 },
+        status: 'completed',
+        userId: 'user-zip-storage',
+      });
+    });
+    expect(result.current.zipImportUiState).toBe('completed');
+
+    // setItem fails: dismiss must not throw, session state still resets.
+    (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+    await act(async () => {
+      result.current.dismissZipImport();
+    });
+    expect(result.current.zipImportUiState).toBe('idle');
+    expect(result.current.zipImportDoc).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[Trakt] Failed to persist dismissed zip import id:',
+      expect.anything()
+    );
+
+    // removeItem fails: starting a new import still proceeds normally.
+    (AsyncStorage.removeItem as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+    await act(async () => {
+      await result.current.startZipImport({
+        name: 'next.zip',
+        size: 512,
+        uri: 'file:///next.zip',
+      });
+    });
+    expect(uploadSpy).toHaveBeenCalled();
+    expect(startImportSpy).toHaveBeenCalled();
+    expect(result.current.zipImportUiState).toBe('processing');
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[Trakt] Failed to persist dismissed zip import id:',
+      expect.anything()
+    );
+
+    warnSpy.mockRestore();
+    subscribeSpy.mockRestore();
+    unmount();
+  });
+
+  it('defers pre-hydration terminal snapshots and honors dismissal in the progress callback', async () => {
+    const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+    let capturedServiceProgressCallback: any = null;
+    const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
+      (...args: Parameters<typeof traktZipImportService.subscribeToProgress>) => {
+        capturedServiceProgressCallback = args[2];
+        return jest.fn();
+      }
+    );
+
+    // Hold dismissal hydration open until the test releases it.
+    let releaseDismissedId!: (value: string | null) => void;
+    (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
+      if (key === TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID) {
+        return new Promise<string | null>((resolve) => {
+          releaseDismissedId = resolve;
+        });
+      }
+      return null;
+    });
+
+    const userDocSnapshots: ((snapshot: any) => void)[] = [];
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      userDocSnapshots.push(callback);
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-defer' };
+    const { result, unmount } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    // Terminal snapshot arrives while hydration is still pending: stashed,
+    // summary not shown.
+    await act(async () => {
+      userDocSnapshots[0]?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: { id: 'zip_deferred_1', phase: 'completed', status: 'completed' },
+        }),
+      });
+    });
+    expect(result.current.zipImportUiState).toBe('idle');
+    expect(result.current.zipImportDoc).toBeNull();
+    expect(subscribeSpy).not.toHaveBeenCalled();
+
+    // Hydration finishes: the stashed snapshot belongs to the dismissed
+    // import, so it stays suppressed.
+    await act(async () => {
+      releaseDismissedId('zip_deferred_1');
+    });
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(result.current.zipImportUiState).toBe('idle');
+    expect(result.current.zipImportDoc).toBeNull();
+    expect(subscribeSpy).not.toHaveBeenCalled();
+
+    // Progress callback also respects dismissal directly: a late/redelivered
+    // doc for the dismissed import cannot resurrect the summary.
+    await act(async () => {
+      userDocSnapshots[0]?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: { id: 'zip_direct_2', status: 'processing' },
+        }),
+      });
+    });
+    await act(async () => {
+      capturedServiceProgressCallback?.({
+        id: 'zip_direct_2',
+        progress: { current: 100, phase: 'completed', total: 100 },
+        stats: { customLists: 0, episodes: 0, favorites: 0, movies: 7, movieWatches: 0, ratings: 0, shows: 0, watchlist: 0 },
+        status: 'completed',
+        userId: 'user-zip-defer',
+      });
+    });
+    expect(result.current.zipImportUiState).toBe('completed');
+
+    act(() => {
+      result.current.dismissZipImport();
+    });
+    expect(result.current.zipImportUiState).toBe('idle');
+
+    await act(async () => {
+      capturedServiceProgressCallback?.({
+        id: 'zip_direct_2',
+        progress: { current: 100, phase: 'completed', total: 100 },
+        stats: { customLists: 0, episodes: 0, favorites: 0, movies: 7, movieWatches: 0, ratings: 0, shows: 0, watchlist: 0 },
+        status: 'completed',
+        userId: 'user-zip-defer',
+      });
+    });
+    expect(result.current.zipImportUiState).toBe('idle');
+    expect(result.current.zipImportDoc).toBeNull();
+
+    subscribeSpy.mockRestore();
+    unmount();
   });
 });

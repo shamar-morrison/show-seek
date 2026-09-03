@@ -1233,6 +1233,7 @@
       "done": "Done",
       "failedTitle": "Import Failed",
       "failedFallback": "An error occurred while importing your Trakt archive.",
+      "statusUnavailable": "Import status is unavailable. Please try again.",
       "uploadFailed": "Failed to upload the zip archive. Please verify your internet connection and try again.",
       "tryAgain": "Try Again",
       "backToSettings": "Back to Settings"
