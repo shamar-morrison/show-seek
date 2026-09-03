@@ -39,27 +39,55 @@ export interface UseForYouRecommendationsResult {
 }
 
 /**
+ * Removes duplicate entries by numeric `id`, keeping the first occurrence.
+ * Guards against TMDB responses that occasionally repeat the same item.
+ */
+function dedupeById<T extends { id: number }>(items: T[]): T[] {
+  const seen = new Set<number>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+/**
  * Extracts preliminary seed items from user ratings.
- * Filters for items rated >= 8, excludes episodes, sorts by most recent.
- * Seeds may have missing titles which will be fetched from TMDB.
+ * Filters for items rated >= 8, only movies and TV shows, sorts by most recent.
+ * Silently dedupes by mediaType + id (keeping the most recent) and drops
+ * non-numeric ids. Seeds may have missing titles which will be fetched from TMDB.
  */
 function extractPreliminarySeeds(
   ratings: RatingItem[] | undefined
 ): { id: number; mediaType: 'movie' | 'tv'; title: string | null }[] {
   if (!ratings || ratings.length === 0) return [];
 
-  return ratings
+  const seenSeeds = new Set<string>();
+  const seeds: { id: number; mediaType: 'movie' | 'tv'; title: string | null }[] = [];
+
+  const sorted = [...ratings]
     .filter(
       (rating): rating is RatingItem & { mediaType: 'movie' | 'tv' } =>
-        rating.rating >= MIN_RATING_THRESHOLD && rating.mediaType !== 'episode'
+        rating.rating >= MIN_RATING_THRESHOLD &&
+        (rating.mediaType === 'movie' || rating.mediaType === 'tv')
     )
-    .sort((a, b) => b.ratedAt - a.ratedAt)
-    .slice(0, MAX_SEEDS)
-    .map((rating) => ({
-      id: parseInt(rating.id, 10),
+    .sort((a, b) => b.ratedAt - a.ratedAt);
+
+  for (const rating of sorted) {
+    if (seeds.length >= MAX_SEEDS) break;
+    const id = parseInt(rating.id, 10);
+    if (Number.isNaN(id)) continue;
+    const key = `${rating.mediaType}-${id}`;
+    if (seenSeeds.has(key)) continue;
+    seenSeeds.add(key);
+    seeds.push({
+      id,
       mediaType: rating.mediaType,
       title: rating.title || null, // null indicates title needs to be fetched
-    }));
+    });
+  }
+
+  return seeds;
 }
 
 /**
@@ -87,10 +115,10 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
         queryFn: async () => {
           if (seed.mediaType === 'movie') {
             const movie = await tmdbApi.getMovieDetails(seed.id);
-            return { id: seed.id, title: movie.title };
+            return { id: seed.id, mediaType: seed.mediaType, title: movie.title };
           } else {
             const show = await tmdbApi.getTVShowDetails(seed.id);
-            return { id: seed.id, title: show.name };
+            return { id: seed.id, mediaType: seed.mediaType, title: show.name };
           }
         },
         staleTime: Infinity, // titles don't change
@@ -98,12 +126,13 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
       })),
   });
 
-  // Build a map of fetched titles
+  // Build a map of fetched titles, keyed by mediaType + id so a movie and a
+  // TV show sharing the same numeric id don't overwrite each other
   const fetchedTitlesMap = useMemo(() => {
-    const map = new Map<number, string>();
+    const map = new Map<string, string>();
     titleQueries.forEach((query) => {
       if (query.data) {
-        map.set(query.data.id, query.data.title);
+        map.set(`${query.data.mediaType}-${query.data.id}`, query.data.title);
       }
     });
     return map;
@@ -115,7 +144,7 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
       id: seed.id,
       mediaType: seed.mediaType,
       // Use stored title, or fetched title, or fallback to a placeholder
-      title: seed.title || fetchedTitlesMap.get(seed.id) || 'Loading...',
+      title: seed.title || fetchedTitlesMap.get(`${seed.mediaType}-${seed.id}`) || 'Loading...',
     }));
   }, [preliminarySeeds, fetchedTitlesMap]);
 
@@ -139,13 +168,13 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
     })),
   });
 
-  // Build sections from query results
+  // Build sections from query results, deduping items within each section
   const sections: RecommendationSection[] = useMemo(() => {
     return seeds.map((seed, index) => {
       const query = recommendationQueries[index];
       return {
         seed,
-        recommendations: query?.data?.results || [],
+        recommendations: dedupeById((query?.data?.results || []) as (Movie | TVShow)[]),
         isLoading: query?.isLoading ?? true,
         error: query?.error as Error | null,
       };
@@ -160,8 +189,10 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
         sortBy: 'vote_average.desc',
         voteAverageGte: HIDDEN_GEMS_MIN_VOTE_AVERAGE,
       });
-      // Filter for low popularity client-side
-      return response.results.filter((movie) => movie.popularity < HIDDEN_GEMS_MAX_POPULARITY);
+      // Filter for low popularity client-side and drop any duplicate ids
+      return dedupeById(
+        response.results.filter((movie) => movie.popularity < HIDDEN_GEMS_MAX_POPULARITY)
+      );
     },
     staleTime: 1000 * 60 * 60, // 1 hour
     enabled: isAuthenticated && hasEnoughData,
@@ -185,6 +216,12 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
   const isLoadingRecommendations = recommendationQueries.some((q) => q.isLoading);
   const isLoadingTrending = isLoadingTrendingMovies || isLoadingTrendingTV;
 
+  const trendingMovies = useMemo(
+    () => dedupeById(trendingMoviesData?.results || []),
+    [trendingMoviesData]
+  );
+  const trendingTV = useMemo(() => dedupeById(trendingTVData?.results || []), [trendingTVData]);
+
   return {
     seeds,
     // Filter out sections that are loading or have placeholder titles (still fetching from TMDB)
@@ -196,8 +233,8 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
     isLoadingRatings,
     hiddenGems: hiddenGemsData || [],
     isLoadingHiddenGems,
-    trendingMovies: trendingMoviesData?.results || [],
-    trendingTV: trendingTVData?.results || [],
+    trendingMovies,
+    trendingTV,
     isLoadingTrending,
     needsFallback,
   };

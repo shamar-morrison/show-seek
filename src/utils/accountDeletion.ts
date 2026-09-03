@@ -27,6 +27,7 @@ export async function clearLocalAccountData(userId?: string): Promise<void> {
     TRAKT_STORAGE_KEYS.LAST_SYNCED,
     TRAKT_STORAGE_KEYS.SYNC_STATUS,
     TRAKT_STORAGE_KEYS.LAST_ENRICHED,
+    TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID,
   ]);
 
   if (userId) {

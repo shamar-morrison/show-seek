@@ -1294,6 +1294,7 @@
       "done": "Terminé",
       "failedTitle": "Échec de l'importation",
       "failedFallback": "Une erreur est survenue lors de l'importation de votre archive Trakt.",
+      "statusUnavailable": "Le statut de l'importation est indisponible. Veuillez réessayer.",
       "uploadFailed": "Échec du téléversement du fichier zip. Veuillez vérifier votre connexion et réessayer.",
       "tryAgain": "Réessayer",
       "backToSettings": "Retour aux paramètres"

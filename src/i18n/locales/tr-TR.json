@@ -1225,6 +1225,7 @@
       "done": "Tamam",
       "failedTitle": "İçe Aktarma Başarısız",
       "failedFallback": "Trakt arşiviniz içe aktarılırken bir hata oluştu.",
+      "statusUnavailable": "İçe aktarma durumu kullanılamıyor. Lütfen tekrar deneyin.",
       "uploadFailed": "Zip arşivi yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",
       "tryAgain": "Tekrar Dene",
       "backToSettings": "Ayarlara Dön"

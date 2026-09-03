@@ -1233,6 +1233,7 @@
       "done": "Hecho",
       "failedTitle": "Error de importación",
       "failedFallback": "Ocurrió un error al importar tu archivo de Trakt.",
+      "statusUnavailable": "El estado de la importación no está disponible. Inténtalo de nuevo.",
       "uploadFailed": "Error al subir el archivo zip. Comprueba tu conexión a internet e inténtalo de nuevo.",
       "tryAgain": "Intentar de nuevo",
       "backToSettings": "Volver a Configuración"
