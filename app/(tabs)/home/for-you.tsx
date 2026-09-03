@@ -83,7 +83,7 @@ export default function ForYouScreen() {
         {/* Recommendation sections based on user's high-rated content */}
         {sections.map((section, index) => (
           <RecommendationSection
-            key={`${section.seed.mediaType}-${section.seed.id}`}
+            key={`${section.seed.mediaType}-${section.seed.id}-${index}`}
             title={t('forYou.becauseYouLoved', { title: section.seed.title })}
             items={section.recommendations}
             mediaType={section.seed.mediaType}
@@ -171,7 +171,7 @@ function RecommendationSection({
           horizontal
           data={[1, 2, 3, 4]}
           renderItem={() => <MovieCardSkeleton />}
-          keyExtractor={(item) => item.toString()}
+          keyExtractor={(item, index) => `skeleton-${item}-${index ?? 0}`}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
         />
@@ -180,7 +180,7 @@ function RecommendationSection({
           horizontal
           data={items}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) => `${mediaType}-${item.id}-${index ?? 0}`}
           extraData={listExtraData}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
@@ -200,7 +200,7 @@ function SkeletonSection() {
         horizontal
         data={[1, 2, 3, 4]}
         renderItem={() => <MovieCardSkeleton />}
-        keyExtractor={(item) => item.toString()}
+        keyExtractor={(item, index) => `skeleton-${item}-${index ?? 0}`}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
       />
