@@ -605,4 +605,40 @@ describe('OnboardingContainer', () => {
       });
     });
   });
+
+  it('clamps deep-linked target greater than 7 to index 7 when hasInteractedWithNotifications is false', async () => {
+    const { getByText, queryByText } = render(<OnboardingContainer initialStepIndex={9} />);
+
+    await waitFor(() => {
+      expect(getByText('Notifications step')).toBeTruthy();
+      expect(queryByText('TV Shows step')).toBeNull();
+    });
+  });
+
+  it('clamps restored step index greater than 7 to index 7 when hasInteractedWithNotifications is false', async () => {
+    const { readOnboardingProgress } = require('@/src/utils/onboardingStepCache');
+    readOnboardingProgress.mockResolvedValueOnce({
+      stepIndex: 9,
+      hasInteractedWithNotifications: false,
+      selections: {
+        region: 'US',
+        displayName: 'Test',
+        homeScreenLists: [],
+        language: 'en-US',
+        selectedGenreIds: [],
+        selectedTVGenreIds: [],
+        selectedTVShows: [],
+        selectedMovies: [],
+        selectedActors: [],
+        accentColor: null,
+      },
+    });
+
+    const { getByText, queryByText } = render(<OnboardingContainer />);
+
+    await waitFor(() => {
+      expect(getByText('Notifications step')).toBeTruthy();
+      expect(queryByText('TV Shows step')).toBeNull();
+    });
+  });
 });

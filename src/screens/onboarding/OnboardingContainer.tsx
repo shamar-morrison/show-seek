@@ -66,14 +66,23 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const queryClient = useQueryClient();
 
-  // If deep-linked with a step index, skip the welcome screen and start at that step
+  const [hasInteractedWithNotifications, setHasInteractedWithNotifications] = useState(false);
+
+  // If deep-linked with a step index, skip the welcome screen and start at that step.
+  // Targets greater than 7 are clamped to index 7 whenever hasInteractedWithNotifications is false.
   const hasInitialStep =
     initialStepIndex !== undefined &&
     Number.isFinite(initialStepIndex) &&
     initialStepIndex >= 0 &&
     initialStepIndex < ONBOARDING_STEPS.length;
 
-  const [currentStepIndex, setCurrentStepIndex] = useState(hasInitialStep ? initialStepIndex : 0);
+  const initialTargetStep = hasInitialStep
+    ? initialStepIndex > 7 && !hasInteractedWithNotifications
+      ? 7
+      : initialStepIndex
+    : 0;
+
+  const [currentStepIndex, setCurrentStepIndex] = useState(initialTargetStep);
   const [selections, setSelections] = useState<OnboardingSelections>(() => ({
     ...EMPTY_ONBOARDING_SELECTIONS,
     language,
@@ -81,7 +90,6 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   const [selectedViaOther, setSelectedViaOther] = useState(false);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(!hasInitialStep);
-  const [hasInteractedWithNotifications, setHasInteractedWithNotifications] = useState(false);
   const saveOnboardingPromiseRef = useRef<Promise<void> | null>(null);
 
   const progressWidth = useSharedValue(0);
@@ -105,7 +113,13 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   }, [selections, selectedViaOther, hasInteractedWithNotifications]);
 
   // Re-engagement notification hook — schedules notification on background (reads live hasRehydratedRef)
-  useOnboardingReengagement(currentStepIndex, selections, selectedViaOther, hasRehydratedRef);
+  useOnboardingReengagement(
+    currentStepIndex,
+    selections,
+    selectedViaOther,
+    hasRehydratedRef,
+    hasInteractedWithNotifications
+  );
 
   // On mount, restore progress (step index + selections) from AsyncStorage before allowing any persist writes
   useEffect(() => {
@@ -133,17 +147,22 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
           setSelectedViaOther(savedProgress.selectedViaOther);
         }
 
+        let restoredHasInteractedWithNotifications = false;
         if (typeof savedProgress.hasInteractedWithNotifications === 'boolean') {
+          restoredHasInteractedWithNotifications = savedProgress.hasInteractedWithNotifications;
           setHasInteractedWithNotifications(savedProgress.hasInteractedWithNotifications);
           hasInteractedWithNotificationsRef.current = savedProgress.hasInteractedWithNotifications;
         } else if (typeof savedProgress.stepIndex === 'number' && savedProgress.stepIndex > 7) {
+          restoredHasInteractedWithNotifications = true;
           setHasInteractedWithNotifications(true);
           hasInteractedWithNotificationsRef.current = true;
         }
 
         // Target step index: use explicit deep-link param if present, otherwise restore saved index
-        const targetStep = hasInitialStep ? initialStepIndex : savedProgress.stepIndex;
-        if (targetStep !== undefined && targetStep > 0 && targetStep < ONBOARDING_STEPS.length) {
+        const rawTargetStep = hasInitialStep ? initialStepIndex : savedProgress.stepIndex;
+        if (rawTargetStep !== undefined && rawTargetStep > 0 && rawTargetStep < ONBOARDING_STEPS.length) {
+          const targetStep =
+            rawTargetStep > 7 && !restoredHasInteractedWithNotifications ? 7 : rawTargetStep;
           setCurrentStepIndex(targetStep);
           setShowWelcome(false);
           updateProgress(targetStep);

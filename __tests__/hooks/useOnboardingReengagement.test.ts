@@ -138,6 +138,29 @@ describe('useOnboardingReengagement', () => {
     });
   });
 
+  it('preserves hasInteractedWithNotifications when persisting onboarding progress on background', async () => {
+    (AppState as any).currentState = 'active';
+    const rehydratedRef = { current: true };
+
+    renderHook(() =>
+      useOnboardingReengagement(7, mockSelections, false, rehydratedRef, true)
+    );
+
+    expect(appStateListener).toBeDefined();
+
+    // Trigger transition to background
+    appStateListener!('background');
+
+    await waitFor(() => {
+      expect(persistOnboardingProgress).toHaveBeenCalledWith('test-user-123', {
+        stepIndex: 7,
+        selections: mockSelections,
+        selectedViaOther: false,
+        hasInteractedWithNotifications: true,
+      });
+    });
+  });
+
   it('skips progress persistence if hasRehydratedRef is false during background transition', async () => {
     (AppState as any).currentState = 'active';
     const rehydratedRef = { current: false };
