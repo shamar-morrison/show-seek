@@ -322,19 +322,19 @@ import AdmZip = require('adm-zip');
 import {
   TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS,
   TRAKT_ZIP_IMPORT_COOLDOWN_MS,
-} from '../../functions/src/trakt/constants';
+} from '@/functions/src/trakt/constants';
 import {
   completeZipImportWithLease,
   failZipImportWithLease,
   getZipImportCooldownBypassSource,
   runTraktZipImportHandler,
   startTraktZipImportHandler,
-} from '../../functions/src/trakt/zipImport';
+} from '@/functions/src/trakt/zipImport';
 import {
   parseTraktZipBuffer,
   TraktZipCorruptArchiveError,
   TraktZipSizeLimitError,
-} from '../../functions/src/trakt/zipParser';
+} from '@/functions/src/trakt/zipParser';
 
 const SafeAdmZip = (AdmZip as unknown as { default?: typeof AdmZip }).default || AdmZip;
 

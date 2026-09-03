@@ -624,7 +624,7 @@ describe('TraktContext', () => {
 
     expect(result.current.zipImportUiState).toBe('failed');
     expect(result.current.zipImportError).toBe(
-      'Import cooldown active. Please wait before starting another Trakt zip import.'
+      'Please wait before starting another import.'
     );
 
     consoleErrorSpy.mockRestore();

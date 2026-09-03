@@ -32,10 +32,12 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as WebBrowser from 'expo-web-browser';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const isActiveSyncStatus = (status?: SyncStatus['status']): boolean =>
   status === 'queued' || status === 'in_progress' || status === 'retrying';
@@ -51,7 +53,27 @@ const hasEligibleTraktUser = (user: User | null): user is User => Boolean(user &
 
 const ZIP_COOLDOWN_TICK_INTERVAL_MS = 15000;
 
+const getDateFnsLocale = (lang?: string) => {
+  switch (lang) {
+    case 'es-ES':
+    case 'es-MX':
+      return es;
+    case 'fr':
+    case 'fr-FR':
+      return fr;
+    case 'pt-BR':
+      return ptBR;
+    case 'pt-PT':
+      return pt;
+    case 'tr-TR':
+      return tr;
+    default:
+      return enUS;
+  }
+};
+
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -648,13 +670,19 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
           if (error.nextAllowedImportAt) {
             setNextAllowedZipImportAt(new Date(error.nextAllowedImportAt));
           }
+          const distanceLocale = getDateFnsLocale(i18n.language);
           setZipImportError(
             error.nextAllowedImportAt
-              ? `Import cooldown active. You can start another import ${formatDistanceToNow(
-                  new Date(error.nextAllowedImportAt),
-                  { addSuffix: true }
-                )}.`
-              : 'Import cooldown active. Please wait before starting another Trakt zip import.'
+              ? t('trakt.zipImportCard.subtitleRateLimited', {
+                  defaultValue: 'Import cooldown active. You can start another import {{time}}.',
+                  time: formatDistanceToNow(new Date(error.nextAllowedImportAt), {
+                    addSuffix: true,
+                    locale: distanceLocale,
+                  }),
+                })
+              : t('trakt.zipImport.rateLimitedDescription', {
+                  defaultValue: 'Please wait before starting another import.',
+                })
           );
         } else if (error instanceof TraktZipUploadError) {
           setZipImportError('Upload failed: Network error while uploading archive.');
@@ -666,7 +694,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         throw error;
       }
     },
-    [ensureEligibleUser, isSyncing, isZipImporting, subscribeToZipProgress]
+    [ensureEligibleUser, i18n.language, isSyncing, isZipImporting, subscribeToZipProgress, t]
   );
 
   const dismissZipImport = useCallback(() => {
