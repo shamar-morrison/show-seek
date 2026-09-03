@@ -17,12 +17,35 @@ describe('ExitIntentModal', () => {
       />
     );
 
+    expect(getByText('🫣')).toBeTruthy();
     expect(getByText("You're almost there!")).toBeTruthy();
     expect(
       getByText('Just a few more steps and your personalized movie & TV experience will be ready.')
     ).toBeTruthy();
     expect(getByText('Continue Setup')).toBeTruthy();
     expect(getByText('Exit Anyway')).toBeTruthy();
+  });
+
+  it('renders the emoji for variant b and variant c', () => {
+    const { getByText: getByTextB } = render(
+      <ExitIntentModal
+        visible={true}
+        variant="b"
+        onContinue={jest.fn()}
+        onExit={jest.fn()}
+      />
+    );
+    expect(getByTextB('🫣')).toBeTruthy();
+
+    const { getByText: getByTextC } = render(
+      <ExitIntentModal
+        visible={true}
+        variant="c"
+        onContinue={jest.fn()}
+        onExit={jest.fn()}
+      />
+    );
+    expect(getByTextC('🫣')).toBeTruthy();
   });
 
   it('calls onContinue when the Continue button is pressed', () => {

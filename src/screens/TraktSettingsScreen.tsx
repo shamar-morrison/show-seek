@@ -67,6 +67,8 @@ export default function TraktSettingsScreen() {
     isSyncing,
     isEnriching,
     isZipImporting,
+    isZipImportRateLimited,
+    nextAllowedZipImportAt,
     lastSyncedAt,
     lastEnrichedAt,
     syncStatus,
@@ -134,6 +136,29 @@ export default function TraktSettingsScreen() {
       Alert.alert(title, alertMessage || undefined);
     },
     [formatRetryTimeMessage]
+  );
+
+  const getZipImportCardSubtitle = useCallback(
+    (baseSubtitleKey: string) => {
+      if (isZipImporting) {
+        return t('trakt.zipImportCard.subtitleImporting', {
+          defaultValue: 'An import is currently in progress. Tap to view live progress.',
+        });
+      }
+      if (isZipImportRateLimited) {
+        return t('trakt.zipImportCard.subtitleRateLimited', {
+          defaultValue: 'Import cooldown active. You can start another import {{time}}.',
+          time: nextAllowedZipImportAt
+            ? formatDistanceToNow(nextAllowedZipImportAt, {
+                addSuffix: true,
+                locale: distanceLocale,
+              })
+            : '',
+        });
+      }
+      return t(baseSubtitleKey);
+    },
+    [distanceLocale, isZipImportRateLimited, isZipImporting, nextAllowedZipImportAt, t]
   );
 
   const handleConnect = useCallback(async () => {
@@ -484,11 +509,7 @@ export default function TraktSettingsScreen() {
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </View>
               <Text style={styles.zipImportCardSubtitle}>
-                {isZipImporting
-                  ? t('trakt.zipImportCard.subtitleImporting', {
-                      defaultValue: 'An import is currently in progress. Tap to view live progress.',
-                    })
-                  : t('trakt.zipImportCard.subtitleDisconnected')}
+                {getZipImportCardSubtitle('trakt.zipImportCard.subtitleDisconnected')}
               </Text>
             </View>
             <ChevronRight size={20} color={COLORS.textSecondary} />
@@ -534,11 +555,6 @@ export default function TraktSettingsScreen() {
               icon="information-circle-outline"
             />
           </CollapsibleCategory>
-
-          <View style={styles.privacyNote}>
-            <AlertCircle size={16} color={COLORS.textSecondary} />
-            <Text style={styles.privacyNoteText}>{t('trakt.privacyNote')}</Text>
-          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -619,11 +635,7 @@ export default function TraktSettingsScreen() {
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </View>
               <Text style={styles.zipImportCardSubtitle}>
-                {isZipImporting
-                  ? t('trakt.zipImportCard.subtitleImporting', {
-                      defaultValue: 'An import is currently in progress. Tap to view live progress.',
-                    })
-                  : t('trakt.zipImportCard.subtitleConnected')}
+                {getZipImportCardSubtitle('trakt.zipImportCard.subtitleConnected')}
               </Text>
             </View>
             <ChevronRight size={20} color={COLORS.textSecondary} />
@@ -822,11 +834,7 @@ export default function TraktSettingsScreen() {
               {!isPremium && !isPremiumLoading && <PremiumBadge />}
             </View>
             <Text style={styles.zipImportCardSubtitle}>
-              {isZipImporting
-                ? t('trakt.zipImportCard.subtitleImporting', {
-                    defaultValue: 'An import is currently in progress. Tap to view live progress.',
-                  })
-                : t('trakt.zipImportCard.subtitleSynced')}
+              {getZipImportCardSubtitle('trakt.zipImportCard.subtitleSynced')}
             </Text>
           </View>
           <ChevronRight size={20} color={COLORS.textSecondary} />
@@ -955,22 +963,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: 'bold',
     color: COLORS.white,
-  },
-
-  privacyNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.s,
-    marginTop: SPACING.l,
-    padding: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  privacyNoteText: {
-    flex: 1,
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    lineHeight: 18,
   },
   disconnectButton: {
     flexDirection: 'row',

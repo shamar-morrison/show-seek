@@ -1,25 +1,78 @@
 import * as admin from 'firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { getFunctions } from 'firebase-admin/functions';
-import { type CallableRequest, HttpsError, onCall } from 'firebase-functions/v2/https';
+import { type CallableRequest, HttpsError, onCall, type Request } from 'firebase-functions/v2/https';
 import { onTaskDispatched, type Request as TaskRequest } from 'firebase-functions/v2/tasks';
 import {
   buildTraktZipImportDocPath,
   buildTraktZipImportStoragePath,
+  DEV_SYNC_BYPASS_HEADER,
   MAX_ZIP_SIZE_BYTES,
+  TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS,
+  TRAKT_ZIP_IMPORT_COOLDOWN_MS,
   TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS,
   TRAKT_ZIP_IMPORT_QUEUE_FUNCTION,
   TRAKT_ZIP_IMPORT_QUEUE_REGION,
 } from './constants';
 import { dispatchEnrichmentRun, prepareEnrichmentRun } from './enrichment';
+import {
+  getAllowedSyncBypassUids,
+  hasDevSyncBypassHeader,
+  isFunctionsEmulator,
+} from './handlers';
 import { isZipImportActive, isZipImportStatusStale } from './status';
 import type {
+  ManualSyncCooldownBypassSource,
   StartTraktZipImportRequest,
   TraktUserDoc,
+  TraktZipImportErrorCategory,
   TraktZipImportTaskPayload,
 } from './types';
-import { parseTraktZipBuffer } from './zipParser';
+import { TraktZipCorruptArchiveError, TraktZipSizeLimitError, parseTraktZipBuffer } from './zipParser';
 import { syncTraktZipImport } from './zipSync';
+
+/**
+ * Determines whether the user and request qualify for the short test cooldown bypass.
+ */
+export const getZipImportCooldownBypassSource = (
+  request: CallableRequest<StartTraktZipImportRequest> | Request,
+  userId: string
+): ManualSyncCooldownBypassSource | undefined => {
+  const rawRequest = 'rawRequest' in request ? request.rawRequest : request;
+  const hasRawHeader = Boolean(
+    rawRequest &&
+      (typeof rawRequest.header === 'function'
+        ? hasDevSyncBypassHeader(rawRequest)
+        : (rawRequest as unknown as { headers?: Record<string, string | undefined> })?.headers?.[
+            DEV_SYNC_BYPASS_HEADER
+          ] === 'true' ||
+          (rawRequest as unknown as { headers?: Record<string, string | undefined> })?.headers?.[
+            DEV_SYNC_BYPASS_HEADER.toLowerCase()
+          ] === 'true' ||
+          (rawRequest as unknown as { headers?: Record<string, string | undefined> })?.headers?.[
+            'X-ShowSeek-Dev-Sync'
+          ] === 'true')
+  );
+
+  const data = (request as { data?: Record<string, unknown> })?.data;
+  const hasDataFlag = Boolean(
+    data &&
+      (data[DEV_SYNC_BYPASS_HEADER] === 'true' ||
+        data[DEV_SYNC_BYPASS_HEADER.toLowerCase()] === 'true' ||
+        data['X-ShowSeek-Dev-Sync'] === 'true' ||
+        data['x-showseek-dev-sync'] === 'true')
+  );
+
+  if (!hasRawHeader && !hasDataFlag) {
+    return undefined;
+  }
+
+  if (isFunctionsEmulator()) {
+    return 'emulator';
+  }
+
+  return getAllowedSyncBypassUids().has(userId) ? 'allowlist' : undefined;
+};
 
 /**
  * Asserts that the authenticated user has an active Premium entitlement before permitting import.
@@ -71,6 +124,15 @@ export const startTraktZipImportHandler = async (
   const userDocRef = db.collection('users').doc(userId);
   const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
   const now = Timestamp.now();
+  const cooldownBypassSource = getZipImportCooldownBypassSource(request, userId);
+  const isCooldownBypassed = cooldownBypassSource !== undefined;
+
+  if (cooldownBypassSource === 'allowlist') {
+    console.info('[startTraktZipImport] Applied test cooldown for allowlisted tester', {
+      importId,
+      userId,
+    });
+  }
 
   await db.runTransaction(async (transaction) => {
     const userDoc = await transaction.get(userDocRef);
@@ -90,9 +152,17 @@ export const startTraktZipImportHandler = async (
       throw new HttpsError('already-exists', 'A Trakt zip import is already in progress.');
     }
 
+    const nextAllowedImportAt = userData.traktZipImportStatus?.nextAllowedImportAt;
+    if (nextAllowedImportAt instanceof Timestamp && nextAllowedImportAt.toMillis() > now.toMillis()) {
+      throw new HttpsError('resource-exhausted', 'Please wait before starting another Trakt zip import.', {
+        nextAllowedImportAt: nextAllowedImportAt.toDate().toISOString(),
+      });
+    }
+
     transaction.set(progressDocRef, {
       createdAt: now,
       id: importId,
+      isCooldownBypassed,
       progress: {
         current: 0,
         phase: 'pending',
@@ -132,7 +202,7 @@ export const startTraktZipImportHandler = async (
     await getFunctions()
       .taskQueue<TraktZipImportTaskPayload>(TRAKT_ZIP_IMPORT_QUEUE_FUNCTION)
       .enqueue(
-        { importId, userId },
+        { importId, isCooldownBypassed, userId },
         {
           dispatchDeadlineSeconds: TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS,
           id: `zip_import_${importId}`,
@@ -323,6 +393,7 @@ export const completeZipImportWithLease = async (
   leaseToken: string,
   options: {
     completedAt: FirebaseFirestore.Timestamp;
+    isCooldownBypassed?: boolean;
     stats: {
       customLists: number;
       episodes: number;
@@ -347,11 +418,19 @@ export const completeZipImportWithLease = async (
       return false;
     }
 
+    const cooldownDuration = options.isCooldownBypassed
+      ? TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS
+      : TRAKT_ZIP_IMPORT_COOLDOWN_MS;
+    const nextAllowedImportAt = Timestamp.fromMillis(
+      options.completedAt.toMillis() + cooldownDuration
+    );
+
     transaction.set(
       progressDocRef,
       {
         completedAt: options.completedAt,
         leaseToken,
+        nextAllowedImportAt,
         progress: { current: 100, phase: 'completed', total: 100 },
         stats: options.stats,
         status: 'completed',
@@ -366,6 +445,7 @@ export const completeZipImportWithLease = async (
           completedAt: options.completedAt,
           id: importId,
           leaseToken,
+          nextAllowedImportAt,
           phase: 'completed',
           stats: options.stats,
           status: 'completed',
@@ -386,7 +466,9 @@ export const failZipImportWithLease = async (
   leaseToken: string,
   options: {
     error: string;
+    errorCategory: TraktZipImportErrorCategory;
     failedAt: FirebaseFirestore.Timestamp;
+    isCooldownBypassed?: boolean;
   }
 ): Promise<boolean> => {
   const userDocRef = db.collection('users').doc(userId);
@@ -407,6 +489,14 @@ export const failZipImportWithLease = async (
     console.error('[runTraktZipImport] Failed to update progressDoc on failure:', err);
   });
 
+  const cooldownDuration = options.isCooldownBypassed
+    ? TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS
+    : TRAKT_ZIP_IMPORT_COOLDOWN_MS;
+  const nextAllowedImportAt =
+    options.errorCategory === 'in_flight'
+      ? Timestamp.fromMillis(options.failedAt.toMillis() + cooldownDuration)
+      : FieldValue.delete();
+
   return db.runTransaction(async (transaction) => {
     const userSnapshot = await transaction.get(userDocRef);
     const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
@@ -421,9 +511,11 @@ export const failZipImportWithLease = async (
       {
         traktZipImportStatus: {
           error: options.error,
+          errorCategory: options.errorCategory,
           failedAt: options.failedAt,
           id: importId,
           leaseToken,
+          nextAllowedImportAt,
           phase: 'failed',
           status: 'failed',
           updatedAt: options.failedAt,
@@ -452,6 +544,18 @@ export const runTraktZipImportHandler = async (
   }
 
   const db = admin.firestore();
+  let isCooldownBypassed = Boolean(request.data?.isCooldownBypassed);
+  if (!isCooldownBypassed) {
+    try {
+      const progressSnapshot = await db.doc(buildTraktZipImportDocPath(userId, importId)).get();
+      if (progressSnapshot.exists && progressSnapshot.data()?.isCooldownBypassed) {
+        isCooldownBypassed = true;
+      }
+    } catch {
+      // Ignore fallback check failure
+    }
+  }
+
   const storagePath = buildTraktZipImportStoragePath(userId, importId);
   const bucket = admin.storage().bucket();
   const file = bucket.file(storagePath);
@@ -489,7 +593,7 @@ export const runTraktZipImportHandler = async (
     const rawSize = metadata.size;
     const size = typeof rawSize === 'number' ? rawSize : parseInt(String(rawSize || '0'), 10);
     if (size > MAX_ZIP_SIZE_BYTES) {
-      throw new Error(`Import archive size (${size} bytes) exceeds the 200MB maximum allowed limit.`);
+      throw new TraktZipSizeLimitError(`Import archive size (${size} bytes) exceeds the 200MB maximum allowed limit.`);
     }
 
     const [downloadBuffer] = await file.download();
@@ -556,6 +660,7 @@ export const runTraktZipImportHandler = async (
 
     hasOwnership = await completeZipImportWithLease(db, userId, importId, leaseToken, {
       completedAt,
+      isCooldownBypassed,
       stats,
     });
     if (!hasOwnership) {
@@ -604,10 +709,17 @@ export const runTraktZipImportHandler = async (
         ? error.message
         : 'An error occurred while importing your Trakt archive.';
 
+    const errorCategory: TraktZipImportErrorCategory =
+      error instanceof TraktZipSizeLimitError || error instanceof TraktZipCorruptArchiveError
+        ? 'pre_flight'
+        : 'in_flight';
+
     const failedAt = Timestamp.now();
     await failZipImportWithLease(db, userId, importId, leaseToken, {
       error: friendlyMessage,
+      errorCategory,
       failedAt,
+      isCooldownBypassed,
     });
   } finally {
     // Phase 5: Storage cleanup in finally block

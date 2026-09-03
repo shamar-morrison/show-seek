@@ -2,7 +2,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
-import { trackLogin } from '@/src/services/analytics';
+import { trackAuthInteraction, trackLogin } from '@/src/services/analytics';
 import { persistPersonalOnboardingCache } from '@/src/utils/personalOnboardingCache';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
@@ -87,6 +87,7 @@ export default function EmailAuthSection({
       await seedNewAccountPersonalOnboarding(userCredential.user);
       await completeEmailAuth(userCredential.user);
     } catch (error: any) {
+      void trackAuthInteraction({ option: 'email', action: 'error' });
       if (error?.code === 'auth/email-already-in-use') {
         showExistingAccountMessage();
         return;
@@ -133,6 +134,7 @@ export default function EmailAuthSection({
   };
 
   const handleEmailContinue = async () => {
+    void trackAuthInteraction({ option: 'email', action: 'tap' });
     const normalizedEmail = email.trim();
 
     if (!normalizedEmail) {
@@ -156,6 +158,7 @@ export default function EmailAuthSection({
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       await completeEmailAuth(userCredential.user);
     } catch (error: any) {
+      void trackAuthInteraction({ option: 'email', action: 'error' });
       if (error?.code === 'auth/user-not-found' || error?.code === 'auth/invalid-credential') {
         promptCreateAccount(normalizedEmail, password);
         return;

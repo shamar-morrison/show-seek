@@ -20,6 +20,7 @@ import {
   SelectedZipFile,
   traktZipImportService,
   TraktZipImportProgressDoc,
+  TraktZipRateLimitedError,
   TraktZipUploadError,
 } from '@/src/services/TraktZipImportService';
 import type {
@@ -30,10 +31,13 @@ import type {
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
+import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as WebBrowser from 'expo-web-browser';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const isActiveSyncStatus = (status?: SyncStatus['status']): boolean =>
   status === 'queued' || status === 'in_progress' || status === 'retrying';
@@ -47,14 +51,36 @@ const isLockedAccountStatus = (status?: SyncStatus | null): boolean =>
 
 const hasEligibleTraktUser = (user: User | null): user is User => Boolean(user && !user.isAnonymous);
 
+const ZIP_COOLDOWN_TICK_INTERVAL_MS = 15000;
+
+const getDateFnsLocale = (lang?: string) => {
+  switch (lang) {
+    case 'es-ES':
+    case 'es-MX':
+      return es;
+    case 'fr':
+    case 'fr-FR':
+      return fr;
+    case 'pt-BR':
+      return ptBR;
+    case 'pt-PT':
+      return pt;
+    case 'tr-TR':
+      return tr;
+    default:
+      return enUS;
+  }
+};
+
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [lastEnrichedAt, setLastEnrichedAt] = useState<Date | null>(null);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
 
@@ -64,6 +90,8 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const [zipUploadProgress, setZipUploadProgress] = useState(0);
   const [zipImportDoc, setZipImportDoc] = useState<TraktZipImportProgressDoc | null>(null);
   const [zipImportError, setZipImportError] = useState<string | null>(null);
+  const [nextAllowedZipImportAt, setNextAllowedZipImportAt] = useState<Date | null>(null);
+  const [zipCooldownTick, setZipCooldownTick] = useState(0);
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -73,6 +101,25 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const activeZipImportIdRef = useRef<string | null>(null);
 
   const isZipImporting = zipImportUiState === 'uploading' || zipImportUiState === 'processing';
+  const isZipImportRateLimited =
+    nextAllowedZipImportAt !== null && nextAllowedZipImportAt.getTime() > Date.now();
+
+  useEffect(() => {
+    if (!nextAllowedZipImportAt || nextAllowedZipImportAt.getTime() <= Date.now()) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setZipCooldownTick((t) => t + 1);
+      if (nextAllowedZipImportAt.getTime() <= Date.now()) {
+        clearInterval(interval);
+      }
+    }, ZIP_COOLDOWN_TICK_INTERVAL_MS);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [nextAllowedZipImportAt]);
 
   const invalidateUserLibraryQueries = useCallback(async () => {
     if (!user?.uid) {
@@ -151,6 +198,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setZipUploadProgress(0);
       setZipImportDoc(null);
       setZipImportError(null);
+      setNextAllowedZipImportAt(null);
       return;
     }
 
@@ -213,6 +261,18 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
             setZipImportUiState('failed');
             setZipImportError(zipStatus.error || 'Import failed.');
           }
+
+          const zipNextAllowedAt = zipStatus.nextAllowedImportAt;
+          let parsedSnapshotNextAllowedAt: Date | null = null;
+          if (zipNextAllowedAt && typeof zipNextAllowedAt.toDate === 'function') {
+            const date = zipNextAllowedAt.toDate();
+            if (date && typeof date.getTime === 'function' && !isNaN(date.getTime())) {
+              parsedSnapshotNextAllowedAt = date;
+            }
+          }
+          setNextAllowedZipImportAt(parsedSnapshotNextAllowedAt);
+        } else {
+          setNextAllowedZipImportAt(null);
         }
       },
       (error) => {
@@ -232,6 +292,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setZipUploadProgress(0);
       setZipImportDoc(null);
       setZipImportError(null);
+      setNextAllowedZipImportAt(null);
     };
   }, [user, invalidateUserLibraryQueries, subscribeToZipProgress]);
 
@@ -608,7 +669,32 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         console.error('[TraktContext] Zip import error:', error);
         setZipImportUiState('failed');
 
-        if (error instanceof TraktZipUploadError) {
+        if (error instanceof TraktZipRateLimitedError) {
+          let parsedNextAllowedAt: Date | null = null;
+          if (error.nextAllowedImportAt) {
+            const parsed = new Date(error.nextAllowedImportAt);
+            if (!isNaN(parsed.getTime())) {
+              parsedNextAllowedAt = parsed;
+              setNextAllowedZipImportAt(parsed);
+            } else {
+              setNextAllowedZipImportAt(null);
+            }
+          }
+          const distanceLocale = getDateFnsLocale(i18n.language);
+          setZipImportError(
+            parsedNextAllowedAt
+              ? t('trakt.zipImportCard.subtitleRateLimited', {
+                  defaultValue: 'Import cooldown active. You can start another import {{time}}.',
+                  time: formatDistanceToNow(parsedNextAllowedAt, {
+                    addSuffix: true,
+                    locale: distanceLocale,
+                  }),
+                })
+              : t('trakt.zipImport.rateLimitedDescription', {
+                  defaultValue: 'Please wait before starting another import.',
+                })
+          );
+        } else if (error instanceof TraktZipUploadError) {
           setZipImportError('Upload failed: Network error while uploading archive.');
         } else {
           setZipImportError(
@@ -618,7 +704,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         throw error;
       }
     },
-    [ensureEligibleUser, isSyncing, isZipImporting, subscribeToZipProgress]
+    [ensureEligibleUser, i18n.language, isSyncing, isZipImporting, subscribeToZipProgress, t]
   );
 
   const dismissZipImport = useCallback(() => {
@@ -689,8 +775,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     isSyncing,
     isEnriching,
     isZipImporting,
+    isZipImportRateLimited,
     lastSyncedAt,
     lastEnrichedAt,
+    nextAllowedZipImportAt,
     syncStatus,
     zipImportUiState,
     zipUploadProgress,

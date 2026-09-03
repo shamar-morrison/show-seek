@@ -4,10 +4,14 @@ import { StyleSheet, View, ViewStyle } from 'react-native';
 
 interface SectionSeparatorProps {
   style?: ViewStyle;
+  testID?: string;
 }
 
-export const SectionSeparator: React.FC<SectionSeparatorProps> = ({ style }) => {
-  return <View style={[styles.separator, style]} />;
+export const SectionSeparator: React.FC<SectionSeparatorProps> = ({
+  style,
+  testID = 'section-separator',
+}) => {
+  return <View testID={testID} style={[styles.separator, style]} />;
 };
 
 const styles = StyleSheet.create({

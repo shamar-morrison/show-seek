@@ -8,6 +8,7 @@ import { useRegion } from '@/src/context/RegionProvider';
 import { useOnboardingExitGuard } from '@/src/hooks/useOnboardingExitGuard';
 import { useOnboardingReengagement } from '@/src/hooks/useOnboardingReengagement';
 import { onboardingService } from '@/src/services/OnboardingService';
+import { trackOnboardingComplete, trackOnboardingStepView } from '@/src/services/analytics';
 import { ONBOARDING_STEPS, EMPTY_ONBOARDING_SELECTIONS } from '@/src/types/onboarding';
 import type { OnboardingSelections } from '@/src/types/onboarding';
 import type { HomeScreenListItem } from '@/src/types/preferences';
@@ -65,14 +66,23 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const queryClient = useQueryClient();
 
-  // If deep-linked with a step index, skip the welcome screen and start at that step
+  const [hasInteractedWithNotifications, setHasInteractedWithNotifications] = useState(false);
+
+  // If deep-linked with a step index, skip the welcome screen and start at that step.
+  // Targets greater than 7 are clamped to index 7 whenever hasInteractedWithNotifications is false.
   const hasInitialStep =
     initialStepIndex !== undefined &&
     Number.isFinite(initialStepIndex) &&
     initialStepIndex >= 0 &&
     initialStepIndex < ONBOARDING_STEPS.length;
 
-  const [currentStepIndex, setCurrentStepIndex] = useState(hasInitialStep ? initialStepIndex : 0);
+  const initialTargetStep = hasInitialStep
+    ? initialStepIndex > 7 && !hasInteractedWithNotifications
+      ? 7
+      : initialStepIndex
+    : 0;
+
+  const [currentStepIndex, setCurrentStepIndex] = useState(initialTargetStep);
   const [selections, setSelections] = useState<OnboardingSelections>(() => ({
     ...EMPTY_ONBOARDING_SELECTIONS,
     language,
@@ -88,19 +98,28 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   const currentStep = ONBOARDING_STEPS[currentStepIndex];
   const isLastStep = currentStepIndex === totalSteps - 1;
   const isFirstStep = currentStepIndex === 0;
+  const isNotificationStep = currentStep?.id === 'notifications';
 
   // Refs for live state and rehydration synchronization
   const hasRehydratedRef = useRef(false);
   const selectionsRef = useRef(selections);
   const selectedViaOtherRef = useRef(selectedViaOther);
+  const hasInteractedWithNotificationsRef = useRef(false);
 
   useEffect(() => {
     selectionsRef.current = selections;
     selectedViaOtherRef.current = selectedViaOther;
-  }, [selections, selectedViaOther]);
+    hasInteractedWithNotificationsRef.current = hasInteractedWithNotifications;
+  }, [selections, selectedViaOther, hasInteractedWithNotifications]);
 
   // Re-engagement notification hook — schedules notification on background (reads live hasRehydratedRef)
-  useOnboardingReengagement(currentStepIndex, selections, selectedViaOther, hasRehydratedRef);
+  useOnboardingReengagement(
+    currentStepIndex,
+    selections,
+    selectedViaOther,
+    hasRehydratedRef,
+    hasInteractedWithNotifications
+  );
 
   // On mount, restore progress (step index + selections) from AsyncStorage before allowing any persist writes
   useEffect(() => {
@@ -128,9 +147,22 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
           setSelectedViaOther(savedProgress.selectedViaOther);
         }
 
+        let restoredHasInteractedWithNotifications = false;
+        if (typeof savedProgress.hasInteractedWithNotifications === 'boolean') {
+          restoredHasInteractedWithNotifications = savedProgress.hasInteractedWithNotifications;
+          setHasInteractedWithNotifications(savedProgress.hasInteractedWithNotifications);
+          hasInteractedWithNotificationsRef.current = savedProgress.hasInteractedWithNotifications;
+        } else if (typeof savedProgress.stepIndex === 'number' && savedProgress.stepIndex > 7) {
+          restoredHasInteractedWithNotifications = true;
+          setHasInteractedWithNotifications(true);
+          hasInteractedWithNotificationsRef.current = true;
+        }
+
         // Target step index: use explicit deep-link param if present, otherwise restore saved index
-        const targetStep = hasInitialStep ? initialStepIndex : savedProgress.stepIndex;
-        if (targetStep !== undefined && targetStep > 0 && targetStep < ONBOARDING_STEPS.length) {
+        const rawTargetStep = hasInitialStep ? initialStepIndex : savedProgress.stepIndex;
+        if (rawTargetStep !== undefined && rawTargetStep > 0 && rawTargetStep < ONBOARDING_STEPS.length) {
+          const targetStep =
+            rawTargetStep > 7 && !restoredHasInteractedWithNotifications ? 7 : rawTargetStep;
           setCurrentStepIndex(targetStep);
           setShowWelcome(false);
           updateProgress(targetStep);
@@ -160,8 +192,9 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
       stepIndex: currentStepIndex,
       selections: selectionsRef.current,
       selectedViaOther: selectedViaOtherRef.current,
+      hasInteractedWithNotifications: hasInteractedWithNotificationsRef.current,
     });
-  }, [currentStepIndex, user?.uid, showWelcome, isPersonalizing]);
+  }, [currentStepIndex, user?.uid, showWelcome, isPersonalizing, hasInteractedWithNotifications]);
   const paywallDisplayName = resolvePreferredDisplayName(
     selections.displayName,
     user?.displayName,
@@ -289,6 +322,14 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
     const nextIndex = currentStepIndex + 1;
     setCurrentStepIndex(nextIndex);
     updateProgress(nextIndex);
+
+    const nextStep = ONBOARDING_STEPS[nextIndex];
+    if (nextStep) {
+      void trackOnboardingStepView({
+        stepIndex: nextIndex,
+        stepId: nextStep.id,
+      });
+    }
   }, [
     currentStep?.id,
     currentStepIndex,
@@ -308,6 +349,12 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
     setCurrentStepIndex(prevIndex);
     updateProgress(prevIndex);
   }, [currentStepIndex, isFirstStep, updateProgress]);
+
+  const handleNotificationPermissionGranted = useCallback(() => {
+    setHasInteractedWithNotifications(true);
+    hasInteractedWithNotificationsRef.current = true;
+    handleNext();
+  }, [handleNext]);
 
   const handleSaveOnboarding = useCallback(() => {
     if (saveOnboardingPromiseRef.current) {
@@ -342,6 +389,13 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
 
     try {
       await completePersonalOnboarding();
+      void trackOnboardingComplete({
+        language: selections.language,
+        region: selections.region ?? 'unknown',
+        favoriteMovieGenreCount: selections.selectedGenreIds?.length ?? 0,
+        favoriteTVGenreCount: selections.selectedTVGenreIds?.length ?? 0,
+        favoriteShowCount: selections.selectedTVShows?.length ?? 0,
+      });
       router.replace('/(tabs)/home' as any);
     } catch (e) {
       console.error('[OnboardingContainer] Personal onboarding completion failed:', e);
@@ -353,6 +407,11 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
     queryClient,
     router,
     selections.homeScreenLists,
+    selections.language,
+    selections.region,
+    selections.selectedGenreIds,
+    selections.selectedTVGenreIds,
+    selections.selectedTVShows,
     t,
     user?.uid,
   ]);
@@ -365,6 +424,21 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   React.useEffect(() => {
     setSelections((prev) => (prev.language === language ? prev : { ...prev, language }));
   }, [language]);
+
+  // Track initial step view once welcome intro is dismissed / on initial entry
+  const hasTrackedInitialStepRef = useRef(false);
+  useEffect(() => {
+    if (!showWelcome && !isPersonalizing && !hasTrackedInitialStepRef.current) {
+      hasTrackedInitialStepRef.current = true;
+      const initialStep = ONBOARDING_STEPS[currentStepIndex];
+      if (initialStep) {
+        void trackOnboardingStepView({
+          stepIndex: currentStepIndex,
+          stepId: initialStep.id,
+        });
+      }
+    }
+  }, [currentStepIndex, isPersonalizing, showWelcome]);
 
   // Check if there's a meaningful selection for the current step
   const hasSelection = useMemo(() => {
@@ -392,11 +466,11 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
       case 'accent-color':
         return selections.accentColor !== null;
       case 'notifications':
-        return true; // Always continuable — skip or enable
+        return hasInteractedWithNotifications;
       default:
         return false;
     }
-  }, [currentStep?.id, selections]);
+  }, [currentStep?.id, hasInteractedWithNotifications, selections]);
 
   React.useEffect(() => {
     if (
@@ -501,7 +575,7 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
       case 'notifications':
         return (
           <NotificationPermissionStep
-            onPermissionGranted={handleNext}
+            onPermissionGranted={handleNotificationPermissionGranted}
             accentColor={displayAccentColor}
           />
         );
@@ -547,8 +621,14 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
           </Pressable>
         )}
 
-        <Pressable style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipText}>{t('personalOnboarding.skip')}</Text>
+        <Pressable
+          style={[styles.skipButton, isNotificationStep && styles.skipButtonDisabled]}
+          onPress={isNotificationStep ? undefined : handleSkip}
+          disabled={isNotificationStep}
+        >
+          <Text style={[styles.skipText, isNotificationStep && styles.skipTextDisabled]}>
+            {t('personalOnboarding.skip')}
+          </Text>
         </Pressable>
 
         <Pressable
@@ -620,10 +700,16 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.s,
   },
+  skipButtonDisabled: {
+    opacity: 0.35,
+  },
   skipText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
+  },
+  skipTextDisabled: {
+    color: COLORS.textSecondary,
   },
   backButton: {
     flexDirection: 'row',

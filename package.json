@@ -10,6 +10,8 @@
     "lint": "expo lint",
     "format": "prettier --write .",
     "read:audit": "node scripts/firestore-read-audit.mjs",
+    "audit:db": "node scripts/firestore-db-audit.mjs",
+    "read:audit:db": "node scripts/firestore-db-audit.mjs",
     "test": "jest",
     "test:coverage": "jest --coverage"
   },

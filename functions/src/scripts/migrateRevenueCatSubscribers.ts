@@ -136,9 +136,34 @@ const writeReport = async (outputFile: string, report: MigrationReport): Promise
   await fs.writeFile(outputFile, JSON.stringify(report, null, 2), 'utf8');
 };
 
-const exportActiveSubscribers = async (limit: number | null): Promise<ActiveSubscriber[]> => {
+const exportActiveSubscribers = async (options: ScriptOptions): Promise<ActiveSubscriber[]> => {
   const db = admin.firestore();
-  const querySnapshot = await db.collection('users').where('premium.isPremium', '==', true).get();
+  let baseQuery: admin.firestore.Query = db.collection('users').where('premium.isPremium', '==', true);
+
+  // 1. Cheap count() aggregation to evaluate volume before reading documents
+  const countSnapshot = await baseQuery.count().get();
+  const totalMatching = countSnapshot.data().count;
+  const countChargedReads = Math.ceil(totalMatching / 1000) || (totalMatching > 0 ? 1 : 0);
+  console.log(
+    `[migrateRevenueCat] Found ${totalMatching} active premium users via count() (cost: ${countChargedReads} read ops).`
+  );
+
+  const expectedReads = options.limit !== null ? Math.min(options.limit, totalMatching) : totalMatching;
+
+  // 2. Safety cap: require --force / explicit confirmation for large read scans (> 1,000 documents)
+  if (expectedReads > 1000 && !options.force) {
+    throw new Error(
+      `[SAFETY ABORT] Query would perform ${expectedReads} document reads. Pass --force to confirm reading > 1,000 documents, or use --limit=N.`
+    );
+  }
+
+  // 3. Apply limit to Firestore query itself so we don't over-read
+  if (options.limit !== null) {
+    baseQuery = baseQuery.limit(options.limit);
+  }
+
+  console.log(`[migrateRevenueCat] Reading ${expectedReads} documents...`);
+  const querySnapshot = await baseQuery.get();
 
   const subscribers: ActiveSubscriber[] = [];
   for (const doc of querySnapshot.docs) {
@@ -164,7 +189,7 @@ const exportActiveSubscribers = async (limit: number | null): Promise<ActiveSubs
       purchaseToken,
     });
 
-    if (limit !== null && subscribers.length >= limit) {
+    if (options.limit !== null && subscribers.length >= options.limit) {
       break;
     }
   }
@@ -259,7 +284,7 @@ const run = async (): Promise<void> => {
   }
 
   const processedUserIds = await readProcessedUserIds(options.checkpointFile);
-  const subscribers = await exportActiveSubscribers(options.limit);
+  const subscribers = await exportActiveSubscribers(options);
 
   console.log(`Found ${subscribers.length} active subscribers eligible for migration.`);
   if (options.force) {

@@ -126,6 +126,19 @@ export interface PaywallWinbackDecisionParams {
   currency?: string;
 }
 
+export type AnalyticsAuthOption = 'google' | 'guest' | 'email' | 'screen';
+export type AnalyticsAuthAction = 'tap' | 'dismiss' | 'error';
+
+export interface TrackAuthInteractionParams {
+  option: AnalyticsAuthOption;
+  action: AnalyticsAuthAction;
+}
+
+export interface TrackOnboardingStepViewParams {
+  stepIndex: number;
+  stepId: string;
+}
+
 export const normalizeListKind = (listId: string): AnalyticsListKind => {
   return DEFAULT_LIST_KINDS.includes(listId as (typeof DEFAULT_LIST_KINDS)[number])
     ? (listId as (typeof DEFAULT_LIST_KINDS)[number])

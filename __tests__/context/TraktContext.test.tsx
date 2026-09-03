@@ -235,8 +235,8 @@ describe('TraktContext', () => {
     const uploadSpy = jest.spyOn(traktZipImportService, 'uploadZipFile').mockResolvedValue('path/to/file.zip');
     let capturedProgressCallback: any = null;
     const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
-      (_userId: string, _importId: string, onProgress: any) => {
-        capturedProgressCallback = onProgress;
+      (...args: Parameters<typeof traktZipImportService.subscribeToProgress>) => {
+        capturedProgressCallback = args[2];
         return jest.fn();
       }
     );
@@ -372,5 +372,302 @@ describe('TraktContext', () => {
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ['watchedMovies', 'user-zip-restore'] })
     );
+  });
+
+  it('exposes nextAllowedZipImportAt date and isZipImportRateLimited from user document snapshot', async () => {
+    let capturedSnapshotCallback: ((snapshot: any) => void) | null = null;
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      capturedSnapshotCallback = callback;
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-cooldown' };
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // 1. Initial snapshot with future nextAllowedImportAt
+    const futureDate = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: {
+            errorCategory: 'in_flight',
+            failedAt: { toDate: () => new Date() },
+            nextAllowedImportAt: { toDate: () => futureDate },
+            status: 'failed',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.nextAllowedZipImportAt).toEqual(futureDate);
+    expect(result.current.isZipImportRateLimited).toBe(true);
+
+    // 2. Snapshot transitions to expired cooldown (in the past)
+    const pastDate = new Date(Date.now() - 60 * 1000);
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: {
+            nextAllowedImportAt: { toDate: () => pastDate },
+            status: 'failed',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.nextAllowedZipImportAt).toEqual(pastDate);
+    expect(result.current.isZipImportRateLimited).toBe(false);
+
+    // 3. Snapshot with nextAllowedImportAt deleted (pre-flight failure or cleared)
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: {
+            errorCategory: 'pre_flight',
+            status: 'failed',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.nextAllowedZipImportAt).toBeNull();
+    expect(result.current.isZipImportRateLimited).toBe(false);
+  });
+
+  it('automatically flips isZipImportRateLimited from true to false as time passes without requiring a new Firestore snapshot', async () => {
+    jest.useFakeTimers();
+    try {
+      const { onSnapshot } = jest.requireMock('firebase/firestore');
+      let capturedSnapshotCallback: ((snap: any) => void) | null = null;
+      (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+        capturedSnapshotCallback = callback;
+        return jest.fn();
+      });
+
+      mockCurrentUser = { isAnonymous: false, uid: 'user-zip-ticker' };
+      const { result } = renderHook(() => useTrakt(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(mockCurrentUser);
+      });
+
+      // Snapshot with a cooldown 20 seconds in the future
+      const now = Date.now();
+      const futureDate = new Date(now + 20 * 1000);
+      await act(async () => {
+        capturedSnapshotCallback?.({
+          exists: () => true,
+          data: () => ({
+            traktZipImportStatus: {
+              completedAt: { toDate: () => new Date(now) },
+              nextAllowedImportAt: { toDate: () => futureDate },
+              status: 'completed',
+            },
+          }),
+        });
+      });
+
+      expect(result.current.nextAllowedZipImportAt).toEqual(futureDate);
+      expect(result.current.isZipImportRateLimited).toBe(true);
+
+      // Advance by 15s (20s cooldown has 5s remaining)
+      act(() => {
+        jest.advanceTimersByTime(15000);
+      });
+      expect(result.current.isZipImportRateLimited).toBe(true);
+
+      // Advance by another 15s (total 30s elapsed, past the 20s cooldown)
+      act(() => {
+        jest.advanceTimersByTime(15000);
+      });
+      // isZipImportRateLimited should now be false without any new snapshot!
+      expect(result.current.isZipImportRateLimited).toBe(false);
+
+      // Confirm interval has self-stopped and is no longer ticking
+      const timerCount = jest.getTimerCount();
+      act(() => {
+        jest.advanceTimersByTime(60000);
+      });
+      expect(jest.getTimerCount()).toBeLessThanOrEqual(timerCount);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('does not start an interval when nextAllowedZipImportAt is already expired or null', async () => {
+    jest.useFakeTimers();
+    const setIntervalSpy = jest.spyOn(global, 'setInterval');
+    try {
+      const { onSnapshot } = jest.requireMock('firebase/firestore');
+      let capturedSnapshotCallback: ((snap: any) => void) | null = null;
+      (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+        capturedSnapshotCallback = callback;
+        return jest.fn();
+      });
+
+      mockCurrentUser = { isAnonymous: false, uid: 'user-zip-expired-snap' };
+      const { result, unmount } = renderHook(() => useTrakt(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(mockCurrentUser);
+      });
+
+      setIntervalSpy.mockClear();
+
+      // Snapshot with an already-expired timestamp (10 minutes ago)
+      const pastDate = new Date(Date.now() - 10 * 60 * 1000);
+      await act(async () => {
+        capturedSnapshotCallback?.({
+          exists: () => true,
+          data: () => ({
+            traktZipImportStatus: {
+              nextAllowedImportAt: { toDate: () => pastDate },
+              status: 'idle',
+            },
+          }),
+        });
+      });
+
+      expect(result.current.isZipImportRateLimited).toBe(false);
+      // No extra interval timer should have been started
+      expect(setIntervalSpy).not.toHaveBeenCalled();
+
+      // Snapshot with null nextAllowedImportAt
+      await act(async () => {
+        capturedSnapshotCallback?.({
+          exists: () => true,
+          data: () => ({
+            traktZipImportStatus: {
+              status: 'idle',
+            },
+          }),
+        });
+      });
+
+      expect(result.current.nextAllowedZipImportAt).toBeNull();
+      expect(result.current.isZipImportRateLimited).toBe(false);
+      expect(setIntervalSpy).not.toHaveBeenCalled();
+
+      // Snapshot with invalid nextAllowedImportAt Date returned from toDate()
+      await act(async () => {
+        capturedSnapshotCallback?.({
+          exists: () => true,
+          data: () => ({
+            traktZipImportStatus: {
+              nextAllowedImportAt: { toDate: () => new Date('invalid') },
+              status: 'idle',
+            },
+          }),
+        });
+      });
+
+      expect(result.current.nextAllowedZipImportAt).toBeNull();
+      expect(result.current.isZipImportRateLimited).toBe(false);
+      expect(setIntervalSpy).not.toHaveBeenCalled();
+
+      unmount();
+    } finally {
+      setIntervalSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
+  it('sets rate-limited zipImportError when startZipImport rejects with TraktZipRateLimitedError', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { traktZipImportService, TraktZipRateLimitedError } = require('@/src/services/TraktZipImportService');
+    jest.spyOn(traktZipImportService, 'uploadZipFile').mockResolvedValue('path/to/file.zip');
+
+    const futureDate = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startImportSpy = jest.spyOn(traktZipImportService, 'startImport').mockRejectedValue(
+      new TraktZipRateLimitedError(
+        'Please wait before starting another Trakt zip import.',
+        futureDate.toISOString()
+      )
+    );
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-rate-err' };
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.startZipImport({
+          name: 'export.zip',
+          size: 1024,
+          uri: 'file:///export.zip',
+        })
+      ).rejects.toThrow(TraktZipRateLimitedError);
+    });
+
+    expect(startImportSpy).toHaveBeenCalled();
+    expect(result.current.zipImportUiState).toBe('failed');
+    expect(result.current.zipImportError).toContain('Import cooldown active.');
+    expect(result.current.zipImportError).toContain('You can start another import');
+
+    // Also test fallback message when TraktZipRateLimitedError has no retry ISO
+    startImportSpy.mockRejectedValueOnce(
+      new TraktZipRateLimitedError('Please wait before starting another Trakt zip import.')
+    );
+
+    await act(async () => {
+      await expect(
+        result.current.startZipImport({
+          name: 'export.zip',
+          size: 1024,
+          uri: 'file:///export.zip',
+        })
+      ).rejects.toThrow(TraktZipRateLimitedError);
+    });
+
+    expect(result.current.zipImportUiState).toBe('failed');
+    expect(result.current.zipImportError).toBe(
+      'Please wait before starting another import.'
+    );
+
+    // Regression test: non-empty but invalid nextAllowedImportAt falls back to generic message and clears nextAllowedZipImportAt
+    startImportSpy.mockRejectedValueOnce(
+      new TraktZipRateLimitedError(
+        'Please wait before starting another Trakt zip import.',
+        'invalid-date-string'
+      )
+    );
+
+    await act(async () => {
+      await expect(
+        result.current.startZipImport({
+          name: 'export.zip',
+          size: 1024,
+          uri: 'file:///export.zip',
+        })
+      ).rejects.toThrow(TraktZipRateLimitedError);
+    });
+
+    expect(result.current.zipImportUiState).toBe('failed');
+    expect(result.current.nextAllowedZipImportAt).toBeNull();
+    expect(result.current.zipImportError).toBe(
+      'Please wait before starting another import.'
+    );
+
+    consoleErrorSpy.mockRestore();
   });
 });

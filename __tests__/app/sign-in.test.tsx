@@ -9,6 +9,7 @@ const mockSignInWithGoogle = jest.fn();
 const mockSignInAsGuest = jest.fn();
 const mockCreateUserDocument = jest.fn((_: unknown) => Promise.resolve());
 const mockTrackLogin = jest.fn();
+const mockTrackAuthInteraction = jest.fn();
 const mockSignInWithEmailAndPassword = jest.fn();
 const mockCreateUserWithEmailAndPassword = jest.fn();
 
@@ -24,6 +25,7 @@ jest.mock('@/src/firebase/user', () => ({
 
 jest.mock('@/src/services/analytics', () => ({
   trackLogin: (...args: unknown[]) => mockTrackLogin(...args),
+  trackAuthInteraction: (...args: unknown[]) => mockTrackAuthInteraction(...args),
 }));
 
 jest.mock('firebase/auth', () => ({
@@ -61,6 +63,28 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+let mockBackPressHandler: (() => boolean) | null = null;
+const mockBackHandlerRemove = jest.fn();
+const mockBackHandlerAddEventListener = jest.fn((event: string, handler: () => boolean) => {
+  if (event === 'hardwareBackPress') {
+    mockBackPressHandler = handler;
+  }
+  return {
+    remove: mockBackHandlerRemove,
+  };
+});
+
+jest.mock('react-native', () => {
+  const actual = jest.requireActual('react-native');
+  return {
+    ...actual,
+    BackHandler: {
+      addEventListener: (event: any, handler: any) =>
+        mockBackHandlerAddEventListener(event, handler),
+    },
+  };
+});
+
 import SignIn from '@/app/(auth)/sign-in';
 
 type AlertButton = {
@@ -97,6 +121,8 @@ describe('SignIn', () => {
 
     fireEvent.press(getByText('auth.google'));
 
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'google', action: 'tap' });
+
     await waitFor(() => {
       expect(mockCreateUserDocument).toHaveBeenCalledWith(user);
     });
@@ -105,12 +131,43 @@ describe('SignIn', () => {
     });
   });
 
+  it('tracks Google dismiss when Google sign-in is cancelled', async () => {
+    mockSignInWithGoogle.mockResolvedValue({ success: false, cancelled: true });
+
+    const { getByText } = render(<SignIn />);
+
+    fireEvent.press(getByText('auth.google'));
+
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'google', action: 'tap' });
+
+    await waitFor(() => {
+      expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'google', action: 'dismiss' });
+    });
+  });
+
+  it('tracks Google dismiss when Google sign-in returns errorType CANCELLED without cancelled flag', async () => {
+    mockSignInWithGoogle.mockResolvedValue({ success: false, error: '', errorType: 'CANCELLED' });
+
+    const { getByText } = render(<SignIn />);
+
+    fireEvent.press(getByText('auth.google'));
+
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'google', action: 'tap' });
+
+    await waitFor(() => {
+      expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'google', action: 'dismiss' });
+    });
+    expect(mockTrackAuthInteraction).not.toHaveBeenCalledWith({ option: 'google', action: 'error' });
+  });
+
   it('tracks guest login after a successful guest sign-in', async () => {
     mockSignInAsGuest.mockResolvedValue({ success: true, user: { uid: 'guest-1' } });
 
     const { getByText } = render(<SignIn />);
 
     fireEvent.press(getByText('auth.continueAsGuest'));
+
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'guest', action: 'tap' });
 
     await waitFor(() => {
       expect(mockSignInAsGuest).toHaveBeenCalled();
@@ -127,6 +184,7 @@ describe('SignIn', () => {
     pressEmailContinue(getByText);
 
     expect(Alert.alert).toHaveBeenCalledWith('common.error', 'auth.emailRequired');
+    expect(mockTrackAuthInteraction).not.toHaveBeenCalledWith({ option: 'email', action: 'error' });
   });
 
   it('shows passwordRequired when password is empty', () => {
@@ -136,6 +194,7 @@ describe('SignIn', () => {
     pressEmailContinue(getByText);
 
     expect(Alert.alert).toHaveBeenCalledWith('common.error', 'auth.passwordRequired');
+    expect(mockTrackAuthInteraction).not.toHaveBeenCalledWith({ option: 'email', action: 'error' });
   });
 
   it('signs in directly with existing password accounts without checking sign-in methods', async () => {
@@ -291,6 +350,7 @@ describe('SignIn', () => {
       expect(Alert.alert).toHaveBeenCalledWith('auth.signInFailed', 'auth.invalidCredentials');
     });
 
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'email', action: 'error' });
     expect(Alert.alert).toHaveBeenCalledTimes(1);
     expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
     expect(mockTrackLogin).not.toHaveBeenCalled();
@@ -344,6 +404,7 @@ describe('SignIn', () => {
       );
     });
 
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'email', action: 'error' });
     expect(mockCreateUserDocument).not.toHaveBeenCalled();
     expect(mockTrackLogin).not.toHaveBeenCalled();
   });
@@ -362,7 +423,27 @@ describe('SignIn', () => {
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith('auth.signInFailed', 'auth.tooManyAttempts');
     });
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'email', action: 'error' });
     expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
     expect(mockTrackLogin).not.toHaveBeenCalled();
+  });
+
+  it('tracks screen dismiss when Android hardware back button is pressed while focused', () => {
+    const { Platform } = require('react-native');
+    const originalPlatform = Platform.OS;
+    Platform.OS = 'android';
+
+    try {
+      render(<SignIn />);
+      expect(mockBackPressHandler).toBeDefined();
+      const prevented = mockBackPressHandler!();
+      expect(prevented).toBe(false);
+      expect(mockTrackAuthInteraction).toHaveBeenCalledWith({
+        option: 'screen',
+        action: 'dismiss',
+      });
+    } finally {
+      Platform.OS = originalPlatform;
+    }
   });
 });

@@ -2,6 +2,17 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fork } from 'node:child_process';
+
+const args = process.argv.slice(2);
+if (args.includes('--db') || args.includes('--live')) {
+  const dbAuditScript = path.resolve(process.cwd(), 'scripts/firestore-db-audit.mjs');
+  const forwardedArgs = args.filter(a => a !== '--db' && a !== '--live');
+  const child = fork(dbAuditScript, forwardedArgs, { stdio: 'inherit' });
+  child.on('exit', (code) => process.exit(code ?? 0));
+  // Exit parent handling to let child run
+  await new Promise(() => {});
+}
 
 const ROOT = process.cwd();
 const TARGET_DIRS = ['src', 'app'];

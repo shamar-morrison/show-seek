@@ -11,6 +11,7 @@ import {
 
 interface RunOptions {
   allowDowngrade: boolean;
+  confirm: boolean;
   uids: string[];
 }
 
@@ -36,10 +37,16 @@ const parseArgs = async (): Promise<RunOptions> => {
   const directUids = new Set<string>();
   const fileUids = new Set<string>();
   let allowDowngrade = false;
+  let confirm = false;
 
   for (const arg of args) {
     if (arg === '--allow-downgrade') {
       allowDowngrade = true;
+      continue;
+    }
+
+    if (arg === '--confirm') {
+      confirm = true;
       continue;
     }
 
@@ -72,6 +79,7 @@ const parseArgs = async (): Promise<RunOptions> => {
 
   return {
     allowDowngrade,
+    confirm,
     uids: Array.from(new Set([...directUids, ...fileUids])),
   };
 };
@@ -126,6 +134,13 @@ const run = async (): Promise<void> => {
   const options = await parseArgs();
   if (options.uids.length === 0) {
     throw new Error('Missing user ids. Pass --uids=<uid1,uid2> or --uids-file=<path>.');
+  }
+
+  console.log(`[repair] Target users to inspect: ${options.uids.length} (estimated document reads: ${options.uids.length})`);
+  if (options.uids.length > 1000 && !options.confirm) {
+    throw new Error(
+      `[SAFETY ABORT] Target list contains ${options.uids.length} users (${options.uids.length} document reads). Pass --confirm to proceed with > 1,000 document reads.`
+    );
   }
 
   const apiKey = process.env.REVENUECAT_API_KEY ?? '';

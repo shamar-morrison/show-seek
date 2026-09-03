@@ -127,9 +127,11 @@ export interface TraktUserZipImportStatus {
   completedAt?: FirebaseFirestore.Timestamp;
   createdAt?: FirebaseFirestore.Timestamp;
   error?: string;
+  errorCategory?: TraktZipImportErrorCategory;
   failedAt?: FirebaseFirestore.Timestamp;
   id: string;
   leaseToken?: string;
+  nextAllowedImportAt?: FirebaseFirestore.Timestamp;
   phase: TraktZipImportPhase;
   stats?: {
     customLists: number;
@@ -461,11 +463,13 @@ export interface StartTraktZipImportRequest {
 
 export interface TraktZipImportTaskPayload {
   importId: string;
+  isCooldownBypassed?: boolean;
   userId: string;
 }
 
 export type TraktZipImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type TraktZipImportPhase = 'pending' | 'downloading' | 'parsing' | 'syncing' | 'completed' | 'failed';
+export type TraktZipImportErrorCategory = 'pre_flight' | 'in_flight';
 
 export interface TraktZipImportProgressDoc {
   completedAt?: FirebaseFirestore.Timestamp;
@@ -473,6 +477,8 @@ export interface TraktZipImportProgressDoc {
   error?: string;
   failedAt?: FirebaseFirestore.Timestamp;
   id: string;
+  isCooldownBypassed?: boolean;
+  nextAllowedImportAt?: FirebaseFirestore.Timestamp;
   progress: {
     current: number;
     phase: TraktZipImportPhase;

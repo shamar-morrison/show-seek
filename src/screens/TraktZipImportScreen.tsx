@@ -21,6 +21,8 @@ import {
   TraktZipImportStats,
 } from '@/src/services/TraktZipImportService';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { formatDistanceToNow } from 'date-fns';
+import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -42,7 +44,7 @@ import {
   UploadCloud,
   X,
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -84,13 +86,15 @@ function StatTile({ icon, label, value }: StatTileProps) {
 
 export default function TraktZipImportScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const requireAccount = useAccountRequired();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { accentColor } = useAccentColor();
   const {
     isEnriching,
     isSyncing,
+    isZipImportRateLimited,
+    nextAllowedZipImportAt,
     zipImportUiState: uiState,
     zipUploadProgress: uploadProgress,
     zipImportDoc: progressDoc,
@@ -103,6 +107,25 @@ export default function TraktZipImportScreen() {
 
   const [isPickingFile, setIsPickingFile] = useState(false);
 
+  const distanceLocale = useMemo(() => {
+    switch (i18n.language) {
+      case 'es-ES':
+      case 'es-MX':
+        return es;
+      case 'fr':
+      case 'fr-FR':
+        return fr;
+      case 'pt-BR':
+        return ptBR;
+      case 'pt-PT':
+        return pt;
+      case 'tr-TR':
+        return tr;
+      default:
+        return enUS;
+    }
+  }, [i18n.language]);
+
   useEffect(() => {
     if (requireAccount()) {
       router.back();
@@ -110,7 +133,7 @@ export default function TraktZipImportScreen() {
   }, [requireAccount, router]);
 
   const handlePickFile = async () => {
-    if (isPickingFile || isPremiumLoading || isSyncing) {
+    if (isPickingFile || isPremiumLoading || isSyncing || isZipImportRateLimited) {
       return;
     }
 
@@ -141,7 +164,7 @@ export default function TraktZipImportScreen() {
   };
 
   const handleStartImport = async () => {
-    if (!selectedFile || isSyncing) {
+    if (!selectedFile || isSyncing || isZipImportRateLimited) {
       return;
     }
 
@@ -213,8 +236,40 @@ export default function TraktZipImportScreen() {
           <Text style={[styles.syncRunningDescription, { color: COLORS.trakt }]}>
             {t('trakt.zipImport.syncRunningDescription', {
               defaultValue:
-                'A Trakt sync is currently in progress. Please wait for it to finish before starting a zip import.',
+                'A Trakt sync is currently in progress. Please wait for it to complete before starting a zip import.',
             })}
+          </Text>
+        </View>
+      )}
+
+      {/* If the import cooldown is active, show rate-limited banner */}
+      {isZipImportRateLimited && (
+        <View
+          style={[
+            styles.syncRunningBanner,
+            { backgroundColor: hexToRGBA(COLORS.warning, 0.12) },
+          ]}
+        >
+          <View style={styles.syncRunningHeader}>
+            <AlertCircle size={18} color={COLORS.warning} />
+            <Text style={[styles.syncRunningTitle, { color: COLORS.warning }]}>
+              {t('trakt.zipImport.rateLimitedTitle', {
+                defaultValue: 'Import Cooldown Active',
+              })}
+            </Text>
+          </View>
+          <Text style={[styles.syncRunningDescription, { color: COLORS.warning }]}>
+            {nextAllowedZipImportAt && nextAllowedZipImportAt.getTime() > Date.now()
+              ? t('trakt.zipImport.rateLimitedWithTime', {
+                  defaultValue: 'You can start another import {{time}}.',
+                  time: formatDistanceToNow(nextAllowedZipImportAt, {
+                    addSuffix: true,
+                    locale: distanceLocale,
+                  }),
+                })
+              : t('trakt.zipImport.rateLimitedDescription', {
+                  defaultValue: 'Please wait before starting another import.',
+                })}
           </Text>
         </View>
       )}
@@ -247,17 +302,20 @@ export default function TraktZipImportScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.pickerBox,
-            pressed && !isSyncing && { borderColor: accentColor, opacity: ACTIVE_OPACITY },
-            isSyncing && { opacity: 0.6 },
+            pressed && !isSyncing && !isZipImportRateLimited && { borderColor: accentColor, opacity: ACTIVE_OPACITY },
+            (isSyncing || isZipImportRateLimited) && { opacity: 0.6 },
           ]}
           onPress={handlePickFile}
-          disabled={isPickingFile || isPremiumLoading || isSyncing}
+          disabled={isPickingFile || isPremiumLoading || isSyncing || isZipImportRateLimited}
         >
           {isPickingFile ? (
             <ActivityIndicator color={accentColor} size="small" />
           ) : (
             <>
-              <UploadCloud size={40} color={isSyncing ? COLORS.textSecondary : accentColor} />
+              <UploadCloud
+                size={40}
+                color={isSyncing || isZipImportRateLimited ? COLORS.textSecondary : accentColor}
+              />
               <View style={styles.pickerTitleRow}>
                 <Text style={styles.pickerBoxTitle}>{t('trakt.zipImport.selectFile')}</Text>
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
@@ -275,18 +333,32 @@ export default function TraktZipImportScreen() {
         style={({ pressed }) => [
           styles.primaryButton,
           {
-            backgroundColor: selectedFile && !isSyncing ? COLORS.trakt : COLORS.surfaceLight,
+            backgroundColor:
+              selectedFile && !isSyncing && !isZipImportRateLimited
+                ? COLORS.trakt
+                : COLORS.surfaceLight,
           },
-          pressed && selectedFile && !isSyncing ? { opacity: ACTIVE_OPACITY } : null,
+          pressed && selectedFile && !isSyncing && !isZipImportRateLimited
+            ? { opacity: ACTIVE_OPACITY }
+            : null,
         ]}
         onPress={handleStartImport}
-        disabled={!selectedFile || isSyncing}
+        disabled={!selectedFile || isSyncing || isZipImportRateLimited}
       >
-        <Upload size={20} color={selectedFile && !isSyncing ? COLORS.white : COLORS.textSecondary} />
+        <Upload
+          size={20}
+          color={
+            selectedFile && !isSyncing && !isZipImportRateLimited
+              ? COLORS.white
+              : COLORS.textSecondary
+          }
+        />
         <Text
           style={[
             styles.primaryButtonText,
-            (!selectedFile || isSyncing) && { color: COLORS.textSecondary },
+            (!selectedFile || isSyncing || isZipImportRateLimited) && {
+              color: COLORS.textSecondary,
+            },
           ]}
         >
           {t('trakt.zipImport.startImport')}

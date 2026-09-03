@@ -1,8 +1,17 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { OnboardingExitIntentVariant } from '@/src/services/analytics';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 
 interface ExitIntentModalProps {
@@ -53,6 +62,38 @@ export function ExitIntentModal({
   const { t } = useTranslation();
   const keys = VARIANT_I18N_KEYS[variant];
 
+  const emojiScale = useSharedValue(1);
+
+  // Pulse animation for emoji
+  useEffect(() => {
+    if (visible) {
+      const easingFn = Easing?.inOut ? Easing.inOut(Easing.ease) : undefined;
+      emojiScale.value = withRepeat(
+        withSequence(
+          withTiming(1.15, { duration: 600, easing: easingFn }),
+          withTiming(1, { duration: 600, easing: easingFn })
+        ),
+        -1,
+        true
+      );
+    } else {
+      if (typeof cancelAnimation === 'function') {
+        cancelAnimation(emojiScale);
+      }
+      emojiScale.value = 1;
+    }
+
+    return () => {
+      if (typeof cancelAnimation === 'function') {
+        cancelAnimation(emojiScale);
+      }
+    };
+  }, [visible, emojiScale]);
+
+  const animatedEmojiStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: emojiScale.value }],
+  }));
+
   return (
     <Modal
       visible={visible}
@@ -66,25 +107,34 @@ export function ExitIntentModal({
 
         {/* Stop press propagation on the card itself */}
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          {/* Animated Emoji */}
+          <Animated.View style={[styles.emojiContainer, animatedEmojiStyle]}>
+            <Text style={styles.emojiText}>🫣</Text>
+          </Animated.View>
+
           <Text style={styles.headline}>{t(keys.headline)}</Text>
           <Text style={styles.subtext}>{t(keys.subtext)}</Text>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.continueButton}
+            <Pressable
+              style={({ pressed }) => [
+                styles.continueButton,
+                pressed && styles.buttonPressed,
+              ]}
               onPress={onContinue}
-              activeOpacity={0.85}
             >
               <Text style={styles.continueButtonText}>{t(keys.continueButton)}</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={styles.exitButton}
+            <Pressable
+              style={({ pressed }) => [
+                styles.exitButton,
+                pressed && styles.buttonPressed,
+              ]}
               onPress={onExit}
-              activeOpacity={0.7}
             >
               <Text style={styles.exitButtonText}>{t(keys.exitButton)}</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </Pressable>
       </Pressable>
@@ -143,6 +193,17 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontWeight: '700',
+  },
+  emojiContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.m,
+  },
+  emojiText: {
+    fontSize: 48,
+  },
+  buttonPressed: {
+    opacity: 0.85,
   },
   exitButton: {
     paddingVertical: SPACING.m,

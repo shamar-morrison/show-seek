@@ -30,6 +30,8 @@ export const MAX_ZIP_UNCOMPRESSED_ENTRY_SIZE_BYTES = 100 * 1024 * 1024;
 export const MAX_ZIP_TOTAL_UNCOMPRESSED_SIZE_BYTES = 500 * 1024 * 1024;
 export const TRAKT_ZIP_IMPORT_PENDING_STALE_MS = 5 * 60 * 1000;
 export const TRAKT_ZIP_IMPORT_PROCESSING_STALE_MS = 35 * 60 * 1000;
+export const TRAKT_ZIP_IMPORT_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+export const TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS = 10 * 1000;
 
 export const buildTraktZipImportStoragePath = (userId: string, importId: string): string =>
   `users/${userId}/imports/${importId}.zip`;

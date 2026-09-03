@@ -46,7 +46,8 @@ export function useOnboardingReengagement(
   currentStepIndex: number,
   selections?: OnboardingSelections,
   selectedViaOther?: boolean,
-  hasRehydratedRef?: React.RefObject<boolean> | React.MutableRefObject<boolean>
+  hasRehydratedRef?: React.RefObject<boolean> | React.MutableRefObject<boolean>,
+  hasInteractedWithNotifications?: boolean
 ) {
   const appStateRef = useRef<AppStateStatus>(AppState?.currentState ?? 'active');
   const scheduleGenerationRef = useRef(0);
@@ -61,6 +62,11 @@ export function useOnboardingReengagement(
 
   const rehydratedRef = useRef(hasRehydratedRef);
   rehydratedRef.current = hasRehydratedRef;
+
+  const hasInteractedWithNotificationsRef = useRef(hasInteractedWithNotifications);
+  useEffect(() => {
+    hasInteractedWithNotificationsRef.current = hasInteractedWithNotifications;
+  }, [hasInteractedWithNotifications]);
 
   useEffect(() => {
     if (!AppState?.addEventListener) {
@@ -93,6 +99,9 @@ export function useOnboardingReengagement(
             stepIndex,
             selections: currentSelections,
             selectedViaOther: currentSelectedViaOther,
+            ...(hasInteractedWithNotificationsRef.current !== undefined
+              ? { hasInteractedWithNotifications: hasInteractedWithNotificationsRef.current }
+              : {}),
           });
         } catch (error) {
           console.warn('[Reengagement] Failed to persist onboarding progress:', error);

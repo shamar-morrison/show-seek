@@ -9,7 +9,15 @@ import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react-native';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DEFAULT_LIST_IDS = [
@@ -129,37 +137,57 @@ export default function ManageListsScreen() {
               {customLists.length > 0 ? (
                 <>
                   <Text style={styles.sectionSubtitle}>{t('library.customListsDescription')}</Text>
-                  {customLists.map((list) => (
-                    <View key={list.id} style={styles.listItem}>
-                      <View style={styles.listInfo}>
-                        <Text style={styles.listName}>{list.name}</Text>
-                        <Text style={styles.listCount}>
-                          {(() => {
-                            const count = Object.keys(list.items || {}).length;
-                            return count === 1 ? t('library.itemCountOne') : t('library.itemCount', { count });
-                          })()}
-                        </Text>
+                  {customLists.map((list) => {
+                    const isDeletingThis =
+                      deleteMutation.isPending && deleteMutation.variables === list.id;
+                    const actionsDisabled = deleteMutation.isPending;
+
+                    return (
+                      <View
+                        key={list.id}
+                        testID={`manage-list-row-${list.id}`}
+                        style={[styles.listItem, isDeletingThis && styles.listItemDeleting]}
+                      >
+                        <View style={styles.listInfo}>
+                          <Text style={styles.listName}>{list.name}</Text>
+                          <Text style={styles.listCount}>
+                            {(() => {
+                              const count = Object.keys(list.items || {}).length;
+                              return count === 1
+                                ? t('library.itemCountOne')
+                                : t('library.itemCount', { count });
+                            })()}
+                          </Text>
+                        </View>
+                        <View style={styles.listActions}>
+                          <TouchableOpacity
+                            testID={`rename-list-${list.id}`}
+                            onPress={() =>
+                              handleRenameList(list.id, list.name, list.description ?? '')
+                            }
+                            style={styles.actionButton}
+                            activeOpacity={ACTIVE_OPACITY}
+                            disabled={actionsDisabled}
+                          >
+                            <Pencil size={20} color={COLORS.textSecondary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            testID={`delete-list-${list.id}`}
+                            onPress={() => handleDeleteList(list.id, list.name)}
+                            style={styles.actionButton}
+                            activeOpacity={ACTIVE_OPACITY}
+                            disabled={actionsDisabled}
+                          >
+                            {isDeletingThis ? (
+                              <ActivityIndicator size="small" color={COLORS.error} />
+                            ) : (
+                              <Trash2 size={20} color={COLORS.error} />
+                            )}
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <View style={styles.listActions}>
-                        <TouchableOpacity
-                          onPress={() =>
-                            handleRenameList(list.id, list.name, list.description ?? '')
-                          }
-                          style={styles.actionButton}
-                          activeOpacity={ACTIVE_OPACITY}
-                        >
-                          <Pencil size={20} color={COLORS.textSecondary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => handleDeleteList(list.id, list.name)}
-                          style={styles.actionButton}
-                          activeOpacity={ACTIVE_OPACITY}
-                        >
-                          <Trash2 size={20} color={COLORS.error} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </>
               ) : (
                 <Text style={styles.emptyText}>{t('library.emptyLists')}</Text>
@@ -218,6 +246,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.m,
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
+  },
+  listItemDeleting: {
+    opacity: 0.5,
   },
   listInfo: {
     flex: 1,

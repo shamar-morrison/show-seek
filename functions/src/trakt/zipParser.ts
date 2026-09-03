@@ -27,6 +27,22 @@ import type {
   TraktWatchedShow,
 } from './types';
 
+export class TraktZipSizeLimitError extends Error {
+  readonly isPreFlight = true;
+  constructor(message: string) {
+    super(message);
+    this.name = 'TraktZipSizeLimitError';
+  }
+}
+
+export class TraktZipCorruptArchiveError extends Error {
+  readonly isPreFlight = true;
+  constructor(message: string) {
+    super(message);
+    this.name = 'TraktZipCorruptArchiveError';
+  }
+}
+
 export type ZipEntryCategory =
   | 'history_events'
   | 'history_movies'
@@ -153,8 +169,15 @@ export const parseTraktZipBuffer = (
   const maxEntrySizeBytes = options?.maxEntrySizeBytes ?? MAX_ZIP_UNCOMPRESSED_ENTRY_SIZE_BYTES;
   const maxTotalSizeBytes = options?.maxTotalUncompressedSizeBytes ?? MAX_ZIP_TOTAL_UNCOMPRESSED_SIZE_BYTES;
 
-  const ZipConstructor = (AdmZip as unknown as { default?: typeof AdmZip }).default || AdmZip;
-  const zip = new ZipConstructor(zipBuffer);
+  let zip: AdmZip;
+  try {
+    const ZipConstructor = (AdmZip as unknown as { default?: typeof AdmZip }).default || AdmZip;
+    zip = new ZipConstructor(zipBuffer);
+  } catch (zipError) {
+    throw new TraktZipCorruptArchiveError(
+      `Failed to read Trakt export archive: ${zipError instanceof Error ? zipError.message : 'invalid or corrupt zip file'}`
+    );
+  }
   const entries = zip.getEntries();
 
   // 1. Validate declared uncompressed size in headers across relevant entries before extraction
@@ -169,13 +192,13 @@ export const parseTraktZipBuffer = (
     }
     const declaredSize = entry.header?.size ?? 0;
     if (declaredSize > maxEntrySizeBytes) {
-      throw new Error(
+      throw new TraktZipSizeLimitError(
         `Trakt zip entry "${entry.entryName}" decompressed size (${declaredSize} bytes) exceeds the maximum allowed limit (${maxEntrySizeBytes} bytes).`
       );
     }
     declaredTotalUncompressedBytes += declaredSize;
     if (declaredTotalUncompressedBytes > maxTotalSizeBytes) {
-      throw new Error(
+      throw new TraktZipSizeLimitError(
         `Trakt zip aggregate decompressed size (${declaredTotalUncompressedBytes} bytes) exceeds the maximum allowed limit (${maxTotalSizeBytes} bytes).`
       );
     }
@@ -219,13 +242,13 @@ export const parseTraktZipBuffer = (
     try {
       const dataBuffer = entry.getData();
       if (dataBuffer.length > maxEntrySizeBytes) {
-        throw new Error(
+        throw new TraktZipSizeLimitError(
           `Trakt zip entry "${entry.entryName}" decompressed size (${dataBuffer.length} bytes) exceeds the maximum allowed limit (${maxEntrySizeBytes} bytes).`
         );
       }
       actualTotalUncompressedBytes += dataBuffer.length;
       if (actualTotalUncompressedBytes > maxTotalSizeBytes) {
-        throw new Error(
+        throw new TraktZipSizeLimitError(
           `Trakt zip aggregate decompressed size (${actualTotalUncompressedBytes} bytes) exceeds the maximum allowed limit (${maxTotalSizeBytes} bytes).`
         );
       }

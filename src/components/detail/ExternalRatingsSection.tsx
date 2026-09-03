@@ -58,7 +58,7 @@ RatingItem.displayName = 'RatingItem';
  * External Ratings Section Component
  *
  * Displays ratings from IMDb, Rotten Tomatoes, and Metacritic.
- * Returns null if no ratings are available (hides the section).
+ * Returns a single SectionSeparator if no ratings are available to maintain uniform section separation.
  */
 export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
   ({ ratings, isLoading }) => {
@@ -67,14 +67,14 @@ export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
       return <RatingSkeleton />;
     }
 
-    // Hide section if no ratings
+    // Show single separator if no ratings
     if (!ratings) {
-      return null;
+      return <SectionSeparator />;
     }
 
     const hasAnyRating = ratings.imdb || ratings.rottenTomatoes || ratings.metacritic;
     if (!hasAnyRating) {
-      return null;
+      return <SectionSeparator />;
     }
 
     return (

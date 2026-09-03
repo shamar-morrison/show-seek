@@ -141,6 +141,10 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
   useSegments: () => [],
   usePathname: () => '/',
+  useFocusEffect: (callback) => {
+    const React = require('react');
+    React.useEffect(callback, [callback]);
+  },
   Link: 'Link',
   Stack: {
     Screen: 'Screen',
@@ -200,6 +204,11 @@ jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: {
     DATE: 'date',
   },
+}));
+
+// Mock expo-device
+jest.mock('expo-device', () => ({
+  isDevice: true,
 }));
 
 // Mock expo-haptics

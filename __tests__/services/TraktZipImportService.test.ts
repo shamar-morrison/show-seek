@@ -214,6 +214,36 @@ describe('TraktZipImportService', () => {
       expect(mockCallable).toHaveBeenCalledWith({ importId: 'import-abc' });
     });
 
+    it('attaches the dev sync bypass flag in __DEV__ builds', async () => {
+      const originalDev = (global as { __DEV__?: boolean }).__DEV__;
+      (global as { __DEV__?: boolean }).__DEV__ = true;
+
+      const mockCallable = jest.fn().mockResolvedValue({ data: { importId: 'import-dev' } });
+      const mockHttpsCallable = jest.fn(() => mockCallable);
+
+      jest.doMock('@/src/firebase/config', () => ({
+        db: {},
+        functions: {},
+        storage: {},
+      }));
+      jest.doMock('firebase/functions', () => ({
+        httpsCallable: mockHttpsCallable,
+      }));
+
+      try {
+        const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+        const result = await traktZipImportService.startImport('import-dev');
+
+        expect(result).toEqual({ importId: 'import-dev' });
+        expect(mockCallable).toHaveBeenCalledWith({
+          importId: 'import-dev',
+          'X-ShowSeek-Dev-Sync': 'true',
+        });
+      } finally {
+        (global as { __DEV__?: boolean }).__DEV__ = originalDev;
+      }
+    });
+
     it('throws TraktZipImportError when callable throws', async () => {
       const mockCallable = jest.fn().mockRejectedValue(new Error('User is not premium'));
       const mockHttpsCallable = jest.fn(() => mockCallable);
@@ -232,6 +262,62 @@ describe('TraktZipImportService', () => {
       await expect(traktZipImportService.startImport('import-abc')).rejects.toThrow(
         TraktZipImportError
       );
+    });
+
+    it('throws TraktZipRateLimitedError when callable throws resource-exhausted with nextAllowedImportAt', async () => {
+      const resourceExhaustedError = Object.assign(
+        new Error('Please wait before starting another Trakt zip import.'),
+        {
+          code: 'functions/resource-exhausted',
+          details: { nextAllowedImportAt: '2026-09-02T20:00:00.000Z' },
+        }
+      );
+      const mockCallable = jest.fn().mockRejectedValue(resourceExhaustedError);
+      const mockHttpsCallable = jest.fn(() => mockCallable);
+
+      jest.doMock('@/src/firebase/config', () => ({
+        db: {},
+        functions: {},
+        storage: {},
+      }));
+      jest.doMock('firebase/functions', () => ({
+        httpsCallable: mockHttpsCallable,
+      }));
+
+      const { traktZipImportService, TraktZipRateLimitedError } = require('@/src/services/TraktZipImportService');
+
+      await expect(traktZipImportService.startImport('import-abc')).rejects.toMatchObject({
+        name: 'TraktZipRateLimitedError',
+        message: 'Please wait before starting another Trakt zip import.',
+        nextAllowedImportAt: '2026-09-02T20:00:00.000Z',
+      });
+    });
+
+    it('handles bare resource-exhausted code without details gracefully', async () => {
+      const resourceExhaustedError = Object.assign(
+        new Error('Rate limited'),
+        {
+          code: 'resource-exhausted',
+        }
+      );
+      const mockCallable = jest.fn().mockRejectedValue(resourceExhaustedError);
+      const mockHttpsCallable = jest.fn(() => mockCallable);
+
+      jest.doMock('@/src/firebase/config', () => ({
+        db: {},
+        functions: {},
+        storage: {},
+      }));
+      jest.doMock('firebase/functions', () => ({
+        httpsCallable: mockHttpsCallable,
+      }));
+
+      const { traktZipImportService, TraktZipRateLimitedError } = require('@/src/services/TraktZipImportService');
+
+      await expect(traktZipImportService.startImport('import-abc')).rejects.toMatchObject({
+        name: 'TraktZipRateLimitedError',
+        nextAllowedImportAt: undefined,
+      });
     });
   });
 
