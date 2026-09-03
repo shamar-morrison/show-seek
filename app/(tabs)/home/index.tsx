@@ -16,6 +16,7 @@ import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useInAppReview } from '@/src/hooks/useInAppReview';
 import { useLists } from '@/src/hooks/useLists';
 import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import {
@@ -49,6 +50,7 @@ export default function HomeScreen() {
   });
   const repairHomeScreenLists = useUpdateHomeScreenLists();
   const isAccountRequired = useAccountRequired();
+  const { isReady } = useProgressiveRender();
 
   // In-app review prompt: checks eligibility on Home tab focus with a short delay
   useInAppReview();
@@ -227,9 +229,8 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Show skeleton sections while preferences are loading for signed-in users */}
-        {/* This prevents layout shift when user's customized list loads */}
-        {isLoadingHomeSelections ? (
+        {/* Show skeleton sections while deferred by progressive render or while preferences load */}
+        {!isReady || isLoadingHomeSelections ? (
           <>
             <HomeListSectionSkeleton />
             <HomeListSectionSkeleton />

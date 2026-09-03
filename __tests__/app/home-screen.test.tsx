@@ -51,6 +51,7 @@ const mockListsState = {
 
 let mockTmdbPages: any[] = [];
 let latestMediaItem: any = null;
+let mockProgressiveReady = true;
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -171,6 +172,10 @@ jest.mock('@/src/hooks/usePosterOverrides', () => ({
   }),
 }));
 
+jest.mock('@/src/hooks/useProgressiveRender', () => ({
+  useProgressiveRender: () => ({ isReady: mockProgressiveReady }),
+}));
+
 jest.mock('@/src/hooks/useNavigation', () => ({
   useCurrentTab: () => 'home',
 }));
@@ -192,6 +197,15 @@ jest.mock('@/src/components/ui/ListMembershipBadge', () => ({
 jest.mock('@/src/components/HomeDrawer', () => ({
   HomeDrawer: () => null,
 }));
+
+jest.mock('@/src/components/skeletons/HomeListSectionSkeleton', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    HomeListSectionSkeleton: () =>
+      React.createElement(View, { testID: 'home-list-section-skeleton' }),
+  };
+});
 
 jest.mock('@/src/components/HomeScreenCustomizationModal', () => {
   const React = require('react');
@@ -254,6 +268,7 @@ const trendingMovie = {
 describe('HomeScreen long press add-to-list', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockProgressiveReady = true;
     latestMediaItem = null;
     mockAuthState.user = { uid: 'user-1', isAnonymous: false };
     mockAuthState.isGuest = false;
@@ -563,5 +578,14 @@ describe('HomeScreen long press add-to-list', () => {
     expect(mockRequireAccount).toHaveBeenCalledTimes(1);
     expect(mockPresent).not.toHaveBeenCalled();
     expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
+  it('renders skeleton sections when progressive render is not ready', () => {
+    mockProgressiveReady = false;
+    const { queryByText, getAllByTestId } = render(<HomeScreen />);
+
+    expect(getAllByTestId('home-list-section-skeleton')).toHaveLength(4);
+    expect(queryByText('Trending Pick')).toBeNull();
+    expect(queryByText('Trending Movies')).toBeNull();
   });
 });
