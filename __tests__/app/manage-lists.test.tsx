@@ -1,5 +1,5 @@
 import ManageListsScreen from '@/app/manage-lists';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
@@ -34,6 +34,8 @@ const mockDeleteMutation = {
   variables: undefined as string | undefined,
 };
 
+const mockCreatePresent = jest.fn();
+
 jest.mock('@/src/hooks/useLists', () => ({
   useLists: () => mockListsState,
   useDeleteList: () => mockDeleteMutation,
@@ -50,6 +52,22 @@ jest.mock('@/src/components/RenameListModal', () => {
   };
 });
 
+jest.mock('@/src/components/CreateListModal', () => {
+  const ReactModule = jest.requireActual('react');
+  const MockModal = ReactModule.forwardRef((_props: unknown, ref: React.Ref<unknown>) => {
+    ReactModule.useImperativeHandle(ref, () => ({
+      present: mockCreatePresent,
+      dismiss: jest.fn(),
+    }));
+    return null;
+  });
+  MockModal.displayName = 'CreateListModal';
+  return {
+    __esModule: true,
+    default: MockModal,
+  };
+});
+
 jest.mock('@/src/components/ui/FullScreenLoading', () => ({
   FullScreenLoading: () => null,
 }));
@@ -61,6 +79,7 @@ jest.mock('react-native-safe-area-context', () => ({
 describe('ManageListsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCreatePresent.mockResolvedValue(undefined);
     mockListsState.data = [defaultList];
     mockListsState.isLoading = false;
     mockListsState.isError = false;
@@ -99,6 +118,14 @@ describe('ManageListsScreen', () => {
     expect(getByTestId('manage-list-row-custom-1')).toHaveStyle({ opacity: 0.5 });
     expect(getByTestId('rename-list-custom-1')).toBeDisabled();
     expect(getByTestId('delete-list-custom-1')).toBeDisabled();
+  });
+
+  it('opens the create custom list sheet when the header button is pressed', () => {
+    const { getByTestId } = render(<ManageListsScreen />);
+
+    fireEvent.press(getByTestId('create-custom-list-button'));
+
+    expect(mockCreatePresent).toHaveBeenCalledTimes(1);
   });
 
   it('disables actions across all custom lists while one custom list is deleting', () => {

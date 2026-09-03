@@ -1,3 +1,4 @@
+import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
@@ -6,7 +7,7 @@ import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Pencil, PlusCircle, Trash2 } from 'lucide-react-native';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -33,7 +34,13 @@ export default function ManageListsScreen() {
   const { data: lists, isLoading, isError, error, refetch } = useLists();
   const deleteMutation = useDeleteList();
   const renameModalRef = useRef<RenameListModalRef>(null);
+  const createListModalRef = useRef<CreateListModalRef>(null);
   const { t } = useTranslation();
+
+  const handleCreateCustomList = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void createListModalRef.current?.present();
+  };
 
   const handleRenameList = (listId: string, currentName: string, currentDescription?: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -133,7 +140,20 @@ export default function ManageListsScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('library.customLists')}</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{t('library.customLists')}</Text>
+                <TouchableOpacity
+                  testID="create-custom-list-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('library.createCustomList')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  onPress={handleCreateCustomList}
+                  activeOpacity={ACTIVE_OPACITY}
+                  style={styles.createButton}
+                >
+                  <PlusCircle size={22} color={COLORS.text} />
+                </TouchableOpacity>
+              </View>
               {customLists.length > 0 ? (
                 <>
                   <Text style={styles.sectionSubtitle}>{t('library.customListsDescription')}</Text>
@@ -197,6 +217,7 @@ export default function ManageListsScreen() {
         )}
       </SafeAreaView>
       <RenameListModal ref={renameModalRef} />
+      <CreateListModal ref={createListModalRef} />
     </>
   );
 }
@@ -229,7 +250,15 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
     color: COLORS.text,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: SPACING.xs,
+  },
+  createButton: {
+    padding: SPACING.xs,
   },
   sectionSubtitle: {
     fontSize: FONT_SIZE.s,
