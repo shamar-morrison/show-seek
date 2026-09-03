@@ -6,12 +6,13 @@ import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useForYouRecommendations } from '@/src/hooks/useForYouRecommendations';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Sparkles, Star, TrendingUp } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { memo, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,17 +38,25 @@ export default function ForYouScreen() {
     needsFallback,
   } = useForYouRecommendations();
 
-  // Haptic feedback on mount
+  const { isReady } = useProgressiveRender();
+
+  // Memoize section icons so memoized RecommendationSection props stay stable.
+  const starIcon = useMemo(() => <Star size={20} color={COLORS.warning} />, []);
+  const hiddenGemsIcon = useMemo(() => <Sparkles size={20} color={accentColor} />, [accentColor]);
+  const trendingIcon = useMemo(() => <TrendingUp size={20} color={COLORS.success} />, []);
+
+  // Haptic feedback on mount (fire-and-forget, never blocks render)
   useEffect(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
   const handleGoToDiscover = () => {
     router.push({ pathname: '/(tabs)/discover' });
   };
 
-  // Loading state
-  if (isLoadingRatings) {
+  // Loading / deferred-render state: show skeletons until data is ready
+  // and the navigation transition has had a chance to start.
+  if (!isReady || isLoadingRatings) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -88,7 +97,7 @@ export default function ForYouScreen() {
             items={section.recommendations}
             mediaType={section.seed.mediaType}
             isLoading={section.isLoading}
-            icon={<Star size={20} color={COLORS.warning} />}
+            icon={starIcon}
           />
         ))}
 
@@ -99,7 +108,7 @@ export default function ForYouScreen() {
             items={hiddenGems}
             mediaType="movie"
             isLoading={isLoadingHiddenGems}
-            icon={<Sparkles size={20} color={accentColor} />}
+            icon={hiddenGemsIcon}
           />
         )}
 
@@ -112,7 +121,7 @@ export default function ForYouScreen() {
                 items={trendingMovies}
                 mediaType="movie"
                 isLoading={isLoadingTrending}
-                icon={<TrendingUp size={20} color={COLORS.success} />}
+                icon={trendingIcon}
               />
             )}
             {(trendingTV.length > 0 || isLoadingTrending) && (
@@ -121,7 +130,7 @@ export default function ForYouScreen() {
                 items={trendingTV}
                 mediaType="tv"
                 isLoading={isLoadingTrending}
-                icon={<TrendingUp size={20} color={COLORS.success} />}
+                icon={trendingIcon}
               />
             )}
           </>
@@ -141,7 +150,7 @@ interface RecommendationSectionProps {
   icon?: React.ReactNode;
 }
 
-function RecommendationSection({
+const RecommendationSection = memo(function RecommendationSection({
   title,
   items,
   mediaType,
@@ -174,6 +183,8 @@ function RecommendationSection({
           keyExtractor={(item, index) => `skeleton-${item}-${index ?? 0}`}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          removeClippedSubviews={true}
+          drawDistance={400}
         />
       ) : (
         <FlashList
@@ -184,11 +195,15 @@ function RecommendationSection({
           extraData={listExtraData}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          removeClippedSubviews={true}
+          drawDistance={400}
         />
       )}
     </View>
   );
-}
+});
+
+RecommendationSection.displayName = 'RecommendationSection';
 
 function SkeletonSection() {
   return (
@@ -203,6 +218,8 @@ function SkeletonSection() {
         keyExtractor={(item, index) => `skeleton-${item}-${index ?? 0}`}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        removeClippedSubviews={true}
+        drawDistance={400}
       />
     </View>
   );
