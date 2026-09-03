@@ -228,7 +228,8 @@ async function main() {
     console.log(`[Safety Guard] Sample mode active: Reading max ${options.sample} docs per collection (safe limit).\n`);
     for (const r of results) {
       if (!r.ref || typeof r.count !== 'number' || r.count === 0) continue;
-      const snap = await r.ref.limit(options.sample).get();
+      const sampleLimit = Math.min(options.sample, r.count);
+      const snap = await r.ref.limit(sampleLimit).get();
       console.log(`--- Sample from ${r.label} (${snap.size} docs fetched) ---`);
       snap.docs.forEach((doc, idx) => {
         const preview = JSON.stringify(doc.data()).slice(0, 100);

@@ -263,11 +263,14 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
           }
 
           const zipNextAllowedAt = zipStatus.nextAllowedImportAt;
-          setNextAllowedZipImportAt(
-            zipNextAllowedAt && typeof zipNextAllowedAt.toDate === 'function'
-              ? zipNextAllowedAt.toDate()
-              : null
-          );
+          let parsedSnapshotNextAllowedAt: Date | null = null;
+          if (zipNextAllowedAt && typeof zipNextAllowedAt.toDate === 'function') {
+            const date = zipNextAllowedAt.toDate();
+            if (date && typeof date.getTime === 'function' && !isNaN(date.getTime())) {
+              parsedSnapshotNextAllowedAt = date;
+            }
+          }
+          setNextAllowedZipImportAt(parsedSnapshotNextAllowedAt);
         } else {
           setNextAllowedZipImportAt(null);
         }
@@ -667,15 +670,22 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         setZipImportUiState('failed');
 
         if (error instanceof TraktZipRateLimitedError) {
+          let parsedNextAllowedAt: Date | null = null;
           if (error.nextAllowedImportAt) {
-            setNextAllowedZipImportAt(new Date(error.nextAllowedImportAt));
+            const parsed = new Date(error.nextAllowedImportAt);
+            if (!isNaN(parsed.getTime())) {
+              parsedNextAllowedAt = parsed;
+              setNextAllowedZipImportAt(parsed);
+            } else {
+              setNextAllowedZipImportAt(null);
+            }
           }
           const distanceLocale = getDateFnsLocale(i18n.language);
           setZipImportError(
-            error.nextAllowedImportAt
+            parsedNextAllowedAt
               ? t('trakt.zipImportCard.subtitleRateLimited', {
                   defaultValue: 'Import cooldown active. You can start another import {{time}}.',
-                  time: formatDistanceToNow(new Date(error.nextAllowedImportAt), {
+                  time: formatDistanceToNow(parsedNextAllowedAt, {
                     addSuffix: true,
                     locale: distanceLocale,
                   }),

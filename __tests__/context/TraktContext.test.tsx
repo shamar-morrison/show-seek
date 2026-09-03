@@ -561,6 +561,23 @@ describe('TraktContext', () => {
       expect(result.current.isZipImportRateLimited).toBe(false);
       expect(setIntervalSpy).not.toHaveBeenCalled();
 
+      // Snapshot with invalid nextAllowedImportAt Date returned from toDate()
+      await act(async () => {
+        capturedSnapshotCallback?.({
+          exists: () => true,
+          data: () => ({
+            traktZipImportStatus: {
+              nextAllowedImportAt: { toDate: () => new Date('invalid') },
+              status: 'idle',
+            },
+          }),
+        });
+      });
+
+      expect(result.current.nextAllowedZipImportAt).toBeNull();
+      expect(result.current.isZipImportRateLimited).toBe(false);
+      expect(setIntervalSpy).not.toHaveBeenCalled();
+
       unmount();
     } finally {
       setIntervalSpy.mockRestore();
@@ -623,6 +640,30 @@ describe('TraktContext', () => {
     });
 
     expect(result.current.zipImportUiState).toBe('failed');
+    expect(result.current.zipImportError).toBe(
+      'Please wait before starting another import.'
+    );
+
+    // Regression test: non-empty but invalid nextAllowedImportAt falls back to generic message and clears nextAllowedZipImportAt
+    startImportSpy.mockRejectedValueOnce(
+      new TraktZipRateLimitedError(
+        'Please wait before starting another Trakt zip import.',
+        'invalid-date-string'
+      )
+    );
+
+    await act(async () => {
+      await expect(
+        result.current.startZipImport({
+          name: 'export.zip',
+          size: 1024,
+          uri: 'file:///export.zip',
+        })
+      ).rejects.toThrow(TraktZipRateLimitedError);
+    });
+
+    expect(result.current.zipImportUiState).toBe('failed');
+    expect(result.current.nextAllowedZipImportAt).toBeNull();
     expect(result.current.zipImportError).toBe(
       'Please wait before starting another import.'
     );

@@ -64,7 +64,9 @@ export function useOnboardingReengagement(
   rehydratedRef.current = hasRehydratedRef;
 
   const hasInteractedWithNotificationsRef = useRef(hasInteractedWithNotifications);
-  hasInteractedWithNotificationsRef.current = hasInteractedWithNotifications;
+  useEffect(() => {
+    hasInteractedWithNotificationsRef.current = hasInteractedWithNotifications;
+  }, [hasInteractedWithNotifications]);
 
   useEffect(() => {
     if (!AppState?.addEventListener) {
