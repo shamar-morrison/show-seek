@@ -14,16 +14,43 @@ const createMockComponent = (name) => {
 };
 
 const createTouchable = (name) => {
-  const Component = ({ disabled, onPress, testID, ...props }) => {
+  const Component = ({ disabled, onPress, testID, accessibilityState, ...props }) => {
+    let nextAccessibilityState = accessibilityState;
+    if (disabled) {
+      nextAccessibilityState = {
+        ...accessibilityState,
+        disabled: true,
+      };
+    }
+
     return React.createElement(name, {
       ...props,
       testID,
       disabled,
+      ...(nextAccessibilityState ? { accessibilityState: nextAccessibilityState } : {}),
+      ...(disabled ? { 'aria-disabled': true } : {}),
       onPress: disabled ? undefined : onPress,
     });
   };
   Component.displayName = name;
   return Component;
+};
+
+const flattenStyle = (style) => {
+  if (style === null || typeof style !== 'object') {
+    return undefined;
+  }
+  if (!Array.isArray(style)) {
+    return style;
+  }
+  const result = {};
+  for (let i = 0; i < style.length; ++i) {
+    const computedStyle = flattenStyle(style[i]);
+    if (computedStyle) {
+      Object.assign(result, computedStyle);
+    }
+  }
+  return result;
 };
 
 module.exports = {
@@ -33,7 +60,7 @@ module.exports = {
   },
   StyleSheet: {
     create: (styles) => styles,
-    flatten: (style) => style,
+    flatten: flattenStyle,
   },
   Dimensions: {
     get: () => ({ width: 375, height: 812 }),
