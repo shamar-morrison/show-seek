@@ -62,7 +62,6 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     setLastEnrichedAt,
     enrichData,
     handleSyncCompleted,
-    clearEnrichmentInterval,
   } = useTraktEnrichment({ user, ensureEligibleUser });
 
   const handleDisconnect = useCallback(async () => {
@@ -76,15 +75,12 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     syncStatus,
     lastSyncedAt,
     setIsConnected,
-    setIsSyncing,
     setSyncStatus,
     setLastSyncedAt,
     connectTrakt,
     disconnectTrakt,
     syncNow,
     checkSyncStatus,
-    pollSyncStatus,
-    persistState,
   } = useTraktSync({
     user,
     ensureEligibleUser,
@@ -104,7 +100,6 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     zipImportDoc,
     zipImportError,
     selectedZipFile,
-    dismissedZipImportId,
     dismissedZipImportIdRef,
     lastSeenZipImportIdRef,
     setSelectedZipFile,
@@ -162,14 +157,6 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     dismissalHydratedRef,
     pendingTerminalSnapshotRef,
   });
-
-  // Cleanup polling intervals on unmount
-  useEffect(() => {
-    return () => {
-      clearEnrichmentInterval();
-      clearZipHoldTimeout();
-    };
-  }, [clearEnrichmentInterval, clearZipHoldTimeout]);
 
   return {
     isConnected,
