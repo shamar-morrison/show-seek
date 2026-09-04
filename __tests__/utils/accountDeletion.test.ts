@@ -45,6 +45,7 @@ describe('clearLocalAccountData', () => {
         TRAKT_STORAGE_KEYS.LAST_SYNCED,
         TRAKT_STORAGE_KEYS.SYNC_STATUS,
         TRAKT_STORAGE_KEYS.LAST_ENRICHED,
+        TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID,
         'isPremium_user-1',
         'hasCompletedPersonalOnboarding:user-1',
         'widget_data_watchlist_user-1_watchlist',
