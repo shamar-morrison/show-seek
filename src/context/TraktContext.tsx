@@ -32,64 +32,23 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as WebBrowser from 'expo-web-browser';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-const isActiveSyncStatus = (status?: SyncStatus['status']): boolean =>
-  status === 'queued' || status === 'in_progress' || status === 'retrying';
-
-const isActiveEnrichmentStatus = (
-  status?: 'idle' | 'queued' | 'in_progress' | 'retrying' | 'completed' | 'failed'
-): boolean => status === 'queued' || status === 'in_progress' || status === 'retrying';
-
-const isLockedAccountStatus = (status?: SyncStatus | null): boolean =>
-  status?.status === 'failed' && status.errorCategory === 'locked_account';
-
-const hasEligibleTraktUser = (user: User | null): user is User => Boolean(user && !user.isAnonymous);
-
-const ZIP_COOLDOWN_TICK_INTERVAL_MS = 15000;
-
-// Maximum time to wait for the progress doc after a terminal user-doc
-// snapshot before falling back to the failed view. Healthy-case latency is
-// sub-second (both docs are written in one transaction); this is deliberately
-// generous to avoid false triggers on slow networks, and the state
-// self-corrects if the doc arrives later.
-const ZIP_HOLD_FOR_DOC_TIMEOUT_MS = 60000;
-
-const persistDismissedZipImportId = async (id: string | null): Promise<void> => {
-  try {
-    if (id === null) {
-      await AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID);
-    } else {
-      await AsyncStorage.setItem(TRAKT_STORAGE_KEYS.DISMISSED_ZIP_IMPORT_ID, id);
-    }
-  } catch (error) {
-    console.warn('[Trakt] Failed to persist dismissed zip import id:', error);
-  }
-};
-
-const getDateFnsLocale = (lang?: string) => {
-  switch (lang) {
-    case 'es-ES':
-    case 'es-MX':
-      return es;
-    case 'fr':
-    case 'fr-FR':
-      return fr;
-    case 'pt-BR':
-      return ptBR;
-    case 'pt-PT':
-      return pt;
-    case 'tr-TR':
-      return tr;
-    default:
-      return enUS;
-  }
-};
+import {
+  ZIP_COOLDOWN_TICK_INTERVAL_MS,
+  ZIP_HOLD_FOR_DOC_TIMEOUT_MS,
+} from './trakt/constants';
+import {
+  getDateFnsLocale,
+  hasEligibleTraktUser,
+  isActiveEnrichmentStatus,
+  isActiveSyncStatus,
+  isLockedAccountStatus,
+  persistDismissedZipImportId,
+} from './trakt/helpers';
 
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
   const { t, i18n } = useTranslation();
