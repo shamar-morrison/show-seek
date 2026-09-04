@@ -16,8 +16,20 @@ export interface UseTraktEnrichmentOptions {
 
 export function useTraktEnrichment({ user, ensureEligibleUser }: UseTraktEnrichmentOptions) {
   const [isEnriching, setIsEnriching] = useState(false);
+  const isEnrichingRef = useRef(false);
+  // Note: lastEnrichedAt is not reset on user change — briefly shows the previous user's value until their Firestore snapshot arrives. Low priority, deliberately deferred.
   const [lastEnrichedAt, setLastEnrichedAt] = useState<Date | null>(null);
   const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clear polling interval and reset in-flight/enriching state on user change
+  useEffect(() => {
+    if (enrichmentIntervalRef.current) {
+      clearInterval(enrichmentIntervalRef.current);
+      enrichmentIntervalRef.current = null;
+    }
+    setIsEnriching(false);
+    isEnrichingRef.current = false;
+  }, [user]);
 
   const clearEnrichmentInterval = useCallback(() => {
     if (enrichmentIntervalRef.current) {
@@ -37,6 +49,8 @@ export function useTraktEnrichment({ user, ensureEligibleUser }: UseTraktEnrichm
       if (enrichmentActive) {
         return;
       }
+
+      isEnrichingRef.current = false;
 
       if (enrichmentIntervalRef.current) {
         clearInterval(enrichmentIntervalRef.current);
@@ -69,12 +83,15 @@ export function useTraktEnrichment({ user, ensureEligibleUser }: UseTraktEnrichm
           TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
         );
       } else if (enrichmentStatus.status === 'completed' && enrichmentStatus.completedAt) {
+        isEnrichingRef.current = false;
         const enrichedDate = new Date(enrichmentStatus.completedAt);
         setLastEnrichedAt(enrichedDate);
         await AsyncStorage.setItem(
           TRAKT_STORAGE_KEYS.LAST_ENRICHED,
           enrichedDate.toISOString()
         );
+      } else if (!enrichmentActive) {
+        isEnrichingRef.current = false;
       }
     } catch (enrichmentError) {
       console.warn(
@@ -87,14 +104,14 @@ export function useTraktEnrichment({ user, ensureEligibleUser }: UseTraktEnrichm
   const enrichData = useCallback(async () => {
     ensureEligibleUser('Must be logged in to enrich data');
 
-    if (isEnriching) {
+    if (isEnriching || isEnrichingRef.current) {
       console.log('[Trakt] Enrichment already in progress');
       return;
     }
+    isEnrichingRef.current = true;
+    setIsEnriching(true);
 
     try {
-      setIsEnriching(true);
-
       await TraktService.triggerEnrichment({
         includeEpisodes: true, // Include episodes in enrichment to test new backend cache
       });
@@ -108,6 +125,7 @@ export function useTraktEnrichment({ user, ensureEligibleUser }: UseTraktEnrichm
       }
     } catch (error) {
       console.error('[Trakt] Failed to trigger enrichment:', error);
+      isEnrichingRef.current = false;
       setIsEnriching(false);
       throw error;
     }
@@ -116,6 +134,7 @@ export function useTraktEnrichment({ user, ensureEligibleUser }: UseTraktEnrichm
   // Cleanup polling interval on unmount
   useEffect(() => {
     return () => {
+      isEnrichingRef.current = false;
       if (enrichmentIntervalRef.current) {
         clearInterval(enrichmentIntervalRef.current);
         enrichmentIntervalRef.current = null;
