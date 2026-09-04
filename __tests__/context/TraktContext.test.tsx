@@ -36,7 +36,15 @@ jest.mock('expo-web-browser', () => ({
 }));
 
 jest.mock('@/src/services/TraktService', () => ({
-  TraktRequestError: class TraktRequestError extends Error {},
+  TraktRequestError: class TraktRequestError extends Error {
+    category?: string;
+    nextAllowedSyncAt?: string;
+    constructor(message: string, options?: { category?: string; nextAllowedSyncAt?: string }) {
+      super(message);
+      this.category = options?.category;
+      this.nextAllowedSyncAt = options?.nextAllowedSyncAt;
+    }
+  },
   checkEnrichmentStatus: (...args: any[]) => mockCheckEnrichmentStatus(...args),
   checkSyncStatus: (...args: any[]) => mockCheckSyncStatus(...args),
   disconnectTrakt: (...args: any[]) => mockDisconnectTrakt(...args),
@@ -1256,5 +1264,155 @@ describe('TraktContext', () => {
 
     subscribeSpy.mockRestore();
     unmount();
+  });
+
+  it('rejects syncNow when a zip import is already in progress', async () => {
+    const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+    mockCurrentUser = { uid: 'user-sync-busy', isAnonymous: false };
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const uploadPromise = new Promise(() => {});
+    const uploadSpy = jest
+      .spyOn(traktZipImportService, 'uploadZipFile')
+      .mockReturnValue(uploadPromise as any);
+
+    act(() => {
+      void result.current.startZipImport({
+        name: 'test.zip',
+        size: 100,
+        uri: 'file://test.zip',
+      });
+    });
+
+    expect(result.current.isZipImporting).toBe(true);
+
+    await expect(result.current.syncNow()).rejects.toThrow(
+      'A Trakt zip import is currently in progress.'
+    );
+
+    expect(mockTriggerSync).not.toHaveBeenCalled();
+
+    uploadSpy.mockRestore();
+  });
+
+  it('rejects startZipImport when a sync is already in progress', async () => {
+    mockCurrentUser = { uid: 'user-zip-busy', isAnonymous: false };
+    mockCheckSyncStatus.mockResolvedValue({
+      connected: true,
+      synced: false,
+      status: 'in_progress',
+    });
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.checkSyncStatus();
+    });
+
+    expect(result.current.isSyncing).toBe(true);
+
+    await expect(
+      result.current.startZipImport({
+        name: 'test.zip',
+        size: 100,
+        uri: 'file://test.zip',
+      })
+    ).rejects.toThrow('A Trakt sync is already in progress.');
+  });
+
+  it('early-returns from syncNow without triggering sync when isSyncing is already true', async () => {
+    mockCurrentUser = { uid: 'user-sync-repeat', isAnonymous: false };
+    mockCheckSyncStatus.mockResolvedValue({
+      connected: true,
+      synced: false,
+      status: 'in_progress',
+    });
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.checkSyncStatus();
+    });
+
+    expect(result.current.isSyncing).toBe(true);
+
+    await act(async () => {
+      await result.current.syncNow();
+    });
+
+    expect(mockTriggerSync).not.toHaveBeenCalled();
+  });
+
+  it('sets rate-limited syncStatus when syncNow rejects with TraktRequestError rate_limited', async () => {
+    const { TraktRequestError } = jest.requireMock('@/src/services/TraktService');
+    mockCurrentUser = { uid: 'user-sync-rl', isAnonymous: false };
+    mockTriggerSync.mockRejectedValueOnce(
+      new TraktRequestError('Rate limited by upstream', {
+        category: 'rate_limited',
+        nextAllowedSyncAt: '2026-10-01T00:00:00.000Z',
+      })
+    );
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await expect(result.current.syncNow()).rejects.toThrow('Rate limited by upstream');
+    });
+
+    expect(result.current.isSyncing).toBe(false);
+    expect(result.current.syncStatus?.status).toBe('failed');
+    expect(result.current.syncStatus?.errorCategory).toBe('rate_limited');
+    expect(result.current.syncStatus?.nextAllowedSyncAt).toBe('2026-10-01T00:00:00.000Z');
+  });
+
+  it('updates state and persists to AsyncStorage when signed-in user calls checkSyncStatus directly', async () => {
+    mockCurrentUser = { uid: 'user-sync-direct', isAnonymous: false };
+    const syncTimestamp = '2026-05-15T12:00:00.000Z';
+    mockCheckSyncStatus.mockResolvedValueOnce({
+      connected: true,
+      synced: true,
+      status: 'completed',
+      lastSyncedAt: syncTimestamp,
+    });
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let statusResult: any;
+    await act(async () => {
+      statusResult = await result.current.checkSyncStatus();
+    });
+
+    expect(statusResult?.connected).toBe(true);
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.lastSyncedAt).toEqual(new Date(syncTimestamp));
+    expect(result.current.syncStatus?.status).toBe('completed');
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      TRAKT_STORAGE_KEYS.CONNECTED,
+      'true'
+    );
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      TRAKT_STORAGE_KEYS.LAST_SYNCED,
+      syncTimestamp
+    );
   });
 });
