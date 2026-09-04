@@ -11,7 +11,6 @@
  */
 
 import { TRAKT_CONFIG, TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
-import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { auth, db } from '@/src/firebase/config';
 import { TraktRequestError } from '@/src/services/TraktService';
 import * as TraktService from '@/src/services/TraktService';
@@ -30,7 +29,6 @@ import type {
 } from '@/src/types/trakt';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import * as WebBrowser from 'expo-web-browser';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -49,10 +47,10 @@ import {
   isLockedAccountStatus,
   persistDismissedZipImportId,
 } from './trakt/helpers';
+import { useTraktQueryInvalidation } from './trakt/useTraktQueryInvalidation';
 
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
   const { t, i18n } = useTranslation();
-  const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
@@ -142,21 +140,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     };
   }, [nextAllowedZipImportAt]);
 
-  const invalidateUserLibraryQueries = useCallback(async () => {
-    if (!user?.uid) {
-      return;
-    }
-
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['lists', user.uid] }),
-      queryClient.invalidateQueries({
-        queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, user.uid],
-      }),
-      queryClient.invalidateQueries({ queryKey: ['ratings', user.uid] }),
-      queryClient.invalidateQueries({ queryKey: ['watchedMovies', user.uid] }),
-      queryClient.invalidateQueries({ queryKey: ['episodeTracking'] }),
-    ]);
-  }, [queryClient, user?.uid]);
+  const { invalidateUserLibraryQueries } = useTraktQueryInvalidation({ user });
 
   // Latest translate fn for use inside timeouts (avoids adding t to effect deps).
   const tRef = useRef(t);
