@@ -6,7 +6,7 @@ import { TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
 import type { SyncStatus } from '@/src/types/trakt';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export interface UseTraktPersistenceOptions {
   setDismissedZipImportId: (id: string | null) => void;
@@ -43,6 +43,12 @@ export function useTraktPersistence({
   dismissalHydratedRef,
   pendingTerminalSnapshotRef,
 }: UseTraktPersistenceOptions) {
+  const processTerminalZipSnapshotRef = useRef(processTerminalZipSnapshot);
+
+  useEffect(() => {
+    processTerminalZipSnapshotRef.current = processTerminalZipSnapshot;
+  }, [processTerminalZipSnapshot]);
+
   // Load persisted state from AsyncStorage
   useEffect(() => {
     const loadPersistedState = async () => {
@@ -85,12 +91,12 @@ export function useTraktPersistence({
         const pending = pendingTerminalSnapshotRef.current;
         pendingTerminalSnapshotRef.current = null;
         if (pending) {
-          processTerminalZipSnapshot(pending);
+          processTerminalZipSnapshotRef.current(pending);
         }
         setIsLoading(false);
       }
     };
 
     loadPersistedState();
-  }, [processTerminalZipSnapshot]);
+  }, []);
 }

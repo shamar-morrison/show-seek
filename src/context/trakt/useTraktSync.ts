@@ -43,6 +43,7 @@ export function useTraktSync({
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasAttemptedAutoSync = useRef(false);
+  const autoSyncUserIdRef = useRef<string | null>(null);
 
   const onSyncCompletedRef = useRef(onSyncCompleted);
   useEffect(() => {
@@ -223,9 +224,9 @@ export function useTraktSync({
       }
       setIsSyncing(true);
       setSyncStatus((currentStatus) => ({
+        ...(currentStatus ?? {}),
         connected: true,
         synced: Boolean(currentStatus?.lastSyncedAt),
-        ...(currentStatus ?? {}),
         attempt: 0,
         diagnostics: undefined,
         errorCategory: undefined,
@@ -255,9 +256,9 @@ export function useTraktSync({
 
       if (error instanceof TraktRequestError && error.category === 'rate_limited') {
         setSyncStatus((currentStatus) => ({
+          ...(currentStatus ?? {}),
           connected: true,
           synced: Boolean(currentStatus?.lastSyncedAt),
-          ...(currentStatus ?? {}),
           errorCategory: 'rate_limited',
           errorMessage: error.message,
           nextAllowedSyncAt: error.nextAllowedSyncAt,
@@ -294,6 +295,12 @@ export function useTraktSync({
 
   // Auto-sync on app launch if connected and cooldown has passed
   useEffect(() => {
+    const currentUserId = user?.uid ?? null;
+    if (autoSyncUserIdRef.current !== currentUserId) {
+      autoSyncUserIdRef.current = currentUserId;
+      hasAttemptedAutoSync.current = false;
+    }
+
     if (
       !hasEligibleTraktUser(user) ||
       !isConnected ||
@@ -316,7 +323,7 @@ export function useTraktSync({
 
     if (shouldAutoSync()) {
       console.log('[Trakt] Auto-sync triggered (cooldown passed)');
-      syncNow();
+      syncNow().catch((error) => console.error('[Trakt] Auto-sync failed:', error));
     } else {
       console.log('[Trakt] Skipping auto-sync (cooldown not passed or never synced)');
     }

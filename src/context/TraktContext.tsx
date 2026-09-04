@@ -66,7 +66,11 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
 
   const handleDisconnect = useCallback(async () => {
     setLastEnrichedAt(null);
-    await AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED);
+    try {
+      await AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED);
+    } catch (error) {
+      console.error('[Trakt] Failed to remove persisted enrichment timestamp:', error);
+    }
   }, [setLastEnrichedAt]);
 
   const {

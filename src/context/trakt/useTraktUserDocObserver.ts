@@ -67,6 +67,7 @@ export function useTraktUserDocObserver({
       resetZipImportState();
       pendingTerminalSnapshotRef.current = null;
       setIsEnriching(false);
+      prevEnrichmentStatusRef.current = undefined;
       return;
     }
 
@@ -176,6 +177,7 @@ export function useTraktUserDocObserver({
       unsubscribe();
       resetZipImportState();
       pendingTerminalSnapshotRef.current = null;
+      prevEnrichmentStatusRef.current = undefined;
     };
   }, [
     user,

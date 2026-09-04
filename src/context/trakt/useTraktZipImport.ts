@@ -292,6 +292,13 @@ export function useTraktZipImport({
         await traktZipImportService.startImport(importId);
       } catch (error) {
         isZipImportingRef.current = false;
+        if (activeZipImportIdRef.current === importId) {
+          if (activeZipImportSubscriptionRef.current) {
+            activeZipImportSubscriptionRef.current();
+            activeZipImportSubscriptionRef.current = null;
+          }
+          activeZipImportIdRef.current = null;
+        }
         console.error('[TraktContext] Zip import error:', error);
         setZipImportUiState('failed');
 
