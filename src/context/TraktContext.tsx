@@ -10,10 +10,8 @@
  * - Premium-only gating (integration only available to premium users)
  */
 
-import { TRAKT_CONFIG, TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
+import { TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
 import { auth, db } from '@/src/firebase/config';
-import { TraktRequestError } from '@/src/services/TraktService';
-import * as TraktService from '@/src/services/TraktService';
 import {
   generateImportId,
   SelectedZipFile,
@@ -30,7 +28,6 @@ import type {
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatDistanceToNow } from 'date-fns';
-import * as WebBrowser from 'expo-web-browser';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -43,21 +40,19 @@ import {
   getDateFnsLocale,
   hasEligibleTraktUser,
   isActiveEnrichmentStatus,
-  isActiveSyncStatus,
-  isLockedAccountStatus,
   persistDismissedZipImportId,
 } from './trakt/helpers';
 import { useTraktEnrichment } from './trakt/useTraktEnrichment';
 import { useTraktQueryInvalidation } from './trakt/useTraktQueryInvalidation';
+import { useTraktSync } from './trakt/useTraktSync';
 
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
   const { t, i18n } = useTranslation();
-  const [isConnected, setIsConnected] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
+
+  const isSyncingRef = useRef(false);
+  const isZipImportingRef = useRef(false);
 
   const ensureEligibleUser = useCallback(
     (errorMessage: string): User => {
@@ -83,8 +78,6 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   // null stats) on later snapshots. Persisted so dismissal survives restarts.
   const [dismissedZipImportId, setDismissedZipImportId] = useState<string | null>(null);
 
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hasAttemptedAutoSync = useRef(false);
   const prevEnrichmentStatusRef = useRef<string | undefined>(undefined);
   const activeZipImportSubscriptionRef = useRef<(() => void) | null>(null);
   const activeZipImportIdRef = useRef<string | null>(null);
@@ -129,6 +122,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [zipImportDoc, clearZipHoldTimeout]);
 
   const isZipImporting = zipImportUiState === 'uploading' || zipImportUiState === 'processing';
+  useEffect(() => {
+    isZipImportingRef.current = isZipImporting;
+  }, [isZipImporting]);
+
   const isZipImportRateLimited =
     nextAllowedZipImportAt !== null && nextAllowedZipImportAt.getTime() > Date.now();
 
@@ -160,6 +157,36 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     handleSyncCompleted,
     clearEnrichmentInterval,
   } = useTraktEnrichment({ user, ensureEligibleUser });
+
+  const handleDisconnect = useCallback(async () => {
+    setLastEnrichedAt(null);
+    await AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED);
+  }, [setLastEnrichedAt]);
+
+  const {
+    isConnected,
+    isSyncing,
+    syncStatus,
+    lastSyncedAt,
+    setIsConnected,
+    setIsSyncing,
+    setSyncStatus,
+    setLastSyncedAt,
+    connectTrakt,
+    disconnectTrakt,
+    syncNow,
+    checkSyncStatus,
+    pollSyncStatus,
+    persistState,
+  } = useTraktSync({
+    user,
+    ensureEligibleUser,
+    isLoading,
+    isZipImportingRef,
+    isSyncingRef,
+    onSyncCompleted: handleSyncCompleted,
+    onDisconnect: handleDisconnect,
+  });
 
   // Latest translate fn for use inside timeouts (avoids adding t to effect deps).
   const tRef = useRef(t);
@@ -487,250 +514,27 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     loadPersistedState();
   }, [processTerminalZipSnapshot]);
 
-  // Auto-sync on app launch if connected and cooldown has passed
-  useEffect(() => {
-    if (
-      !hasEligibleTraktUser(user) ||
-      !isConnected ||
-      isLoading ||
-      hasAttemptedAutoSync.current ||
-      isLockedAccountStatus(syncStatus) ||
-      isActiveSyncStatus(syncStatus?.status)
-    ) {
-      return;
-    }
-
-    hasAttemptedAutoSync.current = true;
-
-    const shouldAutoSync = () => {
-      if (!lastSyncedAt) return false; // Don't auto-sync if never synced (user should trigger initial)
-
-      const timeSinceLastSync = Date.now() - lastSyncedAt.getTime();
-      return timeSinceLastSync >= TRAKT_CONFIG.AUTO_SYNC_COOLDOWN_MS;
-    };
-
-    if (shouldAutoSync()) {
-      console.log('[Trakt] Auto-sync triggered (cooldown passed)');
-      syncNow();
-    } else {
-      console.log('[Trakt] Skipping auto-sync (cooldown not passed or never synced)');
-    }
-  }, [user, isConnected, isLoading, lastSyncedAt, syncStatus]);
-
   // Cleanup polling intervals on unmount
   useEffect(() => {
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
       clearEnrichmentInterval();
       clearZipHoldTimeout();
     };
   }, [clearEnrichmentInterval, clearZipHoldTimeout]);
 
-  const persistState = async (
-    connected: boolean,
-    lastSynced: Date | null,
-    status: SyncStatus | null
-  ) => {
-    try {
-      await Promise.all([
-        AsyncStorage.setItem(TRAKT_STORAGE_KEYS.CONNECTED, String(connected)),
-        lastSynced
-          ? AsyncStorage.setItem(TRAKT_STORAGE_KEYS.LAST_SYNCED, lastSynced.toISOString())
-          : AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.LAST_SYNCED),
-        status
-          ? AsyncStorage.setItem(TRAKT_STORAGE_KEYS.SYNC_STATUS, JSON.stringify(status))
-          : AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.SYNC_STATUS),
-      ]);
-    } catch (error) {
-      console.error('[Trakt] Failed to persist state:', error);
-    }
-  };
-
-  const checkSyncStatus = useCallback(async () => {
-    if (!hasEligibleTraktUser(user)) return;
-
-    try {
-      const status = await TraktService.checkSyncStatus();
-      setSyncStatus(status);
-      setIsConnected(status.connected);
-      setIsSyncing(isActiveSyncStatus(status.status));
-
-      if (status.lastSyncedAt) {
-        const syncDate = new Date(status.lastSyncedAt);
-        setLastSyncedAt(syncDate);
-        await persistState(status.connected, syncDate, status);
-      } else {
-        await persistState(status.connected, null, status);
-      }
-
-      return status;
-    } catch (error) {
-      console.error('[Trakt] Failed to check sync status:', error);
-      throw error;
-    }
-  }, [user]);
-
-  const connectTrakt = useCallback(async () => {
-    ensureEligibleUser('Must be logged in to connect Trakt');
-
-    try {
-      const result = await TraktService.initiateOAuthFlow();
-
-      if (
-        result.type === WebBrowser.WebBrowserResultType.DISMISS ||
-        result.type === 'success'
-      ) {
-        // Wait for backend to process the callback
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Check if connection was successful
-        const status = await checkSyncStatus();
-        if (status?.connected) {
-          console.log('[Trakt] Successfully connected');
-        }
-      }
-    } catch (error) {
-      console.error('[Trakt] OAuth flow failed:', error);
-      throw error;
-    }
-  }, [ensureEligibleUser, checkSyncStatus]);
-
-  const pollSyncStatus = useCallback(async () => {
-    if (!hasEligibleTraktUser(user)) return;
-
-    try {
-      const status = await TraktService.checkSyncStatus();
-      setSyncStatus(status);
-      setIsSyncing(isActiveSyncStatus(status.status));
-
-      if (status.status === 'completed' || status.status === 'failed') {
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-
-        setIsSyncing(false);
-
-        if (status.status === 'completed') {
-          const syncDate = status.lastSyncedAt ? new Date(status.lastSyncedAt) : null;
-          setLastSyncedAt(syncDate);
-          await persistState(true, syncDate, status);
-          console.log('[Trakt] Sync completed successfully');
-
-          await handleSyncCompleted();
-        } else if (status.status === 'failed') {
-          await persistState(true, lastSyncedAt, status);
-          console.error('[Trakt] Sync failed:', status.errors);
-        }
-      }
-
-      return status;
-    } catch (error) {
-      console.error('[Trakt] Failed to poll sync status:', error);
-    }
-  }, [user, lastSyncedAt, handleSyncCompleted]);
-
-  useEffect(() => {
-    if (!hasEligibleTraktUser(user) || !syncStatus?.status) {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      clearEnrichmentInterval();
-      setIsSyncing(false);
-      setIsEnriching(false);
-      return;
-    }
-
-    if (isActiveSyncStatus(syncStatus.status)) {
-      setIsSyncing(true);
-
-      if (!pollIntervalRef.current) {
-        pollIntervalRef.current = setInterval(
-          pollSyncStatus,
-          TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
-        );
-      }
-
-      return;
-    }
-
-    setIsSyncing(false);
-  }, [pollSyncStatus, syncStatus?.status, user]);
-
-  const syncNow = useCallback(async () => {
-    ensureEligibleUser('Must be logged in to sync');
-
-    if (isSyncing) {
-      console.log('[Trakt] Sync already in progress');
-      return;
-    }
-
-    if (isZipImporting) {
-      console.log('[Trakt] Zip import already in progress');
-      throw new Error('A Trakt zip import is currently in progress.');
-    }
-
-    try {
-      setIsSyncing(true);
-      setSyncStatus((currentStatus) => ({
-        connected: true,
-        synced: Boolean(currentStatus?.lastSyncedAt),
-        ...(currentStatus ?? {}),
-        attempt: 0,
-        diagnostics: undefined,
-        errorCategory: undefined,
-        errorMessage: undefined,
-        errors: undefined,
-        nextAllowedSyncAt: undefined,
-        nextRetryAt: undefined,
-        status: 'queued',
-      }));
-
-      await TraktService.triggerSync();
-      const status = await pollSyncStatus();
-
-      // Start polling for status updates
-      if (status && isActiveSyncStatus(status.status) && !pollIntervalRef.current) {
-        pollIntervalRef.current = setInterval(
-          pollSyncStatus,
-          TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
-        );
-      }
-    } catch (error) {
-      console.error('[Trakt] Failed to trigger sync:', error);
-      setIsSyncing(false);
-
-      if (error instanceof TraktRequestError && error.category === 'rate_limited') {
-        setSyncStatus((currentStatus) => ({
-          connected: true,
-          synced: Boolean(currentStatus?.lastSyncedAt),
-          ...(currentStatus ?? {}),
-          errorCategory: 'rate_limited',
-          errorMessage: error.message,
-          nextAllowedSyncAt: error.nextAllowedSyncAt,
-          status: 'failed',
-        }));
-      }
-
-      throw error;
-    }
-  }, [ensureEligibleUser, isSyncing, isZipImporting, pollSyncStatus]);
-
   const startZipImport = useCallback(
     async (file: SelectedZipFile) => {
       const eligibleUser = ensureEligibleUser('Must be logged in to import Trakt archive');
 
-      if (isSyncing) {
+      if (isSyncing || isSyncingRef.current) {
         throw new Error('A Trakt sync is already in progress.');
       }
 
-      if (isZipImporting) {
+      if (isZipImporting || isZipImportingRef.current) {
         throw new Error('A Trakt zip import is already in progress.');
       }
 
+      isZipImportingRef.current = true;
       setSelectedZipFile(file);
       setZipImportUiState('uploading');
       setZipUploadProgress(0);
@@ -756,6 +560,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         subscribeToZipProgress(eligibleUser.uid, importId);
         await traktZipImportService.startImport(importId);
       } catch (error) {
+        isZipImportingRef.current = false;
         console.error('[TraktContext] Zip import error:', error);
         setZipImportUiState('failed');
 
@@ -798,6 +603,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   );
 
   const dismissZipImport = useCallback(() => {
+    isZipImportingRef.current = false;
     if (activeZipImportSubscriptionRef.current) {
       activeZipImportSubscriptionRef.current();
       activeZipImportSubscriptionRef.current = null;
@@ -823,27 +629,6 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     setZipImportDoc(null);
     setZipImportError(null);
   }, [clearZipHoldTimeout]);
-
-  const disconnectTrakt = useCallback(async () => {
-    ensureEligibleUser('Must be logged in to disconnect');
-
-    try {
-      await TraktService.disconnectTrakt();
-
-      setIsConnected(false);
-      setLastSyncedAt(null);
-      setLastEnrichedAt(null);
-      setSyncStatus(null);
-
-      await persistState(false, null, null);
-      await AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED);
-
-      console.log('[Trakt] Successfully disconnected');
-    } catch (error) {
-      console.error('[Trakt] Failed to disconnect:', error);
-      throw error;
-    }
-  }, [ensureEligibleUser]);
 
   return {
     isConnected,
