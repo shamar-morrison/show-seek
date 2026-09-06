@@ -68,7 +68,11 @@ export async function fetchAccentColorFromFirebase(): Promise<string | null> {
     const user = getSignedInUser();
     if (!user) return null;
 
+    // Force a server read: this runs at most once per login to restore the
+    // latest cross-device value, so it must not serve the TTL-cached copy
+    // (which can predate a change made on web).
     const userData = await getCachedUserDocument(user.uid, {
+      forceRefresh: true,
       callsite: 'accentColorStorage.fetchAccentColorFromFirebase',
     });
 
