@@ -7,23 +7,16 @@ import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View, ViewStyle } from 'react-native';
 import { useDetailStyles } from './detailStyles';
-import type { UpNextEpisode } from './types';
-import { UpNextEpisodeSection } from './UpNextEpisodeSection';
 
 interface SeasonsSectionProps {
   tvShowId: number;
   seasons: Season[];
   onSeasonPress: (seasonNumber: number) => void;
-  /** Next episode to air — rendered as an "Up Next" card under the header when provided */
-  nextEpisode?: UpNextEpisode | null;
-  onEpisodePress?: (seasonNumber: number, episodeNumber: number) => void;
   style?: ViewStyle;
 }
 
-export type { UpNextEpisode };
-
 export const SeasonsSection = memo<SeasonsSectionProps>(
-  ({ tvShowId, seasons, onSeasonPress, nextEpisode, onEpisodePress, style }) => {
+  ({ tvShowId, seasons, onSeasonPress, style }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
     const { data: ratings } = useRatings();
@@ -60,9 +53,6 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
         <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.seasons')}
         </Text>
-        {nextEpisode && onEpisodePress ? (
-          <UpNextEpisodeSection episode={nextEpisode} onEpisodePress={onEpisodePress} />
-        ) : null}
         <FlashList
           data={seasons}
           keyExtractor={(item) => item.id.toString()}
@@ -86,9 +76,7 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
     return (
       prevProps.tvShowId === nextProps.tvShowId &&
       prevProps.seasons.length === nextProps.seasons.length &&
-      prevProps.seasons.every((s, i) => s.id === nextProps.seasons[i]?.id) &&
-      prevProps.nextEpisode?.id === nextProps.nextEpisode?.id &&
-      prevProps.onEpisodePress === nextProps.onEpisodePress
+      prevProps.seasons.every((s, i) => s.id === nextProps.seasons[i]?.id)
     );
   }
 );

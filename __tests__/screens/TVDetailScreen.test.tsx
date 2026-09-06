@@ -1,5 +1,4 @@
 import TVDetailScreen from '@/src/screens/TVDetailScreen';
-import { SeasonsSection } from '@/src/components/detail/SeasonsSection';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
@@ -310,15 +309,15 @@ jest.mock('@/src/components/detail/RecommendationsSection', () => ({
   RecommendationsSection: () => null,
 }));
 jest.mock('@/src/components/detail/ReviewsSection', () => ({ ReviewsSection: () => null }));
-jest.mock('@/src/components/detail/SeasonsSection', () => {
-  const React = require('react');
-  const MockSeasonsSection = (props: any) => {
-    (MockSeasonsSection as any).lastProps = props;
+jest.mock('@/src/components/detail/SeasonsSection', () => ({ SeasonsSection: () => null }));
+
+const mockUpNextSection = jest.fn();
+jest.mock('@/src/components/detail/UpNextEpisodeSection', () => ({
+  UpNextEpisodeSection: (props: any) => {
+    mockUpNextSection(props);
     return null;
-  };
-  MockSeasonsSection.displayName = 'MockSeasonsSection';
-  return { SeasonsSection: MockSeasonsSection };
-});
+  },
+}));
 jest.mock('@/src/components/detail/SimilarMediaSection', () => ({
   SimilarMediaSection: () => null,
 }));
@@ -495,19 +494,21 @@ describe('TVDetailScreen', () => {
       Object.assign(mockShow, overrides);
     };
 
+    const getUpNextProps = () => mockUpNextSection.mock.calls[0]?.[0];
+
     afterEach(() => {
       Object.assign(mockShow, { status: 'Ended', seasons: [] });
       delete (mockShow as Record<string, unknown>).next_episode_to_air;
     });
 
-    it('passes the next episode to SeasonsSection for a Returning Series show', () => {
+    it('renders the up next card above the seasons for a Returning Series show', () => {
       setShowState({ status: 'Returning Series', seasons: regularSeasons, next_episode_to_air: nextEpisode });
 
       render(<TVDetailScreen />);
 
-      const props = (SeasonsSection as unknown as { lastProps: any }).lastProps;
-      expect(props.nextEpisode).toEqual(nextEpisode);
-      expect(typeof props.onEpisodePress).toBe('function');
+      expect(mockUpNextSection).toHaveBeenCalledTimes(1);
+      expect(getUpNextProps()).toEqual(expect.objectContaining({ episode: nextEpisode }));
+      expect(typeof getUpNextProps().onEpisodePress).toBe('function');
     });
 
     it('navigates to the episode details screen when the up next episode is pressed', () => {
@@ -515,28 +516,25 @@ describe('TVDetailScreen', () => {
 
       render(<TVDetailScreen />);
 
-      const props = (SeasonsSection as unknown as { lastProps: any }).lastProps;
-      props.onEpisodePress(1, 1);
+      getUpNextProps().onEpisodePress(1, 1);
 
       expect(mockPush).toHaveBeenCalledWith('/(tabs)/discover/tv/10/season/1/episode/1');
     });
 
-    it('does not pass a next episode when the show has ended', () => {
+    it('does not render the up next card when the show has ended', () => {
       setShowState({ status: 'Ended', seasons: regularSeasons, next_episode_to_air: nextEpisode });
 
       render(<TVDetailScreen />);
 
-      const props = (SeasonsSection as unknown as { lastProps: any }).lastProps;
-      expect(props.nextEpisode).toBeNull();
+      expect(mockUpNextSection).not.toHaveBeenCalled();
     });
 
-    it('does not pass a next episode when there is no upcoming air date', () => {
+    it('does not render the up next card when there is no upcoming air date', () => {
       setShowState({ status: 'Returning Series', seasons: regularSeasons });
 
       render(<TVDetailScreen />);
 
-      const props = (SeasonsSection as unknown as { lastProps: any }).lastProps;
-      expect(props.nextEpisode).toBeNull();
+      expect(mockUpNextSection).not.toHaveBeenCalled();
     });
   });
 });

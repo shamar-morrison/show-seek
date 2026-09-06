@@ -5,7 +5,6 @@ import React from 'react';
 
 const mockUseRatings = jest.fn();
 const mockSeasonCard = jest.fn();
-const mockUpNextSection = jest.fn();
 
 jest.mock('@/src/hooks/useRatings', () => ({
   useRatings: () => mockUseRatings(),
@@ -14,13 +13,6 @@ jest.mock('@/src/hooks/useRatings', () => ({
 jest.mock('@/src/components/SeasonCard', () => ({
   SeasonCard: (props: any) => {
     mockSeasonCard(props);
-    return null;
-  },
-}));
-
-jest.mock('@/src/components/detail/UpNextEpisodeSection', () => ({
-  UpNextEpisodeSection: (props: any) => {
-    mockUpNextSection(props);
     return null;
   },
 }));
@@ -170,62 +162,5 @@ describe('SeasonsSection', () => {
         userRating: undefined,
       })
     );
-  });
-
-  it('renders the up next episode card when nextEpisode and onEpisodePress are provided', () => {
-    const nextEpisode = {
-      id: 101,
-      name: 'Freedom Day',
-      overview: 'Overview',
-      air_date: '2023-05-04',
-      episode_number: 1,
-      season_number: 1,
-      still_path: '/still.jpg',
-    };
-    const onEpisodePress = jest.fn();
-
-    render(
-      <SeasonsSection
-        tvShowId={55}
-        seasons={seasons as any}
-        onSeasonPress={jest.fn()}
-        nextEpisode={nextEpisode as any}
-        onEpisodePress={onEpisodePress}
-      />
-    );
-
-    expect(mockUpNextSection).toHaveBeenCalledTimes(1);
-    expect(mockUpNextSection.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({ episode: nextEpisode, onEpisodePress })
-    );
-  });
-
-  it('omits the up next episode card when nextEpisode is missing', () => {
-    render(<SeasonsSection tvShowId={55} seasons={seasons as any} onSeasonPress={jest.fn()} />);
-
-    expect(mockUpNextSection).not.toHaveBeenCalled();
-  });
-
-  it('omits the up next episode card when onEpisodePress is missing', () => {
-    const nextEpisode = {
-      id: 101,
-      name: 'Freedom Day',
-      overview: 'Overview',
-      air_date: '2023-05-04',
-      episode_number: 1,
-      season_number: 1,
-      still_path: '/still.jpg',
-    };
-
-    render(
-      <SeasonsSection
-        tvShowId={55}
-        seasons={seasons as any}
-        onSeasonPress={jest.fn()}
-        nextEpisode={nextEpisode as any}
-      />
-    );
-
-    expect(mockUpNextSection).not.toHaveBeenCalled();
   });
 });

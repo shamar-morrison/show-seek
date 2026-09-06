@@ -16,6 +16,7 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { TraktReviewsSection } from '@/src/components/detail/TraktReviewsSection';
 import { TVHeroSection } from '@/src/components/detail/TVHeroSection';
 import { TVMetaSection } from '@/src/components/detail/TVMetaSection';
+import { UpNextEpisodeSection } from '@/src/components/detail/UpNextEpisodeSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
@@ -513,6 +514,14 @@ export default function TVDetailScreen() {
 
           <SectionSeparator />
 
+          {/* Up Next Episode */}
+          {upNextEpisode ? (
+            <UpNextEpisodeSection
+              episode={upNextEpisode}
+              onEpisodePress={handleUpNextEpisodePress}
+            />
+          ) : null}
+
           {/* Seasons Section */}
           {show.seasons && show.seasons.some((s) => s.season_number > 0) && (
             <>
@@ -520,8 +529,6 @@ export default function TVDetailScreen() {
                 tvShowId={tvId}
                 seasons={show.seasons.filter((s) => s.season_number > 0)}
                 onSeasonPress={handleSeasonsPress}
-                nextEpisode={upNextEpisode}
-                onEpisodePress={handleUpNextEpisodePress}
               />
               <SectionSeparator />
             </>
