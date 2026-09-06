@@ -2,6 +2,10 @@ import { AppSettingsSection, AppSettingsSectionProps } from '@/src/components/pr
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
+jest.mock('@expo/vector-icons', () => ({
+  FontAwesome5: () => null,
+}));
+
 describe('AppSettingsSection', () => {
   const createProps = (
     overrides: Partial<AppSettingsSectionProps> = {}
@@ -13,11 +17,11 @@ describe('AppSettingsSection', () => {
     isSigningOut: false,
     isDeletingAccount: false,
     onRateApp: jest.fn(),
-    onFeedback: jest.fn(),
     onExportData: jest.fn(),
     onClearCache: jest.fn(),
     onWebApp: jest.fn(),
     onAbout: jest.fn(),
+    onDiscord: jest.fn(),
     onDeleteAccount: jest.fn(),
     onSignOut: jest.fn(),
     ...overrides,
@@ -112,6 +116,33 @@ describe('AppSettingsSection', () => {
     fireEvent.press(getByTestId('action-button-about'));
 
     expect(props.onAbout).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders join discord action button underneath about', () => {
+    const props = createProps();
+    const { getByText } = render(<AppSettingsSection {...props} />);
+
+    expect(getByText('Join our Discord')).toBeTruthy();
+  });
+
+  it('calls onDiscord when join discord action is pressed', () => {
+    const props = createProps();
+    const { getByTestId } = render(<AppSettingsSection {...props} />);
+
+    fireEvent.press(getByTestId('action-button-join-our-discord'));
+
+    expect(props.onDiscord).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows join discord action for guest users', () => {
+    const props = createProps({ isGuest: true });
+    const { getByText, getByTestId } = render(<AppSettingsSection {...props} />);
+
+    expect(getByText('Join our Discord')).toBeTruthy();
+
+    fireEvent.press(getByTestId('action-button-join-our-discord'));
+
+    expect(props.onDiscord).toHaveBeenCalledTimes(1);
   });
 
   it('shows signing out state and disables sign out action while signing out', () => {

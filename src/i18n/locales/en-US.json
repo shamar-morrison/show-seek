@@ -781,6 +781,7 @@
     "importFromImdb": "Import from IMDb",
     "exportData": "Export Data",
     "webApp": "ShowSeek Web App",
+    "joinDiscord": "Join our Discord",
     "deleteAccount": "Delete Account",
     "clearCache": "Clear Image Cache",
     "deletingAccount": "Deleting Account...",
@@ -816,6 +817,7 @@
     "unableToOpenFeedback": "Unable to open feedback page.",
     "unableToOpenPlayStore": "Unable to open the Play Store.",
     "unableToOpenWebsite": "Unable to open website.",
+    "unableToOpenDiscord": "Unable to open Discord.",
     "user": "User",
     "guestUser": "Guest User",
     "webAppModal": {

@@ -1,6 +1,7 @@
-import { SPACING } from '@/src/constants/theme';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
-import { Download, Globe, Info, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
+import { Download, Globe, Info, LogOut, Star, Trash2 } from 'lucide-react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -21,8 +22,6 @@ export interface AppSettingsSectionProps {
   isDeletingAccount: boolean;
   /** Handler for Rate App button */
   onRateApp: () => void;
-  /** Handler for Send Feedback button */
-  onFeedback: () => void;
   /** Handler for Export Data button */
   onExportData: () => void;
   /** Handler for Clear Cache button */
@@ -31,6 +30,8 @@ export interface AppSettingsSectionProps {
   onWebApp: () => void;
   /** Handler for About button */
   onAbout: () => void;
+  /** Handler for Join Discord button */
+  onDiscord: () => void;
   /** Handler for Delete Account button */
   onDeleteAccount: () => void;
   /** Handler for Sign Out button */
@@ -40,7 +41,7 @@ export interface AppSettingsSectionProps {
 }
 
 /**
- * App settings section with app actions such as feedback, export, cache management, and sign-out.
+ * App settings section with app actions such as export, cache management, and sign-out.
  */
 export function AppSettingsSection({
   isGuest,
@@ -50,11 +51,11 @@ export function AppSettingsSection({
   isSigningOut,
   isDeletingAccount,
   onRateApp,
-  onFeedback,
   onExportData,
   onClearCache,
   onWebApp,
   onAbout,
+  onDiscord,
   onDeleteAccount,
   onSignOut,
   showTitle = true,
@@ -70,10 +71,14 @@ export function AppSettingsSection({
       )}
       <View style={styles.actionsList}>
         <ActionButton icon={Star} label={t('profile.rateApp')} onPress={onRateApp} />
-        <ActionButton icon={MessageCircle} label={t('profile.sendFeedback')} onPress={onFeedback} />
         {isGuest ? (
           <>
             <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
+            <ActionButton
+              customIcon={<FontAwesome5 name="discord" size={20} color={COLORS.text} />}
+              label={t('profile.joinDiscord')}
+              onPress={onDiscord}
+            />
             <ActionButton
               icon={Trash2}
               label={isDeletingAccount ? t('profile.deletingAccount') : t('profile.deleteAccount')}
@@ -107,6 +112,11 @@ export function AppSettingsSection({
             />
             <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
             <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
+            <ActionButton
+              customIcon={<FontAwesome5 name="discord" size={20} color={COLORS.text} />}
+              label={t('profile.joinDiscord')}
+              onPress={onDiscord}
+            />
             <ActionButton
               icon={Trash2}
               label={isDeletingAccount ? t('profile.deletingAccount') : t('profile.deleteAccount')}

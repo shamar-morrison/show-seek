@@ -775,6 +775,7 @@
     "importFromImdb": "IMDb'den içe aktar",
     "exportData": "Verileri dışa aktar",
     "webApp": "ShowSeek web uygulaması",
+    "joinDiscord": "Discord'umuza katıl",
     "deleteAccount": "Hesabı sil",
     "clearCache": "Görsel önbelleğini temizle",
     "deletingAccount": "Hesap siliniyor...",
@@ -810,6 +811,7 @@
     "unableToOpenFeedback": "Geri bildirim sayfası açılamadı.",
     "unableToOpenPlayStore": "Play Store açılamadı.",
     "unableToOpenWebsite": "Web sitesi açılamadı.",
+    "unableToOpenDiscord": "Discord açılamadı.",
     "user": "Kullanıcı",
     "guestUser": "Misafir kullanıcı",
     "webAppModal": {

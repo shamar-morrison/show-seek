@@ -773,6 +773,7 @@
     "importFromImdb": "Importer depuis IMDb",
     "exportData": "Exporter les données",
     "webApp": "ShowSeek Web",
+    "joinDiscord": "Rejoignez notre Discord",
     "deleteAccount": "Supprimer le compte",
     "deletingAccount": "Suppression du compte...",
     "deleteAccountAction": "Supprimer le compte",
@@ -818,6 +819,7 @@
     "unableToOpenFeedback": "Impossible d’ouvrir la page de retours.",
     "unableToOpenPlayStore": "Impossible d’ouvrir le Play Store.",
     "unableToOpenWebsite": "Impossible d’ouvrir le site web.",
+    "unableToOpenDiscord": "Impossible d’ouvrir Discord.",
     "user": "Utilisateur",
     "guestUser": "Invité",
     "webAppModal": {

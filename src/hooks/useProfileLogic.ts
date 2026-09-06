@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Linking } from 'react-native';
 
 const SHOWSEEK_WEB_URL = 'https://show-seek-web.shamar-webdev.workers.dev';
+const DISCORD_INVITE_URL = 'https://discord.gg/gBDWgTtgFj';
 const PACKAGE_ID = 'app.horizon.showseek';
 const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
 
@@ -43,21 +44,19 @@ export function useProfileLogic() {
     }
   }, [t]);
 
-  const handleSendFeedback = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const feedbackUrl = 'https://showseek.canny.io';
-
-    try {
-      await Linking.openURL(feedbackUrl);
-    } catch {
-      Alert.alert(t('common.errorTitle'), t('profile.unableToOpenFeedback'));
-    }
-  }, [t]);
-
   const handleOpenWebApp = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowWebAppModal(true);
   }, []);
+
+  const handleJoinDiscord = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Linking.openURL(DISCORD_INVITE_URL);
+    } catch {
+      Alert.alert(t('common.errorTitle'), t('profile.unableToOpenDiscord'));
+    }
+  }, [t]);
 
   const handleConfirmOpenWebApp = useCallback(async () => {
     setShowWebAppModal(false);
@@ -275,7 +274,7 @@ export function useProfileLogic() {
 
     // Handlers
     handleRateApp,
-    handleSendFeedback,
+    handleJoinDiscord,
     handleOpenWebApp,
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,

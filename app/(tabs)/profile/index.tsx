@@ -50,7 +50,7 @@ export default function ProfileScreen() {
     isClearingCache,
     showWebAppModal,
     handleRateApp,
-    handleSendFeedback,
+    handleJoinDiscord,
     handleOpenWebApp,
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,
@@ -191,11 +191,11 @@ export default function ProfileScreen() {
             isSigningOut={isSigningOut}
             isDeletingAccount={isDeletingAccount}
             onRateApp={handleRateApp}
-            onFeedback={handleSendFeedback}
             onExportData={handleExportData}
             onClearCache={handleClearCache}
             onWebApp={handleOpenWebApp}
             onAbout={handleAboutPress}
+            onDiscord={handleJoinDiscord}
             onDeleteAccount={handleDeleteAccount}
             onSignOut={handleSignOut}
             showTitle={false}
