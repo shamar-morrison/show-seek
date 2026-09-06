@@ -327,6 +327,15 @@ export default function TVDetailScreen() {
 
   const show = tvQuery.data;
   const displayShowTitle = getDisplayMediaTitle(show, !!preferences?.showOriginalTitles);
+  // "Up Next" card: only for actively ongoing shows with a next episode being released.
+  const upNextEpisode =
+    (show.status === 'Returning Series' || show.status === 'In Production') &&
+    show.next_episode_to_air?.air_date &&
+    Number.isInteger(show.next_episode_to_air.season_number) &&
+    Number.isInteger(show.next_episode_to_air.episode_number) &&
+    show.next_episode_to_air.episode_number > 0
+      ? show.next_episode_to_air
+      : null;
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
   const creators = show.created_by || [];
   const videos = videosQuery.data || [];
@@ -366,6 +375,10 @@ export default function TVDetailScreen() {
   const handleSeasonsPress = (seasonNumber?: number) => {
     const path = `/tv/${tvId}/seasons${seasonNumber !== undefined ? `?season=${seasonNumber}` : ''}`;
     navigateTo(path);
+  };
+
+  const handleUpNextEpisodePress = (seasonNumber: number, episodeNumber: number) => {
+    navigateTo(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`);
   };
 
   const handleCastViewAll = () => {
@@ -507,6 +520,8 @@ export default function TVDetailScreen() {
                 tvShowId={tvId}
                 seasons={show.seasons.filter((s) => s.season_number > 0)}
                 onSeasonPress={handleSeasonsPress}
+                nextEpisode={upNextEpisode}
+                onEpisodePress={handleUpNextEpisodePress}
               />
               <SectionSeparator />
             </>

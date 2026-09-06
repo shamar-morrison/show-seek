@@ -1,4 +1,4 @@
-import { CastMember, CrewMember, Episode, Video } from '@/src/api/tmdb';
+import { CastMember, CrewMember, Episode, TVShowDetails, Video } from '@/src/api/tmdb';
 import { ViewStyle } from 'react-native';
 
 export interface WatchProvider {
@@ -129,5 +129,13 @@ export interface RelatedEpisodesSectionProps {
   tvId: number;
   watchedEpisodes: Record<string, boolean>;
   onEpisodePress: (episodeNumber: number) => void;
+  style?: ViewStyle;
+}
+
+export type UpNextEpisode = NonNullable<TVShowDetails['next_episode_to_air']>;
+
+export interface UpNextEpisodeSectionProps {
+  episode: UpNextEpisode;
+  onEpisodePress: (seasonNumber: number, episodeNumber: number) => void;
   style?: ViewStyle;
 }

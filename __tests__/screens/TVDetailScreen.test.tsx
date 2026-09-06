@@ -1,4 +1,5 @@
 import TVDetailScreen from '@/src/screens/TVDetailScreen';
+import { SeasonsSection } from '@/src/components/detail/SeasonsSection';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
@@ -309,7 +310,15 @@ jest.mock('@/src/components/detail/RecommendationsSection', () => ({
   RecommendationsSection: () => null,
 }));
 jest.mock('@/src/components/detail/ReviewsSection', () => ({ ReviewsSection: () => null }));
-jest.mock('@/src/components/detail/SeasonsSection', () => ({ SeasonsSection: () => null }));
+jest.mock('@/src/components/detail/SeasonsSection', () => {
+  const React = require('react');
+  const MockSeasonsSection = (props: any) => {
+    (MockSeasonsSection as any).lastProps = props;
+    return null;
+  };
+  MockSeasonsSection.displayName = 'MockSeasonsSection';
+  return { SeasonsSection: MockSeasonsSection };
+});
 jest.mock('@/src/components/detail/SimilarMediaSection', () => ({
   SimilarMediaSection: () => null,
 }));
@@ -438,6 +447,7 @@ describe('TVDetailScreen', () => {
   });
 
   it('alerts and does not open the note editor when a persisted note fails to load', async () => {
+
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockUseMediaNoteValue = {
       note: null,
@@ -457,5 +467,76 @@ describe('TVDetailScreen', () => {
 
     expect(mockNoteModalPresent).not.toHaveBeenCalled();
     alertSpy.mockRestore();
+  });
+
+  describe('Up Next episode card', () => {
+    const nextEpisode = {
+      id: 101,
+      name: 'Freedom Day',
+      overview: 'Overview',
+      air_date: '2023-05-04',
+      episode_number: 1,
+      season_number: 1,
+      still_path: '/still.jpg',
+    };
+    const regularSeasons = [
+      {
+        id: 11,
+        name: 'Season 1',
+        season_number: 1,
+        episode_count: 10,
+        air_date: '2023-01-01',
+        overview: 'Overview 1',
+        poster_path: '/season-1.jpg',
+      },
+    ];
+
+    const setShowState = (overrides: Record<string, unknown>) => {
+      Object.assign(mockShow, overrides);
+    };
+
+    afterEach(() => {
+      Object.assign(mockShow, { status: 'Ended', seasons: [] });
+      delete (mockShow as Record<string, unknown>).next_episode_to_air;
+    });
+
+    it('passes the next episode to SeasonsSection for a Returning Series show', () => {
+      setShowState({ status: 'Returning Series', seasons: regularSeasons, next_episode_to_air: nextEpisode });
+
+      render(<TVDetailScreen />);
+
+      const props = (SeasonsSection as unknown as { lastProps: any }).lastProps;
+      expect(props.nextEpisode).toEqual(nextEpisode);
+      expect(typeof props.onEpisodePress).toBe('function');
+    });
+
+    it('navigates to the episode details screen when the up next episode is pressed', () => {
+      setShowState({ status: 'In Production', seasons: regularSeasons, next_episode_to_air: nextEpisode });
+
+      render(<TVDetailScreen />);
+
+      const props = (SeasonsSection as unknown as { lastProps: any }).lastProps;
+      props.onEpisodePress(1, 1);
+
+      expect(mockPush).toHaveBeenCalledWith('/(tabs)/discover/tv/10/season/1/episode/1');
+    });
+
+    it('does not pass a next episode when the show has ended', () => {
+      setShowState({ status: 'Ended', seasons: regularSeasons, next_episode_to_air: nextEpisode });
+
+      render(<TVDetailScreen />);
+
+      const props = (SeasonsSection as unknown as { lastProps: any }).lastProps;
+      expect(props.nextEpisode).toBeNull();
+    });
+
+    it('does not pass a next episode when there is no upcoming air date', () => {
+      setShowState({ status: 'Returning Series', seasons: regularSeasons });
+
+      render(<TVDetailScreen />);
+
+      const props = (SeasonsSection as unknown as { lastProps: any }).lastProps;
+      expect(props.nextEpisode).toBeNull();
+    });
   });
 });
