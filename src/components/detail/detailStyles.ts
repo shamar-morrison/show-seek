@@ -160,6 +160,12 @@ export const useDetailStyles = () =>
       borderRadius: BORDER_RADIUS.m,
       marginRight: SPACING.m,
     },
+    photoImagePortrait: {
+      width: 120,
+      height: 180,
+      borderRadius: BORDER_RADIUS.m,
+      marginRight: SPACING.m,
+    },
 
     // Videos
     videosList: {

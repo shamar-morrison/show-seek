@@ -1534,9 +1534,12 @@
     "directedWrittenMovies": "Yönetmenlik/Senaryo (filmler)",
     "directedWrittenTV": "Yönetmenlik/Senaryo (diziler)",
     "failedToLoadDetails": "Kişi ayrıntıları yüklenemedi",
+    "failedToLoadPhotos": "Fotoğraflar yüklenemedi",
     "knownForLabel": "Bilinen yapımlar:",
     "knownForMovies": "Bilinen yapımlar (filmler)",
     "knownForTV": "Bilinen yapımlar (diziler)",
+    "noPhotosDescription": "Bu kişi için gösterilecek fotoğraf yok.",
+    "noPhotosTitle": "Fotoğraf bulunamadı",
     "removeFromFavoritePeople": "Favori kişilerden kaldır"
   },
   "personCredits": {

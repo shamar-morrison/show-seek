@@ -1,5 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
+import { PhotosSection } from '@/src/components/detail/PhotosSection';
+import ImageLightbox from '@/src/components/ImageLightbox';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import AppErrorState from '@/src/components/ui/AppErrorState';
@@ -98,6 +100,8 @@ export default function PersonDetailScreen() {
   const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
     null
   );
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
   const { getListsForMedia } = useListMembership();
@@ -124,6 +128,12 @@ export default function PersonDetailScreen() {
   const tvCreditsQuery = useQuery({
     queryKey: ['person', personId, 'tv-credits'],
     queryFn: () => tmdbApi.getPersonTVCredits(personId),
+    enabled: !!personId,
+  });
+
+  const personImagesQuery = useQuery({
+    queryKey: ['person', personId, 'images'],
+    queryFn: () => tmdbApi.getPersonImages(personId),
     enabled: !!personId,
   });
 
@@ -245,6 +255,16 @@ export default function PersonDetailScreen() {
 
   const profileUrl = getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.large);
 
+  const personPhotos = personImagesQuery.data?.profiles ?? [];
+  const personPhotoDisplayImages = personPhotos
+    .slice(0, 10)
+    .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.profile.large))
+    .filter((url): url is string => url !== null);
+  const personPhotoDownloadImages = personPhotos
+    .slice(0, 10)
+    .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.profile.original))
+    .filter((url): url is string => url !== null);
+
   const handleCreditPress = (mediaType: 'movie' | 'tv', id: number) => {
     navigateTo(`/${mediaType}/${id}`);
   };
@@ -255,6 +275,10 @@ export default function PersonDetailScreen() {
     );
   };
 
+  const handleViewAllPhotos = () => {
+    navigateTo(`/person/${personId}/photos?name=${encodeURIComponent(person.name)}`);
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -262,6 +286,7 @@ export default function PersonDetailScreen() {
         personQuery.refetch(),
         movieCreditsQuery.refetch(),
         tvCreditsQuery.refetch(),
+        personImagesQuery.refetch(),
       ]);
     } finally {
       setRefreshing(false);
@@ -587,7 +612,30 @@ export default function PersonDetailScreen() {
         {movieSections.map(renderCreditSection)}
 
         {tvSections.map(renderCreditSection)}
+
+        {/* Photos */}
+        {personPhotos.length > 0 && (
+          <View style={styles.section}>
+            <PhotosSection
+              images={personPhotos}
+              variant="portrait"
+              onPhotoPress={(index) => {
+                setLightboxIndex(index);
+                setLightboxVisible(true);
+              }}
+              onViewAll={personPhotos.length > 10 ? handleViewAllPhotos : undefined}
+            />
+          </View>
+        )}
       </Animated.ScrollView>
+
+      <ImageLightbox
+        visible={lightboxVisible}
+        onClose={() => setLightboxVisible(false)}
+        images={personPhotoDisplayImages}
+        downloadImages={personPhotoDownloadImages}
+        initialIndex={lightboxIndex}
+      />
 
       {selectedMediaItem && (
         <AddToListModal

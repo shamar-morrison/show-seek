@@ -72,6 +72,8 @@ export interface PhotosSectionProps {
   images: BackdropImage[];
   onPhotoPress: (index: number) => void;
   style?: ViewStyle;
+  variant?: 'landscape' | 'portrait';
+  onViewAll?: () => void;
 }
 
 export interface VideosSectionProps {

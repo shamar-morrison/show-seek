@@ -856,6 +856,13 @@ export const tmdbApi = {
     return data;
   },
 
+  getPersonImages: async (id: number) => {
+    const { data } = await tmdbClient.get<{ id: number; profiles: ImageData[] }>(
+      `/person/${id}/images`
+    );
+    return data;
+  },
+
   getMovieWatchProviders: async (id: number) => {
     const data = await tmdbRequest(() =>
       tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(

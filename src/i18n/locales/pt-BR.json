@@ -1397,9 +1397,12 @@
     "directedWrittenMovies": "Dirigiu/Escreveu (Filmes)",
     "directedWrittenTV": "Dirigiu/Escreveu (TV)",
     "failedToLoadDetails": "Falha ao carregar detalhes da pessoa",
+    "failedToLoadPhotos": "Falha ao carregar fotos",
     "knownForLabel": "Conhecido por:",
     "knownForMovies": "Conhecido por (Filmes)",
     "knownForTV": "Conhecido por (TV)",
+    "noPhotosDescription": "Não há fotos para mostrar desta pessoa.",
+    "noPhotosTitle": "Nenhuma foto encontrada",
     "removeFromFavoritePeople": "Remover de Pessoas favoritas"
   },
   "personCredits": {

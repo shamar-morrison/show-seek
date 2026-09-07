@@ -1,7 +1,9 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
+import { ArrowRight } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -9,9 +11,11 @@ import { useDetailStyles } from './detailStyles';
 import type { PhotosSectionProps } from './types';
 
 export const PhotosSection = memo<PhotosSectionProps>(
-  ({ images, onPhotoPress, style }) => {
+  ({ images, onPhotoPress, style, variant = 'landscape', onViewAll }) => {
     const { t } = useTranslation();
+    const { accentColor } = useAccentColor();
     const styles = useDetailStyles();
+    const isPortrait = variant === 'portrait';
 
     // Limit to 10 images
     const displayImages = images.slice(0, 10);
@@ -22,14 +26,17 @@ export const PhotosSection = memo<PhotosSectionProps>(
         <TouchableOpacity onPress={() => onPhotoPress(index)} activeOpacity={ACTIVE_OPACITY}>
           <MediaImage
             source={{
-              uri: getImageUrl(item.file_path, TMDB_IMAGE_SIZES.backdrop.small),
+              uri: getImageUrl(
+                item.file_path,
+                isPortrait ? TMDB_IMAGE_SIZES.profile.medium : TMDB_IMAGE_SIZES.backdrop.small
+              ),
             }}
-            style={styles.photoImage}
+            style={isPortrait ? styles.photoImagePortrait : styles.photoImage}
             contentFit="cover"
           />
         </TouchableOpacity>
       ),
-      [onPhotoPress]
+      [isPortrait, onPhotoPress, styles.photoImage, styles.photoImagePortrait]
     );
 
     if (images.length === 0) {
@@ -38,9 +45,21 @@ export const PhotosSection = memo<PhotosSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
-          {t('media.photos')}
-        </Text>
+        {onViewAll ? (
+          <TouchableOpacity
+            style={[styles.sectionHeader, { paddingBottom: SPACING.s }]}
+            onPress={onViewAll}
+            activeOpacity={ACTIVE_OPACITY}
+            accessibilityRole="button"
+          >
+            <Text style={styles.sectionTitle}>{t('media.photos')}</Text>
+            <ArrowRight size={23} color={accentColor} />
+          </TouchableOpacity>
+        ) : (
+          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
+            {t('media.photos')}
+          </Text>
+        )}
         <HorizontalFlashList
           data={displayImages}
           renderItem={renderItem}
@@ -61,7 +80,9 @@ export const PhotosSection = memo<PhotosSectionProps>(
       (prevProps.images.length === 0 ||
         prevProps.images[0]?.file_path === nextProps.images[0]?.file_path) &&
       prevProps.onPhotoPress === nextProps.onPhotoPress &&
-      prevProps.style === nextProps.style
+      prevProps.style === nextProps.style &&
+      (prevProps.variant ?? 'landscape') === (nextProps.variant ?? 'landscape') &&
+      prevProps.onViewAll === nextProps.onViewAll
     );
   }
 );

@@ -250,8 +250,18 @@ jest.mock('@/src/hooks/useFavoritePersons', () => ({
   }),
 }));
 
-jest.mock('@/src/components/AddToListModal', () => {
-  const React = require('react');
+const mockPhotosSectionRender: jest.Mock = jest.fn(() => null);
+jest.mock('@/src/components/detail/PhotosSection', () => ({
+  PhotosSection: (props: any) => mockPhotosSectionRender(props),
+}));
+
+const mockImageLightboxRender: jest.Mock = jest.fn(() => null);
+jest.mock('@/src/components/ImageLightbox', () => ({
+  __esModule: true,
+  default: (props: any) => mockImageLightboxRender(props),
+}));
+
+jest.mock('@/src/components/AddToListModal', () => {  const React = require('react');
   const { Text } = require('react-native');
   const AddToListModal = React.forwardRef(({ mediaItem, onDismiss }: any, ref: any) => {
     latestAddToListModalOnDismiss = onDismiss ?? null;
@@ -271,9 +281,11 @@ describe('PersonDetailScreen', () => {
     {
       movieCredits = { cast: [mockMovie], crew: [] },
       tvCredits = { cast: [mockTVShow], crew: [] },
+      profiles = [],
     }: {
       movieCredits?: { cast: (typeof mockMovie)[]; crew: (typeof mockDirectedMovie)[] };
       tvCredits?: { cast: (typeof mockTVShow)[]; crew: (typeof mockDirectedTVShow)[] };
+      profiles?: { file_path: string }[];
     } = {}
   ) => {
     mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
@@ -291,6 +303,15 @@ describe('PersonDetailScreen', () => {
       if (creditKey === 'tv-credits') {
         return {
           data: tvCredits,
+          isLoading: false,
+          isError: false,
+          refetch: jest.fn(),
+        };
+      }
+
+      if (creditKey === 'images') {
+        return {
+          data: { id: 99, profiles },
           isLoading: false,
           isError: false,
           refetch: jest.fn(),
@@ -355,6 +376,15 @@ describe('PersonDetailScreen', () => {
       if (creditKey === 'tv-credits') {
         return {
           data: { cast: [mockTVShow], crew: [] },
+          isLoading: false,
+          isError: false,
+          refetch: jest.fn(),
+        };
+      }
+
+      if (creditKey === 'images') {
+        return {
+          data: { id: 99, profiles: [] },
           isLoading: false,
           isError: false,
           refetch: jest.fn(),
@@ -544,5 +574,69 @@ describe('PersonDetailScreen', () => {
     expect(mockRequireAccount).toHaveBeenCalledTimes(1);
     expect(mockPresent).not.toHaveBeenCalled();
     expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
+  it('does not render the photos section when the person has no photos', () => {
+    setupQueries();
+
+    render(<PersonDetailScreen />);
+
+    expect(mockPhotosSectionRender).not.toHaveBeenCalled();
+  });
+
+  it('passes portrait photos to the photos section without view-all when there are 10 or fewer', () => {
+    const profiles = Array.from({ length: 3 }, (_, index) => ({
+      file_path: `/photo-${index}.jpg`,
+    }));
+    setupQueries(mockPerson, { profiles });
+
+    render(<PersonDetailScreen />);
+
+    expect(mockPhotosSectionRender).toHaveBeenCalledTimes(1);
+    const props = mockPhotosSectionRender.mock.calls[0][0];
+    expect(props.images).toEqual(profiles);
+    expect(props.variant).toBe('portrait');
+    expect(props.onViewAll).toBeUndefined();
+  });
+
+  it('provides view-all navigation when there are more than 10 photos', () => {
+    const profiles = Array.from({ length: 12 }, (_, index) => ({
+      file_path: `/photo-${index}.jpg`,
+    }));
+    setupQueries(mockPerson, { profiles });
+
+    render(<PersonDetailScreen />);
+
+    const props = mockPhotosSectionRender.mock.calls[0][0];
+    expect(props.images).toHaveLength(12);
+    expect(typeof props.onViewAll).toBe('function');
+
+    act(() => {
+      props.onViewAll();
+    });
+
+    expect(mockPush).toHaveBeenCalledWith(
+      '/(tabs)/discover/person/99/photos?name=Test%20Person'
+    );
+  });
+
+  it('opens the lightbox at the pressed photo index', () => {
+    const profiles = Array.from({ length: 3 }, (_, index) => ({
+      file_path: `/photo-${index}.jpg`,
+    }));
+    setupQueries(mockPerson, { profiles });
+
+    render(<PersonDetailScreen />);
+
+    const photosProps = mockPhotosSectionRender.mock.calls[0][0];
+    act(() => {
+      photosProps.onPhotoPress(2);
+    });
+
+    const lightboxProps =
+      mockImageLightboxRender.mock.calls[mockImageLightboxRender.mock.calls.length - 1][0];
+    expect(lightboxProps.visible).toBe(true);
+    expect(lightboxProps.initialIndex).toBe(2);
+    expect(lightboxProps.images).toHaveLength(3);
   });
 });
