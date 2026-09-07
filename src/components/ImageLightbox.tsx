@@ -1,5 +1,5 @@
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
@@ -15,10 +15,12 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const FALLBACK_IMAGE_EXTENSION = '.jpg';
 
 interface ImageLightboxProps {
@@ -115,32 +117,45 @@ export default function ImageLightbox({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.closeButton,
-            pressed && { opacity: ACTIVE_OPACITY },
-          ]}
-          onPress={onClose}
-          testID="image-lightbox-close-button"
-        >
-          <X size={32} color={COLORS.white} />
-        </Pressable>
+        <SafeAreaView edges={['top']} style={styles.headerSafe}>
+          <View style={styles.header}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.headerButton,
+                pressed && { opacity: ACTIVE_OPACITY },
+              ]}
+              onPress={onClose}
+              testID="image-lightbox-close-button"
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            >
+              <X size={28} color={COLORS.white} />
+            </Pressable>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.downloadButton,
-            pressed && { opacity: ACTIVE_OPACITY },
-          ]}
-          onPress={handleDownload}
-          disabled={isDownloading}
-          testID="image-lightbox-download-button"
-        >
-          {isDownloading ? (
-            <ActivityIndicator size="small" color={COLORS.white} />
-          ) : (
-            <Download size={26} color={COLORS.white} />
-          )}
-        </Pressable>
+            {images.length > 1 && (
+              <Text style={styles.counter} testID="image-lightbox-counter">
+                {currentIndex + 1} / {images.length}
+              </Text>
+            )}
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.headerButton,
+                pressed && { opacity: ACTIVE_OPACITY },
+              ]}
+              onPress={handleDownload}
+              disabled={isDownloading}
+              testID="image-lightbox-download-button"
+              accessibilityRole="button"
+            >
+              {isDownloading ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Download size={24} color={COLORS.white} />
+              )}
+            </Pressable>
+          </View>
+        </SafeAreaView>
 
         <ScrollView
           horizontal
@@ -148,6 +163,7 @@ export default function ImageLightbox({
           showsHorizontalScrollIndicator={false}
           scrollEnabled={true}
           testID="image-lightbox-scrollview"
+          style={styles.pager}
           contentOffset={{ x: currentIndex * width, y: 0 }}
           onMomentumScrollEnd={(event) => {
             const newIndex = Math.round(event.nativeEvent.contentOffset.x / width);
@@ -185,43 +201,46 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: COLORS.black,
+  },
+  headerSafe: {
+    backgroundColor: COLORS.black,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.xs,
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 22,
   },
-  closeButton: {
-    position: 'absolute',
-    top: '25%',
-    alignSelf: 'center',
-    zIndex: 10,
-    padding: SPACING.s,
-    backgroundColor: COLORS.black,
-    borderRadius: 20,
+  counter: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
   },
-  downloadButton: {
-    position: 'absolute',
-    top: '25%',
-    right: SPACING.xl,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.black,
-    borderRadius: 20,
+  pager: {
+    flex: 1,
   },
   imageContainer: {
     width,
-    height,
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   image: {
-    width: width,
-    height: height * 0.8,
+    width: '100%',
+    height: '100%',
   },
   indicator: {
     position: 'absolute',
     bottom: 50,
+    alignSelf: 'center',
     flexDirection: 'row',
     gap: SPACING.s,
   },

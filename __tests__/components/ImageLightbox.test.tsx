@@ -22,6 +22,14 @@ jest.mock('expo-media-library', () => ({
   saveToLibraryAsync: jest.fn(),
 }));
 
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  return {
+    SafeAreaView: ({ children }: { children: React.ReactNode }) =>
+      React.createElement(React.Fragment, null, children),
+  };
+});
+
 jest.mock('@/src/components/ui/Toast', () => {
   const React = require('react');
   const MockToast = React.forwardRef((props: any, ref: any) => {
@@ -64,6 +72,37 @@ describe('ImageLightbox', () => {
     );
 
     expect(getByTestId('image-lightbox-download-button')).toBeTruthy();
+  });
+
+  it('renders close button in the header outside the photo area', () => {
+    const { getByTestId } = render(
+      <ImageLightbox visible onClose={mockOnClose} images={['https://example.com/image-1.jpg']} />
+    );
+
+    const closeButton = getByTestId('image-lightbox-close-button');
+    expect(closeButton).toBeTruthy();
+    fireEvent.press(closeButton);
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a position counter when there are multiple images', () => {
+    const { getByTestId } = render(
+      <ImageLightbox
+        visible
+        onClose={mockOnClose}
+        images={['https://example.com/image-1.jpg', 'https://example.com/image-2.jpg']}
+      />
+    );
+
+    expect(getByTestId('image-lightbox-counter').props.children.join('')).toBe('1 / 2');
+  });
+
+  it('hides the position counter for a single image', () => {
+    const { queryByTestId } = render(
+      <ImageLightbox visible onClose={mockOnClose} images={['https://example.com/image-1.jpg']} />
+    );
+
+    expect(queryByTestId('image-lightbox-counter')).toBeNull();
   });
 
   it('downloads and saves image on successful flow', async () => {
