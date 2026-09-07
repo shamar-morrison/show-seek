@@ -450,3 +450,68 @@ FixedDate.parse = RealDate.parse;
 FixedDate.UTC = RealDate.UTC;
 
 global.Date = FixedDate;
+
+// Mock react-native-webview
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: React.forwardRef((props, ref) =>
+      React.createElement(View, { ...props, ref, testID: props.testID || 'webview' })
+    ),
+    WebView: React.forwardRef((props, ref) =>
+      React.createElement(View, { ...props, ref, testID: props.testID || 'webview' })
+    ),
+  };
+});
+
+// Mock react-native-youtube-bridge
+jest.mock('react-native-youtube-bridge', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const mockPlayer = {
+    play: jest.fn(),
+    pause: jest.fn(),
+    stop: jest.fn(),
+    seekTo: jest.fn(),
+    setVolume: jest.fn(),
+    getVolume: jest.fn(() => Promise.resolve(100)),
+    mute: jest.fn(),
+    unMute: jest.fn(),
+    isMuted: jest.fn(() => Promise.resolve(false)),
+  };
+
+  return {
+    __esModule: true,
+    useYouTubePlayer: jest.fn((source, config) => mockPlayer),
+    useYouTubeEvent: jest.fn((player, event, callback) => {
+      return undefined;
+    }),
+    YoutubeView: React.forwardRef((props, ref) =>
+      React.createElement(View, { ...props, ref, testID: props.testID || 'youtube-view' })
+    ),
+    PlayerState: {
+      UNSTARTED: -1,
+      ENDED: 0,
+      PLAYING: 1,
+      PAUSED: 2,
+      BUFFERING: 3,
+      CUED: 5,
+    },
+    ERROR_CODES: {
+      INVALID_PARAM: 2,
+      HTML5_PLAYER_ERROR: 5,
+      VIDEO_NOT_FOUND: 100,
+      EMBED_NOT_ALLOWED: 101,
+      EMBED_NOT_ALLOWED_DISGUISE: 150,
+      BRIDGE_MESSAGE_PARSE_ERROR: 1000,
+      NATIVE_WEBVIEW_LOAD_ERROR: 1001,
+      INVALID_VIDEO_ID: 1002,
+      FAILED_TO_LOAD_API: 1003,
+      UNKNOWN_ERROR: 1004,
+    },
+  };
+});
+

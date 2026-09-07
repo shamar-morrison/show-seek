@@ -747,6 +747,7 @@ export default function EpisodeDetailScreen() {
       <TrailerPlayer
         visible={trailerModalVisible}
         videoKey={selectedVideo?.key || ''}
+        title={selectedVideo?.name || episode?.name}
         onClose={() => {
           setTrailerModalVisible(false);
           setSelectedVideo(null);

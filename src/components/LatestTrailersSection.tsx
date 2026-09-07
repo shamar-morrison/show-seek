@@ -1,14 +1,15 @@
 import { tmdbApi, TrailerItem } from '@/src/api/tmdb';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { useQuery } from '@tanstack/react-query';
 import { Film, Tv } from 'lucide-react-native';
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 interface LatestTrailersSectionProps {
@@ -18,6 +19,8 @@ interface LatestTrailersSectionProps {
 export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }) => {
   const { t } = useTranslation();
   const { preferences } = usePreferences();
+  const [selectedTrailer, setSelectedTrailer] = useState<TrailerItem | null>(null);
+
   const { data: trailers, isLoading } = useQuery({
     queryKey: ['latest-trailers'],
     queryFn: () => tmdbApi.getLatestTrailers(),
@@ -32,16 +35,9 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     [preferences?.dataSaver]
   );
 
-  const handleTrailerPress = useCallback(
-    (trailer: TrailerItem) => {
-      const youtubeUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
-      Linking.openURL(youtubeUrl).catch((error) => {
-        Alert.alert(t('common.errorTitle'), t('errors.unableToOpenVideo'));
-        console.error('Error opening trailer:', error);
-      });
-    },
-    [t]
-  );
+  const handleTrailerPress = useCallback((trailer: TrailerItem) => {
+    setSelectedTrailer(trailer);
+  }, []);
 
   const renderTrailerCard = useCallback(
     ({ item }: { item: TrailerItem }) => {
@@ -51,10 +47,11 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
       );
 
       return (
-        <TouchableOpacity
-          style={styles.videoCard}
+        <Pressable
+          style={({ pressed }) => [styles.videoCard, pressed && { opacity: ACTIVE_OPACITY }]}
           onPress={() => handleTrailerPress(item)}
-          activeOpacity={ACTIVE_OPACITY}
+          accessibilityRole="button"
+          accessibilityLabel={displayTitle || item.name}
         >
           <MediaImage
             source={{
@@ -79,7 +76,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
           <Text style={styles.videoType} numberOfLines={1}>
             {item.name}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       );
     },
     [handleTrailerPress, thumbnailQuality, preferences?.showOriginalTitles, t]
@@ -113,6 +110,17 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
           <Text style={styles.emptyText}>{t('home.noTrailersAvailable')}</Text>
         </View>
       )}
+
+      <TrailerPlayer
+        visible={!!selectedTrailer}
+        onClose={() => setSelectedTrailer(null)}
+        videoKey={selectedTrailer?.key || null}
+        title={
+          selectedTrailer?.mediaTitle
+            ? `${selectedTrailer.mediaTitle} - ${selectedTrailer.name}`
+            : selectedTrailer?.name
+        }
+      />
     </View>
   );
 });

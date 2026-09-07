@@ -1012,6 +1012,7 @@ export default function MovieDetailScreen() {
         visible={trailerModalVisible}
         onClose={() => setTrailerModalVisible(false)}
         videoKey={selectedVideo?.key || trailer?.key || null}
+        title={selectedVideo?.name || trailer?.name || movie?.title}
       />
 
       <ImageLightbox
