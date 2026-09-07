@@ -1,8 +1,12 @@
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
-import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
+import {
+  HORIZONTAL_LIST_CONTENT_STYLE,
+  HORIZONTAL_SCROLL_PROPS,
+} from '@/src/components/ui/horizontalScrollProps';
+import { SPACING } from '@/src/constants/theme';
 import { render } from '@testing-library/react-native';
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 let capturedProps: any = null;
 
@@ -61,5 +65,58 @@ describe('HorizontalFlashList', () => {
       alwaysBounceHorizontal: false,
       overScrollMode: 'never',
     });
+  });
+
+  it('compensates trailing inset for the shared card margin', () => {
+    expect(HORIZONTAL_LIST_CONTENT_STYLE).toEqual({
+      paddingLeft: SPACING.l,
+      paddingRight: SPACING.l - SPACING.m,
+    });
+  });
+
+  it('applies the compensated content inset by default', () => {
+    render(
+      <HorizontalFlashList
+        data={[1, 2, 3]}
+        renderItem={({ item }) => <Text>{item}</Text>}
+        keyExtractor={(item) => String(item)}
+      />
+    );
+
+    expect(capturedProps.contentContainerStyle).toEqual({
+      paddingLeft: SPACING.l,
+      paddingRight: SPACING.l - SPACING.m,
+    });
+  });
+
+  it('keeps the compensated trailing inset for symmetric caller padding', () => {
+    const callerStyle = StyleSheet.create({
+      list: { paddingHorizontal: SPACING.l },
+    });
+
+    render(
+      <HorizontalFlashList
+        data={[1, 2, 3]}
+        renderItem={({ item }) => <Text>{item}</Text>}
+        keyExtractor={(item) => String(item)}
+        contentContainerStyle={callerStyle.list}
+      />
+    );
+
+    expect(capturedProps.contentContainerStyle.paddingRight).toBe(SPACING.l - SPACING.m);
+  });
+
+  it('respects an explicit caller paddingRight', () => {
+    render(
+      <HorizontalFlashList
+        data={[1, 2, 3]}
+        renderItem={({ item }) => <Text>{item}</Text>}
+        keyExtractor={(item) => String(item)}
+        contentContainerStyle={{ paddingLeft: SPACING.l, paddingRight: SPACING.xl }}
+      />
+    );
+
+    expect(capturedProps.contentContainerStyle.paddingRight).toBe(SPACING.xl);
+    expect(capturedProps.contentContainerStyle.paddingLeft).toBe(SPACING.l);
   });
 });

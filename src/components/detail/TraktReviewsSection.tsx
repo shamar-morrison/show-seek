@@ -3,6 +3,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { TraktReview } from '@/src/types/trakt';
 import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
+import { HORIZONTAL_LIST_CONTENT_STYLE } from '@/src/components/ui/horizontalScrollProps';
 import { Star, ThumbsUp } from 'lucide-react-native';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -127,7 +128,7 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
             <TraktLogo size={24} />
             <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
-          <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={styles.similarList}>
+          <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACING.l }} contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}>
             {[1, 2, 3].map((i) => (
               <View key={i} style={styles.reviewCardSkeleton}>
                 <View style={styles.skeletonHeader}>
@@ -170,7 +171,7 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
             <TraktLogo size={24} />
             <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
-          <View style={styles.similarList}>
+          <View style={{ marginHorizontal: -SPACING.l }}>
             <HorizontalFlashList
               data={reviews}
               keyExtractor={(item) => item.id.toString()}

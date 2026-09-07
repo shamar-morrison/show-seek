@@ -65,7 +65,7 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
             />
           )}
           showsHorizontalScrollIndicator={false}
-          style={styles.similarList}
+          style={{ marginHorizontal: -SPACING.l }}
         />
       </View>
     );

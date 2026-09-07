@@ -1,6 +1,7 @@
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
+import { HORIZONTAL_LIST_CONTENT_STYLE } from '@/src/components/ui/horizontalScrollProps';
 import { Star } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +24,8 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
           <ScrollView
             {...HORIZONTAL_SCROLL_PROPS}
             showsHorizontalScrollIndicator={false}
-            style={styles.similarList}
+            style={{ marginHorizontal: -SPACING.l }}
+            contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}
           >
             {[1, 2, 3].map((i) => (
               <View key={i} style={styles.reviewCardSkeleton}>
@@ -64,7 +66,7 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
           <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
             {t('media.tmdbReviews')}
           </Text>
-          <View style={styles.similarList}>
+          <View style={{ marginHorizontal: -SPACING.l }}>
             <HorizontalFlashList
               data={reviews}
               keyExtractor={(item) => item.id}

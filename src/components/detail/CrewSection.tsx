@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, type CrewMember } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
+import { HORIZONTAL_LIST_CONTENT_STYLE, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -73,7 +73,7 @@ export const CrewSection = memo<CrewSectionProps>(
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t('media.crew')}</Text>
         </View>
-        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={styles.castList}>
+        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACING.l }} contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}>
           {priorityCrew.map((member) => (
             <CrewCard key={`${member.id}-${member.job}`} member={member} onPress={onCrewPress} />
           ))}

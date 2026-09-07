@@ -1,7 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, type CrewMember } from '@/src/api/tmdb';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
+import { HORIZONTAL_LIST_CONTENT_STYLE, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
 import React, { memo, useCallback } from 'react';
@@ -72,7 +72,7 @@ export const DirectorsSection = memo<DirectorsSectionProps>(
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{title}</Text>
         </View>
-        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={styles.castList}>
+        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACING.l }} contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}>
           {directors.map((director, index) => (
             <DirectorCard
               key={`${director.id}-${index}`}

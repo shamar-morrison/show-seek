@@ -5,6 +5,7 @@ import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
+import { HORIZONTAL_LIST_CONTENT_STYLE } from '@/src/components/ui/horizontalScrollProps';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -133,7 +134,8 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
           <ScrollView
             {...HORIZONTAL_SCROLL_PROPS}
             showsHorizontalScrollIndicator={false}
-            style={styles.similarList}
+            style={{ marginHorizontal: -SPACING.l }}
+            contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}
           >
             {[1, 2, 3].map((i) => (
               <View key={i} style={styles.recommendationCardSkeleton}>
@@ -168,7 +170,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
           <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
             {t('media.youMayAlsoLike')}
           </Text>
-          <View style={styles.similarList}>
+          <View style={{ marginHorizontal: -SPACING.l }}>
             <HorizontalFlashList
               data={items}
               keyExtractor={(item) => item.id.toString()}

@@ -1,7 +1,15 @@
 import { FlashList, type FlashListProps, type FlashListRef } from '@shopify/flash-list';
 import React from 'react';
+import { StyleSheet } from 'react-native';
+import { HORIZONTAL_LIST_CONTENT_STYLE } from './horizontalScrollProps';
 
-export { HORIZONTAL_FLASH_LIST_PROPS, HORIZONTAL_SCROLL_PROPS } from './horizontalScrollProps';
+export {
+  HORIZONTAL_FLASH_LIST_PROPS,
+  HORIZONTAL_LIST_CARD_GAP,
+  HORIZONTAL_LIST_CONTENT_STYLE,
+  HORIZONTAL_LIST_EDGE_INSET,
+  HORIZONTAL_SCROLL_PROPS,
+} from './horizontalScrollProps';
 
 /**
  * Props enforced on every horizontal carousel to prevent edge overscroll
@@ -15,6 +23,12 @@ export { HORIZONTAL_FLASH_LIST_PROPS, HORIZONTAL_SCROLL_PROPS } from './horizont
  *
  * `decelerationRate` is intentionally left at the RN default (`normal`) to
  * preserve the original fling distance / scroll speed.
+ *
+ * Trailing inset is normalized via `HORIZONTAL_LIST_CONTENT_STYLE`: carousel
+ * cards keep `marginRight: SPACING.m`, so `paddingRight` is compensated to
+ * `SPACING.l - SPACING.m` and the final item ends flush with the leading inset.
+ * An explicit caller `paddingRight` still wins (escape hatch). Relies on RN
+ * resolving a specific `paddingRight` over a general `paddingHorizontal`.
  *
  * Verified against @shopify/flash-list 2.2.0: FlashListProps extends
  * ScrollViewProps and RecyclerView forwards `...rest` to the underlying
@@ -34,7 +48,14 @@ export type HorizontalFlashListProps<T> = Omit<
  * list in a bouncing state that eats the next tap.
  */
 export function HorizontalFlashList<T>(props: HorizontalFlashListProps<T>) {
-  const { ref, ...rest } = props;
+  const { ref, contentContainerStyle, ...rest } = props;
+  const mergedContentContainerStyle = React.useMemo(
+    () => ({
+      ...HORIZONTAL_LIST_CONTENT_STYLE,
+      ...StyleSheet.flatten(contentContainerStyle),
+    }),
+    [contentContainerStyle]
+  );
   return (
     <FlashList
       showsHorizontalScrollIndicator={false}
@@ -44,6 +65,7 @@ export function HorizontalFlashList<T>(props: HorizontalFlashListProps<T>) {
       bounces={false}
       alwaysBounceHorizontal={false}
       overScrollMode="never"
+      contentContainerStyle={mergedContentContainerStyle}
     />
   );
 }
