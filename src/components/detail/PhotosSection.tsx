@@ -1,9 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
-import { ArrowRight } from 'lucide-react-native';
+import { SectionViewAllButton } from '@/src/components/ui/SectionViewAllButton';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -13,7 +12,6 @@ import type { PhotosSectionProps } from './types';
 export const PhotosSection = memo<PhotosSectionProps>(
   ({ images, onPhotoPress, style, variant = 'landscape', onViewAll }) => {
     const { t } = useTranslation();
-    const { accentColor } = useAccentColor();
     const styles = useDetailStyles();
     const isPortrait = variant === 'portrait';
 
@@ -53,7 +51,7 @@ export const PhotosSection = memo<PhotosSectionProps>(
             accessibilityRole="button"
           >
             <Text style={styles.sectionTitle}>{t('media.photos')}</Text>
-            <ArrowRight size={23} color={accentColor} />
+            <SectionViewAllButton onPress={onViewAll} />
           </TouchableOpacity>
         ) : (
           <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>

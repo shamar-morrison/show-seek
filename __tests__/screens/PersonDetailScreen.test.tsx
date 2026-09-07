@@ -148,6 +148,7 @@ jest.mock('lucide-react-native', () => {
     ArrowLeft: Icon,
     ArrowRight: Icon,
     Calendar: Icon,
+    ChevronRight: Icon,
     Facebook: Icon,
     Heart: Icon,
     Instagram: Icon,
@@ -477,6 +478,31 @@ describe('PersonDetailScreen', () => {
     expect(getByText('Acting Movie 10')).toBeTruthy();
 
     fireEvent.press(getByText('person.directedWrittenMovies'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      '/(tabs)/discover/person/99/credits?name=Test%20Person&mediaType=movie&creditType=crew'
+    );
+  });
+
+  it('navigates to credits when the circular view-all button is pressed', () => {
+    const directedMovies = Array.from({ length: 11 }, (_, index) => ({
+      ...mockDirectedMovie,
+      id: 300 + index,
+      title: `Directed Movie ${index}`,
+      original_title: `Directed Movie ${index}`,
+      popularity: 100 + index,
+    }));
+
+    setupQueries(mockPerson, {
+      movieCredits: {
+        cast: [mockMovie],
+        crew: directedMovies,
+      },
+    });
+
+    const { getByTestId } = render(<PersonDetailScreen />);
+
+    fireEvent.press(getByTestId('section-view-all-button'));
 
     expect(mockPush).toHaveBeenCalledWith(
       '/(tabs)/discover/person/99/credits?name=Test%20Person&mediaType=movie&creditType=crew'

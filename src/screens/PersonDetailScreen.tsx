@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
+import { SectionViewAllButton } from '@/src/components/ui/SectionViewAllButton';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
@@ -34,7 +35,6 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
-  ArrowRight,
   Calendar,
   Facebook,
   Heart,
@@ -415,7 +415,10 @@ export default function PersonDetailScreen() {
             activeOpacity={ACTIVE_OPACITY}
           >
             <Text style={styles.sectionTitle}>{title}</Text>
-            <ArrowRight size={23} color={accentColor} style={styles.viewAll} />
+            <SectionViewAllButton
+              onPress={() => handleViewAllCredits(mediaType, creditType)}
+              style={styles.viewAll}
+            />
           </TouchableOpacity>
         ) : (
           <View style={styles.sectionHeader}>
@@ -730,6 +733,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: SPACING.m,
   },
   viewAll: {
