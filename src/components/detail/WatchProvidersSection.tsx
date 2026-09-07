@@ -1,5 +1,6 @@
 import { getImageUrl } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import i18n from '@/src/i18n';
 import React, { memo } from 'react';
@@ -49,7 +50,7 @@ const ProviderCategory = ({ label, providers, link }: ProviderCategoryProps) => 
   return (
     <View style={styles.providersSection}>
       <Text style={styles.providerType}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false}>
         {providers.map((provider) => {
           const handlePress = () => {
             if (link) {

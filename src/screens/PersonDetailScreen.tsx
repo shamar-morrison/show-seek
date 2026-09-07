@@ -5,6 +5,7 @@ import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -396,7 +397,7 @@ export default function PersonDetailScreen() {
             <Text style={styles.sectionTitle}>{title}</Text>
           </View>
         )}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false}>
           {items.map((item, index) => {
             const listIds = getListsForMedia(item.id, mediaType);
             const posterPath = resolvePosterPath(mediaType, item.id, item.poster_path);

@@ -1,7 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -41,8 +41,7 @@ export const PhotosSection = memo<PhotosSectionProps>(
         <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.photos')}
         </Text>
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={displayImages}
           renderItem={renderItem}
           keyExtractor={(_, index) => `photo-${index}`}

@@ -1,5 +1,6 @@
 import type { TVShowDetails } from '@/src/api/tmdb';
 import { useDetailStyles } from '@/src/components/detail/detailStyles';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
@@ -98,7 +99,7 @@ export const TVMetaSection = memo<TVMetaSectionProps>(
       </View>
 
       <ScrollView
-        horizontal
+        {...HORIZONTAL_SCROLL_PROPS}
         showsHorizontalScrollIndicator={false}
         style={{ marginHorizontal: -SPACING.l }}
         contentContainerStyle={{ paddingHorizontal: SPACING.l }}

@@ -3,7 +3,7 @@ import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePreferences } from '@/src/hooks/usePreferences';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { useQuery } from '@tanstack/react-query';
 import { Film, Tv } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -89,8 +89,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{label}</Text>
       {isLoading ? (
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={[1, 2, 3, 4]}
           renderItem={() => <MovieCardSkeleton />}
           keyExtractor={(item) => item.toString()}
@@ -100,8 +99,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
           drawDistance={400}
         />
       ) : trailers && trailers.length > 0 ? (
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={trailers}
           renderItem={renderTrailerCard}
           keyExtractor={(item) => item.id}

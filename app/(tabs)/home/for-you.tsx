@@ -8,7 +8,7 @@ import { useForYouRecommendations } from '@/src/hooks/useForYouRecommendations';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Sparkles, Star, TrendingUp } from 'lucide-react-native';
@@ -176,8 +176,7 @@ const RecommendationSection = memo(function RecommendationSection({
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
       {isLoading ? (
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={[1, 2, 3, 4]}
           renderItem={() => <MovieCardSkeleton />}
           keyExtractor={(item, index) => `skeleton-${item}-${index ?? 0}`}
@@ -187,8 +186,7 @@ const RecommendationSection = memo(function RecommendationSection({
           drawDistance={400}
         />
       ) : (
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={items}
           renderItem={renderItem}
           keyExtractor={(item) => `${mediaType}-${item.id}`}
@@ -211,8 +209,7 @@ function SkeletonSection() {
       <View style={styles.skeletonTitleContainer}>
         <View style={styles.skeletonTitle} />
       </View>
-      <FlashList
-        horizontal
+      <HorizontalFlashList
         data={[1, 2, 3, 4]}
         renderItem={() => <MovieCardSkeleton />}
         keyExtractor={(item, index) => `skeleton-${item}-${index ?? 0}`}

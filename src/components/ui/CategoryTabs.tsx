@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -21,7 +22,7 @@ export function CategoryTabs({ tabs, activeKey, onChange, testID }: CategoryTabs
   return (
     <View style={styles.container} testID={testID}>
       <ScrollView
-        horizontal
+        {...HORIZONTAL_SCROLL_PROPS}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabsContent}
         testID={testID ? `${testID}-scroll` : undefined}

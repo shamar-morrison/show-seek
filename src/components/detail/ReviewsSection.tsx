@@ -1,6 +1,6 @@
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
 import { Star } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,7 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
             {t('media.tmdbReviews')}
           </Text>
           <ScrollView
-            horizontal
+            {...HORIZONTAL_SCROLL_PROPS}
             showsHorizontalScrollIndicator={false}
             style={styles.similarList}
           >
@@ -65,8 +65,7 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
             {t('media.tmdbReviews')}
           </Text>
           <View style={styles.similarList}>
-            <FlashList
-              horizontal
+            <HorizontalFlashList
               data={reviews}
               keyExtractor={(item) => item.id}
               showsHorizontalScrollIndicator={false}

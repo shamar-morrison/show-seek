@@ -2,7 +2,7 @@ import type { Season } from '@/src/api/tmdb';
 import { SeasonCard } from '@/src/components/SeasonCard';
 import { SPACING } from '@/src/constants/theme';
 import { useRatings } from '@/src/hooks/useRatings';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View, ViewStyle } from 'react-native';
@@ -53,7 +53,7 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
         <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.seasons')}
         </Text>
-        <FlashList
+        <HorizontalFlashList
           data={seasons}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
@@ -64,7 +64,6 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
               onPress={handleSeasonPress}
             />
           )}
-          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.similarList}
         />

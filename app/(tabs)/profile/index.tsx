@@ -1,4 +1,5 @@
 import { AppSettingsSection } from '@/src/components/profile/AppSettingsSection';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ContentSettingsSection } from '@/src/components/profile/ContentSettingsSection';
 import { IntegrationsSection } from '@/src/components/profile/IntegrationsSection';
 import { PreferencesSection } from '@/src/components/profile/PreferencesSection';
@@ -234,7 +235,7 @@ export default function ProfileScreen() {
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <ScrollView
-            horizontal
+            {...HORIZONTAL_SCROLL_PROPS}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabsContent}
           >

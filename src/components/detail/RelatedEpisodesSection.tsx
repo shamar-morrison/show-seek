@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, type Episode } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import { Check } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -28,7 +29,7 @@ export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
         <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.moreEpisodes')}
         </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false}>
           {sortedEpisodes.map((episode) => {
             const isCurrent = episode.episode_number === currentEpisodeNumber;
             const episodeKey = `${seasonNumber}_${episode.episode_number}`;

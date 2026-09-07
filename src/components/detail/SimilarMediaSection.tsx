@@ -4,7 +4,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -120,8 +120,7 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
     return (
       <View style={style}>
         <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>{title}</Text>
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={items}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}

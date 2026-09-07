@@ -1,7 +1,7 @@
 import { type Video } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -49,8 +49,7 @@ export const VideosSection = memo<VideosSectionProps>(
         <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.videos')}
         </Text>
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={videos}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}

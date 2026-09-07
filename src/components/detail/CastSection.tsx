@@ -3,7 +3,7 @@ import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -83,8 +83,7 @@ export const CastSection = memo<CastSectionProps>(
             <Text style={styles.sectionTitle}>{resolvedTitle}</Text>
           </View>
         )}
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={cast}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}

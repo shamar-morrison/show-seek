@@ -1,3 +1,4 @@
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLists } from '@/src/hooks/useLists';
@@ -29,7 +30,7 @@ export function ListSelector({ selectedListId, onSelect }: ListSelectorProps) {
     <View style={styles.container}>
       <Text style={styles.label}>{t('widgets.selectWatchlist')}</Text>
       <ScrollView
-        horizontal
+        {...HORIZONTAL_SCROLL_PROPS}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >

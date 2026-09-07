@@ -10,7 +10,7 @@ import { useContentFilterWithDiagnostics } from '@/src/hooks/useContentFilter';
 import { useLists } from '@/src/hooks/useLists';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { HomeScreenListItem } from '@/src/types/preferences';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -150,8 +150,7 @@ function TMDBListSection({
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{label}</Text>
       {query.isLoading ? (
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={[1, 2, 3, 4]}
           renderItem={() => <MovieCardSkeleton />}
           keyExtractor={(item) => item.toString()}
@@ -169,8 +168,7 @@ function TMDBListSection({
           <Text style={styles.emptyText}>{t('home.noContentAvailable')}</Text>
         </View>
       ) : (
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={filteredItems}
           renderItem={({ item }) => {
             const posterPathOverride = resolvePosterPath(config.mediaType, item.id, item.poster_path);
@@ -238,8 +236,7 @@ function UserListSection({
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{label}</Text>
-        <FlashList
-          horizontal
+        <HorizontalFlashList
           data={[1, 2, 3, 4]}
           renderItem={() => <MovieCardSkeleton />}
           keyExtractor={(item) => item.toString()}
@@ -266,8 +263,7 @@ function UserListSection({
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{label}</Text>
-      <FlashList
-        horizontal
+      <HorizontalFlashList
         data={items}
         renderItem={({ item }) => {
           const posterPathOverride = resolvePosterPath(item.media_type, item.id, item.poster_path);

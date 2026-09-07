@@ -32,6 +32,7 @@ import { OpenWithButton } from '@/src/components/ui/OpenWithButton';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { ShareButton } from '@/src/components/ui/ShareButton';
 import AppErrorState from '@/src/components/ui/AppErrorState';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
@@ -787,7 +788,7 @@ export default function MovieDetailScreen() {
           </View>
 
           <ScrollView
-            horizontal
+            {...HORIZONTAL_SCROLL_PROPS}
             showsHorizontalScrollIndicator={false}
             style={{ marginHorizontal: -SPACING.l }}
             contentContainerStyle={{ paddingHorizontal: SPACING.l }}

@@ -4,7 +4,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
-import { FlashList } from '@shopify/flash-list';
+import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -131,7 +131,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
             {t('media.youMayAlsoLike')}
           </Text>
           <ScrollView
-            horizontal
+            {...HORIZONTAL_SCROLL_PROPS}
             showsHorizontalScrollIndicator={false}
             style={styles.similarList}
           >
@@ -169,8 +169,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
             {t('media.youMayAlsoLike')}
           </Text>
           <View style={styles.similarList}>
-            <FlashList
-              horizontal
+            <HorizontalFlashList
               data={items}
               keyExtractor={(item) => item.id.toString()}
               showsHorizontalScrollIndicator={false}

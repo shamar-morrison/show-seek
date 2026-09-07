@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
 import React, { memo, useCallback } from 'react';
@@ -79,7 +80,7 @@ export const CreatorsSection = memo<CreatorsSectionProps>(
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{title}</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
+        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={styles.castList}>
           {creators.map((creator, index) => (
             <CreatorCard
               key={`${creator.id}-${index}`}
