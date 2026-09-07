@@ -10,7 +10,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking } from 'react-native';
 
-const SHOWSEEK_WEB_URL = 'https://show-seek-web.shamar-webdev.workers.dev';
+const SHOWSEEK_WEB_URL = 'https://show-seek.app/';
 const DISCORD_INVITE_URL = 'https://discord.gg/gBDWgTtgFj';
 const PACKAGE_ID = 'app.horizon.showseek';
 const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
