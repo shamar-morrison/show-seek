@@ -2,6 +2,7 @@ import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { TraktReview } from '@/src/types/trakt';
+import { traktToReview } from '@/src/utils/reviewQueue';
 import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
 import { HORIZONTAL_LIST_CONTENT_STYLE } from '@/src/components/ui/horizontalScrollProps';
 import { Star, ThumbsUp } from 'lucide-react-native';
@@ -19,23 +20,6 @@ interface TraktReviewsSectionProps {
   onReviewPress: (review: Review) => void;
   onLayout?: () => void;
   style?: ViewStyle;
-}
-
-/**
- * Convert a TraktReview to the Review format expected by the review detail screen
- */
-function traktToReview(traktReview: TraktReview): Review {
-  return {
-    id: traktReview.id.toString(),
-    author: traktReview.user.name || traktReview.user.username,
-    author_details: {
-      avatar_path: traktReview.user.images?.avatar?.full || null,
-      rating: traktReview.user_rating,
-    },
-    content: traktReview.comment,
-    created_at: traktReview.created_at,
-    updated_at: traktReview.created_at,
-  };
 }
 
 /**

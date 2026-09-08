@@ -17,6 +17,7 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { TraktReviewsSection } from '@/src/components/detail/TraktReviewsSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
+import type { Review } from '@/src/components/detail/types';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import MarkAsWatchedModal from '@/src/components/MarkAsWatchedModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
@@ -87,6 +88,7 @@ import {
 } from '@/src/utils/listIcons';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { getRegionalReleaseDate, hasWatchProviders } from '@/src/utils/mediaUtils';
+import { setReviewQueue, traktToReview, type QueuedReview } from '@/src/utils/reviewQueue';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -379,6 +381,18 @@ export default function MovieDetailScreen() {
       }
     },
     [currentTab, router]
+  );
+
+  // Stage the tapped section's reviews for in-place paging on the review screen,
+  // then navigate to the tapped review. Queue is a snapshot of the visible list.
+  const openReview = useCallback(
+    (review: Review, queue: QueuedReview[]) => {
+      setReviewQueue(queue);
+      navigateTo(
+        `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+      );
+    },
+    [navigateTo]
   );
 
   const handlePosterPress = useCallback(() => {
@@ -966,8 +980,9 @@ export default function MovieDetailScreen() {
             reviews={traktReviews}
             shouldLoad={shouldLoadTraktReviews}
             onReviewPress={(review) => {
-              navigateTo(
-                `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+              openReview(
+                review,
+                traktReviews.map(traktToReview)
               );
             }}
             onLayout={() => {
@@ -988,9 +1003,7 @@ export default function MovieDetailScreen() {
             reviews={reviews}
             shouldLoad={shouldLoadReviews}
             onReviewPress={(review) => {
-              navigateTo(
-                `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
-              );
+              openReview(review, reviews);
             }}
             onLayout={() => {
               if (!shouldLoadReviews) {

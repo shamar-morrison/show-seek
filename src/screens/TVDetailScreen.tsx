@@ -19,6 +19,7 @@ import { TVMetaSection } from '@/src/components/detail/TVMetaSection';
 import { UpNextEpisodeSection } from '@/src/components/detail/UpNextEpisodeSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
+import type { Review } from '@/src/components/detail/types';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
@@ -66,6 +67,7 @@ import {
 } from '@/src/utils/listIcons';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
+import { setReviewQueue, traktToReview, type QueuedReview } from '@/src/utils/reviewQueue';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -243,6 +245,18 @@ export default function TVDetailScreen() {
       }
     },
     [currentTab, router]
+  );
+
+  // Stage the tapped section's reviews for in-place paging on the review screen,
+  // then navigate to the tapped review. Queue is a snapshot of the visible list.
+  const openReview = useCallback(
+    (review: Review, queue: QueuedReview[]) => {
+      setReviewQueue(queue);
+      navigateTo(
+        `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+      );
+    },
+    [navigateTo]
   );
 
   const handlePosterPress = useCallback(() => {
@@ -614,8 +628,9 @@ export default function TVDetailScreen() {
             reviews={traktReviews}
             shouldLoad={shouldLoadTraktReviews}
             onReviewPress={(review) => {
-              navigateTo(
-                `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+              openReview(
+                review,
+                traktReviews.map(traktToReview)
               );
             }}
             onLayout={() => {
@@ -636,9 +651,7 @@ export default function TVDetailScreen() {
             reviews={reviews}
             shouldLoad={shouldLoadReviews}
             onReviewPress={(review) => {
-              navigateTo(
-                `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
-              );
+              openReview(review, reviews);
             }}
             onLayout={() => {
               if (!shouldLoadReviews) {
