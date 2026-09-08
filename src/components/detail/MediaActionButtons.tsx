@@ -1,13 +1,14 @@
 import RatingButton from '@/src/components/RatingButton';
 import ReminderButton from '@/src/components/ReminderButton';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   Image01Icon,
-  PencilEdit01Icon,
+  NoteDoneIcon,
   PlayIcon,
   PlusSignIcon,
-  StickyNote02Icon,
+  Note01Icon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react-native';
@@ -71,6 +72,7 @@ export function MediaActionButtons({
   hasTrailer,
 }: MediaActionButtonsProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const styles = useDetailStyles();
 
   return (
@@ -128,9 +130,9 @@ export function MediaActionButtons({
             {isLoadingNote ? (
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : hasNote ? (
-              <AppIcon icon={PencilEdit01Icon} size={24} color={COLORS.white} />
+              <AppIcon icon={NoteDoneIcon} size={24} color={accentColor} />
             ) : (
-              <AppIcon icon={StickyNote02Icon} size={24} color={COLORS.white} />
+              <AppIcon icon={Note01Icon} size={24} color={COLORS.white} />
             )}
           </TouchableOpacity>
         </View>

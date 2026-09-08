@@ -45,7 +45,7 @@ import {
   Menu01Icon,
   PencilEdit01Icon,
   Search01Icon,
-  StickyNote02Icon,
+  Note01Icon,
 } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -455,7 +455,7 @@ export default function NotesScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={StickyNote02Icon}
+          icon={Note01Icon}
           title={t('library.emptyNotes')}
           description={t('library.emptyNotesHint')}
         />

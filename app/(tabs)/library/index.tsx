@@ -18,7 +18,7 @@ import {
   Notification01Icon,
   PlayIcon,
   Settings02Icon,
-  StickyNote02Icon,
+  Note01Icon,
   Tv01Icon,
   UserIcon,
 } from '@hugeicons/core-free-icons';
@@ -83,7 +83,7 @@ export default function LibraryScreen() {
           },
           {
             id: 'notes',
-            icon: StickyNote02Icon,
+            icon: Note01Icon,
             title: t('library.notes'),
             route: '/(tabs)/library/notes',
           },

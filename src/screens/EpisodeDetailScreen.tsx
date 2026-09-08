@@ -61,10 +61,10 @@ import {
   Calendar03Icon,
   Clock01Icon,
   FavouriteIcon,
-  PencilEdit01Icon,
+  NoteDoneIcon,
   PlayIcon,
   StarIcon,
-  StickyNote02Icon,
+  Note01Icon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -622,9 +622,9 @@ export default function EpisodeDetailScreen() {
                   {isNoteActionLoading ? (
                     <ActivityIndicator size="small" color={COLORS.text} />
                   ) : hasNote ? (
-                    <AppIcon icon={PencilEdit01Icon} size={24} color={COLORS.white} />
+                    <AppIcon icon={NoteDoneIcon} size={24} color={accentColor} />
                   ) : (
-                    <AppIcon icon={StickyNote02Icon} size={24} color={COLORS.text} />
+                    <AppIcon icon={Note01Icon} size={24} color={COLORS.text} />
                   )}
                 </View>
               </TouchableOpacity>
