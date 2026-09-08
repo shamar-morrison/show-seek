@@ -14,6 +14,36 @@ const mockAuthState = {
 
 let mockQueryResults: any[] = [];
 let mockQueryLoading = false;
+let mockUseQueryCalls: Array<{ queryKey: unknown; enabled: unknown }> = [];
+let mockPagerProps: any = {};
+
+// FlatList (the tab pager) renders nothing under Jest without measured layout,
+// so substitute a stub that renders every mounted page. Per-page FlashLists
+// keep their own mock below.
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  const React = require('react');
+  const MockFlatList = React.forwardRef((props: any, ref: any) => {
+    mockPagerProps = props;
+    React.useImperativeHandle(ref, () => ({
+      scrollToIndex: jest.fn(),
+      scrollToOffset: jest.fn(),
+    }));
+    return React.createElement(
+      RN.View,
+      { testID: props.testID },
+      (props.data ?? []).map((item: any, index: number) =>
+        React.createElement(
+          React.Fragment,
+          { key: String(item) },
+          props.renderItem({ item, index })
+        )
+      )
+    );
+  });
+  MockFlatList.displayName = 'MockFlatList';
+  return { ...RN, FlatList: MockFlatList };
+});
 
 jest.mock('expo-router', () => ({
   router: {
@@ -23,10 +53,13 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({
-    data: { results: mockQueryResults },
-    isLoading: mockQueryLoading,
-  }),
+  useQuery: (args: any) => {
+    mockUseQueryCalls.push({ queryKey: args?.queryKey, enabled: args?.enabled });
+    return {
+      data: { results: mockQueryResults },
+      isLoading: mockQueryLoading,
+    };
+  },
 }));
 
 jest.mock('@shopify/flash-list', () => {
@@ -148,6 +181,8 @@ function toggleViewMode(UNSAFE_getAllByType: (type: any) => any[]) {
 describe('SearchScreen routing and auth guard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseQueryCalls = [];
+    mockPagerProps = {};
     jest.useFakeTimers();
     mockAuthState.user = { uid: 'user-1', isAnonymous: false };
     mockAuthState.isGuest = false;
@@ -428,5 +463,99 @@ describe('SearchScreen routing and auth guard', () => {
     expect(mockRequireAccount).not.toHaveBeenCalled();
     expect(mockPresent).not.toHaveBeenCalled();
     expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
+  it('only enables the focused tab query until other tabs are visited', async () => {
+    mockQueryResults = [
+      {
+        id: 77,
+        media_type: 'tv',
+        title: 'TV Item',
+        name: 'TV Item',
+        first_air_date: '2024-01-01',
+        vote_average: 8,
+        overview: 'overview',
+        poster_path: null,
+        genre_ids: [],
+      },
+    ];
+
+    const { getByPlaceholderText, getByTestId } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByTestId('search-tab-pager')).toBeTruthy();
+    });
+
+    const enabledKeys = mockUseQueryCalls
+      .filter((call) => call.enabled)
+      .map((call) => (call.queryKey as unknown[])[2]);
+    expect(enabledKeys).not.toContain('movie');
+    expect(enabledKeys).not.toContain('tv');
+    expect(enabledKeys).toContain('all');
+  });
+
+  it('loads a tab query on pill tap without affecting the previous tab', async () => {
+    mockQueryResults = [
+      {
+        id: 9,
+        media_type: 'movie',
+        title: 'Open Modal',
+        release_date: '2024-01-01',
+        vote_average: 6,
+        overview: 'overview',
+        poster_path: null,
+        genre_ids: [],
+      },
+    ];
+
+    const { getByPlaceholderText, getByTestId } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByTestId('search-tab-pager')).toBeTruthy();
+    });
+
+    mockUseQueryCalls = [];
+    fireEvent.press(getByTestId('search-media-filter-tab-movie'));
+
+    await waitFor(() => {
+      const movieCalls = mockUseQueryCalls.filter(
+        (call) => (call.queryKey as unknown[])[2] === 'movie'
+      );
+      expect(movieCalls.length).toBeGreaterThan(0);
+      expect(movieCalls.every((call) => call.enabled)).toBe(true);
+    });
+  });
+
+  it('switches tabs on pager swipe settle', async () => {
+    const { Dimensions } = require('react-native');
+    mockQueryResults = [];
+
+    const { getByPlaceholderText, getByTestId } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByTestId('search-tab-pager')).toBeTruthy();
+    });
+
+    mockUseQueryCalls = [];
+    const width = Dimensions.get('window').width;
+    act(() => {
+      mockPagerProps.onMomentumScrollEnd({
+        nativeEvent: { contentOffset: { x: width * 2 } },
+      });
+    });
+
+    await waitFor(() => {
+      const tvCalls = mockUseQueryCalls.filter(
+        (call) => (call.queryKey as unknown[])[2] === 'tv'
+      );
+      expect(tvCalls.length).toBeGreaterThan(0);
+      expect(tvCalls.every((call) => call.enabled)).toBe(true);
+    });
   });
 });

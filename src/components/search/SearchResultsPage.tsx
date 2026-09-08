@@ -1,0 +1,484 @@
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
+import { InlineListIndicators, ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
+import { MediaImage } from '@/src/components/ui/MediaImage';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
+import { useContentFilter } from '@/src/hooks/useContentFilter';
+import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
+import { useAllGenres } from '@/src/hooks/useGenres';
+import { useListMembership } from '@/src/hooks/useListMembership';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import { usePreferences } from '@/src/hooks/usePreferences';
+import type { ListMediaItem } from '@/src/services/ListService';
+import { metaTextStyles } from '@/src/styles/metaTextStyles';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
+import { FlashList } from '@shopify/flash-list';
+import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
+import { router, useSegments } from 'expo-router';
+import { Star } from 'lucide-react-native';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+
+export type SearchMediaType = 'all' | 'movie' | 'tv';
+export type SearchViewMode = 'list' | 'grid';
+
+export const SEARCH_TABS: ReadonlyArray<SearchMediaType> = ['all', 'movie', 'tv'];
+
+export function resolveSearchResultMediaType(
+  item: any,
+  selectedMediaType: SearchMediaType
+): 'person' | 'movie' | 'tv' | null {
+  if (item.media_type === 'person') return 'person';
+  if (item.media_type === 'movie') return 'movie';
+  if (item.media_type === 'tv') return 'tv';
+
+  if (selectedMediaType === 'movie') return 'movie';
+  if (selectedMediaType === 'tv') return 'tv';
+
+  if ('first_air_date' in item && !('release_date' in item)) return 'tv';
+  if ('release_date' in item && !('first_air_date' in item)) return 'movie';
+  if ('name' in item && !('title' in item)) return 'tv';
+  if ('title' in item) return 'movie';
+
+  return null;
+}
+
+interface SearchResultsPageProps {
+  /** This page's tab. Drives which endpoint is queried. */
+  mediaType: SearchMediaType;
+  debouncedQuery: string;
+  /**
+   * Whether this page is the focused tab. Gates the query so offscreen tabs
+   * never fetch — swiping to a tab behaves exactly like tapping it.
+   */
+  isActive: boolean;
+  viewMode: SearchViewMode;
+  onLongPressMediaItem: (item: Omit<ListMediaItem, 'addedAt'>) => void;
+}
+
+/**
+ * One tab of search results. Self-contained: owns its query (keyed by tab so
+ * React Query caches per tab) and its list. Mounted lazily by the pager —
+ * only visited tabs exist.
+ */
+export function SearchResultsPage({
+  mediaType,
+  debouncedQuery,
+  isActive,
+  viewMode,
+  onLongPressMediaItem,
+}: SearchResultsPageProps) {
+  const segments = useSegments();
+  const { width: windowWidth } = useWindowDimensions();
+  const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
+  const isAccountRequired = useAccountRequired();
+  const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
+
+  const genresQuery = useAllGenres();
+  const genreMap = genresQuery.data || {};
+  const { getListsForMedia, showIndicators } = useListMembership();
+  const { data: favoritePersons } = useFavoritePersons();
+
+  const searchResultsQuery = useQuery({
+    queryKey: ['search', debouncedQuery, mediaType],
+    queryFn: async () => {
+      if (!debouncedQuery.trim()) return { results: [] };
+
+      switch (mediaType) {
+        case 'movie':
+          return await tmdbApi.searchMovies(debouncedQuery);
+        case 'tv':
+          return await tmdbApi.searchTV(debouncedQuery);
+        default:
+          return await tmdbApi.searchMulti(debouncedQuery);
+      }
+    },
+    enabled: debouncedQuery.length > 0 && isActive,
+  });
+
+  // Filter out watched content (but keep person results)
+  const allResults = searchResultsQuery.data?.results || [];
+  const mediaResults = allResults.filter((item: any) => item.media_type !== 'person');
+  const personResults = allResults.filter((item: any) => item.media_type === 'person');
+  const filteredMediaResults = useContentFilter(mediaResults);
+  const filteredResults = [...personResults, ...filteredMediaResults];
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
+    getThreeColumnGridMetrics(windowWidth);
+
+  const handleItemPress = (item: any) => {
+    const currentTab = segments[1];
+    const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+    const resolvedMediaType = resolveSearchResultMediaType(item, mediaType);
+
+    if (resolvedMediaType === 'person') {
+      router.push(`${basePath}/person/${item.id}` as any);
+    } else if (resolvedMediaType === 'movie') {
+      router.push(`${basePath}/movie/${item.id}` as any);
+    } else if (resolvedMediaType === 'tv') {
+      router.push(`${basePath}/tv/${item.id}` as any);
+    }
+  };
+
+  const handleLongPress = (item: any) => {
+    // Skip for person results
+    if (item.media_type === 'person') return;
+    if (isAccountRequired()) return;
+
+    const itemMediaType = resolveSearchResultMediaType(item, mediaType);
+    if (itemMediaType !== 'movie' && itemMediaType !== 'tv') return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const title = item.title || item.name || '';
+    const releaseDate = item.release_date || item.first_air_date || '';
+    onLongPressMediaItem({
+      id: item.id,
+      media_type: itemMediaType,
+      title: title,
+      name: item.name,
+      poster_path: item.poster_path,
+      vote_average: item.vote_average || 0,
+      release_date: releaseDate,
+      first_air_date: item.first_air_date,
+    });
+  };
+
+  const renderMediaItem = ({ item }: { item: any }) => {
+    const resolvedMediaType = resolveSearchResultMediaType(item, mediaType);
+    const isPerson = resolvedMediaType === 'person';
+    const displayTitle = isPerson
+      ? item.name || item.title || ''
+      : getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
+    const releaseDate = item.release_date || item.first_air_date;
+    const resolvedPosterPath =
+      resolvedMediaType === 'movie' || resolvedMediaType === 'tv'
+        ? resolvePosterPath(resolvedMediaType, item.id, item.poster_path)
+        : item.profile_path;
+    const posterUrl = getImageUrl(
+      resolvedPosterPath,
+      TMDB_IMAGE_SIZES.poster.small
+    );
+
+    // Get genre names from genre_ids
+    const genres = item.genre_ids
+      ? item.genre_ids
+          .slice(0, 3)
+          .map((id: number) => genreMap[id])
+          .filter(Boolean)
+      : [];
+
+    // Determine media type for list check (default to filter type if not multi-search)
+    const itemMediaType = item.media_type || (mediaType !== 'all' ? mediaType : 'movie');
+    const listIds = !isPerson && showIndicators ? getListsForMedia(item.id, itemMediaType) : [];
+
+    // Check if person is favorited
+    const isPersonFavorited = isPerson && favoritePersons?.some((p) => p.id === item.id);
+
+    return (
+      <TouchableOpacity
+        style={styles.resultItem}
+        onPress={() => handleItemPress(item)}
+        onLongPress={() => handleLongPress(item)}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <View style={styles.posterContainer}>
+          <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
+          {isPersonFavorited && <FavoritePersonBadge />}
+        </View>
+        <View style={styles.resultInfo}>
+          <Text style={styles.resultTitle} numberOfLines={2}>
+            {displayTitle}
+          </Text>
+          {isPerson && item.known_for_department && (
+            <Text style={[styles.department, { color: accentColor }]}>
+              {item.known_for_department}
+            </Text>
+          )}
+          {!isPerson && (
+            <>
+              <View style={styles.metaRow}>
+                {releaseDate && (
+                  <Text style={metaTextStyles.secondary}>
+                    {new Date(releaseDate).getFullYear()}
+                  </Text>
+                )}
+                {item.vote_average > 0 && releaseDate && (
+                  <Text style={metaTextStyles.secondary}> • </Text>
+                )}
+                {item.vote_average > 0 && (
+                  <View style={styles.ratingContainer}>
+                    <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
+                    <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+                  </View>
+                )}
+              </View>
+              {genres.length > 0 && (
+                <Text style={styles.genres} numberOfLines={1}>
+                  {genres.join(' • ')}
+                </Text>
+              )}
+            </>
+          )}
+          {isPerson && item.known_for && item.known_for.length > 0 && (
+            <Text style={styles.knownFor} numberOfLines={2}>
+              {t('person.knownForLabel')}{' '}
+              {item.known_for
+                .slice(0, 3)
+                .map((work: any) => work.title || work.name)
+                .join(', ')}
+            </Text>
+          )}
+          {!isPerson && item.overview && (
+            <Text style={styles.resultOverview} numberOfLines={3}>
+              {item.overview}
+            </Text>
+          )}
+          {listIds.length > 0 && <InlineListIndicators listIds={listIds} size="medium" />}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderGridItem = ({ item }: { item: any }) => {
+    const resolvedMediaType = resolveSearchResultMediaType(item, mediaType);
+    const isPerson = resolvedMediaType === 'person';
+    const displayTitle = isPerson
+      ? item.name || item.title || ''
+      : getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
+    const releaseDate = item.release_date || item.first_air_date;
+    const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
+    const resolvedPosterPath =
+      resolvedMediaType === 'movie' || resolvedMediaType === 'tv'
+        ? resolvePosterPath(resolvedMediaType, item.id, item.poster_path)
+        : item.profile_path;
+    const posterUrl = getImageUrl(
+      resolvedPosterPath,
+      isPerson ? TMDB_IMAGE_SIZES.profile.medium : TMDB_IMAGE_SIZES.poster.medium
+    );
+    const itemMediaType = item.media_type || (mediaType !== 'all' ? mediaType : 'movie');
+    const listIds = !isPerson && showIndicators ? getListsForMedia(item.id, itemMediaType) : [];
+    const isPersonFavorited = isPerson && favoritePersons?.some((p) => p.id === item.id);
+
+    return (
+      <TouchableOpacity
+        style={[styles.gridItem, { width: itemWidth, marginHorizontal: itemHorizontalMargin }]}
+        onPress={() => handleItemPress(item)}
+        onLongPress={() => handleLongPress(item)}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <View style={styles.gridPosterContainer}>
+          <MediaImage
+            source={{ uri: posterUrl }}
+            style={[styles.gridPoster, { width: itemWidth, height: itemWidth * 1.5 }]}
+            contentFit="cover"
+            placeholderType={isPerson ? 'person' : undefined}
+          />
+          {isPersonFavorited && <FavoritePersonBadge />}
+          {!isPerson && listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
+        </View>
+        <View style={styles.gridInfo}>
+          <Text style={styles.gridTitle} numberOfLines={1}>
+            {displayTitle}
+          </Text>
+          {isPerson ? (
+            item.known_for_department ? (
+              <Text style={styles.gridDepartment} numberOfLines={1}>
+                {item.known_for_department}
+              </Text>
+            ) : null
+          ) : (
+            (year || item.vote_average > 0) && (
+              <View style={styles.gridMetaRow}>
+                {year && <Text style={styles.gridMetaText}>{year}</Text>}
+                {year && item.vote_average > 0 && <Text style={styles.gridMetaText}> • </Text>}
+                {item.vote_average > 0 && (
+                  <View style={styles.gridRatingContainer}>
+                    <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                    <Text style={styles.gridRating}>{item.vote_average.toFixed(1)}</Text>
+                  </View>
+                )}
+              </View>
+            )
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  if (searchResultsQuery.isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={accentColor} />
+      </View>
+    );
+  }
+
+  if (filteredResults.length === 0) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.emptyText}>{t('common.noResults')}</Text>
+        <Text style={styles.emptySubtext}>{t('search.adjustSearch')}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <FlashList
+      key={viewMode}
+      data={filteredResults}
+      renderItem={viewMode === 'list' ? renderMediaItem : renderGridItem}
+      keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
+      contentContainerStyle={[
+        viewMode === 'list' && styles.listContainer,
+        viewMode === 'grid' && { paddingHorizontal: listPaddingHorizontal },
+      ]}
+      numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
+      showsVerticalScrollIndicator={false}
+      removeClippedSubviews={true}
+      drawDistance={400}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: FONT_SIZE.l,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.m,
+  },
+  emptySubtext: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.s,
+  },
+  listContainer: {
+    paddingHorizontal: SPACING.l,
+  },
+  gridItem: {
+    marginBottom: SPACING.m,
+  },
+  gridPosterContainer: {
+    position: 'relative',
+  },
+  gridPoster: {
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  gridInfo: {
+    marginTop: SPACING.s,
+  },
+  gridTitle: {
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  gridDepartment: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  gridMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  gridMetaText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  gridRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  gridRating: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+  },
+  resultItem: {
+    flexDirection: 'row',
+    marginBottom: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.m,
+  },
+  posterContainer: {
+    position: 'relative',
+  },
+  resultPoster: {
+    width: 92,
+    height: 138,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  resultInfo: {
+    flex: 1,
+    marginLeft: SPACING.m,
+  },
+  resultTitle: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  rating: {
+    color: COLORS.text,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+  },
+  department: {
+    fontSize: FONT_SIZE.s,
+    marginTop: 2,
+  },
+  knownFor: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.s,
+    lineHeight: 18,
+  },
+  resultOverview: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.s,
+    lineHeight: 18,
+  },
+  genres: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+});
