@@ -81,8 +81,23 @@ describe('LatestTrailersSection', () => {
     // Trailer modal should open
     expect(getByTestId('youtube-view')).toBeTruthy();
 
-    // Close modal
-    fireEvent.press(getByTestId('trailer-player-close-button'));
+    // Dismiss via the top backdrop (the close button was removed in favor of backdrop dismiss)
+    fireEvent.press(getByTestId('trailer-player-backdrop'));
+    expect(queryByTestId('youtube-view')).toBeNull();
+  });
+
+  it('dismisses the trailer modal via the bottom backdrop', async () => {
+    const { findByText, getByTestId, queryByTestId } = render(
+      <QueryClientProvider client={queryClient}>
+        <LatestTrailersSection label="Latest Trailers" />
+      </QueryClientProvider>
+    );
+
+    const trailerCard = await findByText('Official Teaser');
+    fireEvent.press(trailerCard);
+    expect(getByTestId('youtube-view')).toBeTruthy();
+
+    fireEvent.press(getByTestId('trailer-player-backdrop-bottom'));
     expect(queryByTestId('youtube-view')).toBeNull();
   });
 });
