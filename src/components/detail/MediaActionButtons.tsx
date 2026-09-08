@@ -1,6 +1,6 @@
 import RatingButton from '@/src/components/RatingButton';
 import ReminderButton from '@/src/components/ReminderButton';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, hexToRGBA } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
@@ -75,17 +75,35 @@ export function MediaActionButtons({
   const { accentColor } = useAccentColor();
   const styles = useDetailStyles();
 
+  // Glassmorphism active-state tints (mirrors show-seek-web action buttons).
+  const listTintColor = listColor ?? COLORS.success;
+  const listTintStyle = isInAnyList
+    ? {
+        backgroundColor: hexToRGBA(listTintColor, 0.15),
+        borderColor: hexToRGBA(listTintColor, 0.5),
+      }
+    : undefined;
+  const ratedTintStyle =
+    userRating > 0
+      ? {
+          backgroundColor: hexToRGBA(accentColor, 0.15),
+          borderColor: hexToRGBA(accentColor, 0.5),
+        }
+      : undefined;
+  const reminderTintStyle = hasReminder
+    ? {
+        backgroundColor: hexToRGBA(accentColor, 0.15),
+        borderColor: hexToRGBA(accentColor, 0.5),
+      }
+    : undefined;
+
   return (
     <View style={styles.actionButtons}>
       {/* Secondary Action Buttons Row */}
       <View style={styles.secondaryActionsRow}>
         {/* Add to List Button */}
         <TouchableOpacity
-          style={[
-            styles.addButton,
-            isInAnyList && styles.addedButton,
-            isInAnyList && listColor ? { backgroundColor: listColor } : undefined,
-          ]}
+          style={[styles.addButton, listTintStyle]}
           activeOpacity={ACTIVE_OPACITY}
           onPress={onAddToList}
           disabled={isLoadingLists}
@@ -104,13 +122,13 @@ export function MediaActionButtons({
         </TouchableOpacity>
 
         {/* Rating Button */}
-        <View style={styles.ratingButtonContainer}>
+        <View style={[styles.ratingButtonContainer, ratedTintStyle]}>
           <RatingButton onPress={onRate} isRated={userRating > 0} isLoading={isLoadingRating} />
         </View>
 
         {/* Reminder Button (optional) */}
         {onReminder && (
-          <View style={styles.ratingButtonContainer}>
+          <View style={[styles.ratingButtonContainer, reminderTintStyle]}>
             <ReminderButton
               onPress={onReminder}
               hasReminder={hasReminder}

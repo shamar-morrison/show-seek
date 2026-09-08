@@ -26,6 +26,7 @@ import {
   FONT_FAMILY,
   FONT_SIZE,
   SPACING,
+  hexToRGBA,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -573,7 +574,15 @@ export default function EpisodeDetailScreen() {
           {/* Action Buttons */}
           <View style={styles.actionButtonsContainer}>
             <View style={styles.secondaryActions}>
-              <View style={styles.actionButtonWrapper}>
+              <View
+                style={[
+                  styles.actionButtonWrapper,
+                  userRating > 0 && {
+                    backgroundColor: hexToRGBA(accentColor, 0.15),
+                    borderColor: hexToRGBA(accentColor, 0.5),
+                  },
+                ]}
+              >
                 <RatingButton
                   onPress={() => {
                     if (isAccountRequired()) return;
@@ -585,7 +594,13 @@ export default function EpisodeDetailScreen() {
               </View>
 
               <TouchableOpacity
-                style={styles.actionButtonWrapper}
+                style={[
+                  styles.actionButtonWrapper,
+                  isFavorited && {
+                    backgroundColor: hexToRGBA(accentColor, 0.15),
+                    borderColor: hexToRGBA(accentColor, 0.5),
+                  },
+                ]}
                 onPress={handleToggleFavorite}
                 disabled={isFavoriteActionLoading}
                 activeOpacity={ACTIVE_OPACITY}
@@ -859,7 +874,9 @@ const styles = StyleSheet.create({
   actionButtonWrapper: {
     flex: 1,
     height: BUTTON_HEIGHT,
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
     alignItems: 'center',

@@ -429,7 +429,9 @@ export const useDetailStyles = () =>
     ratingButtonContainer: {
       flex: 1,
       height: BUTTON_HEIGHT,
-      backgroundColor: COLORS.surfaceLight,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
       borderRadius: BORDER_RADIUS.m,
       overflow: 'hidden',
       alignItems: 'center',
@@ -588,11 +590,10 @@ export const useDetailStyles = () =>
       height: BUTTON_HEIGHT,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: COLORS.surfaceLight,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
       borderRadius: BORDER_RADIUS.m,
-    },
-    addedButton: {
-      backgroundColor: COLORS.success,
     },
 
     // Error screen
