@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 
 export const useSeasonScreenStyles = () =>
@@ -28,7 +28,7 @@ export const useSeasonScreenStyles = () =>
     },
     headerTitle: {
       fontSize: FONT_SIZE.l,
-      fontWeight: 'bold',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.white,
     },
     headerSubtitle: {
@@ -74,7 +74,7 @@ export const useSeasonScreenStyles = () =>
     },
     seasonTitle: {
       fontSize: FONT_SIZE.m,
-      fontWeight: 'bold',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.white,
       marginBottom: 4,
     },
@@ -108,7 +108,7 @@ export const useSeasonScreenStyles = () =>
     markAllText: {
       color: COLORS.white,
       fontSize: FONT_SIZE.xs,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     seasonFullOverview: {
       fontSize: FONT_SIZE.s,
@@ -147,7 +147,7 @@ export const useSeasonScreenStyles = () =>
     seasonActionButtonText: {
       color: COLORS.white,
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     seasonActionButtonTextSecondary: {
       color: accentColor,
@@ -194,7 +194,7 @@ export const useSeasonScreenStyles = () =>
     episodeNumber: {
       fontSize: FONT_SIZE.xs,
       color: accentColor,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     ratingsContainer: {
       flexDirection: 'row',
@@ -209,11 +209,11 @@ export const useSeasonScreenStyles = () =>
     ratingText: {
       fontSize: FONT_SIZE.xs,
       color: COLORS.warning,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     episodeTitle: {
       fontSize: FONT_SIZE.m,
-      fontWeight: 'bold',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.white,
       marginBottom: 4,
     },
@@ -272,6 +272,6 @@ export const useSeasonScreenStyles = () =>
     watchButtonText: {
       color: COLORS.white,
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
   }));

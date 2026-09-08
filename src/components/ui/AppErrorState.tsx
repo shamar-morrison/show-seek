@@ -1,5 +1,12 @@
 import { DEFAULT_ACCENT_COLOR } from '@/src/constants/accentColors';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING, hexToRGBA } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  hexToRGBA,
+  SPACING,
+} from '@/src/constants/theme';
 import { AccentColorContext } from '@/src/context/AccentColorProvider';
 import { classifyErrorKind, getTechnicalErrorMessage } from '@/src/utils/errorPresentation';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -156,7 +163,7 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.text,
     fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     marginBottom: SPACING.s,
     textAlign: 'center',
   },
@@ -178,7 +185,7 @@ const styles = StyleSheet.create({
   technicalLabel: {
     color: COLORS.text,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: SPACING.xs,
@@ -203,7 +210,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   secondaryButton: {
     minHeight: 44,
@@ -217,7 +224,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
 });
 

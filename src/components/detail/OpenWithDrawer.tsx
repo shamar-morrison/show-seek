@@ -1,7 +1,7 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { getTraktSlugByTmdbId } from '@/src/api/trakt';
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import {
   buildOpenWithUrl,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   label: {
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   logo: {
     width: 28,

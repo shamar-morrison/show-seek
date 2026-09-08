@@ -6,7 +6,14 @@ import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineListIndicators, ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
@@ -508,7 +515,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   headerActions: {
@@ -541,7 +548,7 @@ const styles = StyleSheet.create({
   },
   typeText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.textSecondary,
   },
   typeTextActive: {
@@ -586,7 +593,7 @@ const styles = StyleSheet.create({
   },
   gridTitle: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   gridMetaRow: {
@@ -607,7 +614,7 @@ const styles = StyleSheet.create({
   gridRating: {
     color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   resultItem: {
     flexDirection: 'row',
@@ -631,7 +638,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   metaRow: {
@@ -647,7 +654,7 @@ const styles = StyleSheet.create({
   rating: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   resultOverview: {
     fontSize: FONT_SIZE.s,

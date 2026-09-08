@@ -1,6 +1,6 @@
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { StackedPosterPreview } from '@/src/components/library/StackedPosterPreview';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLongPressPressGuard } from '@/src/hooks/useLongPressPressGuard';
 import { UserList } from '@/src/services/ListService';
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   },
   listName: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   listDescription: {

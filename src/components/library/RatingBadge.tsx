@@ -1,4 +1,11 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING, hexToRGBA } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  hexToRGBA,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { StarIcon } from '@hugeicons/core-free-icons';
@@ -66,6 +73,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

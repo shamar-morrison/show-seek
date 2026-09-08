@@ -6,7 +6,7 @@
  */
 import { ExternalRatings } from '@/src/api/omdb';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import React, { memo } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   ratingValue: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   ratingLabel: {
     color: COLORS.textSecondary,

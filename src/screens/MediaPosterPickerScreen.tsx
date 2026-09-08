@@ -9,7 +9,7 @@ import {
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import {
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
   },
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.s,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   disabledButton: {
     opacity: 0.5,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   mediaTitle: {
     fontSize: FONT_SIZE.l,
     color: COLORS.text,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   subtitle: {
     marginTop: SPACING.xs,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   },
   defaultButtonText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   saveButtonContainer: {
     marginHorizontal: SPACING.l,

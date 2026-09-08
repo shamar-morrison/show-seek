@@ -10,6 +10,7 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
   HIT_SLOP,
   SPACING,
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   headerActions: {
@@ -551,7 +552,7 @@ const styles = StyleSheet.create({
   },
   gridTitle: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   gridDepartment: {
@@ -576,7 +577,7 @@ const styles = StyleSheet.create({
   gridRating: {
     color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   resultItem: {
     flexDirection: 'row',
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   metaRow: {
@@ -616,7 +617,7 @@ const styles = StyleSheet.create({
   rating: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   department: {
     fontSize: FONT_SIZE.s,

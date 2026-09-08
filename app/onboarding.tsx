@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { ExitIntentModal } from '@/src/components/ExitIntentModal';
 import { useOnboardingExitGuard } from '@/src/hooks/useOnboardingExitGuard';
@@ -404,7 +411,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 30,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
     textAlign: 'center',
     letterSpacing: -1.5,
@@ -453,7 +460,7 @@ const styles = StyleSheet.create({
   skipText: {
     color: 'rgba(255, 255, 255, 0.82)',
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   nextButton: {
     backgroundColor: COLORS.primary,
@@ -470,7 +477,7 @@ const styles = StyleSheet.create({
   nextText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   backgroundGlowTop: {
     position: 'absolute',

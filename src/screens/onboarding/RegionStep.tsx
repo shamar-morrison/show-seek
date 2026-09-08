@@ -1,5 +1,5 @@
 import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
     letterSpacing: -0.5,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   checkBadge: {
     width: 24,

@@ -10,7 +10,14 @@ import {
   SEASON_TIMING_OPTIONS,
   useReminderModalStyles,
 } from '@/src/components/reminder';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import {
@@ -418,7 +425,7 @@ const styles = StyleSheet.create({
   showTitle: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     flex: 1,
   },
   frequencyOption: {
@@ -442,7 +449,7 @@ const styles = StyleSheet.create({
   frequencyLabel: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   frequencyDescription: {
     fontSize: FONT_SIZE.s,

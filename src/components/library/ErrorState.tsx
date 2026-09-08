@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { AlertCircleIcon } from '@hugeicons/core-free-icons';
@@ -46,7 +53,7 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.text,
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     marginTop: SPACING.m,
     marginBottom: SPACING.s,
   },
@@ -64,7 +71,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
 });

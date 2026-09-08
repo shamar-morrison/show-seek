@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Cancel01Icon, Delete02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   countLabel: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   buttonsRow: {
     flexDirection: 'row',
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   addButton: {
     flexDirection: 'row',
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   removeButton: {
     flexDirection: 'row',
@@ -168,6 +168,6 @@ const styles = StyleSheet.create({
   removeButtonText: {
     color: COLORS.error,
     fontSize: FONT_SIZE.s,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

@@ -6,9 +6,10 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
-  SPACING,
   hexToRGBA,
+  SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { SUPPORTED_REGIONS, useRegion } from '@/src/context/RegionProvider';
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
   regionName: {
     fontSize: FONT_SIZE.l,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   regionStatus: {
     width: 32,

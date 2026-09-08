@@ -1,4 +1,4 @@
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ExitIntentModal } from '@/src/components/ExitIntentModal';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
   stepIndicator: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     minWidth: 28,
     textAlign: 'right',
   },
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
   skipText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   skipTextDisabled: {
     color: COLORS.textSecondary,
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
   backText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   continueButton: {
     flex: 1,
@@ -733,6 +733,6 @@ const styles = StyleSheet.create({
   continueText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

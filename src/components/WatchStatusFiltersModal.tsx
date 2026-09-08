@@ -3,6 +3,7 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
   HIT_SLOP,
   SPACING,
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
   selectLabel: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   selectButton: {
     flexDirection: 'row',
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   optionItem: {
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   optionTextSelected: {
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   actions: {
     flexDirection: 'row',
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   applyButton: {
     flex: 1,
@@ -373,6 +374,6 @@ const styles = StyleSheet.create({
   applyButtonText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

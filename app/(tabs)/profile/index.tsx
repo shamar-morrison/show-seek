@@ -5,7 +5,14 @@ import { IntegrationsSection } from '@/src/components/profile/IntegrationsSectio
 import { PreferencesSection } from '@/src/components/profile/PreferencesSection';
 import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useLanguage } from '@/src/context/LanguageProvider';
@@ -112,9 +119,7 @@ export default function ProfileScreen() {
       [
         t('profile.readDiagnostics.totalReads', { count: report.totalReads }),
         t('profile.readDiagnostics.events', { count: report.eventCount }),
-        topCallsites
-          ? `${t('profile.readDiagnostics.callsites')}\n${topCallsites}`
-          : '',
+        topCallsites ? `${t('profile.readDiagnostics.callsites')}\n${topCallsites}` : '',
       ]
         .filter(Boolean)
         .join('\n')
@@ -291,7 +296,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   tabsContainer: {
@@ -314,7 +319,7 @@ const styles = StyleSheet.create({
   tabText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   activeTabText: {
     color: COLORS.white,

@@ -1,6 +1,13 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
@@ -349,7 +356,7 @@ const styles = StyleSheet.create({
   },
   mediaTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     textAlign: 'center',
   },
@@ -365,7 +372,7 @@ const styles = StyleSheet.create({
   ratingText: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   actions: {
     gap: SPACING.m,
@@ -378,7 +385,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   secondaryButton: {
     flexDirection: 'row',
@@ -392,7 +399,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   disabledButton: {
     borderColor: COLORS.textSecondary,

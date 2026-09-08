@@ -2,7 +2,7 @@ import { Movie, TVShow } from '@/src/api/tmdb';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useForYouRecommendations } from '@/src/hooks/useForYouRecommendations';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     flex: 1,
   },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: SPACING.m,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
   },
   skeletonTitleContainer: {

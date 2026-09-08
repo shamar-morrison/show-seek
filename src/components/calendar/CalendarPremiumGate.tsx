@@ -1,4 +1,4 @@
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: SPACING.m,
@@ -157,6 +157,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#000',
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

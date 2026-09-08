@@ -6,7 +6,7 @@ import {
 } from '@/src/components/premium/PremiumPaywallLayout';
 import { resolvePremiumBillingDisclosure } from '@/src/components/premium/premiumPaywallCopy';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { isPremiumAuthRequiredError, type PremiumPlan } from '@/src/context/premiumBilling';
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     marginTop: SPACING.m,
@@ -231,6 +231,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.black,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

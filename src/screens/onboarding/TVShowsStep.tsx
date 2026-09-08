@@ -2,7 +2,7 @@ import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, type TVShow } from '@/src/api/t
 import { AppErrorState } from '@/src/components/ui/AppErrorState';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useMemo } from 'react';
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
     letterSpacing: -0.5,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   loadingContainer: {
     flex: 1,

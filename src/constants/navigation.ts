@@ -1,9 +1,9 @@
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 
 export const BASE_STACK_SCREEN_OPTIONS = {
   headerStyle: { backgroundColor: COLORS.background },
   headerTintColor: COLORS.text,
-  headerTitleStyle: { fontWeight: 'bold' },
+  headerTitleStyle: { fontFamily: FONT_FAMILY.bold },
   contentStyle: { backgroundColor: COLORS.background },
   headerBackTitle: '',
 } as const;

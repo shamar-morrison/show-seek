@@ -1,7 +1,14 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ReleaseCalendarSkeleton } from '@/src/components/calendar/ReleaseCalendarSkeleton';
 import { CategoryTabs } from '@/src/components/ui/CategoryTabs';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
@@ -682,7 +689,7 @@ const useStyles = () =>
     },
     sectionTitle: {
       fontSize: FONT_SIZE.l,
-      fontWeight: '700',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.text,
     },
     releaseRowSpacing: {
@@ -712,7 +719,7 @@ const useStyles = () =>
     },
     dateDay: {
       fontSize: 24,
-      fontWeight: '700',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.text,
     },
     dateDayHighlight: {
@@ -721,7 +728,7 @@ const useStyles = () =>
     dateMonth: {
       fontSize: FONT_SIZE.xs,
       color: COLORS.textSecondary,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     dateMonthHighlight: {
       color: COLORS.white,
@@ -735,7 +742,7 @@ const useStyles = () =>
     },
     todayBadgeText: {
       fontSize: 10,
-      fontWeight: '700',
+      fontFamily: FONT_FAMILY.bold,
       color: accentColor,
     },
     mediaInfo: {
@@ -774,7 +781,7 @@ const useStyles = () =>
     },
     releaseTitle: {
       fontSize: FONT_SIZE.m,
-      fontWeight: '700',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.white,
       flex: 1,
       lineHeight: 20,
@@ -808,7 +815,7 @@ const useStyles = () =>
       flex: 1,
       fontSize: FONT_SIZE.xs,
       color: accentColor,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     metaBadgeRow: {
       flexDirection: 'row',
@@ -849,7 +856,7 @@ const useStyles = () =>
     episodeRowLabel: {
       color: COLORS.text,
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     episodeRowTitle: {
       color: COLORS.textSecondary,
@@ -859,7 +866,7 @@ const useStyles = () =>
     episodeRowDate: {
       color: accentColor,
       fontSize: FONT_SIZE.xs,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     upgradeOverlayContainer: {
       marginTop: SPACING.l,
@@ -884,7 +891,7 @@ const useStyles = () =>
     },
     upgradeTitle: {
       fontSize: FONT_SIZE.m,
-      fontWeight: '700',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.white,
       textAlign: 'center',
     },
@@ -900,6 +907,6 @@ const useStyles = () =>
     upgradeButtonText: {
       color: COLORS.white,
       fontSize: FONT_SIZE.s,
-      fontWeight: '700',
+      fontFamily: FONT_FAMILY.bold,
     },
   }));

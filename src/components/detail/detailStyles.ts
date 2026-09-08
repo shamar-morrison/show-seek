@@ -1,4 +1,11 @@
-import { BORDER_RADIUS, BUTTON_HEIGHT, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  BUTTON_HEIGHT,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 
 export const useDetailStyles = () =>
@@ -7,7 +14,7 @@ export const useDetailStyles = () =>
     sectionTitle: {
       fontSize: FONT_SIZE.l,
       paddingBottom: SPACING.xs,
-      fontWeight: 'bold',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.white,
     },
     sectionHeader: {
@@ -36,7 +43,7 @@ export const useDetailStyles = () =>
     },
     label: {
       color: COLORS.textSecondary,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     value: {
       color: COLORS.text,
@@ -50,7 +57,7 @@ export const useDetailStyles = () =>
       color: COLORS.textSecondary,
       fontSize: FONT_SIZE.s,
       marginBottom: SPACING.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     providerCard: {
       alignItems: 'center',
@@ -90,7 +97,7 @@ export const useDetailStyles = () =>
     castName: {
       color: COLORS.text,
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     characterName: {
       color: COLORS.textSecondary,
@@ -98,7 +105,7 @@ export const useDetailStyles = () =>
     },
     viewAll: {
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
       color: accentColor,
     },
 
@@ -123,7 +130,7 @@ export const useDetailStyles = () =>
     similarTitle: {
       color: COLORS.text,
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     similarMeta: {
       flexDirection: 'row',
@@ -146,7 +153,7 @@ export const useDetailStyles = () =>
     similarRatingText: {
       color: COLORS.warning,
       fontSize: FONT_SIZE.xs,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
 
     // Photos
@@ -185,7 +192,7 @@ export const useDetailStyles = () =>
     videoTitle: {
       color: COLORS.text,
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
       marginBottom: 4,
     },
     videoType: {
@@ -221,7 +228,7 @@ export const useDetailStyles = () =>
     reviewAuthor: {
       color: COLORS.white,
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
       marginBottom: 4,
     },
     reviewRating: {
@@ -232,7 +239,7 @@ export const useDetailStyles = () =>
     reviewRatingText: {
       color: COLORS.warning,
       fontSize: FONT_SIZE.xs,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     reviewContent: {
       color: COLORS.textSecondary,
@@ -339,7 +346,7 @@ export const useDetailStyles = () =>
     episodeNumberText: {
       fontSize: FONT_SIZE.s,
       color: COLORS.text,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     watchStatusBadge: {
       flexDirection: 'row',
@@ -354,7 +361,7 @@ export const useDetailStyles = () =>
     watchStatusText: {
       fontSize: FONT_SIZE.s,
       color: COLORS.text,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
       marginLeft: SPACING.xs,
     },
 
@@ -405,7 +412,7 @@ export const useDetailStyles = () =>
     relatedEpisodeTitle: {
       fontSize: FONT_SIZE.m,
       color: COLORS.text,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     currentEpisodeBorder: {
       borderWidth: 2,
@@ -504,7 +511,7 @@ export const useDetailStyles = () =>
     },
     title: {
       fontSize: FONT_SIZE.xxl,
-      fontWeight: 'bold',
+      fontFamily: FONT_FAMILY.bold,
       color: COLORS.white,
       marginBottom: SPACING.s,
       marginTop: SPACING.s,
@@ -524,7 +531,7 @@ export const useDetailStyles = () =>
     metaText: {
       color: COLORS.textSecondary,
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     genresContainer: {
       flexDirection: 'row',
@@ -573,7 +580,7 @@ export const useDetailStyles = () =>
     },
     playButtonText: {
       color: COLORS.white,
-      fontWeight: 'bold',
+      fontFamily: FONT_FAMILY.bold,
       fontSize: FONT_SIZE.m,
     },
     addButton: {
@@ -607,7 +614,7 @@ export const useDetailStyles = () =>
     statusBadgeText: {
       color: COLORS.white,
       fontSize: FONT_SIZE.xs,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
       textTransform: 'uppercase',
     },
   }));

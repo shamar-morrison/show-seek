@@ -3,7 +3,7 @@ import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { StackedPosterPreview } from '@/src/components/library/StackedPosterPreview';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   listName: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   itemCount: {

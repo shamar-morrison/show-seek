@@ -1,5 +1,5 @@
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { User } from 'firebase/auth';
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   displayName: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
     marginBottom: 2,
   },
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   },
   signOutButtonText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   upgradeButton: {
     flexDirection: 'row',
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   upgradeButtonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.s,
   },
   premiumStatusContainer: {
@@ -150,6 +150,6 @@ const styles = StyleSheet.create({
   premiumStatusText: {
     color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

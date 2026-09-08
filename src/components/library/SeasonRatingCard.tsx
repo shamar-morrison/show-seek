@@ -1,7 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { RatingItem } from '@/src/services/RatingService';
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   tvShowName: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   seasonInfo: {

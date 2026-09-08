@@ -2,10 +2,11 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import {
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
+  hexToRGBA,
   HIT_SLOP,
   SPACING,
-  hexToRGBA,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
@@ -93,7 +94,7 @@ export function CalendarSortModal({ visible, sortMode, onClose, onApply }: Calen
                   <Text
                     style={[
                       styles.optionLabel,
-                      isSelected && { color: accentColor, fontWeight: '700' },
+                      isSelected && { color: accentColor, fontFamily: FONT_FAMILY.bold },
                     ]}
                   >
                     {option.label}
@@ -145,6 +146,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

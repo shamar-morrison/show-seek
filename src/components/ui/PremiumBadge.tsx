@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { LockIcon } from '@hugeicons/core-free-icons';
@@ -34,6 +34,6 @@ const styles = StyleSheet.create({
   },
   premiumBadgeText: {
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

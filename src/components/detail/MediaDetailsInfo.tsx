@@ -1,5 +1,5 @@
 import { MovieDetails, TVShowDetails } from '@/src/api/tmdb';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useRegion } from '@/src/context/RegionProvider';
 import i18n from '@/src/i18n';
 import { getCountryFlag } from '@/src/utils/countries';
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   row: {

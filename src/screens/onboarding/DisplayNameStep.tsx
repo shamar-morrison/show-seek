@@ -1,4 +1,4 @@
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
     letterSpacing: -0.5,
@@ -77,6 +77,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.l,
     backgroundColor: COLORS.surface,
     borderWidth: 2,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

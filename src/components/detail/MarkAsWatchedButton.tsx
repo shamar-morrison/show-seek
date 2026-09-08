@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Tick02Icon, ViewIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
@@ -93,7 +100,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   watchedButtonText: {
     color: COLORS.success,
@@ -110,6 +117,6 @@ const styles = StyleSheet.create({
   countText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.xs,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

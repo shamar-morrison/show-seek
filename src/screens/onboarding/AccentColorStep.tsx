@@ -1,5 +1,5 @@
 import { ACCENT_COLORS, DEFAULT_ACCENT_COLOR } from '@/src/constants/accentColors';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
     letterSpacing: -0.5,
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   colorName: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     textAlign: 'center',
   },
   colorNameSelected: {

@@ -13,7 +13,14 @@ import {
   HORIZONTAL_SCROLL_PROPS,
 } from '@/src/components/ui/horizontalScrollProps';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
@@ -715,7 +722,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
     marginBottom: SPACING.xs,
     textAlign: 'center',
@@ -742,7 +749,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   sectionHeader: {
@@ -778,7 +785,7 @@ const styles = StyleSheet.create({
   creditTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     marginBottom: 2,
   },
   creditYear: {
@@ -798,7 +805,7 @@ const styles = StyleSheet.create({
   creditRatingText: {
     color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   actionRow: {
     flexDirection: 'row',
@@ -822,7 +829,7 @@ const styles = StyleSheet.create({
   favoriteButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     marginLeft: SPACING.s,
   },
 });

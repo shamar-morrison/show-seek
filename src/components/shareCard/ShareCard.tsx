@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { Image } from 'expo-image';
@@ -121,9 +121,7 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
           {hasRating && (
             <>
               <Text style={styles.ratingLabel}>{t('shareCard.myRating')}</Text>
-              <Text style={[styles.ratingValue, { color: accentColor }]}>
-                {displayRating}/10
-              </Text>
+              <Text style={[styles.ratingValue, { color: accentColor }]}>{displayRating}/10</Text>
             </>
           )}
         </View>
@@ -175,7 +173,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.hero * 1.6,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: SPACING.m,
@@ -183,7 +181,7 @@ const styles = StyleSheet.create({
   // Larger metadata (year & genres)
   metadata: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
@@ -194,14 +192,14 @@ const styles = StyleSheet.create({
   },
   ratingLabel: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.textSecondary,
     marginTop: SPACING.xxl,
   },
   // Rating without star icon
   ratingValue: {
     fontSize: FONT_SIZE.hero * 1.8,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   // Larger CTA button
   ctaContainer: {
@@ -211,7 +209,7 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   // Circular logo watermark

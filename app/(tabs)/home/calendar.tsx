@@ -8,7 +8,7 @@ import {
   SegmentedControl,
   type SegmentedControlOption,
 } from '@/src/components/ui/SegmentedControl';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: SPACING.m,
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
   },
 });

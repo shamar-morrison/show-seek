@@ -8,7 +8,7 @@ import HomeScreenCustomizationModal, {
 import { HomeListSectionSkeleton } from '@/src/components/skeletons/HomeListSectionSkeleton';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     letterSpacing: -1.5,
   },
   scrollView: {

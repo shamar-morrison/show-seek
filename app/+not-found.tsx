@@ -2,6 +2,7 @@
 import { Link, Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { FONT_FAMILY } from '@/src/constants/theme';
 
 export default function NotFoundScreen() {
   const { t } = useTranslation();
@@ -29,7 +30,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   link: {
     marginTop: 15,

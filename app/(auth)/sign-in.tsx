@@ -1,7 +1,14 @@
 import { legal } from '@/app/(auth)/legal';
 import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import EmailAuthSection from '@/src/components/auth/EmailAuthSection';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { configureGoogleAuth, signInAsGuest, signInWithGoogle } from '@/src/firebase/auth';
 import { createUserDocument } from '@/src/firebase/user';
@@ -232,13 +239,13 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
     marginBottom: SPACING.l,
   },
   title: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
     marginBottom: SPACING.xs,
     textAlign: 'center',
@@ -268,7 +275,7 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
   guestButton: {
@@ -284,7 +291,7 @@ const styles = StyleSheet.create({
   },
   guestButtonText: {
     color: COLORS.white,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: FONT_SIZE.m,
   },
   sectionDivider: {
@@ -311,6 +318,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   termsLink: {
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

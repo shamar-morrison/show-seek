@@ -1,5 +1,12 @@
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -287,7 +294,7 @@ const styles = StyleSheet.create({
   },
   displayName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
     marginBottom: 2,
   },
@@ -321,7 +328,7 @@ const styles = StyleSheet.create({
   navigationTitle: {
     flex: 1,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   footerSection: {
@@ -336,7 +343,7 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.error,
   },
   signOutPressed: {

@@ -2,6 +2,7 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
   HIT_SLOP,
   SPACING,
@@ -148,13 +149,13 @@ const styles = StyleSheet.create({
   hintText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   readMoreContainer: {
     marginTop: SPACING.xs,
   },
   readMore: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

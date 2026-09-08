@@ -1,5 +1,12 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
@@ -166,11 +173,21 @@ export const ReminderCard = memo<ReminderCardProps>(
           {Date.now() > reminder.notificationScheduledFor ? (
             // Show different status based on whether this is an every_episode reminder with no next episode
             reminder.noNextEpisodeFound && reminder.tvFrequency === 'every_episode' ? (
-              <Text style={[styles.notificationTime, { color: COLORS.warning, fontWeight: '600' }]}>
+              <Text
+                style={[
+                  styles.notificationTime,
+                  { color: COLORS.warning, fontFamily: FONT_FAMILY.semiBold },
+                ]}
+              >
                 {t('reminder.noUpcomingEpisodes')}
               </Text>
             ) : (
-              <Text style={[styles.notificationTime, { color: COLORS.success, fontWeight: '600' }]}>
+              <Text
+                style={[
+                  styles.notificationTime,
+                  { color: COLORS.success, fontFamily: FONT_FAMILY.semiBold },
+                ]}
+              >
                 {t('reminder.released')}
               </Text>
             )
@@ -212,7 +229,7 @@ ReminderCard.displayName = 'ReminderCard';
 const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   row: {
@@ -235,7 +252,7 @@ const styles = StyleSheet.create({
   },
   timingText: {
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   notificationTime: {
     fontSize: FONT_SIZE.xs,

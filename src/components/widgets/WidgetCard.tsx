@@ -1,4 +1,4 @@
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { WidgetConfig } from '@/src/types';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: 4,
   },

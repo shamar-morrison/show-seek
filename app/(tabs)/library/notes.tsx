@@ -13,6 +13,7 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
   HEADER_CHROME_HEIGHT,
   HIT_SLOP,
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
   },
   mediaTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   noteText: {
@@ -538,7 +539,7 @@ const styles = StyleSheet.create({
   },
   premiumTitle: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginTop: SPACING.l,
     marginBottom: SPACING.s,
@@ -558,6 +559,6 @@ const styles = StyleSheet.create({
   upgradeButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

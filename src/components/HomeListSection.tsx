@@ -3,7 +3,7 @@ import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { LatestTrailersSection } from '@/src/components/LatestTrailersSection';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useContentFilterWithDiagnostics } from '@/src/hooks/useContentFilter';
@@ -171,14 +171,16 @@ function TMDBListSection({
         <HorizontalFlashList
           data={filteredItems}
           renderItem={({ item }) => {
-            const posterPathOverride = resolvePosterPath(config.mediaType, item.id, item.poster_path);
+            const posterPathOverride = resolvePosterPath(
+              config.mediaType,
+              item.id,
+              item.poster_path
+            );
             return isTV ? (
               <TVShowCard
                 show={item as TVShow}
                 posterPathOverride={posterPathOverride}
-                onLongPress={
-                  onMediaLongPress ? (show) => onMediaLongPress(show, 'tv') : undefined
-                }
+                onLongPress={onMediaLongPress ? (show) => onMediaLongPress(show, 'tv') : undefined}
               />
             ) : (
               <MovieCard
@@ -288,7 +290,9 @@ function UserListSection({
                 show={show}
                 posterPathOverride={posterPathOverride}
                 onLongPress={
-                  onMediaLongPress ? (selectedShow) => onMediaLongPress(selectedShow, 'tv') : undefined
+                  onMediaLongPress
+                    ? (selectedShow) => onMediaLongPress(selectedShow, 'tv')
+                    : undefined
                 }
               />
             );
@@ -316,7 +320,9 @@ function UserListSection({
               movie={movie}
               posterPathOverride={posterPathOverride}
               onLongPress={
-                onMediaLongPress ? (selectedMovie) => onMediaLongPress(selectedMovie, 'movie') : undefined
+                onMediaLongPress
+                  ? (selectedMovie) => onMediaLongPress(selectedMovie, 'movie')
+                  : undefined
               }
             />
           );
@@ -357,7 +363,9 @@ export function HomeListSection({ config, onMediaLongPress }: HomeListSectionPro
   }
 
   if (config.type === 'tmdb') {
-    return <TMDBListSection id={config.id} label={translatedLabel} onMediaLongPress={onMediaLongPress} />;
+    return (
+      <TMDBListSection id={config.id} label={translatedLabel} onMediaLongPress={onMediaLongPress} />
+    );
   }
 
   // Both 'default' and 'custom' types use UserListSection
@@ -376,7 +384,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.m,
     paddingHorizontal: SPACING.l,

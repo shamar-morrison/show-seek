@@ -1,5 +1,12 @@
 import { legal } from '@/app/(auth)/legal';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
 import React from 'react';
@@ -91,7 +98,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
   },
@@ -128,6 +135,6 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

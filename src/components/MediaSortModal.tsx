@@ -2,10 +2,11 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import {
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
+  hexToRGBA,
   HIT_SLOP,
   SPACING,
-  hexToRGBA,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
@@ -184,7 +185,7 @@ export default function MediaSortModal({
                     <Text
                       style={[
                         styles.optionText,
-                        isSelected && { color: accentColor, fontWeight: '600' },
+                        isSelected && { color: accentColor, fontFamily: FONT_FAMILY.semiBold },
                       ]}
                     >
                       {t(option.labelKey)}
@@ -255,6 +256,6 @@ const styles = StyleSheet.create({
   applyButtonText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

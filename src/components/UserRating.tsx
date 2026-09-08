@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useAccentColor } from '../context/AccentColorProvider';
 import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 import { getRatingText } from '../utils/ratingHelpers';
+import { FONT_FAMILY } from '@/src/constants/theme';
 
 interface UserRatingProps {
   rating: number;
@@ -48,10 +49,10 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   description: {
     color: COLORS.textSecondary,
-    fontWeight: 'normal',
+    fontFamily: FONT_FAMILY.regular,
   },
 });

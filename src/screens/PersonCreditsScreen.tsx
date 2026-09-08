@@ -20,7 +20,14 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useCurrentTab } from '@/src/context/TabContext';
@@ -528,7 +535,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginTop: SPACING.m,
     marginBottom: SPACING.s,
@@ -546,7 +553,7 @@ const styles = StyleSheet.create({
   },
   clearFiltersText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
   },
   // Grid styles - aligned with MediaGrid
@@ -569,7 +576,7 @@ const styles = StyleSheet.create({
   gridTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   // List styles
   listContent: {

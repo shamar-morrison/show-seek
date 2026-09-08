@@ -1,6 +1,13 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING, hexToRGBA } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  hexToRGBA,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
@@ -102,11 +109,11 @@ const styles = StyleSheet.create({
   },
   upNextLabel: {
     fontSize: 12.5,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   title: {
     fontSize: 17,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   subtitle: {

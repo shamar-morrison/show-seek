@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import React, { memo, useCallback } from 'react';
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     marginBottom: 2,
   },

@@ -1,4 +1,4 @@
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePreferences } from '@/src/hooks/usePreferences';
@@ -61,7 +61,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '600',
+          fontFamily: FONT_FAMILY.semiBold,
           marginBottom: 4,
         },
         tabBarItemStyle: {

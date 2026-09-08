@@ -1,5 +1,5 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalLayoutStyles } from '@/src/styles/modalStyles';
 import React from 'react';
@@ -59,10 +59,7 @@ export default function LoadingModal({
               testID="loading-modal-cancel-button"
             >
               <Text
-                style={[
-                  styles.cancelButtonText,
-                  isCancelling && styles.cancelButtonTextDisabled,
-                ]}
+                style={[styles.cancelButtonText, isCancelling && styles.cancelButtonTextDisabled]}
               >
                 {isCancelling ? `${cancelText}...` : cancelText}
               </Text>
@@ -95,14 +92,14 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     textAlign: 'center',
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   progressText: {
     marginTop: SPACING.xs,
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   cancelButton: {
     marginTop: SPACING.l,
@@ -125,10 +122,9 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   cancelButtonTextDisabled: {
     color: COLORS.textSecondary,
   },
 });
-

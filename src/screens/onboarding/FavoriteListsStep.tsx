@@ -4,7 +4,7 @@ import {
   MAX_HOME_LISTS,
   type TMDBListId,
 } from '@/src/constants/homeScreenLists';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { HomeScreenListItem } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
     letterSpacing: -0.5,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     marginBottom: SPACING.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   list: {
     flex: 1,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   listLabel: {
     fontSize: 18,
     color: COLORS.white,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   checkBadge: {
     width: 24,

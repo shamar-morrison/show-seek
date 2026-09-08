@@ -1,6 +1,13 @@
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import type { TraktReview } from '@/src/types/trakt';
 import { traktToReview } from '@/src/utils/reviewQueue';
 import {
@@ -225,7 +232,7 @@ const localStyles = StyleSheet.create({
   likesText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   spoilerContainer: {
     backgroundColor: COLORS.surface,
@@ -238,6 +245,6 @@ const localStyles = StyleSheet.create({
   spoilerHint: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

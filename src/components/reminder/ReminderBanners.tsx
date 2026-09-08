@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,9 +11,7 @@ interface ReminderWarningBannerProps {
 /**
  * Warning banner for when some (but not all) timing options have passed.
  */
-export function ReminderWarningBanner({
-  message,
-}: ReminderWarningBannerProps) {
+export function ReminderWarningBanner({ message }: ReminderWarningBannerProps) {
   const { t } = useTranslation();
   const styles = useStyles();
   const resolvedMessage = message ?? t('reminder.warningSomeTimesPassed');
@@ -48,9 +46,7 @@ interface DevModeBannerProps {
 /**
  * Dev mode banner shown during development.
  */
-export function DevModeBanner({
-  message,
-}: DevModeBannerProps) {
+export function DevModeBanner({ message }: DevModeBannerProps) {
   const { t } = useTranslation();
   const styles = useStyles();
   const resolvedMessage = message ?? t('reminder.devBanner');
@@ -118,7 +114,7 @@ const useStyles = () =>
       fontSize: FONT_SIZE.xs,
       color: COLORS.background,
       textAlign: 'center',
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     infoBanner: {
       backgroundColor: accentColor + '20',

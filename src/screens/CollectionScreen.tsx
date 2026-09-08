@@ -4,7 +4,14 @@ import AppErrorState from '@/src/components/ui/AppErrorState';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
@@ -440,7 +447,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.hero,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.s,
   },
@@ -470,12 +477,12 @@ const styles = StyleSheet.create({
   startTrackingText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   stopTrackingText: {
     color: COLORS.error,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   progressContainer: {
     marginBottom: SPACING.m,
@@ -489,11 +496,11 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   percentageText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   progressBarBg: {
     height: 8,
@@ -519,12 +526,12 @@ const styles = StyleSheet.create({
   },
   readMore: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     marginBottom: SPACING.l,
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.m,
   },
@@ -563,7 +570,7 @@ const styles = StyleSheet.create({
   },
   movieTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
   },
@@ -588,7 +595,7 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.text,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   movieOverview: {
     fontSize: FONT_SIZE.s,

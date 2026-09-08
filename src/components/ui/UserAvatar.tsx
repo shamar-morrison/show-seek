@@ -1,4 +1,4 @@
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { getInitials } from '@/src/utils/userUtils';
 import { Image } from 'expo-image';
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   initialsText: {
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   premiumBadge: {

@@ -8,9 +8,10 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
-  SPACING,
   hexToRGBA,
+  SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -683,7 +684,7 @@ const styles = StyleSheet.create({
   fileName: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   header: {
     alignItems: 'center',
@@ -698,7 +699,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     flex: 1,
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   heroIconCircle: {
     alignItems: 'center',
@@ -722,7 +723,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     color: COLORS.white,
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     marginBottom: SPACING.s,
     textAlign: 'center',
   },
@@ -756,7 +757,7 @@ const styles = StyleSheet.create({
   pickerBoxTitle: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   pickerTitleRow: {
     alignItems: 'center',
@@ -777,7 +778,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   progressBarFill: {
     borderRadius: 4,
@@ -794,7 +795,7 @@ const styles = StyleSheet.create({
   progressPercentText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   removeFileButton: {
     padding: SPACING.xs,
@@ -815,7 +816,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   sectionContainer: {
     flex: 1,
@@ -864,7 +865,7 @@ const styles = StyleSheet.create({
   statTileValue: {
     color: COLORS.white,
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   statsCard: {
     backgroundColor: COLORS.surface,
@@ -875,7 +876,7 @@ const styles = StyleSheet.create({
   statsCardTitle: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     marginBottom: SPACING.m,
     textAlign: 'center',
   },
@@ -895,7 +896,7 @@ const styles = StyleSheet.create({
   statusTitle: {
     color: COLORS.white,
     fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     textAlign: 'center',
   },
   syncIconsContainer: {
@@ -918,7 +919,7 @@ const styles = StyleSheet.create({
   enrichingBadgeText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   syncRunningBanner: {
     borderRadius: BORDER_RADIUS.m,
@@ -937,6 +938,6 @@ const styles = StyleSheet.create({
   },
   syncRunningTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

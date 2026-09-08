@@ -5,7 +5,7 @@ import { hasListItemInMap } from '@/src/utils/listItemKeys';
 import { maybeWarnTraktManagedListEdit } from '@/src/utils/traktManagedEdits';
 import { isDefaultList } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
@@ -900,7 +900,7 @@ const styles = StyleSheet.create({
   createListText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   manageListsButton: {
     flexDirection: 'row',
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
   manageListsText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   errorBanner: {
     backgroundColor: COLORS.error,
@@ -938,7 +938,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.s,
     textAlign: 'center',
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   saveButton: {
     flexDirection: 'row',
@@ -955,7 +955,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   saveButtonTextDisabled: {
     color: COLORS.textSecondary,

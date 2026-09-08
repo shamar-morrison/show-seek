@@ -23,6 +23,7 @@ import {
   BORDER_RADIUS,
   BUTTON_HEIGHT,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
   SPACING,
 } from '@/src/constants/theme';
@@ -538,7 +539,9 @@ export default function EpisodeDetailScreen() {
           <View style={styles.metaRow}>
             {/* Episode Number */}
             <View style={styles.metaItem}>
-              <Text style={[styles.metaText, { fontWeight: '600', color: COLORS.text }]}>
+              <Text
+                style={[styles.metaText, { fontFamily: FONT_FAMILY.semiBold, color: COLORS.text }]}
+              >
                 {t('media.seasonEpisode', { season: seasonNumber, episode: episodeNumber })}
               </Text>
             </View>
@@ -821,7 +824,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.m,
   },
@@ -888,7 +891,7 @@ const styles = StyleSheet.create({
   watchButtonText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   trailerButton: {
     width: '100%',
@@ -904,12 +907,12 @@ const styles = StyleSheet.create({
   trailerButtonText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   overviewSection: {},
   sectionTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.s,
   },

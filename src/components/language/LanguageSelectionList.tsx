@@ -6,9 +6,10 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
-  SPACING,
   hexToRGBA,
+  SPACING,
 } from '@/src/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   languageNativeName: {
     fontSize: FONT_SIZE.l,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     marginBottom: 2,
   },
   languageEnglishName: {

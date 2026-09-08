@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { ArrowDown01Icon, ArrowUp01Icon } from '@hugeicons/core-free-icons';
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   },
   categoryTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     letterSpacing: 0.3,
   },
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 15,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   featureDescription: {
     fontSize: 13,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   newBadgeText: {
     color: COLORS.black,
     fontSize: 10,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     letterSpacing: 0.5,
   },
 });

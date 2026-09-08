@@ -19,9 +19,10 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
-  SPACING,
   hexToRGBA,
+  SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -913,7 +914,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
     flex: 1,
   },
@@ -967,7 +968,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
     textAlign: 'center',
     marginBottom: SPACING.s,
@@ -990,7 +991,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   disconnectButton: {
@@ -1004,7 +1005,7 @@ const styles = StyleSheet.create({
   disconnectButtonText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.error,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   syncingContainer: {
     flex: 1,
@@ -1017,7 +1018,7 @@ const styles = StyleSheet.create({
   },
   syncingTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
     textAlign: 'center',
     marginBottom: SPACING.s,
@@ -1065,7 +1066,7 @@ const styles = StyleSheet.create({
   },
   statsTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     marginBottom: SPACING.m,
   },
@@ -1084,7 +1085,7 @@ const styles = StyleSheet.create({
   },
   noChangesTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   noChangesDescription: {
@@ -1108,7 +1109,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   statLabel: {
@@ -1132,7 +1133,7 @@ const styles = StyleSheet.create({
   },
   errorsTitle: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.error,
     marginBottom: SPACING.s,
   },
@@ -1163,7 +1164,7 @@ const styles = StyleSheet.create({
   },
   enrichmentTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.warning,
   },
   enrichmentDescription: {
@@ -1224,7 +1225,7 @@ const styles = StyleSheet.create({
   zipImportCardTitle: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   zipImportCardSubtitle: {
     color: COLORS.textSecondary,

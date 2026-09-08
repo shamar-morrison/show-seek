@@ -1,4 +1,4 @@
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -81,9 +81,7 @@ export default function PersonalizingScreen({ onComplete, onDone }: Personalizin
     saveStarted.current = true;
 
     const doComplete = async () => {
-      const waitPromise = new Promise<void>((resolve) =>
-        setTimeout(resolve, MIN_DURATION_MS)
-      );
+      const waitPromise = new Promise<void>((resolve) => setTimeout(resolve, MIN_DURATION_MS));
 
       try {
         const [saveResult] = await Promise.allSettled([
@@ -111,16 +109,12 @@ export default function PersonalizingScreen({ onComplete, onDone }: Personalizin
     <View style={styles.container}>
       <Animated.View entering={FadeIn.duration(600)} style={styles.content}>
         {/* Logo/Title area */}
-        <Text style={styles.title}>
-          {t('personalOnboarding.personalizing.title')}
-        </Text>
+        <Text style={styles.title}>{t('personalOnboarding.personalizing.title')}</Text>
 
         {/* Progress bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
-            <Animated.View
-              style={[styles.progressFill, progressAnimStyle]}
-            />
+            <Animated.View style={[styles.progressFill, progressAnimStyle]} />
           </View>
         </View>
 
@@ -148,7 +142,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -172,7 +166,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     minHeight: 20,
   },
 });

@@ -1,6 +1,6 @@
 import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigationCard';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
-import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   content: {

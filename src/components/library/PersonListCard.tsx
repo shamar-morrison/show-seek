@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
-import { COLORS, FONT_SIZE } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { FavoritePerson } from '@/src/types/favoritePerson';
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   department: {

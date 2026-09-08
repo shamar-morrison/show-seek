@@ -1,4 +1,4 @@
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import React, { memo } from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   track: {
     width: '100%',

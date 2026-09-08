@@ -2,7 +2,14 @@ import CreateListModal, { CreateListModalRef } from '@/src/components/CreateList
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
@@ -246,7 +253,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   content: {
@@ -260,7 +267,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   sectionHeader: {
@@ -296,7 +303,7 @@ const styles = StyleSheet.create({
   },
   listName: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -313,7 +320,7 @@ const styles = StyleSheet.create({
   defaultBadgeText: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   listActions: {
     flexDirection: 'row',

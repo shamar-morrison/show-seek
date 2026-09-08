@@ -1,4 +1,4 @@
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
 import { Stack, useRouter } from 'expo-router';
@@ -19,7 +19,7 @@ export default function WidgetsLayout() {
         },
         headerTintColor: COLORS.text,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontFamily: FONT_FAMILY.bold,
         },
         contentStyle: {
           backgroundColor: COLORS.background,

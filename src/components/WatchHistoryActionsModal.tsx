@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { Delete02Icon, WorkHistoryIcon } from '@hugeicons/core-free-icons';
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     marginBottom: 2,
   },
   description: {

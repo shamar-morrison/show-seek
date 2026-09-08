@@ -1,6 +1,13 @@
 import { getImageUrl, Review, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getReviewQueue, type QueuedReview } from '@/src/utils/reviewQueue';
 import * as Haptics from 'expo-haptics';
@@ -315,7 +322,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   pagerControls: {
@@ -350,7 +357,7 @@ const styles = StyleSheet.create({
   },
   authorName: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
     marginBottom: 4,
   },
@@ -374,7 +381,7 @@ const styles = StyleSheet.create({
   },
   rating: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.warning,
   },
   likesContainer: {
@@ -388,7 +395,7 @@ const styles = StyleSheet.create({
   },
   likesText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.textSecondary,
   },
   reviewText: {
@@ -407,6 +414,6 @@ const styles = StyleSheet.create({
   spoilerHint: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

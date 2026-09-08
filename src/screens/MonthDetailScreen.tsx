@@ -2,7 +2,14 @@ import { ActivityRatingCard } from '@/src/components/library/ActivityRatingCard'
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
@@ -373,7 +380,7 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   summaryLabel: {
@@ -423,11 +430,11 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   tabLabelActive: {
     color: COLORS.text,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   countBadge: {
     backgroundColor: COLORS.surfaceLight,
@@ -441,7 +448,7 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   countTextActive: {
     color: COLORS.white,

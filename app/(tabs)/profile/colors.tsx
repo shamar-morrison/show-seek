@@ -6,9 +6,10 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
-  SPACING,
   hexToRGBA,
+  SPACING,
 } from '@/src/constants/theme';
 import { SUPPORTED_ACCENT_COLORS, useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
   colorName: {
     fontSize: FONT_SIZE.l,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   colorStatus: {
     width: 32,

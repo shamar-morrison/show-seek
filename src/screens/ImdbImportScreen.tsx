@@ -8,9 +8,10 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
-  SPACING,
   hexToRGBA,
+  SPACING,
 } from '@/src/constants/theme';
 import { IMDB_IMPORT_PROGRESS_ROUTE } from '@/src/constants/imdbImportRoutes';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     flex: 1,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     marginRight: SPACING.s,
   },
   fileRow: {
@@ -387,7 +388,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     marginBottom: SPACING.s,
     textAlign: 'center',
   },
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
   imdbButtonText: {
     color: COLORS.black,
     fontSize: FONT_SIZE.m,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   imdbHeroLogo: {
     height: 28,
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
   kindBadgeText: {
     color: COLORS.black,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   metaGrid: {
     flexDirection: 'row',
@@ -443,7 +444,7 @@ const styles = StyleSheet.create({
   metaLabel: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     textTransform: 'uppercase',
   },
   metaPill: {
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
   metaValue: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   primaryButton: {
     alignItems: 'center',
@@ -476,7 +477,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     textTransform: 'uppercase',
   },
   showSeekIcon: {
@@ -509,7 +510,7 @@ const styles = StyleSheet.create({
   stageTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.l,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   startButton: {
     alignItems: 'center',
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
   startButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   syncIconsContainer: {
     alignItems: 'center',
@@ -541,6 +542,6 @@ const styles = StyleSheet.create({
   warningTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

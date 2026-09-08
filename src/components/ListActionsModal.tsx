@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     flex: 1,
   },
 });

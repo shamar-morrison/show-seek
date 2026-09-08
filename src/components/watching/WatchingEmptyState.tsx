@@ -1,4 +1,4 @@
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Tv01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text, // was text.primary
     marginBottom: 8,
   },

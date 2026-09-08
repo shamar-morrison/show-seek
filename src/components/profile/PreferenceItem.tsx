@@ -1,5 +1,12 @@
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
@@ -126,7 +133,7 @@ const styles = StyleSheet.create({
   preferenceLabel: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   preferenceLabelLocked: {
     color: COLORS.textSecondary,

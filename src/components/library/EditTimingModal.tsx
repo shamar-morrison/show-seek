@@ -7,7 +7,14 @@ import {
   ReminderWarningBanner,
 } from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
@@ -237,7 +244,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     marginBottom: SPACING.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   releaseDateContainer: {
     flexDirection: 'row',
@@ -254,7 +261,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     marginBottom: SPACING.m,
   },
@@ -271,7 +278,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
   },
 });

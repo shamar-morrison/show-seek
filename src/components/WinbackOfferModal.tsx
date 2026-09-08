@@ -1,5 +1,5 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { isPremiumAuthRequiredError } from '@/src/context/premiumBilling';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -411,13 +411,13 @@ const styles = StyleSheet.create({
   },
   highlightPrice: {
     fontSize: 28,
-    fontWeight: '900',
+    fontFamily: FONT_FAMILY.bold,
     letterSpacing: -0.5,
   },
   pricePeriod: {
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   timerContainer: {
     flexDirection: 'row',
@@ -435,17 +435,17 @@ const styles = StyleSheet.create({
   timerLabel: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   timerCountdown: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     fontVariant: ['tabular-nums'],
   },
   expiredText: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.error,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   buttonContainer: {
     width: '100%',
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   claimButtonText: {
     color: COLORS.black,
     fontSize: FONT_SIZE.m,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   buttonDisabled: {
     opacity: 0.6,

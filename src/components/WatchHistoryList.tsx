@@ -1,5 +1,5 @@
 import { CustomDatePicker } from '@/src/components/CustomDatePicker';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { WatchInstance } from '@/src/types/watchedMovies';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
@@ -210,12 +210,12 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     color: COLORS.textSecondary,
   },
   ordinalText: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   actionButtons: {
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     textAlign: 'center',
     backgroundColor: COLORS.surface,

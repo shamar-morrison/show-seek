@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { UserPreferences } from '@/src/types/preferences';
@@ -265,7 +272,7 @@ const styles = StyleSheet.create({
   preferenceLabel: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     marginBottom: SPACING.xs,
   },
   preferenceSubtitle: {
@@ -281,7 +288,7 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.white,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   retryButtonDisabled: {
     opacity: 0.6,

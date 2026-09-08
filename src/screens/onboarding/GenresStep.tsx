@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Genre } from '@/src/api/tmdb';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
     letterSpacing: -0.5,
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     marginBottom: SPACING.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   loadingContainer: {
     flex: 1,
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   genreLabel: {
     fontSize: 18,
     color: COLORS.white,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   checkBadge: {
     width: 24,

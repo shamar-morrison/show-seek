@@ -47,6 +47,12 @@ jest.mock('@/src/constants/theme', () => ({
   ACTIVE_OPACITY: 0.7,
   BORDER_RADIUS: { m: 8 },
   COLORS: { text: '#fff', textSecondary: '#888' },
+  FONT_FAMILY: {
+    regular: 'Inter_400Regular',
+    medium: 'Inter_500Medium',
+    semiBold: 'Inter_600SemiBold',
+    bold: 'Inter_700Bold',
+  },
   FONT_SIZE: { s: 14, xs: 12 },
   SPACING: { m: 16, s: 8, xs: 4 },
 }));

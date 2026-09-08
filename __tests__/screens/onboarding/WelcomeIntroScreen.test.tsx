@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import WelcomeIntroScreen from '@/src/screens/onboarding/WelcomeIntroScreen';
-import { COLORS, FONT_SIZE } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE } from '@/src/constants/theme';
 
 jest.mock('@/src/components/auth/AnimatedBackground', () => ({
   AnimatedBackground: () => null,
@@ -67,7 +67,7 @@ describe('WelcomeIntroScreen', () => {
     expect(eyebrow.props.style).toEqual(
       expect.objectContaining({
         fontSize: FONT_SIZE.s,
-        fontWeight: '700',
+        fontFamily: FONT_FAMILY.bold,
         textTransform: 'uppercase',
         letterSpacing: 3,
         color: COLORS.textSecondary,
@@ -80,7 +80,7 @@ describe('WelcomeIntroScreen', () => {
     expect(heroTitle.props.style).toEqual(
       expect.objectContaining({
         fontSize: 50,
-        fontWeight: '900',
+        fontFamily: FONT_FAMILY.bold,
         color: COLORS.primary,
       })
     );

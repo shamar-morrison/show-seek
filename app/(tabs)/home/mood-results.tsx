@@ -6,7 +6,7 @@ import AppErrorState from '@/src/components/ui/AppErrorState';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { getMoodById } from '@/src/constants/moods';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { MoodMediaType, useMoodDiscovery } from '@/src/hooks/useMoodDiscovery';
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
   moodBadgeText: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -451,12 +451,12 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     color: COLORS.textSecondary,
   },
   toggleTextActive: {
     color: COLORS.text,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   listContent: {
     paddingBottom: SPACING.xl,
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     textAlign: 'center',
   },
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   },
   tryAnotherText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   loadingMore: {

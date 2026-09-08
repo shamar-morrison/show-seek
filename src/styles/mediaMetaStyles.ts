@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 
 export const mediaMetaStyles = StyleSheet.create({
   yearRatingContainer: {
@@ -19,6 +19,6 @@ export const mediaMetaStyles = StyleSheet.create({
   rating: {
     color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

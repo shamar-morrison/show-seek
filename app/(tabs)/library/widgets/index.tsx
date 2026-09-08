@@ -1,6 +1,6 @@
 import { PremiumWidgetGate } from '@/src/components/widgets/PremiumWidgetGate';
 import { WidgetCard } from '@/src/components/widgets/WidgetCard';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
 });

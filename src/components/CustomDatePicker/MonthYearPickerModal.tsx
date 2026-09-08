@@ -3,7 +3,14 @@
  */
 
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -207,7 +214,7 @@ const useStyles = () =>
     },
     columnHeader: {
       fontSize: FONT_SIZE.s,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
       color: COLORS.textSecondary,
       marginBottom: SPACING.s,
       textAlign: 'center',
@@ -239,7 +246,7 @@ const useStyles = () =>
     },
     itemTextSelected: {
       color: COLORS.white,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     itemTextDisabled: {
       color: COLORS.textSecondary,
@@ -267,11 +274,11 @@ const useStyles = () =>
     cancelButtonText: {
       color: accentColor,
       fontSize: FONT_SIZE.m,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     confirmButtonText: {
       color: COLORS.white,
       fontSize: FONT_SIZE.m,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
   }));

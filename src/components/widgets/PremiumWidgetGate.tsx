@@ -1,4 +1,4 @@
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: 12,
   },
@@ -94,6 +94,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#000',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

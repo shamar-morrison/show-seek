@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import React from 'react';
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.textSecondary,
   },
   activeTabText: {

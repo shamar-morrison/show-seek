@@ -6,7 +6,7 @@ import i18n from '@/src/i18n';
 
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { BASE_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import ErrorBoundary from '@/src/components/ErrorBoundary';
 import { AccentColorProvider, useAccentColor } from '@/src/context/AccentColorProvider';
 import { AuthProvider, useAuth } from '@/src/context/auth';
@@ -52,6 +52,13 @@ import {
 import { cancelPendingReengagementNotification } from '@/src/utils/onboardingStepCache';
 
 import { dehydrate, hydrate, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  useFonts,
+} from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -262,6 +269,16 @@ function ResolvedRootLayoutNav({
   const [debugForceContinue, setDebugForceContinue] = useState(false);
   const [debugSnapshot, setDebugSnapshot] = useState<InitDebugSnapshot | null>(null);
 
+  // Load Inter (same family/weights as show-seek-web). On error we proceed
+  // anyway and fall back to system fonts rather than blocking startup.
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+  const fontsReady = fontsLoaded || !!fontError;
+
   const gateReasons = useMemo(() => {
     const reasons: string[] = [];
     if (loading) reasons.push('auth-loading');
@@ -269,6 +286,7 @@ function ResolvedRootLayoutNav({
     if (!isLanguageReady) reasons.push('language-not-ready');
     if (!isRegionReady) reasons.push('region-not-ready');
     if (!isAccentReady) reasons.push('accent-not-ready');
+    if (!fontsReady) reasons.push('fonts-loading');
     if (!!user && preferencesLoading) reasons.push('preferences-loading');
     return reasons;
   }, [
@@ -277,6 +295,7 @@ function ResolvedRootLayoutNav({
     isLanguageReady,
     isRegionReady,
     isAccentReady,
+    fontsReady,
     user,
     preferencesLoading,
   ]);
@@ -451,7 +470,14 @@ function ResolvedRootLayoutNav({
 
   useEffect(() => {
     const waitingForPreferences = !!user && preferencesLoading;
-    if (loading || !isLanguageReady || !isRegionReady || !isAccentReady || waitingForPreferences) {
+    if (
+      loading ||
+      !isLanguageReady ||
+      !isRegionReady ||
+      !isAccentReady ||
+      !fontsReady ||
+      waitingForPreferences
+    ) {
       return;
     }
 
@@ -488,6 +514,7 @@ function ResolvedRootLayoutNav({
     isLanguageReady,
     isRegionReady,
     isAccentReady,
+    fontsReady,
     preferences,
     preferencesLoading,
   ]);
@@ -503,7 +530,7 @@ function ResolvedRootLayoutNav({
           gap: 12,
         }}
       >
-        <Text style={{ color: COLORS.text, fontSize: 20, fontWeight: '700' }}>
+        <Text style={{ color: COLORS.text, fontSize: 20, fontFamily: FONT_FAMILY.bold }}>
           Debug: App Stuck Loading
         </Text>
         <Text style={{ color: COLORS.textSecondary }}>
@@ -571,7 +598,10 @@ function ResolvedRootLayoutNav({
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen name="personalized-onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen
+          name="personalized-onboarding"
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
       </Stack>
     </>
   );
@@ -715,11 +745,14 @@ function RootLayoutNav() {
 
             await clearPersistedQueryCache();
           } catch (error) {
-            console.error('[RootLayout] Failed to clear persisted query cache during auth transition:', {
-              error,
-              previousUid,
-              currentUid,
-            });
+            console.error(
+              '[RootLayout] Failed to clear persisted query cache during auth transition:',
+              {
+                error,
+                previousUid,
+                currentUid,
+              }
+            );
           } finally {
             resetClientReadState();
 
@@ -808,7 +841,11 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ErrorBoundary onError={() => { void recordNegativeEvent(); }}>
+    <ErrorBoundary
+      onError={() => {
+        void recordNegativeEvent();
+      }}
+    >
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <QueryCacheBootstrap>

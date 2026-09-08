@@ -8,9 +8,10 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
-  SPACING,
   hexToRGBA,
+  SPACING,
 } from '@/src/constants/theme';
 import { IMDB_IMPORT_ROUTE } from '@/src/constants/imdbImportRoutes';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   actionRow: {
     gap: SPACING.s,
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
   progressPercent: {
     color: COLORS.text,
     fontSize: FONT_SIZE.l,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   progressTrack: {
     backgroundColor: COLORS.surfaceLight,
@@ -473,7 +474,7 @@ const styles = StyleSheet.create({
   resultTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   resultTitleRow: {
     alignItems: 'center',
@@ -483,7 +484,7 @@ const styles = StyleSheet.create({
   resultValue: {
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
   runningRow: {
     alignItems: 'center',
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
   runningText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   scrollContent: {
     gap: SPACING.l,
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
   secondaryActionButtonText: {
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   stageCard: {
     backgroundColor: COLORS.surface,
@@ -525,6 +526,6 @@ const styles = StyleSheet.create({
   stageTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.l,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

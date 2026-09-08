@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { ReminderTiming } from '@/src/types/reminder';
 import React from 'react';
@@ -44,7 +51,10 @@ export function ReminderTimingOptions({
             key={option.value}
             style={[
               styles.timingOption,
-              selectedValue === option.value && [styles.timingOptionSelected, { borderColor: accentColor }],
+              selectedValue === option.value && [
+                styles.timingOptionSelected,
+                { borderColor: accentColor },
+              ],
               isOptionDisabled && styles.timingOptionDisabled,
             ]}
             onPress={() => !isOptionDisabled && onSelect(option.value)}
@@ -112,7 +122,7 @@ const styles = StyleSheet.create({
   timingLabel: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   timingDescription: {
     fontSize: FONT_SIZE.s,

@@ -2,6 +2,7 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
   SPACING,
 } from '@/src/constants/theme';
@@ -69,7 +70,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.textSecondary,
   },
   activeText: {

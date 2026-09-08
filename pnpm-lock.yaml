@@ -9,6 +9,9 @@ dependencies:
   '@bittingz/expo-widgets':
     specifier: 3.0.2
     version: 3.0.2(patch_hash=5v32ut4p46krbjb6bi6iqaooaq)(expo@54.0.25)(react-native@0.81.5)(react@19.1.0)
+  '@expo-google-fonts/inter':
+    specifier: ^0.4.2
+    version: 0.4.2
   '@expo/vector-icons':
     specifier: ^15.0.3
     version: 15.0.3(expo-font@14.0.9)(react-native@0.81.5)(react@19.1.0)
@@ -1409,6 +1412,10 @@ packages:
       '@eslint/core': 0.15.2
       levn: 0.4.1
     dev: true
+
+  /@expo-google-fonts/inter@0.4.2:
+    resolution: {integrity: sha512-syfiImMaDmq7cFi0of+waE2M4uSCyd16zgyWxdPOY7fN2VBmSLKEzkfbZgeOjJq61kSqPBNNtXjggiQiSD6gMQ==}
+    dev: false
 
   /@expo/cli@54.0.16(expo-router@6.0.19)(expo@54.0.25)(react-native@0.81.5):
     resolution: {integrity: sha512-hY/OdRaJMs5WsVPuVSZ+RLH3VObJmL/pv5CGCHEZHN2PxZjSZSdctyKV8UcFBXTF0yIKNAJ9XLs1dlNYXHh4Cw==}

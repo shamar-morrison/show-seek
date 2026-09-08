@@ -4,7 +4,14 @@ import {
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
 import { PREMIUM_CATEGORIES, type PremiumCategory } from '@/src/constants/premiumFeatures';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -404,7 +411,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.xxl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     letterSpacing: -0.6,
@@ -421,7 +428,7 @@ const styles = StyleSheet.create({
   },
   featuresTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     textAlign: 'center',
     color: COLORS.text,
     marginBottom: SPACING.m,
@@ -474,12 +481,12 @@ const styles = StyleSheet.create({
   },
   planName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   planPriceInline: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     textAlign: 'right',
   },
   planPriceContainer: {
@@ -501,7 +508,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     textTransform: 'uppercase',
     color: COLORS.white,
   },
@@ -514,7 +521,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.black,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   legalLinks: {
     flexDirection: 'row',

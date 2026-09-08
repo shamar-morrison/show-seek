@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
   subtitle: {

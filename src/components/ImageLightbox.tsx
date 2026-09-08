@@ -1,5 +1,5 @@
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   counter: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   pager: {
     flex: 1,

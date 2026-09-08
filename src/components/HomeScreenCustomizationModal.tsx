@@ -6,7 +6,7 @@ import {
 } from '@/src/constants/homeScreenLists';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.textSecondary,
     marginTop: SPACING.m,
     marginBottom: SPACING.s,
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   applyButton: {
     flex: 1,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
 });

@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import type { ActivityItem } from '@/src/types/history';
 import { listCardStyles } from '@/src/styles/listCardStyles';
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   subtitle: {

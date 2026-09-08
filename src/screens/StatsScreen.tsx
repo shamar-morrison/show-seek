@@ -1,7 +1,14 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useHistory } from '@/src/hooks/useHistory';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -319,7 +326,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginTop: SPACING.s,
   },
@@ -345,7 +352,7 @@ const styles = StyleSheet.create({
   },
   streakValue: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   streakLabel: {
@@ -366,7 +373,7 @@ const styles = StyleSheet.create({
   },
   patternValue: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginTop: SPACING.s,
   },
@@ -389,7 +396,7 @@ const styles = StyleSheet.create({
   },
   monthName: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   comparisonBadge: {
@@ -410,7 +417,7 @@ const styles = StyleSheet.create({
   },
   monthStatValue: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   monthStatLabel: {

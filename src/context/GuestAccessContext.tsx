@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { modalLayoutStyles } from '@/src/styles/modalStyles';
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
@@ -150,7 +157,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: COLORS.white,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
   secondaryButton: {
@@ -166,7 +173,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: FONT_SIZE.m,
   },
 });

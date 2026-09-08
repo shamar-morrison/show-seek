@@ -1,6 +1,6 @@
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { modalLayoutStyles } from '@/src/styles/modalStyles';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,13 +58,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
   },
   progressText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.textSecondary,
     textAlign: 'center',
   },

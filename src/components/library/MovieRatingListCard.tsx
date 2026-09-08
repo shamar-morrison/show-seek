@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { EnrichedMovieRating } from '@/src/hooks/useEnrichedRatings';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   metaContainer: {
@@ -147,6 +147,6 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.warning,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

@@ -1,4 +1,11 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,9 +33,7 @@ export const NotificationsDisabledBanner = memo<NotificationsDisabledBannerProps
           <Text style={styles.title} numberOfLines={2}>
             {t('reminder.notificationsDisabled')}
           </Text>
-          <Text style={styles.subtitle}>
-            {t('notifications.permissionDeniedMessage')}
-          </Text>
+          <Text style={styles.subtitle}>{t('notifications.permissionDeniedMessage')}</Text>
           <Pressable
             onPress={onEnable}
             disabled={isRequesting}
@@ -36,10 +41,7 @@ export const NotificationsDisabledBanner = memo<NotificationsDisabledBannerProps
             accessibilityRole="button"
             accessibilityLabel={t('reminder.enableNotifications')}
             testID="notifications-enable-button"
-            style={({ pressed }) => [
-              styles.cta,
-              pressed && !isRequesting && styles.ctaPressed,
-            ]}
+            style={({ pressed }) => [styles.cta, pressed && !isRequesting && styles.ctaPressed]}
           >
             {isRequesting ? (
               <ActivityIndicator size="small" color={COLORS.warning} />
@@ -69,12 +71,12 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.background,
   },
   title: {
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
   },
   subtitle: {
@@ -90,7 +92,7 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.warning,
   },
 });

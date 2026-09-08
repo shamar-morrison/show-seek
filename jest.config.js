@@ -10,10 +10,11 @@ module.exports = {
       testPathIgnorePatterns: ['<rootDir>/__tests__/functions/'],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
       moduleNameMapper: {
-        '^@/assets/.*\\.(png|jpg|jpeg|gif|webp|svg|mp4)$': '<rootDir>/__mocks__/fileMock.js',
+        '^@/assets/.*\\.(png|jpg|jpeg|gif|webp|svg|mp4|ttf|otf|woff|woff2)$':
+          '<rootDir>/__mocks__/fileMock.js',
         '^@/(.*)$': '<rootDir>/$1',
         '^react-native$': '<rootDir>/__mocks__/react-native.js',
-        '\\.(png|jpg|jpeg|gif|webp|svg|mp4)$': '<rootDir>/__mocks__/fileMock.js',
+        '\\.(png|jpg|jpeg|gif|webp|svg|mp4|ttf|otf|woff|woff2)$': '<rootDir>/__mocks__/fileMock.js',
       },
       transform: {
         '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
@@ -24,6 +25,8 @@ module.exports = {
           '@react-native\\/.*|' +
           'expo(nent)?|' +
           '@expo(nent)?\\/.*|' +
+          '@expo-google-fonts\\/.*|' +
+          '@expo-google-fonts\\+.*|' +
           '@tanstack\\/.*|' +
           '@nkzw\\+.*|' +
           '@nkzw\\/.*' +

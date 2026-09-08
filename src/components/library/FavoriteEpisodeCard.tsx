@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { COLORS, FONT_SIZE } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE } from '@/src/constants/theme';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
@@ -53,13 +53,13 @@ const styles = StyleSheet.create({
   showName: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   episodeName: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: 2,
   },

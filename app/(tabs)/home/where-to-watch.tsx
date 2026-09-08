@@ -6,10 +6,11 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
+  hexToRGBA,
   HIT_SLOP,
   SPACING,
-  hexToRGBA,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -698,7 +699,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   selectorTextDisabled: {
     color: COLORS.textSecondary,
@@ -744,7 +745,7 @@ const styles = StyleSheet.create({
   resultTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   resultMetaRow: {
     flexDirection: 'row',
@@ -759,7 +760,7 @@ const styles = StyleSheet.create({
   },
   mediaTypeText: {
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     textTransform: 'uppercase',
   },
   resultProviderLogo: {
@@ -785,7 +786,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: SPACING.s,
@@ -818,7 +819,7 @@ const styles = StyleSheet.create({
   premiumTitle: {
     color: COLORS.white,
     fontSize: FONT_SIZE.l,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     textAlign: 'center',
   },
   premiumDescription: {
@@ -838,7 +839,7 @@ const styles = StyleSheet.create({
   },
   upgradeButtonText: {
     color: COLORS.white,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.s,
   },
   modalCard: {
@@ -882,7 +883,7 @@ const styles = StyleSheet.create({
   modalRowTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   modalRowSubtitle: {
     color: COLORS.textSecondary,
@@ -916,7 +917,7 @@ const styles = StyleSheet.create({
   },
   modalRetryText: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   providerLogo: {
     width: 28,

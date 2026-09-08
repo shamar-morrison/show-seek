@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { OnboardingExitIntentVariant } from '@/src/services/analytics';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -117,20 +117,14 @@ export function ExitIntentModal({
 
           <View style={styles.buttonContainer}>
             <Pressable
-              style={({ pressed }) => [
-                styles.continueButton,
-                pressed && styles.buttonPressed,
-              ]}
+              style={({ pressed }) => [styles.continueButton, pressed && styles.buttonPressed]}
               onPress={onContinue}
             >
               <Text style={styles.continueButtonText}>{t(keys.continueButton)}</Text>
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [
-                styles.exitButton,
-                pressed && styles.buttonPressed,
-              ]}
+              style={({ pressed }) => [styles.exitButton, pressed && styles.buttonPressed]}
               onPress={onExit}
             >
               <Text style={styles.exitButtonText}>{t(keys.exitButton)}</Text>
@@ -164,7 +158,7 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -192,7 +186,7 @@ const styles = StyleSheet.create({
   continueButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
   emojiContainer: {
     alignItems: 'center',
@@ -214,6 +208,6 @@ const styles = StyleSheet.create({
   exitButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

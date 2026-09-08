@@ -4,7 +4,14 @@
  * and a quick month/year picker modal.
  */
 
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
@@ -312,7 +319,7 @@ const useStyles = () =>
     },
     monthYearText: {
       fontSize: FONT_SIZE.l,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
       color: COLORS.text,
     },
 
@@ -328,7 +335,7 @@ const useStyles = () =>
     },
     weekdayText: {
       fontSize: FONT_SIZE.xs,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
       color: COLORS.textSecondary,
       textTransform: 'uppercase',
     },
@@ -363,7 +370,7 @@ const useStyles = () =>
     },
     selectedText: {
       color: COLORS.white,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     todayCell: {
       borderWidth: 1,
@@ -403,12 +410,12 @@ const useStyles = () =>
     cancelButtonText: {
       color: accentColor,
       fontSize: FONT_SIZE.m,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     confirmButtonText: {
       color: COLORS.white,
       fontSize: FONT_SIZE.m,
-      fontWeight: '600',
+      fontFamily: FONT_FAMILY.semiBold,
     },
     buttonTextDisabled: {
       color: COLORS.textSecondary,

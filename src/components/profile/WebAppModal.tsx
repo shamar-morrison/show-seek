@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Globe02Icon } from '@hugeicons/core-free-icons';
@@ -80,7 +87,7 @@ const styles = StyleSheet.create({
   },
   webAppModalTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   webAppModalDescription: {
@@ -105,12 +112,12 @@ const styles = StyleSheet.create({
   },
   webAppModalCancelText: {
     color: COLORS.text,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: FONT_SIZE.m,
   },
   webAppModalConfirmText: {
     color: COLORS.white,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: FONT_SIZE.m,
   },
 });

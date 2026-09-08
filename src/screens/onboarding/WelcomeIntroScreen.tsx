@@ -1,5 +1,5 @@
 import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: FONT_SIZE.s,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 3,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 50,
-    fontWeight: '900',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.primary,
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     color: COLORS.textSecondary,
     textAlign: 'center',
   },
@@ -201,6 +201,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

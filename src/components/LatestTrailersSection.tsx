@@ -2,7 +2,14 @@ import { tmdbApi, TrailerItem } from '@/src/api/tmdb';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { useQuery } from '@tanstack/react-query';
@@ -134,7 +141,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.m,
     paddingHorizontal: SPACING.l,
@@ -167,12 +174,12 @@ const styles = StyleSheet.create({
   mediaTypeText: {
     color: COLORS.text,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   videoTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     marginBottom: SPACING.xs,
   },
   videoType: {

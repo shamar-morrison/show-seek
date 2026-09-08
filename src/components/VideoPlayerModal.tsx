@@ -1,5 +1,12 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { extractYouTubeVideoId } from '@/src/utils/youtube';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { AlertCircleIcon, SquareArrowUpRightIcon } from '@hugeicons/core-free-icons';
@@ -194,7 +201,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   edgeToEdgePlayerContainer: {
@@ -228,7 +235,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
     marginBottom: SPACING.xs,
   },
   errorSubtitle: {
@@ -251,6 +258,6 @@ const styles = StyleSheet.create({
   fallbackButtonText: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

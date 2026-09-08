@@ -1,5 +1,5 @@
 import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     marginBottom: 12,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   scrollContent: {
     gap: 12,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   selectedText: {
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   loading: {
     height: 60,

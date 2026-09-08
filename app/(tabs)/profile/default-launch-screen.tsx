@@ -6,9 +6,10 @@ import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
+  FONT_FAMILY,
   FONT_SIZE,
-  SPACING,
   hexToRGBA,
+  SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: FONT_SIZE.l,
     color: COLORS.text,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   optionStatus: {
     width: 32,

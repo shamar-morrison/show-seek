@@ -1,5 +1,12 @@
 import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useQuery } from '@tanstack/react-query';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -120,7 +127,10 @@ const FilterSelect = ({
                   <Text
                     style={[
                       styles.optionText,
-                      item.value === value && { color: accentColor, fontWeight: '600' },
+                      item.value === value && {
+                        color: accentColor,
+                        fontFamily: FONT_FAMILY.semiBold,
+                      },
                     ]}
                   >
                     {item.label}
@@ -235,7 +245,10 @@ const SearchableFilterSelect = ({
                   <Text
                     style={[
                       styles.optionText,
-                      item.value === value && { color: accentColor, fontWeight: '600' },
+                      item.value === value && {
+                        color: accentColor,
+                        fontFamily: FONT_FAMILY.semiBold,
+                      },
                     ]}
                   >
                     {item.label}
@@ -443,7 +456,7 @@ const styles = StyleSheet.create({
   selectLabel: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   selectButton: {
     flexDirection: 'row',
@@ -511,7 +524,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
   optionItem: {
@@ -565,6 +578,6 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

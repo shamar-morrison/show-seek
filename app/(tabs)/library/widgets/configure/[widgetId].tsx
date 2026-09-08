@@ -1,6 +1,13 @@
 import { ListSelector } from '@/src/components/widgets/ListSelector';
 import { WidgetTypeSelector } from '@/src/components/widgets/WidgetTypeSelector';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING, hexToRGBA } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  hexToRGBA,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
@@ -166,7 +173,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     marginBottom: SPACING.m,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -189,7 +196,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
   },
   selectedSizeText: {
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
   previewContainer: {
     marginTop: SPACING.l,
@@ -220,7 +227,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
 });

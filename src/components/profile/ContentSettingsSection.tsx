@@ -1,6 +1,6 @@
 import { getAccentColorName } from '@/src/constants/accentColors';
 import { SUPPORTED_LANGUAGES } from '@/src/constants/supportedLanguages';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
@@ -172,6 +172,6 @@ const styles = StyleSheet.create({
   languageBadgeText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

@@ -1,4 +1,4 @@
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Film01Icon, Menu01Icon, Tv01Icon } from '@hugeicons/core-free-icons';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -76,9 +76,9 @@ const styles = StyleSheet.create({
   typeLabel: {
     fontSize: 12,
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontFamily: FONT_FAMILY.medium,
   },
   selectedLabel: {
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
   },
 });

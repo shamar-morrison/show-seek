@@ -1,7 +1,14 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useTrakt } from '@/src/context/TraktContext';
@@ -578,7 +585,7 @@ const styles = StyleSheet.create({
   },
   ratingScore: {
     fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     marginBottom: SPACING.xs,
   },
   ratingDescription: {
@@ -607,7 +614,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
   deleteButton: {
@@ -622,7 +629,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: COLORS.error,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
   disabledButton: {

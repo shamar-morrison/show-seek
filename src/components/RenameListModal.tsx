@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useRenameList } from '@/src/hooks/useLists';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.semiBold,
   },
   disabledText: {
     opacity: 0.5,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
   },
 });
