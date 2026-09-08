@@ -119,16 +119,21 @@ export default function TrailerPlayer({ visible, onClose, videoKey, title }: Tra
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.backdrop}>
-        <ModalBackground />
+      <View style={styles.overlayContainer}>
+        {/* Soft background blur / lightened dark overlay */}
+        <ModalBackground intensity={30} />
+
+        {/* Tap area above the player group to dismiss */}
         <Pressable
           testID="trailer-player-backdrop"
-          style={StyleSheet.absoluteFill}
+          style={styles.backdropFiller}
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
         />
-        <View style={styles.dialogCard}>
+
+        {/* Center content block: header sitting directly above the edge-to-edge player */}
+        <View style={styles.playerGroup}>
           <View style={styles.header}>
             <Text style={styles.headerTitle} numberOfLines={1}>
               {title || t('media.watchTrailer')}
@@ -141,11 +146,11 @@ export default function TrailerPlayer({ visible, onClose, videoKey, title }: Tra
               accessibilityLabel={t('common.close')}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <X size={18} color={COLORS.text} />
+              <X size={20} color={COLORS.text} />
             </Pressable>
           </View>
 
-          <View style={styles.playerContainer}>
+          <View style={styles.edgeToEdgePlayerContainer}>
             {visible && videoId ? (
               <YouTubeEmbedPlayer videoId={videoId} />
             ) : (
@@ -158,59 +163,59 @@ export default function TrailerPlayer({ visible, onClose, videoKey, title }: Tra
             )}
           </View>
         </View>
+
+        {/* Tap area below the player group to dismiss */}
+        <Pressable
+          testID="trailer-player-backdrop-bottom"
+          style={styles.backdropFiller}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+        />
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
+  overlayContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.m,
   },
-  dialogCard: {
+  backdropFiller: {
+    flex: 1,
     width: '100%',
-    maxWidth: 480,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.44,
-    shadowRadius: 16,
-    elevation: 10,
+  },
+  playerGroup: {
+    width: '100%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.l,
+    marginBottom: SPACING.s,
   },
   headerTitle: {
     flex: 1,
     fontSize: FONT_SIZE.m,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginRight: SPACING.s,
+    marginRight: SPACING.m,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.surfaceLight,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  playerContainer: {
+  edgeToEdgePlayerContainer: {
     width: '100%',
     aspectRatio: 16 / 9,
     backgroundColor: '#000000',
-    borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',

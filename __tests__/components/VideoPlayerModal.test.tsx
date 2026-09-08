@@ -70,6 +70,16 @@ describe('TrailerPlayer (VideoPlayerModal)', () => {
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
+  it('calls onClose when bottom backdrop space is pressed', () => {
+    const { getByTestId } = render(
+      <TrailerPlayer visible={true} onClose={mockOnClose} videoKey="dQw4w9WgXcQ" />
+    );
+
+    fireEvent.press(getByTestId('trailer-player-backdrop-bottom'));
+
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
   it('does not render YouTube player when visible is false', () => {
     const { queryByTestId } = render(
       <TrailerPlayer visible={false} onClose={mockOnClose} videoKey="dQw4w9WgXcQ" />
