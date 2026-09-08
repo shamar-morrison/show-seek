@@ -1,4 +1,5 @@
-import { SlidersHorizontal } from 'lucide-react-native';
+import { SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Movie, TVShow } from '../api/tmdb';
@@ -28,7 +29,7 @@ export interface BaseEnrichedRating {
  */
 export interface RatingListAction {
   id: string;
-  icon: typeof SlidersHorizontal;
+  icon: typeof SlidersHorizontalIcon;
   label: string;
   onPress: () => void;
   showBadge?: boolean;
@@ -46,7 +47,7 @@ export interface UseRatingScreenLogicOptions<TItem extends BaseEnrichedRating> {
   getMediaFromItem: (item: TItem) => Movie | TVShow | null;
   /** Optional search button to display in header */
   searchButton?: {
-    icon: React.ComponentType<{ size: number; color: string }>;
+    icon: IconSvgElement;
     onPress: () => void;
     showBadge?: boolean;
   };
@@ -194,7 +195,7 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
     () => [
       {
         id: 'filter',
-        icon: SlidersHorizontal,
+        icon: SlidersHorizontalIcon,
         label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,

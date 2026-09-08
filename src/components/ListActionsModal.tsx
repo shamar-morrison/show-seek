@@ -2,19 +2,21 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
-import { Ellipsis, LucideIcon } from 'lucide-react-native';
+import { MoreHorizontalIcon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 /** Standard icon to use for opening the ListActionsModal */
-export const ListActionsIcon = Ellipsis;
+export const ListActionsIcon = MoreHorizontalIcon;
 
 export interface ListAction {
   /** Unique identifier for the action */
   id: string;
-  /** Lucide icon component to display */
-  icon: LucideIcon;
+  /** HugeIcons icon data to display */
+  icon: IconSvgElement;
   /** Text label for the action */
   label: string;
   /** Callback when action is pressed */
@@ -87,7 +89,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
                 disabled={isDisabled}
               >
                 <View style={styles.iconContainer}>
-                  <IconComponent size={24} color={iconColor} />
+                  <AppIcon icon={IconComponent} size={24} color={iconColor} />
                   {action.showBadge && <View style={iconBadgeStyles.badge} />}
                 </View>
                 <Text style={[styles.label, { color: iconColor }]}>{action.label}</Text>

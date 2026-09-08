@@ -7,7 +7,8 @@ import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { Download, Share2, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, Download01Icon, Share02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -170,7 +171,7 @@ export default function ShareCardModal({
             <Pressable onPress={handleClose} disabled={isProcessing}>
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
-                  <X size={24} color={COLORS.text} />
+                  <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
                 </View>
               )}
             </Pressable>
@@ -221,7 +222,7 @@ export default function ShareCardModal({
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
                 <>
-                  <Share2 size={20} color={COLORS.white} />
+                  <AppIcon icon={Share02Icon} size={20} color={COLORS.white} />
                   <Text style={styles.actionButtonText}>{t('shareCard.share')}</Text>
                 </>
               )}
@@ -242,8 +243,10 @@ export default function ShareCardModal({
                 <ActivityIndicator size="small" color={accentColor} />
               ) : (
                 <>
-                  <Download size={20} color={accentColor} />
-                  <Text style={[styles.saveButtonText, { color: accentColor }]}>{t('shareCard.save')}</Text>
+                  <AppIcon icon={Download01Icon} size={20} color={accentColor} />
+                  <Text style={[styles.saveButtonText, { color: accentColor }]}>
+                    {t('shareCard.save')}
+                  </Text>
                 </>
               )}
             </Pressable>
@@ -324,8 +327,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
   },
-  shareButton: {
-  },
+  shareButton: {},
   saveButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,

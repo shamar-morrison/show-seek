@@ -1,16 +1,21 @@
-import { Bookmark, Circle, Folder, Heart, Play, X } from 'lucide-react-native';
+import {
+  Bookmark02Icon,
+  Cancel01Icon,
+  CircleIcon,
+  FavouriteIcon,
+  Folder01Icon,
+  PlayIcon,
+} from '@hugeicons/core-free-icons';
 
 /**
  * Centralized configuration for list indicator icons and colors.
  * Used by ListMembershipBadge, InlineListIndicators, and other indicator components.
  */
 
-// Icon component type for reuse
-export type ListIconComponent = React.ComponentType<{
-  size: number;
-  color: string;
-  fill?: string;
-}>;
+import type { IconSvgElement } from '@hugeicons/react-native';
+
+// Icon data type for reuse
+export type ListIconComponent = IconSvgElement;
 
 export interface ListIndicatorConfig {
   icon: ListIconComponent;
@@ -19,12 +24,12 @@ export interface ListIndicatorConfig {
 
 // Default list icons and colors
 export const LIST_INDICATOR_CONFIG: Record<string, ListIndicatorConfig> = {
-  watchlist: { icon: Bookmark, color: '#3B82F6' }, // Blue
-  'currently-watching': { icon: Play, color: '#F97316' }, // Orange - Play icon
-  'already-watched': { icon: Circle, color: '#22C55E' }, // Green - Dot/Circle icon
-  favorites: { icon: Heart, color: '#EF4444' }, // Red
-  dropped: { icon: X, color: '#6B7280' }, // Gray
-  custom: { icon: Folder, color: '#8B5CF6' }, // Purple - user-defined custom list
+  watchlist: { icon: Bookmark02Icon, color: '#3B82F6' }, // Blue
+  'currently-watching': { icon: PlayIcon, color: '#F97316' }, // Orange - PlayIcon icon
+  'already-watched': { icon: CircleIcon, color: '#22C55E' }, // Green - Dot/CircleIcon icon
+  favorites: { icon: FavouriteIcon, color: '#EF4444' }, // Red
+  dropped: { icon: Cancel01Icon, color: '#6B7280' }, // Gray
+  custom: { icon: Folder01Icon, color: '#8B5CF6' }, // Purple - user-defined custom list
 };
 
 // Individual color exports for direct use

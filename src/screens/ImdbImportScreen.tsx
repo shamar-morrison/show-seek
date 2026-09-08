@@ -22,7 +22,19 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { ArrowRight, Info, Upload } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  AnalyticsUpIcon,
+  ArrowLeftRightIcon,
+  ArrowRight01Icon,
+  Bookmark02Icon,
+  CheckmarkBadge01Icon,
+  File01Icon,
+  InformationCircleIcon,
+  StarIcon,
+  TickDouble01Icon,
+  Upload01Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -118,7 +130,12 @@ export default function ImdbImportScreen() {
                 style={styles.imdbHeroLogo}
               />
             </View>
-            <ArrowRight size={24} color={COLORS.textSecondary} style={styles.arrowIcon} />
+            <AppIcon
+              icon={ArrowRight01Icon}
+              size={24}
+              color={COLORS.textSecondary}
+              style={styles.arrowIcon}
+            />
             <View style={styles.showSeekIconCircle}>
               <Image
                 source={require('@/assets/images/icon.png')}
@@ -167,7 +184,7 @@ export default function ImdbImportScreen() {
               activeOpacity={ACTIVE_OPACITY}
               disabled={!hasImportableChunks || isPickingFiles}
             >
-              <Upload size={18} color={COLORS.white} />
+              <AppIcon icon={Upload01Icon} size={18} color={COLORS.white} />
               <Text style={styles.startButtonText}>{t('imdbImport.startImport')}</Text>
             </TouchableOpacity>
           </View>
@@ -227,7 +244,7 @@ export default function ImdbImportScreen() {
         {preparedImport && hasImportableChunks ? (
           <StageCard title={t('imdbImport.readyTitle')} description={t('imdbImport.readyBody')}>
             <View style={styles.inlineNote}>
-              <Info size={16} color={COLORS.textSecondary} />
+              <AppIcon icon={InformationCircleIcon} size={16} color={COLORS.textSecondary} />
               <Text style={styles.inlineNoteText}>{t('imdbImport.readyNote')}</Text>
             </View>
           </StageCard>
@@ -247,22 +264,22 @@ export default function ImdbImportScreen() {
             <CollapsibleFeatureItem
               text={t('imdbImport.features.ratingsTitle')}
               description={t('imdbImport.features.ratingsDescription')}
-              icon="star-outline"
+              icon={StarIcon}
             />
             <CollapsibleFeatureItem
               text={t('imdbImport.features.listsTitle')}
               description={t('imdbImport.features.listsDescription')}
-              icon="bookmark-outline"
+              icon={Bookmark02Icon}
             />
             <CollapsibleFeatureItem
               text={t('imdbImport.features.checkinsTitle')}
               description={t('imdbImport.features.checkinsDescription')}
-              icon="checkmark-done-outline"
+              icon={TickDouble01Icon}
             />
             <CollapsibleFeatureItem
               text={t('imdbImport.features.skipsTitle')}
               description={t('imdbImport.features.skipsDescription')}
-              icon="information-circle-outline"
+              icon={InformationCircleIcon}
             />
           </CollapsibleCategory>
 
@@ -270,22 +287,22 @@ export default function ImdbImportScreen() {
             <CollapsibleFeatureItem
               text={t('imdbImport.howItWorks.selectTitle')}
               description={t('imdbImport.howItWorks.selectDescription')}
-              icon="document-text-outline"
+              icon={File01Icon}
             />
             <CollapsibleFeatureItem
               text={t('imdbImport.howItWorks.matchTitle')}
               description={t('imdbImport.howItWorks.matchDescription')}
-              icon="swap-horizontal-outline"
+              icon={ArrowLeftRightIcon}
             />
             <CollapsibleFeatureItem
               text={t('imdbImport.howItWorks.mergeTitle')}
               description={t('imdbImport.howItWorks.mergeDescription')}
-              icon="shield-checkmark-outline"
+              icon={CheckmarkBadge01Icon}
             />
             <CollapsibleFeatureItem
               text={t('imdbImport.howItWorks.summaryTitle')}
               description={t('imdbImport.howItWorks.summaryDescription')}
-              icon="analytics-outline"
+              icon={AnalyticsUpIcon}
             />
           </CollapsibleCategory>
         </View>

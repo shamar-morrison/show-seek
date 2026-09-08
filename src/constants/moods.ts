@@ -35,8 +35,15 @@
  * TMDB Keyword IDs are shared between Movies and TV.
  */
 
-import type { LucideIcon } from 'lucide-react-native';
-import { Armchair, Brain, Ghost, Heart, Sparkles, Zap } from 'lucide-react-native';
+import {
+  BrainIcon,
+  FavouriteIcon,
+  SkullIcon,
+  Sofa01Icon,
+  SparklesIcon,
+  ZapIcon,
+} from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 
 export interface MoodConfig {
   /** Unique identifier for the mood */
@@ -45,8 +52,8 @@ export interface MoodConfig {
   translationKey: string;
   /** Emoji representation of the mood */
   emoji: string;
-  /** Lucide icon component for the mood */
-  icon: LucideIcon;
+  /** HugeIcons icon data for the mood */
+  icon: IconSvgElement;
   /** Unique accent color for the mood card (hex) */
   color: string;
   /** TMDB genre IDs for MOVIES (pipe-separated = OR logic) */
@@ -70,7 +77,7 @@ export const MOODS: MoodConfig[] = [
     id: 'cozy',
     translationKey: 'mood.cozy',
     emoji: '🧣',
-    icon: Armchair,
+    icon: Sofa01Icon,
     color: '#FF8C42', // Warm orange
     movieGenres: [35, 10751], // Comedy, Family
     tvGenres: [35, 10751], // Comedy, Family (same IDs)
@@ -87,7 +94,7 @@ export const MOODS: MoodConfig[] = [
     id: 'mindBending',
     translationKey: 'mood.mindBending',
     emoji: '🌀',
-    icon: Brain,
+    icon: BrainIcon,
     color: '#9B59B6', // Purple
     movieGenres: [9648, 878], // Mystery, Science Fiction
     tvGenres: [9648, 10765], // Mystery, Sci-Fi & Fantasy
@@ -105,7 +112,7 @@ export const MOODS: MoodConfig[] = [
     id: 'adrenaline',
     translationKey: 'mood.adrenaline',
     emoji: '⚡',
-    icon: Zap,
+    icon: ZapIcon,
     color: '#E74C3C', // Red
     movieGenres: [28, 12], // Action, Adventure
     tvGenres: [10759], // Action & Adventure (TV-specific genre)
@@ -123,7 +130,7 @@ export const MOODS: MoodConfig[] = [
     id: 'heartbreaking',
     translationKey: 'mood.heartbreaking',
     emoji: '💔',
-    icon: Heart,
+    icon: FavouriteIcon,
     color: '#3498DB', // Blue
     movieGenres: [18, 10749], // Drama, Romance
     tvGenres: [18], // Drama (Romance doesn't exist for TV)
@@ -141,7 +148,7 @@ export const MOODS: MoodConfig[] = [
     id: 'spooky',
     translationKey: 'mood.spooky',
     emoji: '👻',
-    icon: Ghost,
+    icon: SkullIcon,
     color: '#1A1A2E', // Dark purple/navy
     movieGenres: [27, 53], // Horror, Thriller
     tvGenres: [9648], // Mystery (Horror/Thriller don't exist for TV)
@@ -159,7 +166,7 @@ export const MOODS: MoodConfig[] = [
     id: 'whimsical',
     translationKey: 'mood.whimsical',
     emoji: '✨',
-    icon: Sparkles,
+    icon: SparklesIcon,
     color: '#F39C12', // Gold
     movieGenres: [14, 16], // Fantasy, Animation
     tvGenres: [10765, 16], // Sci-Fi & Fantasy, Animation

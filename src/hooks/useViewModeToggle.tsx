@@ -5,15 +5,17 @@ import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from 'expo-router';
-import { ArrowUpDown, Grid3X3, List } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowUpDownIcon, GridIcon, Menu01Icon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export type ViewMode = 'grid' | 'list';
 
 interface ActionButton {
-  /** Icon component to display */
-  icon: React.ComponentType<{ size: number; color: string }>;
+  /** HugeIcons icon data to display */
+  icon: IconSvgElement;
   /** Callback when button is pressed */
   onPress: () => void;
   /** Whether to show an active indicator badge */
@@ -137,20 +139,20 @@ export function useViewModeToggle({
           <View style={styles.headerButtons}>
             {searchButton && (
               <HeaderIconButton onPress={searchButton.onPress}>
-                <searchButton.icon size={22} color={COLORS.text} />
+                <AppIcon icon={searchButton.icon} size={22} color={COLORS.text} />
               </HeaderIconButton>
             )}
             <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'grid' ? (
-                <List size={24} color={COLORS.text} />
+                <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
               ) : (
-                <Grid3X3 size={24} color={COLORS.text} />
+                <AppIcon icon={GridIcon} size={24} color={COLORS.text} />
               )}
             </HeaderIconButton>
             {showSortButton && onSortPress && (
               <HeaderIconButton onPress={onSortPress}>
                 <View style={iconBadgeStyles.wrapper}>
-                  <ArrowUpDown size={22} color={COLORS.text} />
+                  <AppIcon icon={ArrowUpDownIcon} size={22} color={COLORS.text} />
                   {hasActiveSort && <View style={iconBadgeStyles.badge} />}
                 </View>
               </HeaderIconButton>
@@ -158,7 +160,7 @@ export function useViewModeToggle({
             {actionButton && (
               <HeaderIconButton onPress={actionButton.onPress}>
                 <View style={iconBadgeStyles.wrapper}>
-                  <actionButton.icon size={22} color={COLORS.text} />
+                  <AppIcon icon={actionButton.icon} size={22} color={COLORS.text} />
                   {actionButton.showBadge && <View style={iconBadgeStyles.badge} />}
                 </View>
               </HeaderIconButton>

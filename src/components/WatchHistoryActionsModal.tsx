@@ -1,7 +1,8 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
-import { History, Trash2 } from 'lucide-react-native';
+import { Delete02Icon, WorkHistoryIcon } from '@hugeicons/core-free-icons';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -55,7 +56,7 @@ const WatchHistoryActionsModal = forwardRef<
   const actions = [
     {
       id: 'view',
-      icon: History,
+      icon: WorkHistoryIcon,
       label: t('watched.viewWatchHistory'),
       description: t('watched.viewWatchHistoryDescription'),
       onPress: handleViewHistory,
@@ -63,7 +64,7 @@ const WatchHistoryActionsModal = forwardRef<
     },
     {
       id: 'clear',
-      icon: Trash2,
+      icon: Delete02Icon,
       label: t('watched.clearAllWatchHistory'),
       description: t('watched.clearWatchHistoryDescription'),
       onPress: handleClearHistory,
@@ -93,7 +94,7 @@ const WatchHistoryActionsModal = forwardRef<
               accessibilityRole="button"
             >
               <View style={styles.iconContainer}>
-                <IconComponent size={24} color={action.color} />
+                <AppIcon icon={IconComponent} size={24} color={action.color} />
               </View>
               <View style={styles.textContainer}>
                 <Text style={[styles.label, { color: action.color }]}>{action.label}</Text>

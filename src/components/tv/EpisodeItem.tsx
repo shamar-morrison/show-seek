@@ -4,7 +4,8 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
-import { Calendar, Check, Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Calendar03Icon, StarIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback } from 'react';
 import type { TFunction } from 'i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
@@ -77,7 +78,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
           <View style={styles.episodeStillContainer}>
             {isWatched && (
               <View style={styles.watchedOverlay}>
-                <Check size={24} color={COLORS.success} />
+                <AppIcon icon={Tick02Icon} size={24} color={COLORS.success} />
               </View>
             )}
             <MediaImage
@@ -96,7 +97,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
                 {/* User Rating */}
                 {userRating > 0 && (
                   <View style={styles.episodeRating}>
-                    <Star size={12} color={accentColor} fill={accentColor} />
+                    <AppIcon icon={StarIcon} size={12} color={accentColor} fill={accentColor} />
                     <Text style={[styles.ratingText, { color: accentColor }]}>
                       {userRating.toFixed(1)}
                     </Text>
@@ -105,7 +106,12 @@ export const EpisodeItem = memo<EpisodeItemProps>(
                 {/* TMDB Rating */}
                 {episode.vote_average > 0 && (
                   <View style={styles.episodeRating}>
-                    <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                    <AppIcon
+                      icon={StarIcon}
+                      size={12}
+                      color={COLORS.warning}
+                      fill={COLORS.warning}
+                    />
                     <Text style={styles.ratingText}>{episode.vote_average.toFixed(1)}</Text>
                   </View>
                 )}
@@ -119,7 +125,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
             <View style={styles.episodeMeta}>
               {episode.air_date && (
                 <View style={styles.metaItem}>
-                  <Calendar size={12} color={COLORS.textSecondary} />
+                  <AppIcon icon={Calendar03Icon} size={12} color={COLORS.textSecondary} />
                   <Text style={styles.metaText}>{formatDate(episode.air_date)}</Text>
                 </View>
               )}

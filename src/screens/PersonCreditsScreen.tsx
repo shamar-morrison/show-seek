@@ -52,7 +52,8 @@ import { getSortableTitle } from '@/src/utils/sortUtils';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { Film, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Film01Icon, SlidersHorizontalIcon, StarIcon, Tv01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -136,7 +137,7 @@ const GridCreditCard = React.memo<GridCreditCardProps>(
               {item.vote_average > 0 && (
                 <>
                   <Text style={mediaMetaStyles.separator}> • </Text>
-                  <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                  <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
                   <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
                 </>
               )}
@@ -355,7 +356,7 @@ export default function PersonCreditsScreen() {
     () => [
       {
         id: 'filter',
-        icon: SlidersHorizontal,
+        icon: SlidersHorizontalIcon,
         label: 'Filter Items',
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
@@ -441,9 +442,9 @@ export default function PersonCreditsScreen() {
         {credits.length === 0 ? (
           <View style={styles.emptyContainer}>
             {isTVCredits ? (
-              <Tv size={48} color={COLORS.textSecondary} />
+              <AppIcon icon={Tv01Icon} size={48} color={COLORS.textSecondary} />
             ) : (
-              <Film size={48} color={COLORS.textSecondary} />
+              <AppIcon icon={Film01Icon} size={48} color={COLORS.textSecondary} />
             )}
             <Text style={styles.emptyTitle}>
               {hasActiveFilterState

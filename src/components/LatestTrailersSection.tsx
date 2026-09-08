@@ -6,7 +6,8 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { useQuery } from '@tanstack/react-query';
-import { Film, Tv } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Film01Icon, Tv01Icon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -62,9 +63,9 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
           />
           <View style={styles.mediaTypeBadge}>
             {item.mediaType === 'movie' ? (
-              <Film size={12} color={COLORS.text} />
+              <AppIcon icon={Film01Icon} size={12} color={COLORS.text} />
             ) : (
-              <Tv size={12} color={COLORS.text} />
+              <AppIcon icon={Tv01Icon} size={12} color={COLORS.text} />
             )}
             <Text style={styles.mediaTypeText}>
               {item.mediaType === 'movie' ? t('media.movie') : t('media.tvShow')}

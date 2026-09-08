@@ -3,7 +3,8 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Calendar, Crown } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Calendar03Icon, CrownIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -14,7 +15,7 @@ const CALENDAR_BG = require('@/assets/images/calendar_bg.png');
 
 /**
  * Premium gate component displayed when non-premium users try to access
- * the Release Calendar feature. Shows a visually appealing teaser to
+ * the Release Calendar03Icon feature. Shows a visually appealing teaser to
  * encourage upgrades.
  */
 export function CalendarPremiumGate() {
@@ -55,7 +56,7 @@ export function CalendarPremiumGate() {
       <View style={styles.content}>
         {/* Icon Container */}
         <View style={styles.iconContainer}>
-          <Calendar size={48} color="#FFD700" />
+          <AppIcon icon={Calendar03Icon} size={48} color="#FFD700" />
         </View>
 
         {/* Title */}
@@ -69,7 +70,7 @@ export function CalendarPremiumGate() {
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           onPress={handleUpgrade}
         >
-          <Crown size={20} color="#000" style={styles.buttonIcon} />
+          <AppIcon icon={CrownIcon} size={20} color="#000" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>{t('calendar.upgradeToPremium')}</Text>
         </Pressable>
       </View>

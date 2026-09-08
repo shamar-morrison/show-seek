@@ -1,19 +1,3 @@
-// Mock lucide-react-native before any imports
-jest.mock('lucide-react-native', () => ({
-  Calendar: ({ testID }: { testID?: string }) => {
-    const { View } = require('react-native');
-    return <View testID={testID || 'calendar-icon'} />;
-  },
-  Check: ({ testID }: { testID?: string }) => {
-    const { View } = require('react-native');
-    return <View testID={testID || 'check-icon'} />;
-  },
-  Star: ({ testID }: { testID?: string }) => {
-    const { View } = require('react-native');
-    return <View testID={testID || 'star-icon'} />;
-  },
-}));
-
 // Mock expo-haptics
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),

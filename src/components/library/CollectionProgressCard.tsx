@@ -5,7 +5,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { CollectionProgressItem } from '@/src/types/collectionTracking';
 import { useRouter } from 'expo-router';
-import { Layers } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Layers01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -33,7 +34,7 @@ export function CollectionProgressCard({ collection }: CollectionProgressCardPro
         />
       ) : (
         <View style={[styles.backdrop, styles.placeholderBackdrop]}>
-          <Layers size={32} color={COLORS.textSecondary} />
+          <AppIcon icon={Layers01Icon} size={32} color={COLORS.textSecondary} />
         </View>
       )}
 

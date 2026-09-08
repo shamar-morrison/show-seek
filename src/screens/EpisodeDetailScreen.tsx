@@ -53,18 +53,19 @@ import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
-  ArrowLeft,
-  Calendar,
-  Check,
-  ChevronRight,
-  Clock,
-  Heart,
-  Pencil,
-  Play,
-  Star,
-  StickyNote,
-} from 'lucide-react-native';
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  Calendar03Icon,
+  Clock01Icon,
+  FavouriteIcon,
+  PencilEdit01Icon,
+  PlayIcon,
+  StarIcon,
+  StickyNote02Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -511,7 +512,7 @@ export default function EpisodeDetailScreen() {
             onPress={handleBack}
             activeOpacity={ACTIVE_OPACITY}
           >
-            <ArrowLeft size={24} color={COLORS.text} />
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
           </TouchableOpacity>
         </View>
 
@@ -522,7 +523,7 @@ export default function EpisodeDetailScreen() {
             <TouchableOpacity onPress={handleTVShowPress} activeOpacity={ACTIVE_OPACITY}>
               <Text style={detailStyles.episodeBreadcrumbLink}>{displayShowTitle}</Text>
             </TouchableOpacity>
-            <ChevronRight size={14} color={COLORS.textSecondary} />
+            <AppIcon icon={ArrowRight01Icon} size={14} color={COLORS.textSecondary} />
             <TouchableOpacity onPress={handleBack} activeOpacity={ACTIVE_OPACITY}>
               <Text style={detailStyles.episodeBreadcrumbLink}>
                 {season?.name || t('media.seasonNumber', { number: seasonNumber })}
@@ -544,13 +545,13 @@ export default function EpisodeDetailScreen() {
 
             {episode.air_date && (
               <View style={styles.metaItem}>
-                <Calendar size={16} color={COLORS.textSecondary} />
+                <AppIcon icon={Calendar03Icon} size={16} color={COLORS.textSecondary} />
                 <Text style={styles.metaText}>{formatTmdbDate(episode.air_date)}</Text>
               </View>
             )}
             {episode.runtime && (
               <View style={styles.metaItem}>
-                <Clock size={16} color={COLORS.textSecondary} />
+                <AppIcon icon={Clock01Icon} size={16} color={COLORS.textSecondary} />
                 <Text style={styles.metaText}>
                   {t('common.minutesShort', { count: episode.runtime })}
                 </Text>
@@ -558,7 +559,7 @@ export default function EpisodeDetailScreen() {
             )}
             {episode.vote_average > 0 && (
               <View style={styles.metaItem}>
-                <Star size={16} color={COLORS.warning} fill={COLORS.warning} />
+                <AppIcon icon={StarIcon} size={16} color={COLORS.warning} fill={COLORS.warning} />
                 <Text style={[styles.metaText, { color: COLORS.warning }]}>
                   {episode.vote_average.toFixed(1)}
                 </Text>
@@ -596,7 +597,8 @@ export default function EpisodeDetailScreen() {
                     />
                   ) : (
                     <View testID="episode-favorite-action-icon">
-                      <Heart
+                      <AppIcon
+                        icon={FavouriteIcon}
                         size={24}
                         color={isFavorited ? accentColor : COLORS.text}
                         fill={isFavorited ? accentColor : 'transparent'}
@@ -617,9 +619,9 @@ export default function EpisodeDetailScreen() {
                   {isNoteActionLoading ? (
                     <ActivityIndicator size="small" color={COLORS.text} />
                   ) : hasNote ? (
-                    <Pencil size={24} color={COLORS.white} />
+                    <AppIcon icon={PencilEdit01Icon} size={24} color={COLORS.white} />
                   ) : (
-                    <StickyNote size={24} color={COLORS.text} />
+                    <AppIcon icon={StickyNote02Icon} size={24} color={COLORS.text} />
                   )}
                 </View>
               </TouchableOpacity>
@@ -641,7 +643,7 @@ export default function EpisodeDetailScreen() {
                   <ActivityIndicator size="small" color={COLORS.text} />
                 ) : (
                   <>
-                    <Check size={20} color={COLORS.text} />
+                    <AppIcon icon={Tick02Icon} size={20} color={COLORS.text} />
                     <Text style={styles.watchButtonText}>
                       {isWatched
                         ? t('media.markAsUnwatched')
@@ -659,7 +661,7 @@ export default function EpisodeDetailScreen() {
                   onPress={() => handleVideoPress(trailer)}
                   activeOpacity={ACTIVE_OPACITY}
                 >
-                  <Play size={20} color={COLORS.text} fill={COLORS.text} />
+                  <AppIcon icon={PlayIcon} size={20} color={COLORS.text} fill={COLORS.text} />
                   <Text style={styles.trailerButtonText}>{t('media.watchTrailer')}</Text>
                 </TouchableOpacity>
               )}

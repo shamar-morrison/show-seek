@@ -71,7 +71,8 @@ import { setReviewQueue, traktToReview, type QueuedReview } from '@/src/utils/re
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ExternalLink } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { SquareArrowUpRightIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, RefreshControl, Text, View } from 'react-native';
@@ -252,9 +253,7 @@ export default function TVDetailScreen() {
   const openReview = useCallback(
     (review: Review, queue: QueuedReview[]) => {
       setReviewQueue(queue);
-      navigateTo(
-        `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
-      );
+      navigateTo(`/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`);
     },
     [navigateTo]
   );
@@ -428,7 +427,7 @@ export default function TVDetailScreen() {
         scrollY={scrollY}
         rightAction={
           <HeaderIconButton onPress={() => setOpenWithDrawerVisible(true)}>
-            <ExternalLink size={22} color={COLORS.white} />
+            <AppIcon icon={SquareArrowUpRightIcon} size={22} color={COLORS.white} />
           </HeaderIconButton>
         }
       />
@@ -501,9 +500,9 @@ export default function TVDetailScreen() {
             hasReminder={hasReminder}
             isLoadingReminder={isLoadingReminder}
             hasNote={hasNote}
-          isLoadingNote={isLoadingNote || isOpeningNote}
-          hasTrailer={!!trailer}
-        />
+            isLoadingNote={isLoadingNote || isOpeningNote}
+            hasTrailer={!!trailer}
+          />
 
           {userRating > 0 && <UserRating rating={userRating} />}
 
@@ -628,10 +627,7 @@ export default function TVDetailScreen() {
             reviews={traktReviews}
             shouldLoad={shouldLoadTraktReviews}
             onReviewPress={(review) => {
-              openReview(
-                review,
-                traktReviews.map(traktToReview)
-              );
+              openReview(review, traktReviews.map(traktToReview));
             }}
             onLayout={() => {
               if (!shouldLoadTraktReviews) {

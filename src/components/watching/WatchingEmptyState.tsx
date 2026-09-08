@@ -1,5 +1,6 @@
 import { COLORS } from '@/src/constants/theme';
-import { Tv } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tv01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -10,7 +11,7 @@ export const WatchingEmptyState = () => {
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <Tv size={48} color={COLORS.secondary} />
+        <AppIcon icon={Tv01Icon} size={48} color={COLORS.secondary} />
       </View>
       <Text style={styles.title}>{t('library.emptyWatchProgress')}</Text>
       <Text style={styles.message}>{t('library.emptyWatchProgressHint')}</Text>

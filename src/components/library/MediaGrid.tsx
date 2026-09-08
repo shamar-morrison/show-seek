@@ -9,9 +9,18 @@ import { ListMediaItem } from '@/src/services/ListService';
 import { PosterOverrideMediaType } from '@/src/utils/posterOverrides';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
-import { LucideIcon, Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import React, { forwardRef, memo, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { EmptyState } from './EmptyState';
 
@@ -19,7 +28,7 @@ interface MediaGridProps {
   items: ListMediaItem[];
   isLoading: boolean;
   emptyState: {
-    icon: LucideIcon;
+    icon: IconSvgElement;
     title: string;
     description: string;
     actionLabel?: string;
@@ -62,74 +71,74 @@ const MediaGridItem = memo<{
     itemHorizontalMargin,
     resolvePosterPath,
   }) => {
-  const { accentColor } = useAccentColor();
-  const handlePress = useCallback(() => onPress(item), [onPress, item]);
-  const handleLongPress = useCallback(() => onLongPress(item), [onLongPress, item]);
-  const posterPath = useMemo(
-    () => resolvePosterPath(item.media_type, item.id, item.poster_path),
-    [item.id, item.media_type, item.poster_path, resolvePosterPath]
-  );
+    const { accentColor } = useAccentColor();
+    const handlePress = useCallback(() => onPress(item), [onPress, item]);
+    const handleLongPress = useCallback(() => onLongPress(item), [onLongPress, item]);
+    const posterPath = useMemo(
+      () => resolvePosterPath(item.media_type, item.id, item.poster_path),
+      [item.id, item.media_type, item.poster_path, resolvePosterPath]
+    );
 
-  const displayTitle = item.title || item.name;
-  const releaseDate = item.release_date || item.first_air_date;
-  const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
+    const displayTitle = item.title || item.name;
+    const releaseDate = item.release_date || item.first_air_date;
+    const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
 
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.mediaCard,
-        { width: itemWidth, marginHorizontal: itemHorizontalMargin },
-        pressed && styles.mediaCardPressed,
-      ]}
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-    >
-      <View style={styles.posterContainer}>
-        <MediaImage
-          source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium) }}
-          style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
-          contentFit="cover"
-        />
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.mediaCard,
+          { width: itemWidth, marginHorizontal: itemHorizontalMargin },
+          pressed && styles.mediaCardPressed,
+        ]}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+      >
+        <View style={styles.posterContainer}>
+          <MediaImage
+            source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium) }}
+            style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
+            contentFit="cover"
+          />
+          {selectionMode && (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.selectionOverlay,
+                isSelected && { borderColor: accentColor, backgroundColor: COLORS.overlaySubtle },
+              ]}
+            />
+          )}
+        </View>
         {selectionMode && (
           <View
-            pointerEvents="none"
             style={[
-              styles.selectionOverlay,
-              isSelected && { borderColor: accentColor, backgroundColor: COLORS.overlaySubtle },
+              styles.selectionBadge,
+              isSelected && { backgroundColor: accentColor, borderColor: accentColor },
             ]}
-          />
-        )}
-      </View>
-      {selectionMode && (
-        <View
-          style={[
-            styles.selectionBadge,
-            isSelected && { backgroundColor: accentColor, borderColor: accentColor },
-          ]}
-        >
-          <AnimatedCheck visible={isSelected} />
-        </View>
-      )}
-      <View style={mediaCardStyles.info}>
-        <Text style={mediaCardStyles.title} numberOfLines={1}>
-          {displayTitle}
-        </Text>
-        {(year || item.vote_average > 0) && (
-          <View style={mediaMetaStyles.yearRatingContainer}>
-            {year && <Text style={mediaMetaStyles.year}>{year}</Text>}
-            {year && item.vote_average > 0 && <Text style={mediaMetaStyles.separator}> • </Text>}
-            {item.vote_average > 0 && (
-              <>
-                <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
-              </>
-            )}
+          >
+            <AnimatedCheck visible={isSelected} />
           </View>
         )}
-      </View>
-    </Pressable>
-  );
-}
+        <View style={mediaCardStyles.info}>
+          <Text style={mediaCardStyles.title} numberOfLines={1}>
+            {displayTitle}
+          </Text>
+          {(year || item.vote_average > 0) && (
+            <View style={mediaMetaStyles.yearRatingContainer}>
+              {year && <Text style={mediaMetaStyles.year}>{year}</Text>}
+              {year && item.vote_average > 0 && <Text style={mediaMetaStyles.separator}> • </Text>}
+              {item.vote_average > 0 && (
+                <>
+                  <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
+                </>
+              )}
+            </View>
+          )}
+        </View>
+      </Pressable>
+    );
+  }
 );
 
 MediaGridItem.displayName = 'MediaGridItem';

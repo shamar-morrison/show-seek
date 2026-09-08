@@ -18,7 +18,8 @@ import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
-import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowUpDownIcon, Search01Icon, Tv01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
@@ -103,7 +104,7 @@ export default function WatchProgressScreen() {
     return sorted;
   }, [data, sortState]);
 
-  // Search functionality
+  // Search01Icon functionality
   const {
     searchQuery,
     isSearchActive,
@@ -157,11 +158,11 @@ export default function WatchProgressScreen() {
         headerRight: () => (
           <View style={styles.headerButtons}>
             <HeaderIconButton onPress={searchButton.onPress}>
-              <Search size={22} color={COLORS.text} />
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
             </HeaderIconButton>
             <HeaderIconButton onPress={() => setSortModalVisible(true)}>
               <View style={iconBadgeStyles.wrapper}>
-                <ArrowUpDown size={22} color={COLORS.text} />
+                <AppIcon icon={ArrowUpDownIcon} size={22} color={COLORS.text} />
                 {hasActiveSort && <View style={iconBadgeStyles.badge} />}
               </View>
             </HeaderIconButton>
@@ -211,7 +212,7 @@ export default function WatchProgressScreen() {
           />
         )}
         <EmptyState
-          icon={TvIcon}
+          icon={Tv01Icon}
           title={t('library.emptyWatchProgress')}
           description={t('library.emptyWatchProgressHint')}
         />

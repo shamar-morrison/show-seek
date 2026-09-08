@@ -12,6 +12,12 @@ dependencies:
   '@expo/vector-icons':
     specifier: ^15.0.3
     version: 15.0.3(expo-font@14.0.9)(react-native@0.81.5)(react@19.1.0)
+  '@hugeicons/core-free-icons':
+    specifier: 3.1.1
+    version: 3.1.1
+  '@hugeicons/react-native':
+    specifier: ^1.0.16
+    version: 1.0.16(react-native-svg@15.12.1)(react-native@0.81.5)(react@19.1.0)
   '@lodev09/react-native-true-sheet':
     specifier: ^3.2.1
     version: 3.2.1(@react-navigation/native@7.1.26)(react-native-reanimated@4.1.1)(react-native-worklets@0.5.1)(react-native@0.81.5)(react@19.1.0)
@@ -132,9 +138,6 @@ dependencies:
   intl-pluralrules:
     specifier: ^2.0.1
     version: 2.0.1
-  lucide-react-native:
-    specifier: ^0.554.0
-    version: 0.554.0(react-native-svg@15.12.1)(react-native@0.81.5)(react@19.1.0)
   papaparse:
     specifier: ^5.5.3
     version: 5.5.3
@@ -2814,6 +2817,22 @@ packages:
     dependencies:
       hono: 4.11.3
     dev: true
+
+  /@hugeicons/core-free-icons@3.1.1:
+    resolution: {integrity: sha512-UpS2lUQFi5sKyJSWwM6rO+BnPLvVz1gsyCpPHeZyVuZqi89YH8ksliza4cwaODqKOZyeXmG8juo1ty4QtQofkg==}
+    dev: false
+
+  /@hugeicons/react-native@1.0.16(react-native-svg@15.12.1)(react-native@0.81.5)(react@19.1.0):
+    resolution: {integrity: sha512-566CkIQPK82oa2Q3sadoNrGgxlsFH7JBz+mXZ8cqelm1o+KFfNhXXgJAII5+OI4nilEBSH2qPQzo9H80uNRUOA==}
+    peerDependencies:
+      react: '>=16.0.0'
+      react-native: '>=0.60.0'
+      react-native-svg: '>=12.0.0'
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
+      react-native-svg: 15.12.1(react-native@0.81.5)(react@19.1.0)
+    dev: false
 
   /@humanfs/core@0.19.1:
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -10342,18 +10361,6 @@ packages:
       is-number: 2.1.0
       through2: 2.0.5
     dev: true
-
-  /lucide-react-native@0.554.0(react-native-svg@15.12.1)(react-native@0.81.5)(react@19.1.0):
-    resolution: {integrity: sha512-r9BIigpxb05BuU+FOZTDnLkHTdu2huC+h3ZkEdiM00HiSB5VzQjxYxkZK7s+FWxu5gsmmF2OcggElMfpO7SSrA==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-native: '*'
-      react-native-svg: ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0
-    dependencies:
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
-      react-native-svg: 15.12.1(react-native@0.81.5)(react@19.1.0)
-    dev: false
 
   /make-dir@3.1.0:
     resolution: {integrity: sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw==}

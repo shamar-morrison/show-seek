@@ -5,7 +5,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -94,10 +95,14 @@ export default function MoviesStep({ selectedMovies, onSelect, genreIds }: Movie
           accessibilityLabel={item.title}
           accessibilityState={{ selected: isSelected }}
         >
-          <MediaImage source={uri ? { uri } : undefined} style={styles.posterImage} contentFit="cover" />
+          <MediaImage
+            source={uri ? { uri } : undefined}
+            style={styles.posterImage}
+            contentFit="cover"
+          />
           {isSelected && (
             <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
-              <Check size={12} color={COLORS.white} />
+              <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
             </View>
           )}
         </Pressable>

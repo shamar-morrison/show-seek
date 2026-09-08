@@ -94,7 +94,15 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Clock, ExternalLink, Globe, Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowLeft01Icon,
+  Calendar03Icon,
+  Clock01Icon,
+  Globe02Icon,
+  SquareArrowUpRightIcon,
+  StarIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -388,9 +396,7 @@ export default function MovieDetailScreen() {
   const openReview = useCallback(
     (review: Review, queue: QueuedReview[]) => {
       setReviewQueue(queue);
-      navigateTo(
-        `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
-      );
+      navigateTo(`/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`);
     },
     [navigateTo]
   );
@@ -706,7 +712,7 @@ export default function MovieDetailScreen() {
         scrollY={scrollY}
         rightAction={
           <HeaderIconButton onPress={() => setOpenWithDrawerVisible(true)}>
-            <ExternalLink size={22} color={COLORS.white} />
+            <AppIcon icon={SquareArrowUpRightIcon} size={22} color={COLORS.white} />
           </HeaderIconButton>
         }
       />
@@ -735,7 +741,7 @@ export default function MovieDetailScreen() {
               onPress={() => router.back()}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <ArrowLeft size={22} color={COLORS.white} />
+              <AppIcon icon={ArrowLeft01Icon} size={22} color={COLORS.white} />
             </TouchableOpacity>
           </SafeAreaView>
 
@@ -772,7 +778,7 @@ export default function MovieDetailScreen() {
 
           <View style={styles.metaContainer}>
             <View style={styles.metaItem}>
-              <Calendar size={14} color={COLORS.textSecondary} />
+              <AppIcon icon={Calendar03Icon} size={14} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>
                 {displayReleaseDate
                   ? formatTmdbDate(displayReleaseDate, {
@@ -784,18 +790,18 @@ export default function MovieDetailScreen() {
               </Text>
             </View>
             <View style={styles.metaItem}>
-              <Clock size={14} color={COLORS.textSecondary} />
+              <AppIcon icon={Clock01Icon} size={14} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>{formatRuntime(movie.runtime)}</Text>
             </View>
             <View style={styles.metaItem}>
-              <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
+              <AppIcon icon={StarIcon} size={14} color={COLORS.warning} fill={COLORS.warning} />
               <Text style={[styles.metaText, { color: COLORS.warning }]}>
                 {movie.vote_average.toFixed(1)}
               </Text>
             </View>
             {movie.original_language !== 'en' && (
               <View style={styles.metaItem}>
-                <Globe size={14} color={COLORS.textSecondary} />
+                <AppIcon icon={Globe02Icon} size={14} color={COLORS.textSecondary} />
                 <Text style={styles.metaText}>{getLanguageName(movie.original_language)}</Text>
               </View>
             )}
@@ -830,11 +836,7 @@ export default function MovieDetailScreen() {
               }
               setRatingModalVisible(true);
             }}
-            onReminder={
-              canShowReminder(displayReleaseDate)
-                ? handleReminderPress
-                : undefined
-            }
+            onReminder={canShowReminder(displayReleaseDate) ? handleReminderPress : undefined}
             onNote={handleNotePress}
             onTrailer={handleTrailerPress}
             onShareCard={() => setShareCardModalVisible(true)}
@@ -980,10 +982,7 @@ export default function MovieDetailScreen() {
             reviews={traktReviews}
             shouldLoad={shouldLoadTraktReviews}
             onReviewPress={(review) => {
-              openReview(
-                review,
-                traktReviews.map(traktToReview)
-              );
+              openReview(review, traktReviews.map(traktToReview));
             }}
             onLayout={() => {
               if (!shouldLoadTraktReviews) {

@@ -4,7 +4,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Shuffle } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ShuffleIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -159,7 +160,7 @@ export default function MoodPickerScreen() {
           disabled={isSpinning}
         >
           <Animated.View style={surpriseAnimatedStyle}>
-            <Shuffle size={24} color={COLORS.text} />
+            <AppIcon icon={ShuffleIcon} size={24} color={COLORS.text} />
           </Animated.View>
           <Text style={styles.surpriseButtonText}>{t('mood.surpriseMe')}</Text>
         </Pressable>

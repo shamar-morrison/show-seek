@@ -1,6 +1,7 @@
 import { LIST_INDICATOR_COLORS } from '@/src/constants/listIndicators';
 import { COLORS, SPACING } from '@/src/constants/theme';
-import { Heart } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { FavouriteIcon } from '@hugeicons/core-free-icons';
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -10,7 +11,7 @@ interface FavoritePersonBadgeProps {
 }
 
 /**
- * Heart icon badge to indicate a person is in the user's favorites.
+ * FavouriteIcon icon badge to indicate a person is in the user's favorites.
  * Positioned absolutely in the top-right corner.
  * Parent container should have position: 'relative'.
  */
@@ -30,7 +31,7 @@ export const FavoritePersonBadge = memo<FavoritePersonBadgeProps>(({ size = 'sma
         },
       ]}
     >
-      <Heart size={iconSize} color={COLORS.white} fill={COLORS.white} />
+      <AppIcon icon={FavouriteIcon} size={iconSize} color={COLORS.white} fill={COLORS.white} />
     </View>
   );
 });

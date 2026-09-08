@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { Check, Eye } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon, ViewIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
@@ -50,9 +51,9 @@ export function MarkAsWatchedButton({
       ) : (
         <>
           {hasBeenWatched ? (
-            <Check size={20} color={COLORS.success} />
+            <AppIcon icon={Tick02Icon} size={20} color={COLORS.success} />
           ) : (
-            <Eye size={20} color={COLORS.white} />
+            <AppIcon icon={ViewIcon} size={20} color={COLORS.white} />
           )}
           <Text style={[styles.buttonText, hasBeenWatched && styles.watchedButtonText]}>
             {hasBeenWatched

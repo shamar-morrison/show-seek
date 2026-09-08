@@ -17,7 +17,8 @@ import { getGridMetrics } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { Frown, RefreshCw } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { RefreshIcon, Sad01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -122,14 +123,14 @@ function EmptyState({
   return (
     <View style={styles.emptyContainer}>
       <View style={[styles.emptyIcon, { backgroundColor: accentColor + '20' }]}>
-        <Frown size={48} color={accentColor} />
+        <AppIcon icon={Sad01Icon} size={48} color={accentColor} />
       </View>
       <Text style={styles.emptyTitle}>{t('mood.noResults')}</Text>
       <Pressable
         style={[styles.tryAnotherButton, { backgroundColor: accentColor }]}
         onPress={onTryAnother}
       >
-        <RefreshCw size={20} color={COLORS.text} />
+        <AppIcon icon={RefreshIcon} size={20} color={COLORS.text} />
         <Text style={styles.tryAnotherText}>{t('mood.tryAnother')}</Text>
       </Pressable>
     </View>
@@ -265,35 +266,38 @@ export default function MoodResultsScreen() {
   );
   const listExtraData = useMemo(() => ({ overrides, isFocused }), [isFocused, overrides]);
 
-  const renderItem = useCallback(({ item }: { item: Movie | TVShow }) => {
-    // Type guard to determine if it's a Movie or TVShow
-    const isMovie = 'title' in item;
-    const posterPathOverride = isMovie
-      ? resolvePosterPath('movie', item.id, item.poster_path)
-      : resolvePosterPath('tv', item.id, item.poster_path);
+  const renderItem = useCallback(
+    ({ item }: { item: Movie | TVShow }) => {
+      // Type guard to determine if it's a Movie or TVShow
+      const isMovie = 'title' in item;
+      const posterPathOverride = isMovie
+        ? resolvePosterPath('movie', item.id, item.poster_path)
+        : resolvePosterPath('tv', item.id, item.poster_path);
 
-    if (isMovie) {
-      return (
-        <MovieCard
-          movie={item as Movie}
-          width={itemWidth}
-          containerStyle={cardSpacingStyle}
-          posterPathOverride={posterPathOverride}
-          onLongPress={handleMediaLongPress}
-        />
-      );
-    } else {
-      return (
-        <TVShowCard
-          show={item as TVShow}
-          width={itemWidth}
-          containerStyle={cardSpacingStyle}
-          posterPathOverride={posterPathOverride}
-          onLongPress={handleMediaLongPress}
-        />
-      );
-    }
-  }, [cardSpacingStyle, handleMediaLongPress, itemWidth, resolvePosterPath]);
+      if (isMovie) {
+        return (
+          <MovieCard
+            movie={item as Movie}
+            width={itemWidth}
+            containerStyle={cardSpacingStyle}
+            posterPathOverride={posterPathOverride}
+            onLongPress={handleMediaLongPress}
+          />
+        );
+      } else {
+        return (
+          <TVShowCard
+            show={item as TVShow}
+            width={itemWidth}
+            containerStyle={cardSpacingStyle}
+            posterPathOverride={posterPathOverride}
+            onLongPress={handleMediaLongPress}
+          />
+        );
+      }
+    },
+    [cardSpacingStyle, handleMediaLongPress, itemWidth, resolvePosterPath]
+  );
 
   const keyExtractor = useCallback(
     (item: Movie | TVShow) => `${item.id}-${mediaType}`,

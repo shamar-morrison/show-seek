@@ -1,7 +1,8 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
-import { Search, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useRef } from 'react';
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +26,7 @@ export function SearchableHeader({
   searchQuery,
   onSearchChange,
   onClose,
-  placeholder = 'Search...',
+  placeholder = 'Search01Icon...',
 }: SearchableHeaderProps) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
@@ -56,7 +57,12 @@ export function SearchableHeader({
       ]}
     >
       <View style={styles.searchContainer}>
-        <Search size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
+        <AppIcon
+          icon={Search01Icon}
+          size={20}
+          color={COLORS.textSecondary}
+          style={styles.searchIcon}
+        />
         <TextInput
           ref={inputRef}
           style={styles.input}
@@ -70,7 +76,7 @@ export function SearchableHeader({
           selectionColor={accentColor}
         />
         <Pressable onPress={handleClear} hitSlop={HIT_SLOP.l} style={styles.clearButton}>
-          <X size={20} color={COLORS.textSecondary} />
+          <AppIcon icon={Cancel01Icon} size={20} color={COLORS.textSecondary} />
         </Pressable>
       </View>
     </View>

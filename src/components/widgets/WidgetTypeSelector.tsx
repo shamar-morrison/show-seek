@@ -1,13 +1,14 @@
 import { COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Film, List, Tv } from 'lucide-react-native';
+import { Film01Icon, Menu01Icon, Tv01Icon } from '@hugeicons/core-free-icons';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 const TYPES = [
-  { id: 'upcoming-movies', label: 'Movies', icon: Film },
-  { id: 'upcoming-tv', label: 'TV Shows', icon: Tv },
-  { id: 'watchlist', label: 'Watchlist', icon: List },
+  { id: 'upcoming-movies', label: 'Movies', icon: Film01Icon },
+  { id: 'upcoming-tv', label: 'TV Shows', icon: Tv01Icon },
+  { id: 'watchlist', label: 'Watchlist', icon: Menu01Icon },
 ] as const;
 
 interface WidgetTypeSelectorProps {
@@ -35,7 +36,11 @@ export function WidgetTypeSelector({ selectedType, onSelect }: WidgetTypeSelecto
             ]}
             onPress={() => onSelect(type.id)}
           >
-            <Icon size={24} color={isSelected ? accentColor : COLORS.textSecondary} />
+            <AppIcon
+              icon={Icon}
+              size={24}
+              color={isSelected ? accentColor : COLORS.textSecondary}
+            />
             <Text
               style={[
                 styles.typeLabel,
@@ -67,8 +72,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  selectedButton: {
-  },
+  selectedButton: {},
   typeLabel: {
     fontSize: 12,
     color: COLORS.textSecondary,

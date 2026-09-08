@@ -9,7 +9,8 @@ import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Calendar03Icon, Delete02Icon, PencilEdit01Icon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -140,7 +141,7 @@ export const ReminderCard = memo<ReminderCardProps>(
             {reminder.title}
           </Text>
           <View style={styles.row}>
-            <Calendar size={14} color={COLORS.textSecondary} />
+            <AppIcon icon={Calendar03Icon} size={14} color={COLORS.textSecondary} />
             <Text style={styles.releaseDate}>
               {t('media.releasesOn', { date: formatReleaseDate(reminder.releaseDate) })}
             </Text>
@@ -186,7 +187,7 @@ export const ReminderCard = memo<ReminderCardProps>(
             style={styles.actionButton}
             hitSlop={HIT_SLOP.m}
           >
-            <Pencil size={20} color={COLORS.text} />
+            <AppIcon icon={PencilEdit01Icon} size={20} color={COLORS.text} />
           </Pressable>
           <Pressable
             onPress={handleCancel}
@@ -197,7 +198,7 @@ export const ReminderCard = memo<ReminderCardProps>(
             {isLoading ? (
               <ActivityIndicator size="small" color={COLORS.error} />
             ) : (
-              <Trash2 size={20} color={COLORS.error} />
+              <AppIcon icon={Delete02Icon} size={20} color={COLORS.error} />
             )}
           </Pressable>
         </View>

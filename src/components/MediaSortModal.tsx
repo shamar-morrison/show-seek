@@ -9,7 +9,13 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
-import { ArrowDown, ArrowUp, Check, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  Cancel01Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -149,17 +155,13 @@ export default function MediaSortModal({
         style={modalLayoutStyles.container}
       >
         <ModalBackground />
-        <TouchableOpacity
-          style={modalLayoutStyles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+        <TouchableOpacity style={modalLayoutStyles.backdrop} activeOpacity={1} onPress={onClose} />
 
         <View style={modalLayoutStyles.card}>
           <View style={[modalHeaderStyles.header, styles.header]}>
             <Text style={modalHeaderStyles.title}>{t('discover.sortBy')}</Text>
             <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </Pressable>
           </View>
 
@@ -190,14 +192,14 @@ export default function MediaSortModal({
                     {isSelected && (
                       <View style={styles.directionIndicator}>
                         {localSortState.direction === 'asc' ? (
-                          <ArrowUp size={16} color={accentColor} />
+                          <AppIcon icon={ArrowUp01Icon} size={16} color={accentColor} />
                         ) : (
-                          <ArrowDown size={16} color={accentColor} />
+                          <AppIcon icon={ArrowDown01Icon} size={16} color={accentColor} />
                         )}
                       </View>
                     )}
                   </View>
-                  {isSelected && <Check size={20} color={accentColor} />}
+                  {isSelected && <AppIcon icon={Tick02Icon} size={20} color={accentColor} />}
                 </Pressable>
               );
             })}

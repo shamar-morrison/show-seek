@@ -6,7 +6,8 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { InProgressShow } from '@/src/types/episodeTracking';
 import { useRouter } from 'expo-router';
-import { Play } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { PlayIcon } from '@hugeicons/core-free-icons';
 import React, { useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -65,9 +66,7 @@ export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
 
         <View style={styles.episodeInfo}>
           <Text style={styles.episodeText} numberOfLines={1}>
-            <Text style={[styles.seasonEpLabel, { color: accentColor }]}>
-              {t('watching.next')}
-            </Text>{' '}
+            <Text style={[styles.seasonEpLabel, { color: accentColor }]}>{t('watching.next')}</Text>{' '}
             {show.nextEpisode
               ? t('watching.nextEpisode', {
                   seasonEpisode: t('media.seasonEpisode', {
@@ -89,15 +88,13 @@ export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
               ]}
             />
           </View>
-          <Text style={[styles.percentageText, { color: accentColor }]}>
-            {show.percentage}%
-          </Text>
+          <Text style={[styles.percentageText, { color: accentColor }]}>{show.percentage}%</Text>
         </View>
       </View>
 
       {!show.nextEpisode ? null : (
         <View style={styles.playIconContainer}>
-          <Play size={16} color={COLORS.text} fill={COLORS.text} />
+          <AppIcon icon={PlayIcon} size={16} color={COLORS.text} fill={COLORS.text} />
         </View>
       )}
     </TouchableOpacity>

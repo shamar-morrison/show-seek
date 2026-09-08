@@ -7,7 +7,8 @@ import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { Shuffle, Star, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, ShuffleIcon, StarIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -200,13 +201,13 @@ export default function ShuffleModal({
           {/* Header */}
           <View style={[modalHeaderStyles.header, styles.header]}>
             <View style={styles.headerTitleRow}>
-              <Shuffle size={20} color={accentColor} />
+              <AppIcon icon={ShuffleIcon} size={20} color={accentColor} />
               <Text style={modalHeaderStyles.title}>{t('shuffle.title')}</Text>
             </View>
             <Pressable onPress={handleClose} testID="shuffle-close-button">
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
-                  <X size={24} color={COLORS.text} />
+                  <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
                 </View>
               )}
             </Pressable>
@@ -231,7 +232,7 @@ export default function ShuffleModal({
               </Animated.View>
             ) : (
               <View style={[styles.poster, styles.placeholderPoster]}>
-                <Shuffle size={48} color={COLORS.textSecondary} />
+                <AppIcon icon={ShuffleIcon} size={48} color={COLORS.textSecondary} />
                 <Text style={styles.placeholderText}>{t('shuffle.shuffling')}</Text>
               </View>
             )}
@@ -245,7 +246,7 @@ export default function ShuffleModal({
               </Text>
               {displayedItem.vote_average > 0 && (
                 <View style={styles.ratingBadge}>
-                  <Star size={14} color={accentColor} fill={accentColor} />
+                  <AppIcon icon={StarIcon} size={14} color={accentColor} fill={accentColor} />
                   <Text style={styles.ratingText}>{displayedItem.vote_average.toFixed(1)}</Text>
                 </View>
               )}
@@ -279,7 +280,11 @@ export default function ShuffleModal({
               disabled={isAnimating}
               testID="shuffle-spin-again-button"
             >
-              <Shuffle size={18} color={isAnimating ? COLORS.textSecondary : accentColor} />
+              <AppIcon
+                icon={ShuffleIcon}
+                size={18}
+                color={isAnimating ? COLORS.textSecondary : accentColor}
+              />
               <Text
                 style={[
                   styles.secondaryButtonText,

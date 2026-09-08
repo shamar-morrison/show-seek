@@ -6,7 +6,13 @@ import { useTrakt } from '@/src/context/TraktContext';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { maybeWarnTraktManagedWatchedEdit } from '@/src/utils/traktManagedEdits';
-import { Calendar, CalendarDays, Clock, Trash2, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  Calendar03Icon,
+  Cancel01Icon,
+  Clock01Icon,
+  Delete02Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -148,34 +154,30 @@ export default function MarkAsWatchedModal({
   };
 
   const handleClearAll = () => {
-    Alert.alert(
-      t('watched.clearWatchHistoryTitle'),
-      t('watched.clearWatchHistoryMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.clearAll'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              maybeWarnTraktManagedWatchedEdit(
-                isTraktConnected,
-                onShowToast,
-                t('trakt.localWatchedEditWarning')
-              );
-              await onClearAll();
-              onShowToast?.(t('watched.watchHistoryCleared'));
-              onClose();
-            } catch (error) {
-              onShowToast?.(error instanceof Error ? error.message : t('watched.failedToClear'));
-            } finally {
-              setIsLoading(false);
-            }
-          },
+    Alert.alert(t('watched.clearWatchHistoryTitle'), t('watched.clearWatchHistoryMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.clearAll'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setIsLoading(true);
+            maybeWarnTraktManagedWatchedEdit(
+              isTraktConnected,
+              onShowToast,
+              t('trakt.localWatchedEditWarning')
+            );
+            await onClearAll();
+            onShowToast?.(t('watched.watchHistoryCleared'));
+            onClose();
+          } catch (error) {
+            onShowToast?.(error instanceof Error ? error.message : t('watched.failedToClear'));
+          } finally {
+            setIsLoading(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const getFormattedReleaseDate = (): string => {
@@ -204,7 +206,7 @@ export default function MarkAsWatchedModal({
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('watched.whenDidYouWatch')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
 
@@ -223,7 +225,7 @@ export default function MarkAsWatchedModal({
                 disabled={isLoading}
               >
                 <View style={styles.optionIcon}>
-                  <Clock size={20} color={accentColor} />
+                  <AppIcon icon={Clock01Icon} size={20} color={accentColor} />
                 </View>
                 <View style={styles.optionContent}>
                   <Text style={styles.optionTitle}>{t('watched.rightNow')}</Text>
@@ -239,7 +241,7 @@ export default function MarkAsWatchedModal({
                   disabled={isLoading}
                 >
                   <View style={styles.optionIcon}>
-                    <Calendar size={20} color={accentColor} />
+                    <AppIcon icon={Calendar03Icon} size={20} color={accentColor} />
                   </View>
                   <View style={styles.optionContent}>
                     <Text style={styles.optionTitle}>{t('watched.releaseDate')}</Text>
@@ -255,7 +257,7 @@ export default function MarkAsWatchedModal({
                 disabled={isLoading}
               >
                 <View style={styles.optionIcon}>
-                  <CalendarDays size={20} color={accentColor} />
+                  <AppIcon icon={Calendar03Icon} size={20} color={accentColor} />
                 </View>
                 <View style={styles.optionContent}>
                   <Text style={styles.optionTitle}>{t('watched.customDate')}</Text>
@@ -277,7 +279,7 @@ export default function MarkAsWatchedModal({
                     disabled={isLoading}
                   >
                     <View style={styles.optionIcon}>
-                      <Trash2 size={20} color={COLORS.error} />
+                      <AppIcon icon={Delete02Icon} size={20} color={COLORS.error} />
                     </View>
                     <View style={styles.optionContent}>
                       <Text style={[styles.optionTitle, styles.dangerText]}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Search } from 'lucide-react-native';
+import { Search01Icon } from '@hugeicons/core-free-icons';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +13,7 @@ export function SearchEmptyState({ height }: SearchEmptyStateProps) {
 
   const content = (
     <EmptyState
-      icon={Search}
+      icon={Search01Icon}
       title={t('common.noResults')}
       description={t('search.adjustSearch')}
     />

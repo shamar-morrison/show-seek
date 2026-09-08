@@ -7,7 +7,8 @@ import { PREMIUM_CATEGORIES, type PremiumCategory } from '@/src/constants/premiu
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BadgeCheck, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, CheckmarkBadge01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -139,7 +140,7 @@ export function PremiumPaywallScreenShell({
             style={styles.closeButton}
             testID={closeButtonTestID}
           >
-            <X size={22} color={COLORS.white} />
+            <AppIcon icon={Cancel01Icon} size={22} color={COLORS.white} />
           </TouchableOpacity>
         </Animated.View>
 
@@ -315,7 +316,7 @@ function PremiumPlanOptionCard({
       <View style={styles.planHeaderRow}>
         <View style={styles.planNameRow}>
           {isSelected ? (
-            <BadgeCheck size={18} color={accentColor} />
+            <AppIcon icon={CheckmarkBadge01Icon} size={18} color={accentColor} />
           ) : (
             <View style={styles.checkIconPlaceholder} />
           )}

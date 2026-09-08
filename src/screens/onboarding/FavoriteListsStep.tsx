@@ -8,7 +8,8 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme
 import type { HomeScreenListItem } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -91,7 +92,7 @@ function HomeListCard({ listItem, isSelected, isDisabled, onPress }: HomeListCar
       <Text style={styles.listLabel}>{listItem.label}</Text>
       {isSelected && (
         <View style={styles.checkBadge}>
-          <Check size={14} color={COLORS.white} />
+          <AppIcon icon={Tick02Icon} size={14} color={COLORS.white} />
         </View>
       )}
     </LinearGradient>

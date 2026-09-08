@@ -25,7 +25,14 @@ import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Check, Play, Star, StopCircle } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowLeft01Icon,
+  PlayIcon,
+  StarIcon,
+  StopCircleIcon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -232,7 +239,7 @@ export default function CollectionScreen() {
               onPress={() => router.back()}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <ArrowLeft size={24} color={COLORS.white} />
+              <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
             </TouchableOpacity>
           </SafeAreaView>
         </View>
@@ -288,7 +295,7 @@ export default function CollectionScreen() {
                     <ActivityIndicator size="small" color={COLORS.error} />
                   ) : (
                     <>
-                      <StopCircle size={20} color={COLORS.error} />
+                      <AppIcon icon={StopCircleIcon} size={20} color={COLORS.error} />
                       <Text style={styles.stopTrackingText}>{t('collection.stopTracking')}</Text>
                     </>
                   )}
@@ -309,7 +316,7 @@ export default function CollectionScreen() {
                   <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
                   <>
-                    <Play size={20} color={COLORS.white} fill={COLORS.white} />
+                    <AppIcon icon={PlayIcon} size={20} color={COLORS.white} fill={COLORS.white} />
                     <Text style={styles.startTrackingText}>{t('collection.startTracking')}</Text>
                   </>
                 )}
@@ -352,7 +359,7 @@ export default function CollectionScreen() {
                   />
                   {isTracked && isWatched && (
                     <View style={styles.watchedBadge}>
-                      <Check size={14} color={COLORS.white} strokeWidth={3} />
+                      <AppIcon icon={Tick02Icon} size={14} color={COLORS.white} strokeWidth={3} />
                     </View>
                   )}
                 </View>
@@ -367,7 +374,12 @@ export default function CollectionScreen() {
                     )}
                     {movie.vote_average > 0 && (
                       <View style={styles.rating}>
-                        <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
+                        <AppIcon
+                          icon={StarIcon}
+                          size={14}
+                          color={COLORS.warning}
+                          fill={COLORS.warning}
+                        />
                         <Text style={styles.ratingText}>{movie.vote_average.toFixed(1)}</Text>
                       </View>
                     )}
@@ -446,8 +458,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     gap: SPACING.s,
   },
-  startTrackingButton: {
-  },
+  startTrackingButton: {},
   stopTrackingButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,

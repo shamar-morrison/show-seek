@@ -11,7 +11,9 @@ import type { ListMediaItem } from '@/src/services/ListService';
 import type { ActivityItem, MonthWatchedItem } from '@/src/types/history';
 import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { Calendar, Plus, Star, Tv } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Calendar03Icon, PlusSignIcon, StarIcon, Tv01Icon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -34,7 +36,7 @@ function TabButton({
   count: number;
   isActive: boolean;
   onPress: () => void;
-  icon: typeof Tv;
+  icon: IconSvgElement;
   iconColor: string;
 }) {
   const { accentColor } = useAccentColor();
@@ -42,14 +44,11 @@ function TabButton({
 
   return (
     <TouchableOpacity
-      style={[
-        styles.tabButton,
-        isActive && [styles.tabButtonActive, { borderColor: accentColor }],
-      ]}
+      style={[styles.tabButton, isActive && [styles.tabButtonActive, { borderColor: accentColor }]]}
       onPress={onPress}
       activeOpacity={ACTIVE_OPACITY}
     >
-      <Icon size={16} color={isActive ? iconColor : COLORS.textSecondary} />
+      <AppIcon icon={Icon} size={16} color={isActive ? iconColor : COLORS.textSecondary} />
       <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
       <View
         style={[
@@ -221,7 +220,7 @@ export default function MonthDetailScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
-          icon={Calendar}
+          icon={Calendar03Icon}
           title={t('stats.monthDetail.noDataTitle')}
           description={t('stats.monthDetail.noDataDescription')}
         />
@@ -237,7 +236,7 @@ export default function MonthDetailScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
-          icon={Calendar}
+          icon={Calendar03Icon}
           title={t('stats.monthDetail.noActivityTitle')}
           description={t('stats.monthDetail.noActivityDescription')}
         />
@@ -253,17 +252,17 @@ export default function MonthDetailScreen() {
       <View style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
-            <Tv size={20} color={accentColor} />
+            <AppIcon icon={Tv01Icon} size={20} color={accentColor} />
             <Text style={styles.summaryValue}>{monthDetail.stats.watched}</Text>
             <Text style={styles.summaryLabel}>{t('stats.watched')}</Text>
           </View>
           <View style={styles.summaryItem}>
-            <Star size={20} color={COLORS.warning} />
+            <AppIcon icon={StarIcon} size={20} color={COLORS.warning} />
             <Text style={styles.summaryValue}>{monthDetail.stats.averageRating ?? '-'}</Text>
             <Text style={styles.summaryLabel}>{t('stats.avgRating')}</Text>
           </View>
           <View style={styles.summaryItem}>
-            <Plus size={20} color={COLORS.success} />
+            <AppIcon icon={PlusSignIcon} size={20} color={COLORS.success} />
             <Text style={styles.summaryValue}>{filteredAddedCount}</Text>
             <Text style={styles.summaryLabel}>{t('stats.added')}</Text>
           </View>
@@ -284,7 +283,7 @@ export default function MonthDetailScreen() {
           count={monthDetail.stats.watched}
           isActive={activeTab === 'watched'}
           onPress={() => setActiveTab('watched')}
-          icon={Tv}
+          icon={Tv01Icon}
           iconColor={accentColor}
         />
         <TabButton
@@ -292,7 +291,7 @@ export default function MonthDetailScreen() {
           count={rated.length}
           isActive={activeTab === 'rated'}
           onPress={() => setActiveTab('rated')}
-          icon={Star}
+          icon={StarIcon}
           iconColor={COLORS.warning}
         />
         <TabButton
@@ -300,7 +299,7 @@ export default function MonthDetailScreen() {
           count={filteredAddedCount}
           isActive={activeTab === 'added'}
           onPress={() => setActiveTab('added')}
-          icon={Plus}
+          icon={PlusSignIcon}
           iconColor={COLORS.success}
         />
       </View>
@@ -342,7 +341,9 @@ export default function MonthDetailScreen() {
       ) : (
         <FlashList
           data={rated}
-          renderItem={({ item }) => <ActivityRatingCard item={item} onPress={handleItemPress} t={t} />}
+          renderItem={({ item }) => (
+            <ActivityRatingCard item={item} onPress={handleItemPress} t={t} />
+          )}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={styles.listContent}
         />
@@ -436,8 +437,7 @@ const styles = StyleSheet.create({
     minWidth: 20,
     alignItems: 'center',
   },
-  countBadgeActive: {
-  },
+  countBadgeActive: {},
   countText: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,

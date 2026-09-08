@@ -10,7 +10,8 @@ import {
   purchaseWinbackOffer,
   type SubscriptionOption,
 } from '@/src/services/winbackOffer';
-import { AlertCircle, Clock } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { AlertCircleIcon, Clock01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -240,11 +241,9 @@ export function WinbackOfferModal({
       }
 
       console.error('[WinbackOfferModal] Purchase error:', error);
-      Alert.alert(
-        t('premium.purchaseFailedTitle'),
-        error?.message || t('errors.generic'),
-        [{ text: t('common.ok'), onPress: onDecline }]
-      );
+      Alert.alert(t('premium.purchaseFailedTitle'), error?.message || t('errors.generic'), [
+        { text: t('common.ok'), onPress: onDecline },
+      ]);
     }
   }, [
     currencyCode,
@@ -267,11 +266,7 @@ export function WinbackOfferModal({
       statusBarTranslucent
       onRequestClose={onDecline}
     >
-      <Pressable
-        style={styles.overlay}
-        onPress={onDecline}
-        testID="winback-modal-overlay"
-      >
+      <Pressable style={styles.overlay} onPress={onDecline} testID="winback-modal-overlay">
         <ModalBackground />
 
         {/* Prevent press propagation on the card */}
@@ -295,12 +290,8 @@ export function WinbackOfferModal({
           {/* Pricing Highlight Card */}
           <View style={styles.priceContainer}>
             <View style={styles.priceRow}>
-              <Text style={[styles.highlightPrice, { color: accentColor }]}>
-                {formattedPrice}
-              </Text>
-              <Text style={styles.pricePeriod}>
-                {t('winbackOffer.perWeek', '/ week')}
-              </Text>
+              <Text style={[styles.highlightPrice, { color: accentColor }]}>{formattedPrice}</Text>
+              <Text style={styles.pricePeriod}>{t('winbackOffer.perWeek', '/ week')}</Text>
             </View>
           </View>
 
@@ -308,14 +299,14 @@ export function WinbackOfferModal({
           <View style={[styles.timerContainer, isExpired && styles.timerContainerExpired]}>
             {isExpired ? (
               <>
-                <AlertCircle size={16} color={COLORS.error} />
+                <AppIcon icon={AlertCircleIcon} size={16} color={COLORS.error} />
                 <Text style={styles.expiredText}>
                   {t('winbackOffer.expiredBadge', 'Offer has expired')}
                 </Text>
               </>
             ) : (
               <>
-                <Clock size={16} color={accentColor} />
+                <AppIcon icon={Clock01Icon} size={16} color={accentColor} />
                 <Text style={styles.timerLabel}>
                   {t('winbackOffer.timerLabel', 'Offer expires in:')}
                 </Text>

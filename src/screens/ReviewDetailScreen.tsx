@@ -5,7 +5,13 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { getReviewQueue, type QueuedReview } from '@/src/utils/reviewQueue';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ChevronLeft, ChevronRight, Star, ThumbsUp } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  StarIcon,
+  ThumbsUpIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -87,7 +93,7 @@ function ReviewPage({
             <View style={styles.badges}>
               {hasRating && (
                 <View style={styles.ratingContainer}>
-                  <Star size={16} color={COLORS.warning} fill={COLORS.warning} />
+                  <AppIcon icon={StarIcon} size={16} color={COLORS.warning} fill={COLORS.warning} />
                   <Text style={styles.rating}>
                     {Number(review.author_details.rating).toFixed(1)}
                   </Text>
@@ -95,7 +101,7 @@ function ReviewPage({
               )}
               {hasLikes && (
                 <View style={styles.likesContainer}>
-                  <ThumbsUp size={14} color={COLORS.textSecondary} />
+                  <AppIcon icon={ThumbsUpIcon} size={14} color={COLORS.textSecondary} />
                   <Text style={styles.likesText}>{review.likes}</Text>
                 </View>
               )}
@@ -196,7 +202,7 @@ export default function ReviewDetailScreen() {
 
       <SafeAreaView style={styles.header} edges={['top']}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={24} color={COLORS.white} />
+          <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {hasPager && queue
@@ -214,7 +220,8 @@ export default function ReviewDetailScreen() {
               onPress={() => goToIndex(activeIndex - 1)}
               style={[styles.pagerButton, isFirst && styles.pagerButtonDisabled]}
             >
-              <ChevronLeft
+              <AppIcon
+                icon={ArrowLeft01Icon}
                 size={24}
                 color={isFirst ? COLORS.textSecondary : COLORS.white}
               />
@@ -228,7 +235,11 @@ export default function ReviewDetailScreen() {
               onPress={() => goToIndex(activeIndex + 1)}
               style={[styles.pagerButton, isLast && styles.pagerButtonDisabled]}
             >
-              <ChevronRight size={24} color={isLast ? COLORS.textSecondary : COLORS.white} />
+              <AppIcon
+                icon={ArrowRight01Icon}
+                size={24}
+                color={isLast ? COLORS.textSecondary : COLORS.white}
+              />
             </TouchableOpacity>
           </View>
         ) : (

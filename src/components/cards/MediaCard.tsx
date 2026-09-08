@@ -11,7 +11,8 @@ import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { Route, router } from 'expo-router';
-import { Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
@@ -119,7 +120,7 @@ function MediaCardComponent<T extends MediaCardItem>({
             )}
             {hasVoteAverage && (
               <>
-                <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
                 <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
               </>
             )}

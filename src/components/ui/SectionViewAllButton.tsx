@@ -1,6 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, HIT_SLOP } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { ChevronRight } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleProp, TouchableOpacity, ViewStyle } from 'react-native';
@@ -47,7 +48,7 @@ export const SectionViewAllButton = memo<SectionViewAllButtonProps>(
           style,
         ]}
       >
-        <ChevronRight size={CHEVRON_SIZE} color={COLORS.white} />
+        <AppIcon icon={ArrowRight01Icon} size={CHEVRON_SIZE} color={COLORS.white} />
       </TouchableOpacity>
     );
   }

@@ -1,40 +1,43 @@
 import { DEFAULT_ACCENT_COLOR } from '@/src/constants/accentColors';
 import { COLORS } from '@/src/constants/theme';
 import {
-  Bookmark,
-  Check,
-  CirclePlay,
-  Folder,
-  Heart,
-  ListCheck,
-  LucideIcon,
-  X,
-} from 'lucide-react-native';
+  Bookmark02Icon,
+  Cancel01Icon,
+  CheckListIcon,
+  FavouriteIcon,
+  Folder01Icon,
+  PlayCircle02Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 
 /**
- * Get the Lucide icon component associated with a list ID.
+ * Get the HugeIcons icon data associated with a list ID.
  */
-export const getListIconComponent = (listId: string): LucideIcon => {
+export const getListIconComponent = (listId: string): IconSvgElement => {
   switch (listId) {
     case 'watchlist':
-      return Bookmark;
+      return Bookmark02Icon;
     case 'currently-watching':
-      return CirclePlay;
+      return PlayCircle02Icon;
     case 'already-watched':
-      return Check;
+      return Tick02Icon;
     case 'favorites':
-      return Heart;
+      return FavouriteIcon;
     case 'dropped':
-      return X;
+      return Cancel01Icon;
     default:
-      return Folder;
+      return Folder01Icon;
   }
 };
 
 /**
  * Get the color associated with a list ID.
  */
-export const getListColor = (listId: string, accentColor: string = DEFAULT_ACCENT_COLOR): string => {
+export const getListColor = (
+  listId: string,
+  accentColor: string = DEFAULT_ACCENT_COLOR
+): string => {
   switch (listId) {
     case 'watchlist':
       return '#3b82f6'; // Blue
@@ -54,7 +57,7 @@ export const getListColor = (listId: string, accentColor: string = DEFAULT_ACCEN
 /**
  * Default icon for items in multiple lists
  */
-export const MultipleListsIcon = ListCheck;
+export const MultipleListsIcon = CheckListIcon;
 
 /**
  * Default color for items in multiple lists

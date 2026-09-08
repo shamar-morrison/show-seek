@@ -4,6 +4,7 @@ import {
   LIST_INDICATOR_CONFIG,
 } from '@/src/constants/listIndicators';
 import { COLORS, SPACING } from '@/src/constants/theme';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -57,7 +58,12 @@ export const ListMembershipBadge = memo<ListMembershipBadgeProps>(
                 },
               ]}
             >
-              <IconComponent size={iconSize} color={COLORS.white} fill={COLORS.white} />
+              <AppIcon
+                icon={IconComponent}
+                size={iconSize}
+                color={COLORS.white}
+                fill={COLORS.white}
+              />
             </View>
           );
         })}
@@ -143,7 +149,12 @@ export const InlineListIndicators = memo<InlineListIndicatorsProps>(
                 },
               ]}
             >
-              <IconComponent size={iconSize} color={COLORS.white} fill={COLORS.white} />
+              <AppIcon
+                icon={IconComponent}
+                size={iconSize}
+                color={COLORS.white}
+                fill={COLORS.white}
+              />
             </View>
           );
         })}

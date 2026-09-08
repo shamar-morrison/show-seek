@@ -1,6 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { AlertCircle } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -17,7 +18,7 @@ export const ErrorState = memo<ErrorStateProps>(({ title, message, onRetry }) =>
 
   return (
     <View style={styles.container}>
-      <AlertCircle size={48} color={COLORS.error} />
+      <AppIcon icon={AlertCircleIcon} size={48} color={COLORS.error} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       {onRetry && (

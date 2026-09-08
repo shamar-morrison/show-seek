@@ -1,7 +1,16 @@
 import RatingButton from '@/src/components/RatingButton';
 import ReminderButton from '@/src/components/ReminderButton';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
-import { Check, ImageIcon, LucideIcon, Pencil, Play, Plus, StickyNote } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  Image01Icon,
+  PencilEdit01Icon,
+  PlayIcon,
+  PlusSignIcon,
+  StickyNote02Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
@@ -19,7 +28,7 @@ export interface MediaActionButtonsProps {
   // Add to List state
   isInAnyList: boolean;
   isLoadingLists: boolean;
-  listIcon?: LucideIcon;
+  listIcon?: IconSvgElement;
   listColor?: string;
 
   // Rating state
@@ -83,12 +92,12 @@ export function MediaActionButtons({
             <ActivityIndicator size="small" color={COLORS.white} />
           ) : isInAnyList ? (
             listIcon ? (
-              React.createElement(listIcon, { size: 24, color: COLORS.white })
+              <AppIcon icon={listIcon} size={24} color={COLORS.white} />
             ) : (
-              <Check size={24} color={COLORS.white} />
+              <AppIcon icon={Tick02Icon} size={24} color={COLORS.white} />
             )
           ) : (
-            <Plus size={24} color={COLORS.white} />
+            <AppIcon icon={PlusSignIcon} size={24} color={COLORS.white} />
           )}
         </TouchableOpacity>
 
@@ -119,9 +128,9 @@ export function MediaActionButtons({
             {isLoadingNote ? (
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : hasNote ? (
-              <Pencil size={24} color={COLORS.white} />
+              <AppIcon icon={PencilEdit01Icon} size={24} color={COLORS.white} />
             ) : (
-              <StickyNote size={24} color={COLORS.white} />
+              <AppIcon icon={StickyNote02Icon} size={24} color={COLORS.white} />
             )}
           </TouchableOpacity>
         </View>
@@ -134,7 +143,7 @@ export function MediaActionButtons({
               activeOpacity={ACTIVE_OPACITY}
               onPress={onShareCard}
             >
-              <ImageIcon size={24} color={COLORS.white} />
+              <AppIcon icon={Image01Icon} size={24} color={COLORS.white} />
             </TouchableOpacity>
           </View>
         )}
@@ -148,7 +157,7 @@ export function MediaActionButtons({
           disabled={!hasTrailer}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Play size={18} color={COLORS.white} fill={COLORS.white} />
+          <AppIcon icon={PlayIcon} size={18} color={COLORS.white} fill={COLORS.white} />
           <Text style={styles.playButtonText}>{t('media.watchTrailer')}</Text>
         </TouchableOpacity>
       </View>

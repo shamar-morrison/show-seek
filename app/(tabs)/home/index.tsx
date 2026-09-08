@@ -26,7 +26,8 @@ import {
 import { filterCustomLists } from '@/src/constants/lists';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Menu, Settings2 } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Menu01Icon, Settings02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -45,7 +46,11 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { preferences, homeScreenLists, isLoading: isLoadingPreferences } = usePreferences();
-  const { data: userLists, isLoading: isLoadingLists, isError: isListsError } = useLists({
+  const {
+    data: userLists,
+    isLoading: isLoadingLists,
+    isError: isListsError,
+  } = useLists({
     enabled: !!user,
   });
   const repairHomeScreenLists = useUpdateHomeScreenLists();
@@ -58,7 +63,8 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const storedHomeScreenLists = preferences.homeScreenLists;
-  const hasCustomSelections = storedHomeScreenLists?.some((item) => item.type === 'custom') ?? false;
+  const hasCustomSelections =
+    storedHomeScreenLists?.some((item) => item.type === 'custom') ?? false;
   const customLists = useMemo(() => filterCustomLists(userLists), [userLists]);
   const resolvedHomeScreenLists = useMemo(() => {
     if (hasCustomSelections && (isLoadingLists || isListsError)) {
@@ -207,13 +213,13 @@ export default function HomeScreen() {
     <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <HeaderIconButton onPress={handleOpenDrawer}>
-          <Menu size={24} color={COLORS.text} />
+          <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
         </HeaderIconButton>
         <View style={styles.headerTitleContainer} pointerEvents="none">
           <Text style={[styles.headerTitle, { color: accentColor }]}>{t('common.appName')}</Text>
         </View>
         <HeaderIconButton onPress={handleOpenCustomization}>
-          <Settings2 size={24} color={COLORS.text} />
+          <AppIcon icon={Settings02Icon} size={24} color={COLORS.text} />
         </HeaderIconButton>
       </View>
 

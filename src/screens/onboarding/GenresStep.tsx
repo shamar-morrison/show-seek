@@ -4,7 +4,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -219,7 +220,7 @@ function GenreCard({
       <Text style={styles.genreLabel}>{genre.name}</Text>
       {isSelected && (
         <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
-          <Check size={14} color={COLORS.white} />
+          <AppIcon icon={Tick02Icon} size={14} color={COLORS.white} />
         </View>
       )}
     </LinearGradient>

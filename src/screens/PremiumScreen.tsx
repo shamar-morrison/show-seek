@@ -15,7 +15,8 @@ import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { trackPremiumPaywallView } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -138,7 +139,7 @@ export default function PremiumScreen() {
     return (
       <SafeAreaView style={screenStyles.container}>
         <View style={styles.content}>
-          <Ionicons name="checkmark-circle" size={80} color={accentColor} />
+          <AppIcon icon={CheckmarkCircle02Icon} size={80} color={accentColor} />
           <Text style={styles.title}>{t('premium.alreadyPremiumTitle')}</Text>
           <Text style={styles.description}>{t('premium.alreadyPremiumDescription')}</Text>
           <TouchableOpacity

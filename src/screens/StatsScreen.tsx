@@ -8,28 +8,24 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import type { MonthlyStats } from '@/src/types/history';
 import { useRouter } from 'expo-router';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
-  ArrowDown,
-  ArrowUp,
-  BarChart3,
-  Calendar,
-  Clock,
-  Flame,
-  Minus,
-  Plus,
-  Star,
-  Trophy,
-  Tv,
-} from 'lucide-react-native';
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  BarChartIcon,
+  Calendar03Icon,
+  Clock01Icon,
+  FireIcon,
+  Medal01Icon,
+  MinusSignIcon,
+  PlusSignIcon,
+  StarIcon,
+  Tv01Icon,
+} from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
@@ -41,14 +37,14 @@ function StatCard({
   value,
   iconColor,
 }: {
-  icon: typeof Flame;
+  icon: IconSvgElement;
   label: string;
   value: string | number;
   iconColor: string;
 }) {
   return (
     <View style={styles.statCard}>
-      <Icon size={24} color={iconColor} />
+      <AppIcon icon={Icon} size={24} color={iconColor} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -64,7 +60,7 @@ function ComparisonBadge({ value, label }: { value: number; label: string }) {
   if (value === 0) {
     return (
       <View style={styles.comparisonBadge}>
-        <Minus size={12} color={COLORS.textSecondary} />
+        <AppIcon icon={MinusSignIcon} size={12} color={COLORS.textSecondary} />
         <Text style={[styles.comparisonText, { color: COLORS.textSecondary }]}>
           {t('stats.noChange', { label })}
         </Text>
@@ -74,11 +70,11 @@ function ComparisonBadge({ value, label }: { value: number; label: string }) {
 
   const isPositive = value > 0;
   const color = isPositive ? COLORS.success : COLORS.error;
-  const Icon = isPositive ? ArrowUp : ArrowDown;
+  const Icon = isPositive ? ArrowUp01Icon : ArrowDown01Icon;
 
   return (
     <View style={styles.comparisonBadge}>
-      <Icon size={12} color={color} />
+      <AppIcon icon={Icon} size={12} color={color} />
       <Text style={[styles.comparisonText, { color }]}>
         {isPositive ? '+' : ''}
         {value}% {label}
@@ -99,26 +95,29 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
       <View style={styles.monthHeader}>
         <Text style={styles.monthName}>{stats.monthName}</Text>
         {stats.comparisonToPrevious && (
-          <ComparisonBadge value={stats.comparisonToPrevious.watched} label={t('stats.vsLastMonth')} />
+          <ComparisonBadge
+            value={stats.comparisonToPrevious.watched}
+            label={t('stats.vsLastMonth')}
+          />
         )}
       </View>
 
       {hasActivity ? (
         <View style={styles.monthStats}>
           <View style={styles.monthStatItem}>
-            <Tv size={16} color={COLORS.textSecondary} />
+            <AppIcon icon={Tv01Icon} size={16} color={COLORS.textSecondary} />
             <Text style={styles.monthStatValue}>{stats.watched}</Text>
             <Text style={styles.monthStatLabel}>{t('stats.watched')}</Text>
           </View>
 
           <View style={styles.monthStatItem}>
-            <Star size={16} color={COLORS.warning} />
+            <AppIcon icon={StarIcon} size={16} color={COLORS.warning} />
             <Text style={styles.monthStatValue}>{stats.averageRating ?? '-'}</Text>
             <Text style={styles.monthStatLabel}>{t('stats.avgRating')}</Text>
           </View>
 
           <View style={styles.monthStatItem}>
-            <Plus size={16} color={COLORS.success} />
+            <AppIcon icon={PlusSignIcon} size={16} color={COLORS.success} />
             <Text style={styles.monthStatValue}>{stats.addedToLists}</Text>
             <Text style={styles.monthStatLabel}>{t('stats.added')}</Text>
           </View>
@@ -185,7 +184,7 @@ export default function StatsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
-          icon={BarChart3}
+          icon={BarChartIcon}
           title={t('stats.noActivityTitle')}
           description={t('stats.noActivityDescription')}
         />
@@ -204,19 +203,19 @@ export default function StatsScreen() {
           </Text>
           <View style={styles.statsGrid}>
             <StatCard
-              icon={Tv}
+              icon={Tv01Icon}
               label={t('stats.watched')}
               value={historyData.totalWatched}
               iconColor={accentColor}
             />
             <StatCard
-              icon={Star}
+              icon={StarIcon}
               label={t('stats.rated')}
               value={historyData.totalRated}
               iconColor={COLORS.warning}
             />
             <StatCard
-              icon={Plus}
+              icon={PlusSignIcon}
               label={t('stats.added')}
               value={historyData.totalAddedToLists}
               iconColor={COLORS.success}
@@ -229,7 +228,7 @@ export default function StatsScreen() {
           <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>{t('stats.streaks')}</Text>
           <View style={styles.streakRow}>
             <View style={styles.streakItem}>
-              <Flame size={28} color="#FF6B35" />
+              <AppIcon icon={FireIcon} size={28} color="#FF6B35" />
               <View style={styles.streakInfo}>
                 <Text style={styles.streakValue}>
                   {t('stats.streakValue', { count: historyData.currentStreak })}
@@ -238,7 +237,7 @@ export default function StatsScreen() {
               </View>
             </View>
             <View style={styles.streakItem}>
-              <Trophy size={28} color="#FFD700" />
+              <AppIcon icon={Medal01Icon} size={28} color="#FFD700" />
               <View style={styles.streakInfo}>
                 <Text style={styles.streakValue}>
                   {t('stats.streakValue', { count: historyData.longestStreak })}
@@ -258,14 +257,14 @@ export default function StatsScreen() {
             <View style={styles.patternRow}>
               {historyData.mostActiveDay && (
                 <View style={styles.patternItem}>
-                  <Calendar size={24} color={accentColor} />
+                  <AppIcon icon={Calendar03Icon} size={24} color={accentColor} />
                   <Text style={styles.patternValue}>{historyData.mostActiveDay}</Text>
                   <Text style={styles.patternLabel}>{t('stats.mostActiveDay')}</Text>
                 </View>
               )}
               {historyData.mostActiveTimeOfDay && (
                 <View style={styles.patternItem}>
-                  <Clock size={24} color={accentColor} />
+                  <AppIcon icon={Clock01Icon} size={24} color={accentColor} />
                   <Text style={styles.patternValue}>{historyData.mostActiveTimeOfDay}</Text>
                   <Text style={styles.patternLabel}>{t('stats.preferredTime')}</Text>
                 </View>

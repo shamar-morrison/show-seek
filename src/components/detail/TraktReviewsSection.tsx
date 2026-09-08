@@ -3,9 +3,13 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { TraktReview } from '@/src/types/trakt';
 import { traktToReview } from '@/src/utils/reviewQueue';
-import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
+import {
+  HorizontalFlashList,
+  HORIZONTAL_SCROLL_PROPS,
+} from '@/src/components/ui/HorizontalFlashList';
 import { HORIZONTAL_LIST_CONTENT_STYLE } from '@/src/components/ui/horizontalScrollProps';
-import { Star, ThumbsUp } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon, ThumbsUpIcon } from '@hugeicons/core-free-icons';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
@@ -69,13 +73,13 @@ const TraktReviewCard = memo(
             <View style={localStyles.reviewMeta}>
               {review.user_rating && (
                 <View style={styles.reviewRating}>
-                  <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                  <AppIcon icon={StarIcon} size={12} color={COLORS.warning} fill={COLORS.warning} />
                   <Text style={styles.reviewRatingText}>{review.user_rating.toFixed(1)}</Text>
                 </View>
               )}
               {review.likes > 0 && (
                 <View style={localStyles.likesContainer}>
-                  <ThumbsUp size={12} color={COLORS.textSecondary} />
+                  <AppIcon icon={ThumbsUpIcon} size={12} color={COLORS.textSecondary} />
                   <Text style={localStyles.likesText}>{review.likes}</Text>
                 </View>
               )}
@@ -112,7 +116,12 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
             <TraktLogo size={24} />
             <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
-          <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACING.l }} contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}>
+          <ScrollView
+            {...HORIZONTAL_SCROLL_PROPS}
+            showsHorizontalScrollIndicator={false}
+            style={{ marginHorizontal: -SPACING.l }}
+            contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}
+          >
             {[1, 2, 3].map((i) => (
               <View key={i} style={styles.reviewCardSkeleton}>
                 <View style={styles.skeletonHeader}>

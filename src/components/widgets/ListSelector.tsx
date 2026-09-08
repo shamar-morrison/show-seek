@@ -3,7 +3,8 @@ import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -57,7 +58,7 @@ export function ListSelector({ selectedListId, onSelect }: ListSelectorProps) {
               >
                 {list.name}
               </Text>
-              {isSelected && <Check size={16} color={accentColor} />}
+              {isSelected && <AppIcon icon={Tick02Icon} size={16} color={accentColor} />}
             </Pressable>
           );
         })}
@@ -90,8 +91,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
   },
-  selectedButton: {
-  },
+  selectedButton: {},
   listName: {
     fontSize: 14,
     color: COLORS.text,

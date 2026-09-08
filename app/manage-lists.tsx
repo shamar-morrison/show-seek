@@ -7,7 +7,13 @@ import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Pencil, PlusCircle, Trash2 } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowLeft01Icon,
+  Delete02Icon,
+  PencilEdit01Icon,
+  PlusSignCircleIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -98,7 +104,7 @@ export default function ManageListsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ArrowLeft size={24} color={COLORS.text} />
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={styles.title}>{t('library.manageLists')}</Text>
           <View style={{ width: 28 }} />
@@ -128,7 +134,9 @@ export default function ManageListsScreen() {
                       <Text style={styles.listCount}>
                         {(() => {
                           const count = Object.keys(list.items || {}).length;
-                          return count === 1 ? t('library.itemCountOne') : t('library.itemCount', { count });
+                          return count === 1
+                            ? t('library.itemCountOne')
+                            : t('library.itemCount', { count });
                         })()}
                       </Text>
                     </View>
@@ -151,7 +159,7 @@ export default function ManageListsScreen() {
                   activeOpacity={ACTIVE_OPACITY}
                   style={styles.createButton}
                 >
-                  <PlusCircle size={22} color={COLORS.text} />
+                  <AppIcon icon={PlusSignCircleIcon} size={22} color={COLORS.text} />
                 </TouchableOpacity>
               </View>
               {customLists.length > 0 ? (
@@ -189,7 +197,11 @@ export default function ManageListsScreen() {
                             activeOpacity={ACTIVE_OPACITY}
                             disabled={actionsDisabled}
                           >
-                            <Pencil size={20} color={COLORS.textSecondary} />
+                            <AppIcon
+                              icon={PencilEdit01Icon}
+                              size={20}
+                              color={COLORS.textSecondary}
+                            />
                           </TouchableOpacity>
                           <TouchableOpacity
                             testID={`delete-list-${list.id}`}
@@ -201,7 +213,7 @@ export default function ManageListsScreen() {
                             {isDeletingThis ? (
                               <ActivityIndicator size="small" color={COLORS.error} />
                             ) : (
-                              <Trash2 size={20} color={COLORS.error} />
+                              <AppIcon icon={Delete02Icon} size={20} color={COLORS.error} />
                             )}
                           </TouchableOpacity>
                         </View>

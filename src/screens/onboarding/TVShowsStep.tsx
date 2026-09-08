@@ -10,7 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
 
 interface TVShowsStepProps {
@@ -132,7 +133,7 @@ export default function TVShowsStep({ selectedShows, onSelect, genreIds }: TVSho
           />
           {isSelected && (
             <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
-              <Check size={12} color={COLORS.white} />
+              <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
             </View>
           )}
         </Pressable>

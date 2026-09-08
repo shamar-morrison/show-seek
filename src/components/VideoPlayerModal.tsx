@@ -1,18 +1,11 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { extractYouTubeVideoId } from '@/src/utils/youtube';
-import { AlertCircle, ExternalLink } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { AlertCircleIcon, SquareArrowUpRightIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  Linking,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useYouTubeEvent, useYouTubePlayer, YoutubeView } from 'react-native-youtube-bridge';
 
 export interface TrailerPlayerProps {
@@ -77,7 +70,12 @@ function YouTubeEmbedPlayer({ videoId }: YouTubeEmbedPlayerProps) {
   if (hasError) {
     return (
       <View style={styles.stateContainer}>
-        <AlertCircle size={32} color={COLORS.error || '#E50914'} style={styles.stateIcon} />
+        <AppIcon
+          icon={AlertCircleIcon}
+          size={32}
+          color={COLORS.error || '#E50914'}
+          style={styles.stateIcon}
+        />
         <Text style={styles.errorTitle}>{t('common.error')}</Text>
         <Text style={styles.errorSubtitle}>{t('errors.unableToOpenVideo')}</Text>
         <Pressable
@@ -86,7 +84,12 @@ function YouTubeEmbedPlayer({ videoId }: YouTubeEmbedPlayerProps) {
           accessibilityRole="button"
           accessibilityLabel="Open in YouTube"
         >
-          <ExternalLink size={16} color={COLORS.text} style={styles.buttonIcon} />
+          <AppIcon
+            icon={SquareArrowUpRightIcon}
+            size={16}
+            color={COLORS.text}
+            style={styles.buttonIcon}
+          />
           <Text style={styles.fallbackButtonText}>
             {t('media.openInYouTube', 'Open in YouTube')}
           </Text>
@@ -145,7 +148,12 @@ export default function TrailerPlayer({ visible, onClose, videoKey, title }: Tra
               <YouTubeEmbedPlayer videoId={videoId} />
             ) : (
               <View style={styles.stateContainer}>
-                <AlertCircle size={32} color={COLORS.textSecondary} style={styles.stateIcon} />
+                <AppIcon
+                  icon={AlertCircleIcon}
+                  size={32}
+                  color={COLORS.textSecondary}
+                  style={styles.stateIcon}
+                />
                 <Text style={styles.errorSubtitle}>
                   {t('media.noTrailerAvailable', 'No trailer available')}
                 </Text>

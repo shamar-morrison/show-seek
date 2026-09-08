@@ -37,7 +37,14 @@ import { createSortAction } from '@/src/utils/listActions';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Bookmark, Pencil, Search, Shuffle, SlidersHorizontal, Trash2 } from 'lucide-react-native';
+import {
+  Bookmark02Icon,
+  Delete02Icon,
+  PencilEdit01Icon,
+  Search01Icon,
+  ShuffleIcon,
+  SlidersHorizontalIcon,
+} from '@hugeicons/core-free-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -191,7 +198,7 @@ export default function CustomListDetailScreen() {
 
   const hasActiveFilterState = hasActiveFilters(filterState);
 
-  // Search functionality
+  // Search01Icon functionality
   const {
     searchQuery,
     isSearchActive,
@@ -284,14 +291,14 @@ export default function CustomListDetailScreen() {
     () => [
       {
         id: 'shuffle',
-        icon: Shuffle,
+        icon: ShuffleIcon,
         label: t('library.shufflePick'),
         onPress: () => setShuffleModalVisible(true),
         disabled: !canShuffle,
       },
       {
         id: 'filter',
-        icon: SlidersHorizontal,
+        icon: SlidersHorizontalIcon,
         label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
@@ -302,13 +309,13 @@ export default function CustomListDetailScreen() {
       }),
       {
         id: 'rename',
-        icon: Pencil,
+        icon: PencilEdit01Icon,
         label: t('library.renameList'),
         onPress: handleRenameList,
       },
       {
         id: 'delete',
-        icon: Trash2,
+        icon: Delete02Icon,
         label: t('library.deleteList'),
         onPress: handleDeleteList,
         color: COLORS.error,
@@ -319,7 +326,7 @@ export default function CustomListDetailScreen() {
 
   const filterEmptyState = useMemo(
     () => ({
-      icon: SlidersHorizontal,
+      icon: SlidersHorizontalIcon,
       title: t('discover.noResultsWithFilters'),
       description: t('discover.adjustFilters'),
       actionLabel: t('common.reset'),
@@ -330,7 +337,7 @@ export default function CustomListDetailScreen() {
 
   const defaultEmptyState = useMemo(
     () => ({
-      icon: Bookmark,
+      icon: Bookmark02Icon,
       title: t('library.emptyList'),
       description: t('library.emptyListHint'),
       actionLabel: t('library.browseContent'),
@@ -434,7 +441,7 @@ export default function CustomListDetailScreen() {
             emptyState={
               searchQuery
                 ? {
-                    icon: Search,
+                    icon: Search01Icon,
                     title: t('common.noResults'),
                     description: t('search.adjustSearch'),
                   }

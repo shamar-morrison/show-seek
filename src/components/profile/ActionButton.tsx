@@ -7,14 +7,15 @@ import {
   SPACING,
   hexToRGBA,
 } from '@/src/constants/theme';
-import { LucideIcon } from 'lucide-react-native';
+import type { IconSvgElement } from '@hugeicons/react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface ActionButtonProps {
-  /** Lucide icon component to render */
-  icon?: LucideIcon;
-  /** Custom icon component to render instead of the standard Lucide icon */
+  /** HugeIcons icon data to render */
+  icon?: IconSvgElement;
+  /** Custom icon component to render instead of the standard icon */
   customIcon?: React.ReactNode;
   /** Button label text */
   label: string;
@@ -75,7 +76,8 @@ export function ActionButton({
       ) : customIcon ? (
         customIcon
       ) : Icon ? (
-        <Icon
+        <AppIcon
+          icon={Icon}
           size={20}
           color={isLocked ? COLORS.textSecondary : isDanger ? COLORS.error : COLORS.text}
         />

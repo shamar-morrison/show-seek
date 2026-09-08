@@ -13,7 +13,8 @@ import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
-import { Calendar, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Calendar03Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -156,7 +157,7 @@ export default function EditTimingModal({
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('reminder.editTimingTitle')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
 
@@ -170,7 +171,7 @@ export default function EditTimingModal({
 
             {/* Release Date Display */}
             <View style={styles.releaseDateContainer}>
-              <Calendar size={16} color={COLORS.textSecondary} />
+              <AppIcon icon={Calendar03Icon} size={16} color={COLORS.textSecondary} />
               <Text style={styles.releaseDate}>
                 {getReleaseLabel()} {formatReleaseDate(reminder.releaseDate)}
               </Text>

@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Check, User } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon, UserIcon } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
 
 interface ActorsStepProps {
@@ -59,7 +60,7 @@ export default function ActorsStep({ selectedActors, onSelect }: ActorsStepProps
             <MediaImage source={{ uri }} style={styles.actorImage} contentFit="cover" />
           ) : (
             <View style={[styles.actorImage, styles.actorPlaceholder]}>
-              <User size={24} color={COLORS.textSecondary} />
+              <AppIcon icon={UserIcon} size={24} color={COLORS.textSecondary} />
             </View>
           )}
           <Text style={styles.actorName} numberOfLines={2}>
@@ -67,7 +68,7 @@ export default function ActorsStep({ selectedActors, onSelect }: ActorsStepProps
           </Text>
           {isSelected && (
             <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
-              <Check size={12} color={COLORS.white} />
+              <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
             </View>
           )}
         </Pressable>

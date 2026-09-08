@@ -1,6 +1,7 @@
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { shareMedia } from '@/src/utils/share';
-import { Share2 } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Share02Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,7 +27,7 @@ export function ShareButton({ id, title, mediaType, onShowToast }: ShareButtonPr
         onPress={handleShare}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <Share2 size={21} color={COLORS.white} />
+        <AppIcon icon={Share02Icon} size={21} color={COLORS.white} />
       </TouchableOpacity>
     </SafeAreaView>
   );

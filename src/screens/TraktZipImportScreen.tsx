@@ -16,34 +16,32 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useTrakt } from '@/src/context/TraktContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
-import {
-  traktZipImportService,
-  TraktZipImportStats,
-} from '@/src/services/TraktZipImportService';
+import { traktZipImportService, TraktZipImportStats } from '@/src/services/TraktZipImportService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  FileArchive,
-  Film,
-  FolderPlus,
-  Heart,
-  List,
-  RefreshCw,
-  Star,
-  Tv,
-  Upload,
-  UploadCloud,
-  X,
-} from 'lucide-react-native';
+  AlertCircleIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  Cancel01Icon,
+  CheckmarkCircle02Icon,
+  CloudUploadIcon,
+  FavouriteIcon,
+  FileZipIcon,
+  Film01Icon,
+  FolderAddIcon,
+  Menu01Icon,
+  RefreshIcon,
+  StarIcon,
+  Tick02Icon,
+  Tv01Icon,
+  Upload01Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -153,10 +151,7 @@ export default function TraktZipImportScreen() {
       }
     } catch (error) {
       console.error('[TraktZipImportScreen] Error picking file:', error);
-      const msg =
-        error instanceof Error
-          ? error.message
-          : t('trakt.zipImport.failedFallback');
+      const msg = error instanceof Error ? error.message : t('trakt.zipImport.failedFallback');
       Alert.alert(t('trakt.zipImport.title'), msg);
     } finally {
       setIsPickingFile(false);
@@ -206,7 +201,12 @@ export default function TraktZipImportScreen() {
       <View style={styles.heroSection}>
         <View style={styles.syncIconsContainer}>
           <TraktLogo size={65} />
-          <ArrowRight size={24} color={COLORS.textSecondary} style={styles.arrowIcon} />
+          <AppIcon
+            icon={ArrowRight01Icon}
+            size={24}
+            color={COLORS.textSecondary}
+            style={styles.arrowIcon}
+          />
           <View style={styles.showSeekIconCircle}>
             <Image
               source={require('@/assets/images/icon.png')}
@@ -222,13 +222,10 @@ export default function TraktZipImportScreen() {
       {/* If an OAuth sync is running, show in-flight banner */}
       {isSyncing && (
         <View
-          style={[
-            styles.syncRunningBanner,
-            { backgroundColor: hexToRGBA(COLORS.trakt, 0.12) },
-          ]}
+          style={[styles.syncRunningBanner, { backgroundColor: hexToRGBA(COLORS.trakt, 0.12) }]}
         >
           <View style={styles.syncRunningHeader}>
-            <RefreshCw size={18} color={COLORS.trakt} />
+            <AppIcon icon={RefreshIcon} size={18} color={COLORS.trakt} />
             <Text style={[styles.syncRunningTitle, { color: COLORS.trakt }]}>
               {t('trakt.zipImport.syncRunningTitle', { defaultValue: 'Trakt Sync In Progress' })}
             </Text>
@@ -245,13 +242,10 @@ export default function TraktZipImportScreen() {
       {/* If the import cooldown is active, show rate-limited banner */}
       {isZipImportRateLimited && (
         <View
-          style={[
-            styles.syncRunningBanner,
-            { backgroundColor: hexToRGBA(COLORS.warning, 0.12) },
-          ]}
+          style={[styles.syncRunningBanner, { backgroundColor: hexToRGBA(COLORS.warning, 0.12) }]}
         >
           <View style={styles.syncRunningHeader}>
-            <AlertCircle size={18} color={COLORS.warning} />
+            <AppIcon icon={AlertCircleIcon} size={18} color={COLORS.warning} />
             <Text style={[styles.syncRunningTitle, { color: COLORS.warning }]}>
               {t('trakt.zipImport.rateLimitedTitle', {
                 defaultValue: 'Import Cooldown Active',
@@ -278,7 +272,7 @@ export default function TraktZipImportScreen() {
       {selectedFile ? (
         <View style={styles.selectedFileCard}>
           <View style={[styles.fileIconWrapper, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
-            <FileArchive size={26} color={accentColor} />
+            <AppIcon icon={FileZipIcon} size={26} color={accentColor} />
           </View>
           <View style={styles.fileDetails}>
             <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
@@ -290,19 +284,24 @@ export default function TraktZipImportScreen() {
           </View>
           <Pressable
             onPress={() => setSelectedFile(null)}
-            style={({ pressed }) => [styles.removeFileButton, pressed && { opacity: ACTIVE_OPACITY }]}
+            style={({ pressed }) => [
+              styles.removeFileButton,
+              pressed && { opacity: ACTIVE_OPACITY },
+            ]}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityLabel={t('trakt.zipImport.removeFile')}
             disabled={isSyncing}
           >
-            <X size={20} color={COLORS.textSecondary} />
+            <AppIcon icon={Cancel01Icon} size={20} color={COLORS.textSecondary} />
           </Pressable>
         </View>
       ) : (
         <Pressable
           style={({ pressed }) => [
             styles.pickerBox,
-            pressed && !isSyncing && !isZipImportRateLimited && { borderColor: accentColor, opacity: ACTIVE_OPACITY },
+            pressed &&
+              !isSyncing &&
+              !isZipImportRateLimited && { borderColor: accentColor, opacity: ACTIVE_OPACITY },
             (isSyncing || isZipImportRateLimited) && { opacity: 0.6 },
           ]}
           onPress={handlePickFile}
@@ -312,7 +311,8 @@ export default function TraktZipImportScreen() {
             <ActivityIndicator color={accentColor} size="small" />
           ) : (
             <>
-              <UploadCloud
+              <AppIcon
+                icon={CloudUploadIcon}
                 size={40}
                 color={isSyncing || isZipImportRateLimited ? COLORS.textSecondary : accentColor}
               />
@@ -345,7 +345,8 @@ export default function TraktZipImportScreen() {
         onPress={handleStartImport}
         disabled={!selectedFile || isSyncing || isZipImportRateLimited}
       >
-        <Upload
+        <AppIcon
+          icon={Upload01Icon}
           size={20}
           color={
             selectedFile && !isSyncing && !isZipImportRateLimited
@@ -370,32 +371,32 @@ export default function TraktZipImportScreen() {
         <CollapsibleFeatureItem
           text={t('trakt.zipImport.features.watched')}
           description={t('trakt.zipImport.features.watchedDesc')}
-          icon="checkmark-circle"
+          icon={CheckmarkCircle02Icon}
         />
         <CollapsibleFeatureItem
           text={t('trakt.zipImport.features.granularHistory')}
           description={t('trakt.zipImport.features.granularHistoryDesc')}
-          icon="checkmark-circle"
+          icon={CheckmarkCircle02Icon}
         />
         <CollapsibleFeatureItem
           text={t('trakt.zipImport.features.episodeProgress')}
           description={t('trakt.zipImport.features.episodeProgressDesc')}
-          icon="checkmark-circle"
+          icon={CheckmarkCircle02Icon}
         />
         <CollapsibleFeatureItem
           text={t('trakt.zipImport.features.ratings')}
           description={t('trakt.zipImport.features.ratingsDesc')}
-          icon="checkmark-circle"
+          icon={CheckmarkCircle02Icon}
         />
         <CollapsibleFeatureItem
           text={t('trakt.zipImport.features.watchlistAndFavorites')}
           description={t('trakt.zipImport.features.watchlistAndFavoritesDesc')}
-          icon="checkmark-circle"
+          icon={CheckmarkCircle02Icon}
         />
         <CollapsibleFeatureItem
           text={t('trakt.zipImport.features.customLists')}
           description={t('trakt.zipImport.features.customListsDesc')}
-          icon="checkmark-circle"
+          icon={CheckmarkCircle02Icon}
         />
       </CollapsibleCategory>
     </View>
@@ -404,7 +405,7 @@ export default function TraktZipImportScreen() {
   const renderUploadingView = () => (
     <View style={styles.centerContainer}>
       <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
-        <UploadCloud size={40} color={accentColor} />
+        <AppIcon icon={CloudUploadIcon} size={40} color={accentColor} />
       </View>
       <Text style={styles.statusTitle}>{t('trakt.zipImport.uploadingTitle')}</Text>
       <Text style={styles.statusSubtitle}>{t('trakt.zipImport.uploadingSubtitle')}</Text>
@@ -424,7 +425,7 @@ export default function TraktZipImportScreen() {
   const renderProcessingView = () => (
     <View style={styles.centerContainer}>
       <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(COLORS.trakt, 0.15) }]}>
-        <RefreshCw size={36} color={COLORS.trakt} />
+        <AppIcon icon={RefreshIcon} size={36} color={COLORS.trakt} />
       </View>
       <Text style={styles.statusTitle}>{t('trakt.zipImport.processingTitle')}</Text>
       <Text style={styles.statusSubtitle}>{getPhaseText(progressDoc?.progress?.phase)}</Text>
@@ -465,7 +466,7 @@ export default function TraktZipImportScreen() {
       <View style={styles.sectionContainer}>
         <View style={styles.heroSection}>
           <View style={[styles.iconCircle, { backgroundColor: COLORS.success }]}>
-            <Check size={32} color={COLORS.white} />
+            <AppIcon icon={Tick02Icon} size={32} color={COLORS.white} />
           </View>
           <Text style={styles.heroTitle}>{t('trakt.zipImport.completeTitle')}</Text>
           <Text style={styles.heroSubtitle}>{t('trakt.zipImport.completeSubtitle')}</Text>
@@ -485,42 +486,42 @@ export default function TraktZipImportScreen() {
           <Text style={styles.statsCardTitle}>{t('trakt.zipImport.summaryTitle')}</Text>
           <View style={styles.statsGrid}>
             <StatTile
-              icon={<Film size={22} color={accentColor} />}
+              icon={<AppIcon icon={Film01Icon} size={22} color={accentColor} />}
               label={t('trakt.zipImport.stats.movies')}
               value={stats.movies}
             />
             <StatTile
-              icon={<Tv size={22} color={accentColor} />}
+              icon={<AppIcon icon={Tv01Icon} size={22} color={accentColor} />}
               label={t('trakt.zipImport.stats.shows')}
               value={stats.shows}
             />
             <StatTile
-              icon={<CheckCircle2 size={22} color={accentColor} />}
+              icon={<AppIcon icon={CheckmarkCircle02Icon} size={22} color={accentColor} />}
               label={t('trakt.zipImport.stats.episodes')}
               value={stats.episodes}
             />
             <StatTile
-              icon={<Star size={22} color={COLORS.warning} />}
+              icon={<AppIcon icon={StarIcon} size={22} color={COLORS.warning} />}
               label={t('trakt.zipImport.stats.ratings')}
               value={stats.ratings}
             />
             <StatTile
-              icon={<List size={22} color={accentColor} />}
+              icon={<AppIcon icon={Menu01Icon} size={22} color={accentColor} />}
               label={t('trakt.zipImport.stats.watchlist')}
               value={stats.watchlist}
             />
             <StatTile
-              icon={<Heart size={22} color={COLORS.error} />}
+              icon={<AppIcon icon={FavouriteIcon} size={22} color={COLORS.error} />}
               label={t('trakt.zipImport.stats.favorites')}
               value={stats.favorites}
             />
             <StatTile
-              icon={<FolderPlus size={22} color={accentColor} />}
+              icon={<AppIcon icon={FolderAddIcon} size={22} color={accentColor} />}
               label={t('trakt.zipImport.stats.customLists')}
               value={stats.customLists}
             />
             <StatTile
-              icon={<Film size={22} color={COLORS.success} />}
+              icon={<AppIcon icon={Film01Icon} size={22} color={COLORS.success} />}
               label={t('trakt.zipImport.stats.movieWatches')}
               value={stats.movieWatches}
             />
@@ -543,10 +544,7 @@ export default function TraktZipImportScreen() {
         </Pressable>
 
         <Pressable
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            pressed && { opacity: ACTIVE_OPACITY },
-          ]}
+          style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: ACTIVE_OPACITY }]}
           onPress={() => {
             dismissZipImport();
             router.back();
@@ -561,7 +559,7 @@ export default function TraktZipImportScreen() {
   const renderFailedView = () => (
     <View style={styles.centerContainer}>
       <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(COLORS.error, 0.15) }]}>
-        <AlertCircle size={40} color={COLORS.error} />
+        <AppIcon icon={AlertCircleIcon} size={40} color={COLORS.error} />
       </View>
       <Text style={styles.statusTitle}>{t('trakt.zipImport.failedTitle')}</Text>
 
@@ -579,7 +577,7 @@ export default function TraktZipImportScreen() {
         ]}
         onPress={handleReset}
       >
-        <RefreshCw size={18} color={COLORS.white} />
+        <AppIcon icon={RefreshIcon} size={18} color={COLORS.white} />
         <Text style={styles.primaryButtonText}>{t('trakt.zipImport.tryAgain')}</Text>
       </Pressable>
 
@@ -607,7 +605,7 @@ export default function TraktZipImportScreen() {
           style={({ pressed }) => [styles.backButton, pressed && { opacity: ACTIVE_OPACITY }]}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <ArrowLeft size={24} color={COLORS.white} />
+          <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('trakt.zipImport.title')}</Text>
       </View>

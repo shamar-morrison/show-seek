@@ -1,10 +1,9 @@
-import { AppSettingsSection, AppSettingsSectionProps } from '@/src/components/profile/AppSettingsSection';
+import {
+  AppSettingsSection,
+  AppSettingsSectionProps,
+} from '@/src/components/profile/AppSettingsSection';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
-
-jest.mock('@expo/vector-icons', () => ({
-  FontAwesome5: () => null,
-}));
 
 describe('AppSettingsSection', () => {
   const createProps = (

@@ -1,7 +1,8 @@
 import { COLORS } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRouter } from 'expo-router';
-import { Crown, Lock } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { CrownIcon, LockIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -23,16 +24,14 @@ export function PremiumWidgetGate({ children }: PremiumWidgetGateProps) {
     <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.iconContainer}>
-          <Crown size={48} color="#FFD700" />
+          <AppIcon icon={CrownIcon} size={48} color="#FFD700" />
         </View>
 
         <Text style={styles.title}>{t('premiumFeature.title')}</Text>
-        <Text style={styles.description}>
-          {t('widgets.premiumGateDescription')}
-        </Text>
+        <Text style={styles.description}>{t('widgets.premiumGateDescription')}</Text>
 
         <TouchableOpacity style={styles.button} onPress={() => router.push('/premium')}>
-          <Lock size={18} color="#000" style={styles.lockIcon} />
+          <AppIcon icon={LockIcon} size={18} color="#000" style={styles.lockIcon} />
           <Text style={styles.buttonText}>{t('widgets.unlockWidgets')}</Text>
         </TouchableOpacity>
       </View>

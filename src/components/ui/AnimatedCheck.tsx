@@ -1,5 +1,6 @@
 import { COLORS } from '@/src/constants/theme';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 
@@ -35,7 +36,7 @@ export const AnimatedCheck = ({ visible, size = 14, color = COLORS.white }: Anim
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
-      <Check size={size} color={color} strokeWidth={3} />
+      <AppIcon icon={Tick02Icon} size={size} color={color} strokeWidth={3} />
     </Animated.View>
   );
 };

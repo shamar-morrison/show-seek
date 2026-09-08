@@ -1,8 +1,12 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, type Episode } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { HORIZONTAL_LIST_CONTENT_STYLE, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
+import {
+  HORIZONTAL_LIST_CONTENT_STYLE,
+  HORIZONTAL_SCROLL_PROPS,
+} from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -29,7 +33,12 @@ export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
         <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.moreEpisodes')}
         </Text>
-        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACING.l }} contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}>
+        <ScrollView
+          {...HORIZONTAL_SCROLL_PROPS}
+          showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: -SPACING.l }}
+          contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}
+        >
           {sortedEpisodes.map((episode) => {
             const isCurrent = episode.episode_number === currentEpisodeNumber;
             const episodeKey = `${seasonNumber}_${episode.episode_number}`;
@@ -96,7 +105,7 @@ const EpisodeCard = memo<{
         />
         {isWatched && (
           <View style={styles.relatedEpisodeWatchedOverlay}>
-            <Check size={16} color="#fff" />
+            <AppIcon icon={Tick02Icon} size={16} color="#fff" />
           </View>
         )}
       </View>

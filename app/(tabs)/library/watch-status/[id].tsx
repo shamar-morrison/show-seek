@@ -36,7 +36,12 @@ import {
 } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Bookmark, Search, Shuffle, SlidersHorizontal } from 'lucide-react-native';
+import {
+  Bookmark02Icon,
+  Search01Icon,
+  ShuffleIcon,
+  SlidersHorizontalIcon,
+} from '@hugeicons/core-free-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -145,7 +150,7 @@ export default function WatchStatusDetailScreen() {
 
   const hasActiveFilterState = hasActiveFilters(filterState);
 
-  // Search functionality
+  // Search01Icon functionality
   const {
     searchQuery,
     isSearchActive,
@@ -237,14 +242,14 @@ export default function WatchStatusDetailScreen() {
     () => [
       {
         id: 'shuffle',
-        icon: Shuffle,
+        icon: ShuffleIcon,
         label: t('library.shufflePick'),
         onPress: () => setShuffleModalVisible(true),
         disabled: !canShuffle,
       },
       {
         id: 'filter',
-        icon: SlidersHorizontal,
+        icon: SlidersHorizontalIcon,
         label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
@@ -259,7 +264,7 @@ export default function WatchStatusDetailScreen() {
 
   const filterEmptyState = useMemo(
     () => ({
-      icon: SlidersHorizontal,
+      icon: SlidersHorizontalIcon,
       title: t('discover.noResultsWithFilters'),
       description: t('discover.adjustFilters'),
       actionLabel: t('common.reset'),
@@ -270,7 +275,7 @@ export default function WatchStatusDetailScreen() {
 
   const defaultEmptyState = useMemo(
     () => ({
-      icon: Bookmark,
+      icon: Bookmark02Icon,
       title: t('library.emptyList'),
       description: t('library.watchStatusEmptyDescription', { listName: listTitle }),
       actionLabel: t('library.browseContent'),
@@ -367,7 +372,7 @@ export default function WatchStatusDetailScreen() {
             emptyState={
               searchQuery
                 ? {
-                    icon: Search,
+                    icon: Search01Icon,
                     title: t('common.noResults'),
                     description: t('search.adjustSearch'),
                   }

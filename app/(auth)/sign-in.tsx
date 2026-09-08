@@ -9,7 +9,8 @@ import { trackAuthInteraction, trackLogin } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
-import { User } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { UserIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -107,7 +108,10 @@ export default function SignIn() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.glassCard}>
               <View style={styles.header}>
                 <View style={styles.logoContainer}>
@@ -148,7 +152,7 @@ export default function SignIn() {
                     <ActivityIndicator color={COLORS.white} />
                   ) : (
                     <>
-                      <User size={16} color={COLORS.white} />
+                      <AppIcon icon={UserIcon} size={16} color={COLORS.white} />
                       <Text style={styles.guestButtonText}>{t('auth.continueAsGuest')}</Text>
                     </>
                   )}
@@ -160,7 +164,10 @@ export default function SignIn() {
                   <View style={styles.dividerLine} />
                 </View>
 
-                <EmailAuthSection disabled={googleLoading || guestLoading} onLoadingChange={setEmailLoading} />
+                <EmailAuthSection
+                  disabled={googleLoading || guestLoading}
+                  onLoadingChange={setEmailLoading}
+                />
 
                 <Text style={styles.termsText}>
                   {t('auth.bySigningIn')}{' '}

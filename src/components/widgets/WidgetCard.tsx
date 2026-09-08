@@ -1,7 +1,8 @@
 import { COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { WidgetConfig } from '@/src/types';
-import { Settings, Smartphone, Trash2 } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Delete02Icon, Settings01Icon, SmartPhone01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -36,12 +37,14 @@ export function WidgetCard({ widget, onEdit, onDelete }: WidgetCardProps) {
   return (
     <View style={styles.container}>
       <View style={[styles.iconContainer, { backgroundColor: accentColor + '20' }]}>
-        <Smartphone size={24} color={accentColor} />
+        <AppIcon icon={SmartPhone01Icon} size={24} color={accentColor} />
       </View>
 
       <View style={styles.content}>
         <Text style={styles.title}>{getTypeLabel()}</Text>
-        <Text style={styles.subtitle}>{t('widgets.widgetSizeLabel', { size: getSizeLabel() })}</Text>
+        <Text style={styles.subtitle}>
+          {t('widgets.widgetSizeLabel', { size: getSizeLabel() })}
+        </Text>
         {widget.listId && (
           <Text style={styles.listInfo}>{t('widgets.listIdLabel', { id: widget.listId })}</Text>
         )}
@@ -49,10 +52,10 @@ export function WidgetCard({ widget, onEdit, onDelete }: WidgetCardProps) {
 
       <View style={styles.actions}>
         <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
-          <Settings size={20} color={COLORS.textSecondary} />
+          <AppIcon icon={Settings01Icon} size={20} color={COLORS.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
-          <Trash2 size={20} color={COLORS.error} />
+          <AppIcon icon={Delete02Icon} size={20} color={COLORS.error} />
         </TouchableOpacity>
       </View>
     </View>

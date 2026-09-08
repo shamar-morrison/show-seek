@@ -9,11 +9,9 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
-import {
-  CALENDAR_SOURCE_FILTERS,
-  CalendarSourceFilter,
-} from '@/src/utils/calendarViewModel';
-import { Check, X } from 'lucide-react-native';
+import { CALENDAR_SOURCE_FILTERS, CalendarSourceFilter } from '@/src/utils/calendarViewModel';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -82,17 +80,13 @@ export function CalendarSourceFilterModal({
         style={modalLayoutStyles.container}
       >
         <ModalBackground />
-        <TouchableOpacity
-          style={modalLayoutStyles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+        <TouchableOpacity style={modalLayoutStyles.backdrop} activeOpacity={1} onPress={onClose} />
 
         <View style={modalLayoutStyles.card} testID="calendar-source-filter-modal">
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('calendar.filterSources')}</Text>
             <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </Pressable>
           </View>
 
@@ -129,7 +123,9 @@ export function CalendarSourceFilterModal({
                       },
                     ]}
                   >
-                    {isSelected ? <Check size={14} color={COLORS.white} /> : null}
+                    {isSelected ? (
+                      <AppIcon icon={Tick02Icon} size={14} color={COLORS.white} />
+                    ) : null}
                   </View>
                 </Pressable>
               );

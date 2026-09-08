@@ -26,7 +26,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { router, useSegments } from 'expo-router';
-import { Grid3X3, List, SlidersHorizontal, Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { GridIcon, Menu01Icon, SlidersHorizontalIcon, StarIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -154,16 +155,19 @@ export default function DiscoverScreen() {
     setFilters(DEFAULT_FILTERS);
   };
 
-  const handleItemPress = useCallback((item: Movie | TVShow) => {
-    const currentTab = segments[1];
-    const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+  const handleItemPress = useCallback(
+    (item: Movie | TVShow) => {
+      const currentTab = segments[1];
+      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
 
-    if ('title' in item) {
-      router.push(`${basePath}/movie/${item.id}` as any);
-    } else {
-      router.push(`${basePath}/tv/${item.id}` as any);
-    }
-  }, [segments]);
+      if ('title' in item) {
+        router.push(`${basePath}/movie/${item.id}` as any);
+      } else {
+        router.push(`${basePath}/tv/${item.id}` as any);
+      }
+    },
+    [segments]
+  );
 
   const handleLoadMore = () => {
     if (discoverQuery.hasNextPage && !discoverQuery.isFetchingNextPage) {
@@ -171,27 +175,30 @@ export default function DiscoverScreen() {
     }
   };
 
-  const handleLongPress = useCallback((item: Movie | TVShow) => {
-    if (!user || isGuest) {
-      requireAccount();
-      return;
-    }
+  const handleLongPress = useCallback(
+    (item: Movie | TVShow) => {
+      if (!user || isGuest) {
+        requireAccount();
+        return;
+      }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const title = 'title' in item ? item.title : item.name;
-    const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-    setSelectedMediaItem({
-      id: item.id,
-      media_type: mediaType,
-      title: title || '',
-      name: 'name' in item ? item.name : undefined,
-      poster_path: item.poster_path,
-      vote_average: item.vote_average,
-      release_date: releaseDate || '',
-      first_air_date: 'first_air_date' in item ? item.first_air_date : undefined,
-    });
-    // Note: Modal is presented via useEffect below to ensure it's mounted first
-  }, [isGuest, mediaType, requireAccount, user]);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const title = 'title' in item ? item.title : item.name;
+      const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
+      setSelectedMediaItem({
+        id: item.id,
+        media_type: mediaType,
+        title: title || '',
+        name: 'name' in item ? item.name : undefined,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average,
+        release_date: releaseDate || '',
+        first_air_date: 'first_air_date' in item ? item.first_air_date : undefined,
+      });
+      // Note: Modal is presented via useEffect below to ensure it's mounted first
+    },
+    [isGuest, mediaType, requireAccount, user]
+  );
 
   // Present the modal when an item is selected
   // This uses useEffect to ensure the modal is mounted (if conditionally rendered)
@@ -251,7 +258,11 @@ export default function DiscoverScreen() {
           activeOpacity={ACTIVE_OPACITY}
         >
           <View style={styles.posterContainer}>
-            <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
+            <MediaImage
+              source={{ uri: posterUrl }}
+              style={styles.resultPoster}
+              contentFit="cover"
+            />
           </View>
           <View style={styles.resultInfo}>
             <Text style={styles.resultTitle} numberOfLines={2}>
@@ -266,7 +277,7 @@ export default function DiscoverScreen() {
               )}
               {item.vote_average > 0 && (
                 <View style={styles.ratingContainer}>
-                  <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
+                  <AppIcon icon={StarIcon} size={14} fill={COLORS.warning} color={COLORS.warning} />
                   <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
                 </View>
               )}
@@ -333,7 +344,7 @@ export default function DiscoverScreen() {
               {year && item.vote_average > 0 && <Text style={styles.gridMetaText}> • </Text>}
               {item.vote_average > 0 && (
                 <View style={styles.gridRatingContainer}>
-                  <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                  <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
                   <Text style={styles.gridRating}>{item.vote_average.toFixed(1)}</Text>
                 </View>
               )}
@@ -355,25 +366,22 @@ export default function DiscoverScreen() {
     ]
   );
 
-  const flashListContentContainerStyle = useMemo<ViewStyle>(
-    () => {
-      const flattenedStyle = StyleSheet.flatten([
-        viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
-        viewMode === 'grid' ? { paddingHorizontal: listPaddingHorizontal } : null,
-        { paddingBottom: 100 },
-      ]);
+  const flashListContentContainerStyle = useMemo<ViewStyle>(() => {
+    const flattenedStyle = StyleSheet.flatten([
+      viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
+      viewMode === 'grid' ? { paddingHorizontal: listPaddingHorizontal } : null,
+      { paddingBottom: 100 },
+    ]);
 
-      if (Array.isArray(flattenedStyle)) {
-        return flattenedStyle.reduce<ViewStyle>((acc, style) => {
-          if (!style || typeof style !== 'object') return acc;
-          return { ...acc, ...(style as ViewStyle) };
-        }, {});
-      }
+    if (Array.isArray(flattenedStyle)) {
+      return flattenedStyle.reduce<ViewStyle>((acc, style) => {
+        if (!style || typeof style !== 'object') return acc;
+        return { ...acc, ...(style as ViewStyle) };
+      }, {});
+    }
 
-      return (flattenedStyle as ViewStyle) ?? {};
-    },
-    [viewMode, listPaddingHorizontal]
-  );
+    return (flattenedStyle as ViewStyle) ?? {};
+  }, [viewMode, listPaddingHorizontal]);
 
   return (
     <>
@@ -383,14 +391,15 @@ export default function DiscoverScreen() {
           <View style={styles.headerActions}>
             <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'list' ? (
-                <Grid3X3 size={24} color={COLORS.text} />
+                <AppIcon icon={GridIcon} size={24} color={COLORS.text} />
               ) : (
-                <List size={24} color={COLORS.text} />
+                <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
               )}
             </HeaderIconButton>
             <View style={styles.filterButtonWrapper}>
               <HeaderIconButton onPress={() => setShowFilters(!showFilters)}>
-                <SlidersHorizontal
+                <AppIcon
+                  icon={SlidersHorizontalIcon}
                   size={24}
                   color={showFilters ? accentColor : COLORS.textSecondary}
                 />

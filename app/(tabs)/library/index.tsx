@@ -6,22 +6,22 @@ import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { useRouter } from 'expo-router';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
-  BarChart3,
-  Bell,
-  Film,
-  Heart,
-  Layers,
-  Layout,
-  ListPlus,
-  MessageSquareHeart,
-  Play,
-  Settings2,
-  StickyNote,
-  Tv,
-  TvMinimal,
-  User,
-} from 'lucide-react-native';
+  AddToListIcon,
+  BarChartIcon,
+  CameraVideoIcon,
+  DashboardSquare03Icon,
+  FavouriteIcon,
+  Layers01Icon,
+  MessageFavourite01Icon,
+  Notification01Icon,
+  PlayIcon,
+  Settings02Icon,
+  StickyNote02Icon,
+  Tv01Icon,
+  UserIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
@@ -29,7 +29,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NavigationItem = {
   id: string;
-  icon: typeof Tv;
+  icon: typeof Tv01Icon;
   title: string;
   route: string;
 };
@@ -53,37 +53,37 @@ export default function LibraryScreen() {
         data: [
           {
             id: 'watch-progress',
-            icon: Play,
+            icon: PlayIcon,
             title: t('library.watchProgress'),
             route: '/(tabs)/library/watch-progress',
           },
           {
             id: 'collection-progress',
-            icon: Layers,
+            icon: Layers01Icon,
             title: t('library.collectionProgress'),
             route: '/(tabs)/library/collection-progress',
           },
           {
             id: 'watch-status',
-            icon: Tv,
+            icon: Tv01Icon,
             title: t('library.watchLists'),
             route: '/(tabs)/library/watch-status',
           },
           {
             id: 'custom-lists',
-            icon: ListPlus,
+            icon: AddToListIcon,
             title: t('library.customLists'),
             route: '/(tabs)/library/custom-lists',
           },
           {
             id: 'stats',
-            icon: BarChart3,
+            icon: BarChartIcon,
             title: t('library.statsAndHistory'),
             route: '/(tabs)/library/stats',
           },
           {
             id: 'notes',
-            icon: StickyNote,
+            icon: StickyNote02Icon,
             title: t('library.notes'),
             route: '/(tabs)/library/notes',
           },
@@ -94,25 +94,25 @@ export default function LibraryScreen() {
         data: [
           {
             id: 'episode-ratings',
-            icon: TvMinimal,
+            icon: Tv01Icon,
             title: t('library.episodeRatings'),
             route: '/(tabs)/library/ratings/episodes',
           },
           {
             id: 'season-ratings',
-            icon: Layers,
+            icon: Layers01Icon,
             title: t('library.seasonRatings'),
             route: '/(tabs)/library/ratings/seasons',
           },
           {
             id: 'movie-ratings',
-            icon: Film,
+            icon: CameraVideoIcon,
             title: t('library.movieRatings'),
             route: '/(tabs)/library/ratings/movies',
           },
           {
             id: 'tv-ratings',
-            icon: Tv,
+            icon: Tv01Icon,
             title: t('library.tvShowRatings'),
             route: '/(tabs)/library/ratings/tv-shows',
           },
@@ -123,19 +123,19 @@ export default function LibraryScreen() {
         data: [
           {
             id: 'favorite-content',
-            icon: Heart,
+            icon: FavouriteIcon,
             title: t('library.favoriteContent'),
             route: '/(tabs)/library/favorites',
           },
           {
             id: 'favorite-episodes',
-            icon: MessageSquareHeart,
+            icon: MessageFavourite01Icon,
             title: t('library.favoriteEpisodes'),
             route: '/(tabs)/library/favorite-episodes',
           },
           {
             id: 'favorite-people',
-            icon: User,
+            icon: UserIcon,
             title: t('library.favoritePeople'),
             route: '/(tabs)/library/favorite-people',
           },
@@ -146,7 +146,7 @@ export default function LibraryScreen() {
         data: [
           {
             id: 'reminders',
-            icon: Bell,
+            icon: Notification01Icon,
             title: t('library.reminders'),
             route: '/(tabs)/library/reminders',
           },
@@ -157,7 +157,7 @@ export default function LibraryScreen() {
         data: [
           {
             id: 'widgets',
-            icon: Layout,
+            icon: DashboardSquare03Icon,
             title: t('library.homeScreenWidgets'),
             route: '/(tabs)/library/widgets',
           },
@@ -225,7 +225,7 @@ export default function LibraryScreen() {
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>{t('tabs.library')}</Text>
         <Pressable onPress={() => router.push('/manage-lists' as any)} hitSlop={HIT_SLOP.m}>
-          <Settings2 size={24} color={COLORS.text} />
+          <AppIcon icon={Settings02Icon} size={24} color={COLORS.text} />
         </Pressable>
       </View>
 

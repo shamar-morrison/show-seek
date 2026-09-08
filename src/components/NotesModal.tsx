@@ -10,7 +10,8 @@ import {
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
-import { Trash2, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -203,7 +204,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
         <View style={modalHeaderStyles.header}>
           <View style={styles.headerLeft}>
             <Pressable onPress={handleClose} hitSlop={HIT_SLOP.m}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </Pressable>
             <Text style={modalHeaderStyles.title}>
               {isEditing ? t('notes.editNote') : t('notes.addNote')}
@@ -214,7 +215,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
               {deleteNoteMutation.isPending ? (
                 <ActivityIndicator size="small" color={COLORS.error} />
               ) : (
-                <Trash2 size={22} color={COLORS.error} />
+                <AppIcon icon={Delete02Icon} size={22} color={COLORS.error} />
               )}
             </Pressable>
           )}

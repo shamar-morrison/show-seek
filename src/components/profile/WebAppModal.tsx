@@ -1,6 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Globe } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Globe02Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -26,12 +27,10 @@ export function WebAppModal({ visible, onClose, onConfirm }: WebAppModalProps) {
       <View style={styles.webAppModalOverlay}>
         <View style={styles.webAppModalContent}>
           <View style={styles.webAppModalHeader}>
-            <Globe size={24} color={accentColor} />
+            <AppIcon icon={Globe02Icon} size={24} color={accentColor} />
             <Text style={styles.webAppModalTitle}>{t('profile.webAppModal.title')}</Text>
           </View>
-          <Text style={styles.webAppModalDescription}>
-            {t('profile.webAppModal.description')}
-          </Text>
+          <Text style={styles.webAppModalDescription}>{t('profile.webAppModal.description')}</Text>
           <View style={styles.webAppModalButtons}>
             <TouchableOpacity
               style={[styles.webAppModalButton, styles.webAppModalCancelButton]}

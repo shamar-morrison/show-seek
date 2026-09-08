@@ -12,7 +12,11 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
-import { useClearPosterOverride, usePosterOverrides, useSetPosterOverride } from '@/src/hooks/usePosterOverrides';
+import {
+  useClearPosterOverride,
+  usePosterOverrides,
+  useSetPosterOverride,
+} from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { buildPosterOverrideKey, type PosterOverrideMediaType } from '@/src/utils/posterOverrides';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
@@ -20,7 +24,8 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Check, Image as ImageIcon } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowLeft01Icon, Image01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -57,7 +62,8 @@ export default function MediaPosterPickerScreen({ mediaType }: MediaPosterPicker
 
   const imagesQuery = useQuery<MediaImages>({
     queryKey: [mediaType, mediaId, 'images'],
-    queryFn: () => (mediaType === 'movie' ? tmdbApi.getMovieImages(mediaId) : tmdbApi.getTVImages(mediaId)),
+    queryFn: () =>
+      mediaType === 'movie' ? tmdbApi.getMovieImages(mediaId) : tmdbApi.getTVImages(mediaId),
     enabled: Number.isFinite(mediaId) && mediaId > 0 && !isBlocked,
   });
 
@@ -78,7 +84,7 @@ export default function MediaPosterPickerScreen({ mediaType }: MediaPosterPicker
     () => (Number.isFinite(mediaId) ? buildPosterOverrideKey(mediaType, mediaId) : null),
     [mediaId, mediaType]
   );
-  const currentOverride = overrideKey ? overrides?.[overrideKey] ?? null : null;
+  const currentOverride = overrideKey ? (overrides?.[overrideKey] ?? null) : null;
 
   useEffect(() => {
     if (!details || !overrideKey) {
@@ -143,7 +149,9 @@ export default function MediaPosterPickerScreen({ mediaType }: MediaPosterPicker
       }
 
       const shouldClear =
-        selectedPosterPath === defaultPosterPath || !selectedPosterPath || selectedPosterPath.length === 0;
+        selectedPosterPath === defaultPosterPath ||
+        !selectedPosterPath ||
+        selectedPosterPath.length === 0;
 
       if (shouldClear) {
         await clearOverrideMutation.mutateAsync({ mediaType, mediaId });
@@ -198,7 +206,7 @@ export default function MediaPosterPickerScreen({ mediaType }: MediaPosterPicker
           <MediaImage source={{ uri }} style={styles.posterImage} contentFit="cover" />
           {isSelected && (
             <View style={[styles.selectedBadge, { backgroundColor: accentColor }]}>
-              <Check size={12} color={COLORS.white} />
+              <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
             </View>
           )}
         </Pressable>
@@ -244,7 +252,7 @@ export default function MediaPosterPickerScreen({ mediaType }: MediaPosterPicker
 
       <View style={styles.header}>
         <Pressable style={styles.headerButton} onPress={handleBackPress}>
-          <ArrowLeft size={22} color={COLORS.text} />
+          <AppIcon icon={ArrowLeft01Icon} size={22} color={COLORS.text} />
         </Pressable>
         <Text style={styles.headerTitle}>
           {mediaType === 'movie' ? t('posterPicker.movieTitle') : t('posterPicker.tvTitle')}
@@ -261,8 +269,14 @@ export default function MediaPosterPickerScreen({ mediaType }: MediaPosterPicker
         </Text>
       </View>
 
-      <Pressable testID="poster-picker-use-default" style={styles.defaultButton} onPress={handleUseDefault}>
-        <Text style={[styles.defaultButtonText, { color: accentColor }]}>{t('posterPicker.useDefault')}</Text>
+      <Pressable
+        testID="poster-picker-use-default"
+        style={styles.defaultButton}
+        onPress={handleUseDefault}
+      >
+        <Text style={[styles.defaultButtonText, { color: accentColor }]}>
+          {t('posterPicker.useDefault')}
+        </Text>
       </Pressable>
 
       <View style={styles.saveButtonContainer}>
@@ -296,7 +310,7 @@ export default function MediaPosterPickerScreen({ mediaType }: MediaPosterPicker
         />
       ) : (
         <View style={styles.emptyState}>
-          <ImageIcon size={32} color={COLORS.textSecondary} />
+          <AppIcon icon={Image01Icon} size={32} color={COLORS.textSecondary} />
           <Text style={styles.emptyText}>{t('posterPicker.noPosters')}</Text>
         </View>
       )}

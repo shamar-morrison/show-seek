@@ -3,7 +3,8 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { Check, Copy, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, Copy01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -72,9 +73,9 @@ function CryptoCard({
           activeOpacity={ACTIVE_OPACITY}
         >
           {copied ? (
-            <Check size={18} color={COLORS.success} />
+            <AppIcon icon={Tick02Icon} size={18} color={COLORS.success} />
           ) : (
-            <Copy size={18} color={COLORS.textSecondary} />
+            <AppIcon icon={Copy01Icon} size={18} color={COLORS.textSecondary} />
           )}
         </TouchableOpacity>
       </View>
@@ -107,14 +108,12 @@ export default function SupportDevelopmentModal({
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('profile.supportDevelopment')} 🙏</Text>
             <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
 
           {/* Message */}
-          <Text style={styles.message}>
-            {t('profile.supportDevelopmentMessage')}
-          </Text>
+          <Text style={styles.message}>{t('profile.supportDevelopmentMessage')}</Text>
 
           {/* Crypto Cards */}
           <View style={styles.cryptoList}>

@@ -1,8 +1,9 @@
-import { Search } from 'lucide-react-native';
+import { Search01Icon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface ActionButton {
-  icon: React.ComponentType<{ size: number; color: string }>;
+  icon: IconSvgElement;
   onPress: () => void;
   showBadge?: boolean;
 }
@@ -29,7 +30,7 @@ interface UseHeaderSearchReturn<T> {
   deactivateSearch: () => void;
   /** Update search query */
   setSearchQuery: (query: string) => void;
-  /** Search button config to pass to useViewModeToggle */
+  /** Search01Icon button config to pass to useViewModeToggle */
   searchButton: ActionButton;
 }
 
@@ -96,10 +97,10 @@ export function useHeaderSearch<T>({
     });
   }, [items, debouncedQuery, getSearchableText]);
 
-  // Search button configuration for header
+  // Search01Icon button configuration for header
   const searchButton: ActionButton = useMemo(
     () => ({
-      icon: Search,
+      icon: Search01Icon,
       onPress: activateSearch,
       showBadge: searchQuery.length > 0,
     }),

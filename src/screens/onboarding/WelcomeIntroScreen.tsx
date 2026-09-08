@@ -1,7 +1,8 @@
 import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowRight } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -111,12 +112,8 @@ export default function WelcomeIntroScreen({ onComplete }: WelcomeIntroScreenPro
         </Animated.View>
 
         <Animated.View style={[styles.titleContainer, titleStyle]}>
-          <Text style={styles.eyebrow}>
-            {t('personalOnboarding.welcomePrefix').trim()}
-          </Text>
-          <Text style={styles.heroTitle}>
-            {t('personalOnboarding.welcomeAppName')}
-          </Text>
+          <Text style={styles.eyebrow}>{t('personalOnboarding.welcomePrefix').trim()}</Text>
+          <Text style={styles.heroTitle}>{t('personalOnboarding.welcomeAppName')}</Text>
         </Animated.View>
 
         <Animated.Text style={[styles.subtitle, subtitleStyle]}>
@@ -131,7 +128,7 @@ export default function WelcomeIntroScreen({ onComplete }: WelcomeIntroScreenPro
             accessibilityLabel={t('personalOnboarding.letsGo')}
           >
             <Text style={styles.buttonText}>{t('personalOnboarding.letsGo')}</Text>
-            <ArrowRight size={20} color={COLORS.white} />
+            <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.white} />
           </Pressable>
         </Animated.View>
       </View>

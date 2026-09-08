@@ -16,7 +16,8 @@ import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { Stack, useNavigation, useRouter } from 'expo-router';
-import { Heart, Search } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { FavouriteIcon, Search01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -65,7 +66,7 @@ export default function FavoriteEpisodesScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <HeaderIconButton onPress={searchButton.onPress}>
-            <Search size={22} color={COLORS.text} />
+            <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
           </HeaderIconButton>
         ),
       });
@@ -117,7 +118,7 @@ export default function FavoriteEpisodesScreen() {
         <Stack.Screen options={{ title: t('library.favoriteEpisodes') }} />
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={Heart}
+          icon={FavouriteIcon}
           title={t('library.emptyFavoriteEpisodes')}
           description={t('library.emptyFavoriteEpisodesHint')}
         />

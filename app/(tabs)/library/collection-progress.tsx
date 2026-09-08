@@ -16,7 +16,8 @@ import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
-import { ArrowUpDown, Layers, Search } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowUpDownIcon, Layers01Icon, Search01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
@@ -97,7 +98,7 @@ export default function CollectionProgressScreen() {
     return sorted;
   }, [progressItems, sortState]);
 
-  // Search functionality
+  // Search01Icon functionality
   const {
     searchQuery,
     isSearchActive,
@@ -128,11 +129,11 @@ export default function CollectionProgressScreen() {
         headerRight: () => (
           <View style={styles.headerButtons}>
             <HeaderIconButton onPress={searchButton.onPress}>
-              <Search size={22} color={COLORS.text} />
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
             </HeaderIconButton>
             <HeaderIconButton onPress={() => setSortModalVisible(true)}>
               <View style={iconBadgeStyles.wrapper}>
-                <ArrowUpDown size={22} color={COLORS.text} />
+                <AppIcon icon={ArrowUpDownIcon} size={22} color={COLORS.text} />
                 {hasActiveSort && <View style={iconBadgeStyles.badge} />}
               </View>
             </HeaderIconButton>
@@ -164,7 +165,7 @@ export default function CollectionProgressScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={Layers}
+          icon={Layers01Icon}
           title={t('library.emptyCollectionProgress')}
           description={t('library.emptyCollectionProgressHint')}
         />
@@ -180,9 +181,7 @@ export default function CollectionProgressScreen() {
         renderItem={renderItem}
         contentContainerStyle={libraryListStyles.listContent}
         keyExtractor={(item) => item.collectionId.toString()}
-        ListEmptyComponent={
-          searchQuery ? <SearchEmptyState height={300} /> : null
-        }
+        ListEmptyComponent={searchQuery ? <SearchEmptyState height={300} /> : null}
       />
 
       <LibrarySortModal

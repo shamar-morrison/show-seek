@@ -4,7 +4,8 @@ import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
 import { FlashList } from '@shopify/flash-list';
 
@@ -23,7 +24,11 @@ type RegionItem = {
   emoji: string;
 };
 
-export default function RegionStep({ selectedRegion, selectedViaOther, onSelect }: RegionStepProps) {
+export default function RegionStep({
+  selectedRegion,
+  selectedViaOther,
+  onSelect,
+}: RegionStepProps) {
   const { t } = useTranslation();
 
   const regions = useMemo<RegionItem[]>(() => {
@@ -76,7 +81,7 @@ export default function RegionStep({ selectedRegion, selectedViaOther, onSelect 
                 <Text style={styles.regionName}>{region.name}</Text>
                 {selected && (
                   <View style={styles.checkBadge}>
-                    <Check size={14} color={COLORS.white} />
+                    <AppIcon icon={Tick02Icon} size={14} color={COLORS.white} />
                   </View>
                 )}
               </Pressable>

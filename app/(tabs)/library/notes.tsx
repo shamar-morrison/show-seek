@@ -36,15 +36,16 @@ import { FlashList } from '@shopify/flash-list';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
-  ArrowUpDown,
-  Grid3X3,
-  List,
-  Pencil,
-  Search,
-  StickyNote,
-  Trash2,
-} from 'lucide-react-native';
+  ArrowUpDownIcon,
+  Delete02Icon,
+  GridIcon,
+  Menu01Icon,
+  PencilEdit01Icon,
+  Search01Icon,
+  StickyNote02Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -206,7 +207,7 @@ export default function NotesScreen() {
     });
   }, [notes, sortState]);
 
-  // Search functionality - search by note content and media title
+  // Search01Icon functionality - search by note content and media title
   const {
     searchQuery,
     isSearchActive,
@@ -238,23 +239,23 @@ export default function NotesScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
-            {/* Search button */}
+            {/* Search01Icon button */}
             <HeaderIconButton onPress={searchButton.onPress}>
-              <Search size={22} color={COLORS.text} />
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
             </HeaderIconButton>
             {/* Sort button */}
             <HeaderIconButton onPress={() => setSortModalVisible(true)}>
               <View style={iconBadgeStyles.wrapper}>
-                <ArrowUpDown size={22} color={COLORS.text} />
+                <AppIcon icon={ArrowUpDownIcon} size={22} color={COLORS.text} />
                 {hasActiveSort && <View style={iconBadgeStyles.badge} />}
               </View>
             </HeaderIconButton>
             {/* View mode button */}
             <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'list' ? (
-                <Grid3X3 size={22} color={COLORS.text} />
+                <AppIcon icon={GridIcon} size={22} color={COLORS.text} />
               ) : (
-                <List size={22} color={COLORS.text} />
+                <AppIcon icon={Menu01Icon} size={22} color={COLORS.text} />
               )}
             </HeaderIconButton>
           </View>
@@ -399,7 +400,7 @@ export default function NotesScreen() {
               style={styles.actionButton}
               hitSlop={HIT_SLOP.m}
             >
-              <Pencil size={20} color={COLORS.text} />
+              <AppIcon icon={PencilEdit01Icon} size={20} color={COLORS.text} />
             </Pressable>
             <Pressable
               onPress={() => handleDeleteNote(item)}
@@ -410,7 +411,7 @@ export default function NotesScreen() {
               {deleteNoteMutation.isPending ? (
                 <ActivityIndicator size="small" color={COLORS.error} />
               ) : (
-                <Trash2 size={20} color={COLORS.error} />
+                <AppIcon icon={Delete02Icon} size={20} color={COLORS.error} />
               )}
             </Pressable>
           </View>
@@ -453,7 +454,7 @@ export default function NotesScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={StickyNote}
+          icon={StickyNote02Icon}
           title={t('library.emptyNotes')}
           description={t('library.emptyNotesHint')}
         />

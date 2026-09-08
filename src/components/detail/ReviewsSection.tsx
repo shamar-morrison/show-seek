@@ -1,8 +1,12 @@
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
-import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
+import {
+  HorizontalFlashList,
+  HORIZONTAL_SCROLL_PROPS,
+} from '@/src/components/ui/HorizontalFlashList';
 import { HORIZONTAL_LIST_CONTENT_STYLE } from '@/src/components/ui/horizontalScrollProps';
-import { Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -92,7 +96,12 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
                       </Text>
                       {review.author_details.rating && (
                         <View style={styles.reviewRating}>
-                          <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                          <AppIcon
+                            icon={StarIcon}
+                            size={12}
+                            color={COLORS.warning}
+                            fill={COLORS.warning}
+                          />
                           <Text style={styles.reviewRatingText}>
                             {review.author_details.rating.toFixed(1)}
                           </Text>

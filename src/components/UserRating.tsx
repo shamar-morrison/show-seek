@@ -1,4 +1,5 @@
-import { Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -20,7 +21,7 @@ export default function UserRating({ rating }: UserRatingProps) {
     <View style={styles.container}>
       <Text style={styles.label}>{t('rating.yourRating')}:</Text>
       <View style={styles.ratingContent}>
-        <Star size={16} color={accentColor} fill={accentColor} />
+        <AppIcon icon={StarIcon} size={16} color={accentColor} fill={accentColor} />
         <Text style={styles.ratingText}>
           {rating}/10 - <Text style={styles.description}>{getRatingText(rating)}</Text>
         </Text>

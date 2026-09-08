@@ -2,12 +2,6 @@ import { FavoriteEpisodeCard } from '@/src/components/library/FavoriteEpisodeCar
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
-// Mock lucide-react-native
-jest.mock('lucide-react-native', () => ({
-  Pencil: 'Pencil',
-  Trash2: 'Trash2',
-}));
-
 // Mock translation
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -28,8 +22,11 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
     overrides: {},
-    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
-      fallbackPosterPath,
+    resolvePosterPath: (
+      _mediaType: 'movie' | 'tv',
+      _mediaId: number,
+      fallbackPosterPath: string | null
+    ) => fallbackPosterPath,
   }),
 }));
 

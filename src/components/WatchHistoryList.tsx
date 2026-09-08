@@ -3,7 +3,8 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme
 import { WatchInstance } from '@/src/types/watchedMovies';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Calendar03Icon, Delete02Icon, PencilEdit01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Modal, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
@@ -63,7 +64,7 @@ function WatchHistoryItem({ instance, watchNumber, onDelete, onEdit }: WatchHist
       <View style={styles.itemContent}>
         <Text style={styles.ordinalText}>{ordinalLabel}</Text>
         <View style={styles.dateRow}>
-          <Calendar size={16} color={COLORS.textSecondary} />
+          <AppIcon icon={Calendar03Icon} size={16} color={COLORS.textSecondary} />
           <Text style={styles.dateText}>{formattedDate}</Text>
         </View>
       </View>
@@ -74,7 +75,7 @@ function WatchHistoryItem({ instance, watchNumber, onDelete, onEdit }: WatchHist
             style={styles.actionButton}
             accessibilityLabel={t('watched.editWatchDate')}
           >
-            <Pencil size={20} color={COLORS.textSecondary} />
+            <AppIcon icon={PencilEdit01Icon} size={20} color={COLORS.textSecondary} />
           </Pressable>
         )}
         {onDelete && (
@@ -83,7 +84,7 @@ function WatchHistoryItem({ instance, watchNumber, onDelete, onEdit }: WatchHist
             style={styles.actionButton}
             accessibilityLabel={t('common.delete')}
           >
-            <Trash2 size={20} color={COLORS.error} />
+            <AppIcon icon={Delete02Icon} size={20} color={COLORS.error} />
           </Pressable>
         )}
       </View>

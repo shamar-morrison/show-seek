@@ -1,6 +1,8 @@
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowDown01Icon, ArrowUp01Icon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -32,8 +34,8 @@ export function CollapsibleCategory({
     <View style={styles.categoryContainer} testID={testID}>
       <Pressable style={styles.categoryHeader} onPress={toggleExpanded}>
         <Text style={styles.categoryTitle}>{title}</Text>
-        <Ionicons
-          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+        <AppIcon
+          icon={isExpanded ? ArrowUp01Icon : ArrowDown01Icon}
           size={20}
           color={COLORS.textSecondary}
         />
@@ -46,7 +48,7 @@ export function CollapsibleCategory({
 
 interface CollapsibleFeatureItemProps {
   text: string;
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: IconSvgElement;
   description?: string;
   isNew?: boolean;
 }
@@ -65,7 +67,7 @@ export function CollapsibleFeatureItem({
 
   return (
     <View style={styles.featureItem}>
-      {icon && <Ionicons name={icon} size={22} color={accentColor} style={styles.featureIcon} />}
+      {icon && <AppIcon icon={icon} size={22} color={accentColor} style={styles.featureIcon} />}
       <View style={styles.featureContent}>
         <View style={styles.featureTitleRow}>
           <Text style={styles.featureTitle}>{text}</Text>

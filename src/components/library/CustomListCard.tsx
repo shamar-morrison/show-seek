@@ -4,7 +4,8 @@ import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLongPressPressGuard } from '@/src/hooks/useLongPressPressGuard';
 import { UserList } from '@/src/services/ListService';
-import { ChevronRight } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -30,11 +31,14 @@ export const CustomListCard = memo<CustomListCardProps>(
       onLongPress?.(list.id);
     }, [list.id, onLongPress]);
 
-    const { handlePress: handleCardPress, handleLongPress: handleCardLongPress, handlePressOut } =
-      useLongPressPressGuard({
-        onPress: handlePress,
-        onLongPress: onLongPress ? handleLongPress : undefined,
-      });
+    const {
+      handlePress: handleCardPress,
+      handleLongPress: handleCardLongPress,
+      handlePressOut,
+    } = useLongPressPressGuard({
+      onPress: handlePress,
+      onLongPress: onLongPress ? handleLongPress : undefined,
+    });
 
     const { itemCount, previewItems } = useMemo(() => {
       const items = list.items || {};
@@ -103,11 +107,15 @@ export const CustomListCard = memo<CustomListCardProps>(
             </Text>
           )}
           <Text style={styles.itemCount}>
-            {itemCount === 1 ? t('library.itemCountOne') : t('library.itemCount', { count: itemCount })}
+            {itemCount === 1
+              ? t('library.itemCountOne')
+              : t('library.itemCount', { count: itemCount })}
           </Text>
         </View>
 
-        {!selectionMode && <ChevronRight size={20} color={COLORS.textSecondary} />}
+        {!selectionMode && (
+          <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
+        )}
       </Pressable>
     );
   }

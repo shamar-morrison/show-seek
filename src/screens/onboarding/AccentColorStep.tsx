@@ -4,7 +4,8 @@ import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
 
 interface AccentColorStepProps {
@@ -39,10 +40,7 @@ export default function AccentColorStep({ selectedColor, onSelect }: AccentColor
           const isSelected = selectedColor === color.value;
 
           return (
-            <Animated.View
-              key={color.value}
-              entering={FadeInDown.duration(300).delay(index * 40)}
-            >
+            <Animated.View key={color.value} entering={FadeInDown.duration(300).delay(index * 40)}>
               <Pressable
                 style={[styles.colorItem, isSelected && styles.colorItemSelected]}
                 onPress={() => handleSelect(color.value)}
@@ -54,7 +52,7 @@ export default function AccentColorStep({ selectedColor, onSelect }: AccentColor
                     isSelected && styles.colorCircleSelected,
                   ]}
                 >
-                  {isSelected && <Check size={18} color={COLORS.white} />}
+                  {isSelected && <AppIcon icon={Tick02Icon} size={18} color={COLORS.white} />}
                 </View>
                 <Text style={[styles.colorName, isSelected && styles.colorNameSelected]}>
                   {color.name}

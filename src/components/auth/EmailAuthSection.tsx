@@ -5,7 +5,8 @@ import { createUserDocument } from '@/src/firebase/user';
 import { trackAuthInteraction, trackLogin } from '@/src/services/analytics';
 import { persistPersonalOnboardingCache } from '@/src/utils/personalOnboardingCache';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { LockIcon, Mail01Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -197,7 +198,12 @@ export default function EmailAuthSection({
   return (
     <View style={styles.container}>
       <View style={[styles.inputWithIcon, isDisabled && styles.disabledField]}>
-        <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+        <AppIcon
+          icon={Mail01Icon}
+          size={20}
+          color={COLORS.textSecondary}
+          style={styles.inputIcon}
+        />
         <TextInput
           style={styles.inputField}
           placeholder={t('auth.email')}
@@ -215,7 +221,7 @@ export default function EmailAuthSection({
       </View>
 
       <View style={[styles.inputWithIcon, isDisabled && styles.disabledField]}>
-        <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+        <AppIcon icon={LockIcon} size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
         <TextInput
           style={styles.inputField}
           placeholder={t('auth.password')}
@@ -242,9 +248,9 @@ export default function EmailAuthSection({
           accessibilityLabel={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
         >
           {showPassword ? (
-            <EyeOff size={20} color={COLORS.textSecondary} />
+            <AppIcon icon={ViewOffIcon} size={20} color={COLORS.textSecondary} />
           ) : (
-            <Eye size={20} color={COLORS.textSecondary} />
+            <AppIcon icon={ViewIcon} size={20} color={COLORS.textSecondary} />
           )}
         </TouchableOpacity>
       </View>

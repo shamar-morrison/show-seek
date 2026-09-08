@@ -17,7 +17,8 @@ import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import { hasEpisodeAired } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
 import type { TFunction } from 'i18next';
-import { ChevronDown, ChevronRight } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowDown01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 import { EpisodeItem } from './EpisodeItem';
@@ -278,31 +279,36 @@ export const SeasonItem = memo<SeasonItemProps>(
           </View>
 
           <View style={styles.seasonActions}>
-            {showEpisodes && isExpanded && (hasBulkMarkableEpisodes || hasWatchedEpisodesToUnmark) && (
-              <TouchableOpacity
-                style={[styles.markAllButton, isBulkActionPending && styles.markAllButtonDisabled]}
-                onPress={handleMarkAllPress}
-                disabled={isBulkActionPending}
-                activeOpacity={ACTIVE_OPACITY}
-                testID={`season-mark-all-button-${season.season_number}`}
-              >
-                {isBulkActionPending ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={COLORS.white}
-                    testID={`season-mark-all-spinner-${season.season_number}`}
-                  />
-                ) : (
-                  <Text style={styles.markAllText}>
-                    {shouldOfferUnmarkAll ? t('watched.unmarkAll') : t('watched.markAll')}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            )}
+            {showEpisodes &&
+              isExpanded &&
+              (hasBulkMarkableEpisodes || hasWatchedEpisodesToUnmark) && (
+                <TouchableOpacity
+                  style={[
+                    styles.markAllButton,
+                    isBulkActionPending && styles.markAllButtonDisabled,
+                  ]}
+                  onPress={handleMarkAllPress}
+                  disabled={isBulkActionPending}
+                  activeOpacity={ACTIVE_OPACITY}
+                  testID={`season-mark-all-button-${season.season_number}`}
+                >
+                  {isBulkActionPending ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={COLORS.white}
+                      testID={`season-mark-all-spinner-${season.season_number}`}
+                    />
+                  ) : (
+                    <Text style={styles.markAllText}>
+                      {shouldOfferUnmarkAll ? t('watched.unmarkAll') : t('watched.markAll')}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
             {isExpanded ? (
-              <ChevronDown size={24} color={accentColor} />
+              <AppIcon icon={ArrowDown01Icon} size={24} color={accentColor} />
             ) : (
-              <ChevronRight size={24} color={COLORS.textSecondary} />
+              <AppIcon icon={ArrowRight01Icon} size={24} color={COLORS.textSecondary} />
             )}
           </View>
         </TouchableOpacity>

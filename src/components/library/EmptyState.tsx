@@ -1,11 +1,12 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { LucideIcon } from 'lucide-react-native';
+import type { IconSvgElement } from '@hugeicons/react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import React, { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: IconSvgElement;
   title: string;
   description: string;
   actionLabel?: string;
@@ -17,7 +18,7 @@ export const EmptyState = memo<EmptyStateProps>(
     const { accentColor } = useAccentColor();
     return (
       <View style={styles.container}>
-        <Icon size={48} color={COLORS.surfaceLight} />
+        <AppIcon icon={Icon} size={48} color={COLORS.surfaceLight} />
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>{description}</Text>
         {actionLabel && onAction && (

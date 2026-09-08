@@ -4,7 +4,8 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING, hexToRGBA } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
-import { ChevronRight } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from 'react-native';
@@ -60,7 +61,8 @@ export const UpNextEpisodeSection = memo<UpNextEpisodeSectionProps>(
             {subtitle}
           </Text>
         </View>
-        <ChevronRight
+        <AppIcon
+          icon={ArrowRight01Icon}
           size={17}
           color={COLORS.textSecondary}
           style={styles.chevron}

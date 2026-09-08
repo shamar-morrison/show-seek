@@ -6,7 +6,12 @@ import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
-import { Languages, LayoutIcon, MapPin, Palette } from 'lucide-react-native';
+import {
+  Layout01Icon,
+  MapPinIcon,
+  PaintBoardIcon,
+  TranslateIcon,
+} from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -70,7 +75,7 @@ export function ContentSettingsSection({
       )}
       <View style={styles.actionsList}>
         <ActionButton
-          icon={Languages}
+          icon={TranslateIcon}
           label={t('settings.language')}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -86,7 +91,7 @@ export function ContentSettingsSection({
           }
         />
         <ActionButton
-          icon={MapPin}
+          icon={MapPinIcon}
           label={t('settings.region')}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -101,7 +106,7 @@ export function ContentSettingsSection({
           }
         />
         <ActionButton
-          icon={Palette}
+          icon={PaintBoardIcon}
           label={t('settings.accentColor')}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -115,7 +120,7 @@ export function ContentSettingsSection({
           }
         />
         <ActionButton
-          icon={LayoutIcon}
+          icon={Layout01Icon}
           label={t('settings.defaultLaunchScreen')}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

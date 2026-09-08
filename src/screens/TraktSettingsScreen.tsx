@@ -33,18 +33,22 @@ import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  ChevronRight,
-  FileArchive,
-  Link2,
-  RefreshCw,
-  Sparkles,
-  Unlink,
-} from 'lucide-react-native';
+  AlertCircleIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  CheckmarkCircle02Icon,
+  CloudDownloadIcon,
+  FileZipIcon,
+  InformationCircleIcon,
+  Link02Icon,
+  Login01Icon,
+  RefreshIcon,
+  Tick02Icon,
+  Unlink01Icon,
+  UserAiIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -315,52 +319,51 @@ export default function TraktSettingsScreen() {
         })
       : null;
 
-  const syncStatusBanner =
-    isLockedAccount ? (
-      <View
-        style={[
-          styles.errorsContainer,
-          styles.lockedStateContainer,
-          { backgroundColor: hexToRGBA(COLORS.error, 0.1) },
-        ]}
-      >
-        <View style={styles.lockedStateHeader}>
-          <AlertCircle size={18} color={COLORS.error} />
-          <Text style={styles.errorsTitle}>{t('trakt.lockedAccountTitle')}</Text>
-        </View>
-        <Text style={styles.errorText}>
-          {getPreferredMessage('trakt.lockedAccountMessage', syncStatus?.errorMessage)}
+  const syncStatusBanner = isLockedAccount ? (
+    <View
+      style={[
+        styles.errorsContainer,
+        styles.lockedStateContainer,
+        { backgroundColor: hexToRGBA(COLORS.error, 0.1) },
+      ]}
+    >
+      <View style={styles.lockedStateHeader}>
+        <AppIcon icon={AlertCircleIcon} size={18} color={COLORS.error} />
+        <Text style={styles.errorsTitle}>{t('trakt.lockedAccountTitle')}</Text>
+      </View>
+      <Text style={styles.errorText}>
+        {getPreferredMessage('trakt.lockedAccountMessage', syncStatus?.errorMessage)}
+      </Text>
+    </View>
+  ) : isRateLimited ? (
+    <View
+      style={[
+        styles.errorsContainer,
+        styles.lockedStateContainer,
+        { backgroundColor: hexToRGBA(COLORS.warning, 0.12) },
+      ]}
+    >
+      <View style={styles.lockedStateHeader}>
+        <AppIcon icon={AlertCircleIcon} size={18} color={COLORS.warning} />
+        <Text style={[styles.errorsTitle, { color: COLORS.warning }]}>
+          {t('trakt.rateLimitedTitle')}
         </Text>
       </View>
-    ) : isRateLimited ? (
-      <View
-        style={[
-          styles.errorsContainer,
-          styles.lockedStateContainer,
-          { backgroundColor: hexToRGBA(COLORS.warning, 0.12) },
-        ]}
-      >
-        <View style={styles.lockedStateHeader}>
-          <AlertCircle size={18} color={COLORS.warning} />
-          <Text style={[styles.errorsTitle, { color: COLORS.warning }]}>
-            {t('trakt.rateLimitedTitle')}
-          </Text>
-        </View>
+      <Text style={[styles.errorText, { color: COLORS.warning }]}>
+        {getPreferredMessage('trakt.rateLimitedMessage', syncStatus?.errorMessage)}
+      </Text>
+      {syncStatus?.nextAllowedSyncAt && (
         <Text style={[styles.errorText, { color: COLORS.warning }]}>
-          {getPreferredMessage('trakt.rateLimitedMessage', syncStatus?.errorMessage)}
+          {t('trakt.rateLimitedRetryAt', {
+            time: formatDistanceToNow(new Date(syncStatus.nextAllowedSyncAt), {
+              addSuffix: true,
+              locale: distanceLocale,
+            }),
+          })}
         </Text>
-        {syncStatus?.nextAllowedSyncAt && (
-          <Text style={[styles.errorText, { color: COLORS.warning }]}>
-            {t('trakt.rateLimitedRetryAt', {
-              time: formatDistanceToNow(new Date(syncStatus.nextAllowedSyncAt), {
-                addSuffix: true,
-                locale: distanceLocale,
-              }),
-            })}
-          </Text>
-        )}
-      </View>
-    ) : null;
+      )}
+    </View>
+  ) : null;
 
   const zipImportBanner = isZipImporting ? (
     <View
@@ -371,7 +374,7 @@ export default function TraktSettingsScreen() {
       ]}
     >
       <View style={styles.lockedStateHeader}>
-        <FileArchive size={18} color={COLORS.trakt} />
+        <AppIcon icon={FileZipIcon} size={18} color={COLORS.trakt} />
         <Text style={[styles.errorsTitle, { color: COLORS.trakt }]}>
           {t('trakt.zipImportRunningTitle', { defaultValue: 'Trakt Zip Import In Progress' })}
         </Text>
@@ -391,7 +394,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ArrowLeft size={24} color={COLORS.white} />
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
             {isRetryingSync ? t('trakt.retryingHeader') : t('trakt.syncingHeader')}
@@ -399,7 +402,7 @@ export default function TraktSettingsScreen() {
         </View>
         <View style={styles.syncingContainer}>
           <View style={styles.syncingIconContainer}>
-            <RefreshCw size={48} color={COLORS.trakt} />
+            <AppIcon icon={RefreshIcon} size={48} color={COLORS.trakt} />
           </View>
           <Text style={styles.syncingTitle}>
             {isRetryingSync ? t('trakt.retryingTitle') : t('trakt.syncingTitle')}
@@ -429,13 +432,13 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ArrowLeft size={24} color={COLORS.white} />
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('trakt.enrichingHeader')}</Text>
         </View>
         <View style={styles.syncingContainer}>
           <View style={styles.syncingIconContainer}>
-            <Sparkles size={48} color={COLORS.warning} />
+            <AppIcon icon={UserAiIcon} size={48} color={COLORS.warning} />
           </View>
           <Text style={styles.syncingTitle}>{t('trakt.enrichingTitle')}</Text>
           <Text style={styles.syncingSubtitle}>{t('trakt.enrichingSubtitle')}</Text>
@@ -455,7 +458,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ArrowLeft size={24} color={COLORS.white} />
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('trakt.connectHeader')}</Text>
         </View>
@@ -463,7 +466,12 @@ export default function TraktSettingsScreen() {
           <View style={styles.heroSection}>
             <View style={styles.syncIconsContainer}>
               <TraktLogo size={65} />
-              <ArrowRight size={24} color={COLORS.textSecondary} style={styles.arrowIcon} />
+              <AppIcon
+                icon={ArrowRight01Icon}
+                size={24}
+                color={COLORS.textSecondary}
+                style={styles.arrowIcon}
+              />
               <View style={styles.showSeekIconCircle}>
                 <Image
                   source={require('@/assets/images/icon.png')}
@@ -486,7 +494,7 @@ export default function TraktSettingsScreen() {
               <ActivityIndicator color={COLORS.white} />
             ) : (
               <>
-                <Link2 size={20} color={COLORS.white} />
+                <AppIcon icon={Link02Icon} size={20} color={COLORS.white} />
                 <Text style={styles.primaryButtonText}>{t('trakt.connectButton')}</Text>
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </>
@@ -500,8 +508,13 @@ export default function TraktSettingsScreen() {
             activeOpacity={ACTIVE_OPACITY}
             disabled={isPremiumLoading}
           >
-            <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
-              <FileArchive size={22} color={accentColor} />
+            <View
+              style={[
+                styles.zipImportIconCircle,
+                { backgroundColor: hexToRGBA(accentColor, 0.15) },
+              ]}
+            >
+              <AppIcon icon={FileZipIcon} size={22} color={accentColor} />
             </View>
             <View style={styles.zipImportCardContent}>
               <View style={styles.zipImportTitleRow}>
@@ -512,24 +525,24 @@ export default function TraktSettingsScreen() {
                 {getZipImportCardSubtitle('trakt.zipImportCard.subtitleDisconnected')}
               </Text>
             </View>
-            <ChevronRight size={20} color={COLORS.textSecondary} />
+            <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
 
           <CollapsibleCategory title={t('trakt.whatWillBeSyncedTitle')} defaultExpanded>
             <CollapsibleFeatureItem
               text={t('trakt.willSync.watchedMoviesAndShows')}
-              icon="checkmark-circle"
+              icon={CheckmarkCircle02Icon}
             />
-            <CollapsibleFeatureItem text={t('library.ratings')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem text={t('library.ratings')} icon={CheckmarkCircle02Icon} />
             <CollapsibleFeatureItem
               text={t('trakt.willSync.customLists')}
-              icon="checkmark-circle"
+              icon={CheckmarkCircle02Icon}
             />
-            <CollapsibleFeatureItem text={t('library.watchlist')} icon="checkmark-circle" />
-            <CollapsibleFeatureItem text={t('library.favorites')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem text={t('library.watchlist')} icon={CheckmarkCircle02Icon} />
+            <CollapsibleFeatureItem text={t('library.favorites')} icon={CheckmarkCircle02Icon} />
             <CollapsibleFeatureItem
               text={t('trakt.willSync.episodeProgress')}
-              icon="checkmark-circle"
+              icon={CheckmarkCircle02Icon}
             />
           </CollapsibleCategory>
 
@@ -537,22 +550,22 @@ export default function TraktSettingsScreen() {
             <CollapsibleFeatureItem
               text={t('trakt.howItWorks.connectTitle')}
               description={t('trakt.howItWorks.connectDescription')}
-              icon="log-in-outline"
+              icon={Login01Icon}
             />
             <CollapsibleFeatureItem
               text={t('trakt.howItWorks.importTitle')}
               description={t('trakt.howItWorks.importDescription')}
-              icon="cloud-download-outline"
+              icon={CloudDownloadIcon}
             />
             <CollapsibleFeatureItem
               text={t('trakt.howItWorks.enrichTitle')}
               description={t('trakt.howItWorks.enrichDescription')}
-              icon="sparkles-outline"
+              icon={UserAiIcon}
             />
             <CollapsibleFeatureItem
               text={t('trakt.howItWorks.conflictsTitle')}
               description={t('trakt.howItWorks.conflictsDescription')}
-              icon="information-circle-outline"
+              icon={InformationCircleIcon}
             />
           </CollapsibleCategory>
         </ScrollView>
@@ -566,14 +579,14 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ArrowLeft size={24} color={COLORS.white} />
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('trakt.connectedHeader')}</Text>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.heroSection}>
             <View style={[styles.iconCircle, { backgroundColor: COLORS.success }]}>
-              <Check size={32} color={COLORS.white} />
+              <AppIcon icon={Tick02Icon} size={32} color={COLORS.white} />
             </View>
             <Text style={styles.heroTitle}>{t('trakt.connectedTitle')}</Text>
             <Text style={styles.heroSubtitle}>{t('trakt.connectedSubtitle')}</Text>
@@ -591,7 +604,7 @@ export default function TraktSettingsScreen() {
               ]}
             >
               <View style={styles.lockedStateHeader}>
-                <AlertCircle size={18} color={COLORS.error} />
+                <AppIcon icon={AlertCircleIcon} size={18} color={COLORS.error} />
                 <Text style={styles.errorsTitle}>{t('trakt.firstImportFailedTitle')}</Text>
               </View>
               <Text style={styles.errorText}>{initialSyncFailureMessage}</Text>
@@ -608,12 +621,13 @@ export default function TraktSettingsScreen() {
             activeOpacity={ACTIVE_OPACITY}
             disabled={isZipImporting}
           >
-            <RefreshCw size={20} color={isZipImporting ? COLORS.textSecondary : COLORS.white} />
+            <AppIcon
+              icon={RefreshIcon}
+              size={20}
+              color={isZipImporting ? COLORS.textSecondary : COLORS.white}
+            />
             <Text
-              style={[
-                styles.primaryButtonText,
-                isZipImporting && { color: COLORS.textSecondary },
-              ]}
+              style={[styles.primaryButtonText, isZipImporting && { color: COLORS.textSecondary }]}
             >
               {t('trakt.importButton')}
             </Text>
@@ -626,8 +640,13 @@ export default function TraktSettingsScreen() {
             activeOpacity={ACTIVE_OPACITY}
             disabled={isPremiumLoading}
           >
-            <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
-              <FileArchive size={22} color={accentColor} />
+            <View
+              style={[
+                styles.zipImportIconCircle,
+                { backgroundColor: hexToRGBA(accentColor, 0.15) },
+              ]}
+            >
+              <AppIcon icon={FileZipIcon} size={22} color={accentColor} />
             </View>
             <View style={styles.zipImportCardContent}>
               <View style={styles.zipImportTitleRow}>
@@ -638,7 +657,7 @@ export default function TraktSettingsScreen() {
                 {getZipImportCardSubtitle('trakt.zipImportCard.subtitleConnected')}
               </Text>
             </View>
-            <ChevronRight size={20} color={COLORS.textSecondary} />
+            <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -651,7 +670,7 @@ export default function TraktSettingsScreen() {
               <ActivityIndicator color={COLORS.error} />
             ) : (
               <>
-                <Unlink size={18} color={COLORS.error} />
+                <AppIcon icon={Unlink01Icon} size={18} color={COLORS.error} />
                 <Text style={styles.disconnectButtonText}>{t('trakt.disconnectButton')}</Text>
               </>
             )}
@@ -663,7 +682,9 @@ export default function TraktSettingsScreen() {
 
   // State: Connected and synced
   const itemsSynced = syncStatus?.itemsSynced;
-  const hasChangedItems = Boolean(itemsSynced && Object.values(itemsSynced).some((count) => count > 0));
+  const hasChangedItems = Boolean(
+    itemsSynced && Object.values(itemsSynced).some((count) => count > 0)
+  );
   const statsTitle =
     syncStatus?.summaryMode === 'bootstrap'
       ? t('trakt.importedItemsTitle')
@@ -677,14 +698,14 @@ export default function TraktSettingsScreen() {
     <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-          <ArrowLeft size={24} color={COLORS.white} />
+          <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('trakt.connectedScreenHeader')}</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.statusSection}>
           <View style={[styles.iconCircle, { backgroundColor: COLORS.success }]}>
-            <Check size={32} color={COLORS.white} />
+            <AppIcon icon={Tick02Icon} size={32} color={COLORS.white} />
           </View>
           <Text style={styles.lastSyncText}>
             {t('trakt.lastSynced', {
@@ -733,21 +754,26 @@ export default function TraktSettingsScreen() {
         {syncStatusBanner}
         {zipImportBanner}
 
-        {!isLockedAccount && !isRateLimited && syncStatus?.errors && syncStatus.errors.length > 0 && (
-          <View style={[styles.errorsContainer, { backgroundColor: hexToRGBA(accentColor, 0.1) }]}>
-            <Text style={styles.errorsTitle}>{t('trakt.syncErrorsTitle')}</Text>
-            {syncStatus.errors.slice(0, 3).map((error, index) => (
-              <Text key={index} style={styles.errorText}>
-                • {getSyncErrorMessage(error)}
-              </Text>
-            ))}
-            {syncStatus.errors.length > 3 && (
-              <Text style={styles.errorText}>
-                {t('trakt.moreErrors', { count: syncStatus.errors.length - 3 })}
-              </Text>
-            )}
-          </View>
-        )}
+        {!isLockedAccount &&
+          !isRateLimited &&
+          syncStatus?.errors &&
+          syncStatus.errors.length > 0 && (
+            <View
+              style={[styles.errorsContainer, { backgroundColor: hexToRGBA(accentColor, 0.1) }]}
+            >
+              <Text style={styles.errorsTitle}>{t('trakt.syncErrorsTitle')}</Text>
+              {syncStatus.errors.slice(0, 3).map((error, index) => (
+                <Text key={index} style={styles.errorText}>
+                  • {getSyncErrorMessage(error)}
+                </Text>
+              ))}
+              {syncStatus.errors.length > 3 && (
+                <Text style={styles.errorText}>
+                  {t('trakt.moreErrors', { count: syncStatus.errors.length - 3 })}
+                </Text>
+              )}
+            </View>
+          )}
 
         <TouchableOpacity
           style={[
@@ -758,12 +784,13 @@ export default function TraktSettingsScreen() {
           activeOpacity={ACTIVE_OPACITY}
           disabled={isZipImporting}
         >
-          <RefreshCw size={20} color={isZipImporting ? COLORS.textSecondary : COLORS.white} />
+          <AppIcon
+            icon={RefreshIcon}
+            size={20}
+            color={isZipImporting ? COLORS.textSecondary : COLORS.white}
+          />
           <Text
-            style={[
-              styles.primaryButtonText,
-              isZipImporting && { color: COLORS.textSecondary },
-            ]}
+            style={[styles.primaryButtonText, isZipImporting && { color: COLORS.textSecondary }]}
           >
             {t('trakt.syncNowButton')}
           </Text>
@@ -773,7 +800,7 @@ export default function TraktSettingsScreen() {
         {lastSyncedAt && (
           <View style={styles.enrichmentSection}>
             <View style={styles.enrichmentHeader}>
-              <Sparkles size={24} color={COLORS.warning} />
+              <AppIcon icon={UserAiIcon} size={24} color={COLORS.warning} />
               <Text style={styles.enrichmentTitle}>
                 {__DEV__ && lastEnrichedAt
                   ? t('trakt.enrichment.devTitle')
@@ -790,7 +817,7 @@ export default function TraktSettingsScreen() {
               onPress={handleEnrich}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Sparkles size={20} color={COLORS.white} />
+              <AppIcon icon={UserAiIcon} size={20} color={COLORS.white} />
               <Text style={styles.primaryButtonText}>
                 {__DEV__ && lastEnrichedAt
                   ? t('trakt.enrichment.devButton')
@@ -806,7 +833,7 @@ export default function TraktSettingsScreen() {
         {/* Show enrichment status if already enriched */}
         {lastEnrichedAt && (
           <View style={styles.enrichedBadge}>
-            <Check size={16} color={COLORS.success} />
+            <AppIcon icon={Tick02Icon} size={16} color={COLORS.success} />
             <Text style={styles.enrichedText}>
               {t('trakt.enriched', {
                 time: formatDistanceToNow(lastEnrichedAt, {
@@ -825,8 +852,10 @@ export default function TraktSettingsScreen() {
           activeOpacity={ACTIVE_OPACITY}
           disabled={isPremiumLoading}
         >
-          <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
-            <FileArchive size={22} color={accentColor} />
+          <View
+            style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}
+          >
+            <AppIcon icon={FileZipIcon} size={22} color={accentColor} />
           </View>
           <View style={styles.zipImportCardContent}>
             <View style={styles.zipImportTitleRow}>
@@ -837,7 +866,7 @@ export default function TraktSettingsScreen() {
               {getZipImportCardSubtitle('trakt.zipImportCard.subtitleSynced')}
             </Text>
           </View>
-          <ChevronRight size={20} color={COLORS.textSecondary} />
+          <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -850,7 +879,7 @@ export default function TraktSettingsScreen() {
             <ActivityIndicator color={COLORS.error} />
           ) : (
             <>
-              <Unlink size={18} color={COLORS.error} />
+              <AppIcon icon={Unlink01Icon} size={18} color={COLORS.error} />
               <Text style={styles.disconnectButtonText}>{t('trakt.disconnectTraktButton')}</Text>
             </>
           )}

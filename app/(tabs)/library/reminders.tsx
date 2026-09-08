@@ -14,15 +14,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useNavigation } from 'expo-router';
-import { Bell, List, Rows3 } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ListViewIcon, Menu01Icon, Notification01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ViewMode = 'flat' | 'grouped';
@@ -46,10 +42,8 @@ export default function RemindersScreen() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [isEnablingNotifications, setIsEnablingNotifications] = useState(false);
 
-  const { permissionStatus, requestPermission, checkPermission } =
-    useNotificationPermissions();
-  const showNotificationsBanner =
-    permissionStatus !== 'granted' && permissionStatus !== 'checking';
+  const { permissionStatus, requestPermission, checkPermission } = useNotificationPermissions();
+  const showNotificationsBanner = permissionStatus !== 'granted' && permissionStatus !== 'checking';
 
   // Re-check permission when returning from OS Settings so the banner clears.
   const checkPermissionRef = useRef(checkPermission);
@@ -113,9 +107,9 @@ export default function RemindersScreen() {
           hitSlop={HIT_SLOP.m}
         >
           {viewMode === 'flat' ? (
-            <Rows3 size={24} color={COLORS.text} />
+            <AppIcon icon={ListViewIcon} size={24} color={COLORS.text} />
           ) : (
-            <List size={24} color={COLORS.text} />
+            <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
           )}
         </TouchableOpacity>
       ),
@@ -267,7 +261,7 @@ export default function RemindersScreen() {
           </View>
         )}
         <EmptyState
-          icon={Bell}
+          icon={Notification01Icon}
           title={t('library.emptyReminders')}
           description={t('library.emptyRemindersHint')}
         />

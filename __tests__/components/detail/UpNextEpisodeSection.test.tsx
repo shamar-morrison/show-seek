@@ -99,7 +99,8 @@ describe('UpNextEpisodeSection', () => {
       <UpNextEpisodeSection episode={baseEpisode} onEpisodePress={jest.fn()} />
     );
 
-    // Lucide propagates testID to its inner Svg, so match all and assert on the outer icon
+    // AppIcon applies style via a wrapper View (HugeIconsIcon drops it),
+    // so match all and assert on the outer styled icon
     const chevrons = getAllByTestId('up-next-chevron');
     expect(chevrons.length).toBeGreaterThan(0);
     const chevronStyle = StyleSheet.flatten(chevrons[0].props.style);

@@ -20,7 +20,8 @@ import { getRatingText } from '@/src/utils/ratingHelpers';
 import { maybeWarnTraktManagedRatingEdit } from '@/src/utils/traktManagedEdits';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Star, StarHalf, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, StarIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -50,12 +51,22 @@ const RatingStar = ({ value, currentRating, onRate, isFirstStar = false }: Ratin
   // Determine what icon to render
   const renderStarIcon = () => {
     if (isFull) {
-      return <Star size={28} color={accentColor} fill={accentColor} />;
+      return <AppIcon icon={StarIcon} size={28} color={accentColor} fill={accentColor} />;
     }
     if (isHalf) {
-      return <StarHalf size={28} color={accentColor} fill={accentColor} />;
+      // Half-filled star: empty base star with a left-half clipped filled
+      // overlay (mirrors show-seek-web rating-modal). A dedicated half-star
+      // glyph can't fill cleanly since fill floods the whole path region.
+      return (
+        <View style={starStyles.halfStarContainer}>
+          <AppIcon icon={StarIcon} size={28} color={COLORS.textSecondary} fill="transparent" />
+          <View style={starStyles.halfStarOverlay}>
+            <AppIcon icon={StarIcon} size={28} color={accentColor} fill={accentColor} />
+          </View>
+        </View>
+      );
     }
-    return <Star size={28} color={COLORS.textSecondary} fill="transparent" />;
+    return <AppIcon icon={StarIcon} size={28} color={COLORS.textSecondary} fill="transparent" />;
   };
 
   const handleLeftPress = () => {
@@ -94,6 +105,18 @@ const starStyles = StyleSheet.create({
   },
   iconContainer: {
     position: 'absolute',
+  },
+  halfStarContainer: {
+    width: 28,
+    height: 28,
+  },
+  halfStarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 14,
+    height: 28,
+    overflow: 'hidden',
   },
   touchLayer: {
     flexDirection: 'row',
@@ -325,7 +348,10 @@ export default function RatingModal({
             console.log('[RatingModal] Auto-removed from Should Watch list:', mediaId);
           } catch (autoRemoveError) {
             // Log but don't throw - auto-remove is non-critical
-            console.error('[RatingModal] Auto-remove from Should Watch list failed:', autoRemoveError);
+            console.error(
+              '[RatingModal] Auto-remove from Should Watch list failed:',
+              autoRemoveError
+            );
           }
         }
 
@@ -408,9 +434,9 @@ export default function RatingModal({
     ? t('media.episode')
     : seasonData
       ? t('media.season')
-    : mediaType === 'tv'
-      ? t('media.tvShow')
-      : t('media.movie');
+      : mediaType === 'tv'
+        ? t('media.tvShow')
+        : t('media.movie');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
@@ -429,7 +455,7 @@ export default function RatingModal({
             <Pressable onPress={handleClose}>
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
-                  <X size={24} color={COLORS.text} />
+                  <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
                 </View>
               )}
             </Pressable>

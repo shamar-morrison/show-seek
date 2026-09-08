@@ -6,7 +6,8 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
-import { X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -90,7 +91,7 @@ export function MonthYearPickerModal({
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('datePicker.selectMonthYear')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
 
@@ -185,92 +186,92 @@ export function MonthYearPickerModal({
 
 const useStyles = () =>
   useThemedStyles(({ accentColor }) => ({
-  content: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-  },
-  closeButton: {
-    padding: SPACING.xs,
-  },
-  pickerContainer: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-    marginBottom: SPACING.l,
-  },
-  column: {
-    flex: 1,
-  },
-  columnHeader: {
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.s,
-    textAlign: 'center',
-  },
-  scrollView: {
-    height: 250,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  scrollContent: {
-    padding: SPACING.s,
-  },
-  item: {
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.xs,
-  },
-  itemSelected: {
-    backgroundColor: accentColor,
-  },
-  itemDisabled: {
-    opacity: 0.4,
-  },
-  itemText: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-    textAlign: 'center',
-  },
-  itemTextSelected: {
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  itemTextDisabled: {
-    color: COLORS.textSecondary,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  cancelButton: {
-    backgroundColor: COLORS.transparent,
-    borderWidth: 1,
-    borderColor: accentColor,
-  },
-  confirmButton: {
-    backgroundColor: accentColor,
-  },
-  cancelButtonText: {
-    color: accentColor,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-  },
-  confirmButtonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-  },
+    content: {
+      backgroundColor: COLORS.surface,
+      borderRadius: BORDER_RADIUS.l,
+      padding: SPACING.l,
+      width: '100%',
+      maxWidth: 400,
+      maxHeight: '80%',
+    },
+    closeButton: {
+      padding: SPACING.xs,
+    },
+    pickerContainer: {
+      flexDirection: 'row',
+      gap: SPACING.m,
+      marginBottom: SPACING.l,
+    },
+    column: {
+      flex: 1,
+    },
+    columnHeader: {
+      fontSize: FONT_SIZE.s,
+      fontWeight: '600',
+      color: COLORS.textSecondary,
+      marginBottom: SPACING.s,
+      textAlign: 'center',
+    },
+    scrollView: {
+      height: 250,
+      backgroundColor: COLORS.surfaceLight,
+      borderRadius: BORDER_RADIUS.m,
+    },
+    scrollContent: {
+      padding: SPACING.s,
+    },
+    item: {
+      paddingVertical: SPACING.m,
+      paddingHorizontal: SPACING.m,
+      borderRadius: BORDER_RADIUS.m,
+      marginBottom: SPACING.xs,
+    },
+    itemSelected: {
+      backgroundColor: accentColor,
+    },
+    itemDisabled: {
+      opacity: 0.4,
+    },
+    itemText: {
+      fontSize: FONT_SIZE.m,
+      color: COLORS.text,
+      textAlign: 'center',
+    },
+    itemTextSelected: {
+      color: COLORS.white,
+      fontWeight: '600',
+    },
+    itemTextDisabled: {
+      color: COLORS.textSecondary,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: SPACING.m,
+    },
+    actionButton: {
+      flex: 1,
+      paddingVertical: SPACING.m,
+      borderRadius: BORDER_RADIUS.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 48,
+    },
+    cancelButton: {
+      backgroundColor: COLORS.transparent,
+      borderWidth: 1,
+      borderColor: accentColor,
+    },
+    confirmButton: {
+      backgroundColor: accentColor,
+    },
+    cancelButtonText: {
+      color: accentColor,
+      fontSize: FONT_SIZE.m,
+      fontWeight: '600',
+    },
+    confirmButtonText: {
+      color: COLORS.white,
+      fontSize: FONT_SIZE.m,
+      fontWeight: '600',
+    },
   }));

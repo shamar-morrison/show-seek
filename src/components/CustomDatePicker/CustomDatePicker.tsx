@@ -6,7 +6,8 @@
 
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -195,7 +196,11 @@ export function CustomDatePicker({
           style={[styles.navButton, !canGoBack && styles.navButtonDisabled]}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <ChevronLeft size={24} color={canGoBack ? COLORS.text : COLORS.textSecondary} />
+          <AppIcon
+            icon={ArrowLeft01Icon}
+            size={24}
+            color={canGoBack ? COLORS.text : COLORS.textSecondary}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -212,7 +217,11 @@ export function CustomDatePicker({
           style={[styles.navButton, !canGoForward && styles.navButtonDisabled]}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <ChevronRight size={24} color={canGoForward ? COLORS.text : COLORS.textSecondary} />
+          <AppIcon
+            icon={ArrowRight01Icon}
+            size={24}
+            color={canGoForward ? COLORS.text : COLORS.textSecondary}
+          />
         </TouchableOpacity>
       </View>
 
@@ -273,135 +282,135 @@ const CELL_SIZE = 44; // Minimum touch target
 
 const useStyles = () =>
   useThemedStyles(({ accentColor }) => ({
-  container: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.m,
-  },
+    container: {
+      backgroundColor: COLORS.surface,
+      borderRadius: BORDER_RADIUS.l,
+      padding: SPACING.m,
+    },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.m,
-  },
-  navButton: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: BORDER_RADIUS.round,
-  },
-  navButtonDisabled: {
-    opacity: 0.5,
-  },
-  monthYearButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: SPACING.s,
-  },
-  monthYearText: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: SPACING.m,
+    },
+    navButton: {
+      width: CELL_SIZE,
+      height: CELL_SIZE,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: BORDER_RADIUS.round,
+    },
+    navButtonDisabled: {
+      opacity: 0.5,
+    },
+    monthYearButton: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: SPACING.s,
+    },
+    monthYearText: {
+      fontSize: FONT_SIZE.l,
+      fontWeight: '600',
+      color: COLORS.text,
+    },
 
-  // Weekday Headers
-  weekdayHeader: {
-    flexDirection: 'row',
-    marginBottom: SPACING.xs,
-  },
-  weekdayCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: SPACING.xs,
-  },
-  weekdayText: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-  },
+    // Weekday Headers
+    weekdayHeader: {
+      flexDirection: 'row',
+      marginBottom: SPACING.xs,
+    },
+    weekdayCell: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: SPACING.xs,
+    },
+    weekdayText: {
+      fontSize: FONT_SIZE.xs,
+      fontWeight: '600',
+      color: COLORS.textSecondary,
+      textTransform: 'uppercase',
+    },
 
-  // Calendar Grid
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: SPACING.m,
-  },
-  dayCell: {
-    width: `${100 / 7}%`,
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: CELL_SIZE,
-  },
-  dayText: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-  },
-  otherMonthText: {
-    color: COLORS.surfaceLight,
-  },
-  disabledText: {
-    color: COLORS.textSecondary,
-    opacity: 0.5,
-  },
-  selectedCell: {
-    backgroundColor: accentColor,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  selectedText: {
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  todayCell: {
-    borderWidth: 1,
-    borderColor: accentColor,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  pressedCell: {
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.round,
-  },
+    // Calendar Grid
+    calendarGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: SPACING.m,
+    },
+    dayCell: {
+      width: `${100 / 7}%`,
+      aspectRatio: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: CELL_SIZE,
+    },
+    dayText: {
+      fontSize: FONT_SIZE.m,
+      color: COLORS.text,
+    },
+    otherMonthText: {
+      color: COLORS.surfaceLight,
+    },
+    disabledText: {
+      color: COLORS.textSecondary,
+      opacity: 0.5,
+    },
+    selectedCell: {
+      backgroundColor: accentColor,
+      borderRadius: BORDER_RADIUS.round,
+    },
+    selectedText: {
+      color: COLORS.white,
+      fontWeight: '600',
+    },
+    todayCell: {
+      borderWidth: 1,
+      borderColor: accentColor,
+      borderRadius: BORDER_RADIUS.round,
+    },
+    pressedCell: {
+      backgroundColor: COLORS.surfaceLight,
+      borderRadius: BORDER_RADIUS.round,
+    },
 
-  // Actions
-  actions: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  cancelButton: {
-    backgroundColor: COLORS.transparent,
-    borderWidth: 1,
-    borderColor: accentColor,
-  },
-  confirmButton: {
-    backgroundColor: accentColor,
-  },
-  buttonDisabled: {
-    backgroundColor: COLORS.surfaceLight,
-    opacity: 0.5,
-  },
-  cancelButtonText: {
-    color: accentColor,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-  },
-  confirmButtonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-  },
-  buttonTextDisabled: {
-    color: COLORS.textSecondary,
-  },
+    // Actions
+    actions: {
+      flexDirection: 'row',
+      gap: SPACING.m,
+    },
+    actionButton: {
+      flex: 1,
+      paddingVertical: SPACING.m,
+      borderRadius: BORDER_RADIUS.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 48,
+    },
+    cancelButton: {
+      backgroundColor: COLORS.transparent,
+      borderWidth: 1,
+      borderColor: accentColor,
+    },
+    confirmButton: {
+      backgroundColor: accentColor,
+    },
+    buttonDisabled: {
+      backgroundColor: COLORS.surfaceLight,
+      opacity: 0.5,
+    },
+    cancelButtonText: {
+      color: accentColor,
+      fontSize: FONT_SIZE.m,
+      fontWeight: '600',
+    },
+    confirmButtonText: {
+      color: COLORS.white,
+      fontSize: FONT_SIZE.m,
+      fontWeight: '600',
+    },
+    buttonTextDisabled: {
+      color: COLORS.textSecondary,
+    },
   }));

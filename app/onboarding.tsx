@@ -7,7 +7,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { ChevronRight, Film } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowRight01Icon, Film01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
@@ -134,7 +135,7 @@ function OnboardingSlideItem({
             >
               {hasVideoError ? (
                 <View style={styles.videoFallback} testID={`video-fallback-${item.id}`}>
-                  <Film color={COLORS.textSecondary} size={30} />
+                  <AppIcon icon={Film01Icon} color={COLORS.textSecondary} size={30} />
                   <Text style={styles.fallbackText}>{fallbackLabel}</Text>
                 </View>
               ) : (
@@ -321,15 +322,11 @@ export default function OnboardingScreen() {
               ? t('onboarding.getStarted')
               : t('common.next')}
           </Text>
-          <ChevronRight color={COLORS.white} size={20} />
+          <AppIcon icon={ArrowRight01Icon} color={COLORS.white} size={20} />
         </TouchableOpacity>
       </SafeAreaView>
 
-      <ExitIntentModal
-        visible={isExitModalVisible}
-        onContinue={onContinue}
-        onExit={onExit}
-      />
+      <ExitIntentModal visible={isExitModalVisible} onContinue={onContinue} onExit={onExit} />
     </View>
   );
 }

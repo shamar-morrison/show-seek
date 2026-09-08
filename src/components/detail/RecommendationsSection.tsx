@@ -4,9 +4,13 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
-import { HorizontalFlashList, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/HorizontalFlashList';
+import {
+  HorizontalFlashList,
+  HORIZONTAL_SCROLL_PROPS,
+} from '@/src/components/ui/HorizontalFlashList';
 import { HORIZONTAL_LIST_CONTENT_STYLE } from '@/src/components/ui/horizontalScrollProps';
-import { Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -77,7 +81,7 @@ const RecommendationCard = memo<{
         {item.vote_average > 0 && year && <Text style={styles.similarSeparator}> • </Text>}
         {item.vote_average > 0 && (
           <View style={styles.similarRating}>
-            <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+            <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
             <Text style={styles.similarRatingText}>{item.vote_average.toFixed(1)}</Text>
           </View>
         )}
@@ -115,13 +119,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
           resolvePosterPath={resolvePosterPath}
         />
       ),
-      [
-        mediaType,
-        onMediaLongPress,
-        onMediaPress,
-        preferOriginalTitles,
-        resolvePosterPath,
-      ]
+      [mediaType, onMediaLongPress, onMediaPress, preferOriginalTitles, resolvePosterPath]
     );
 
     // Render loading skeleton

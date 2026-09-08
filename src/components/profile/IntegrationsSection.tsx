@@ -3,7 +3,8 @@ import { ActionButton } from '@/src/components/profile/ActionButton';
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { Image } from 'expo-image';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -62,7 +63,7 @@ export function IntegrationsSection({
           badge={
             isTraktConnected ? (
               <View style={styles.traktConnectedBadge} testID="integrations-trakt-connected-badge">
-                <Check size={12} color={COLORS.white} />
+                <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
               </View>
             ) : null
           }

@@ -24,7 +24,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { List, Rows3, Search, Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ListViewIcon, Menu01Icon, Search01Icon, StarIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -60,7 +61,9 @@ export default function SeasonRatingsScreen() {
 
   const seasonRatings = useMemo(() => {
     if (!ratings) return [];
-    return ratings.filter((rating) => rating.mediaType === 'season').sort((a, b) => b.ratedAt - a.ratedAt);
+    return ratings
+      .filter((rating) => rating.mediaType === 'season')
+      .sort((a, b) => b.ratedAt - a.ratedAt);
   }, [ratings]);
 
   const {
@@ -143,11 +146,7 @@ export default function SeasonRatingsScreen() {
 
   const getSelectionTarget = useCallback(
     (rating: RatingItem): SeasonRatingSelectionTarget | null => {
-      if (
-        rating.mediaType !== 'season' ||
-        rating.tvShowId == null ||
-        rating.seasonNumber == null
-      ) {
+      if (rating.mediaType !== 'season' || rating.tvShowId == null || rating.seasonNumber == null) {
         return null;
       }
 
@@ -212,14 +211,14 @@ export default function SeasonRatingsScreen() {
           <View style={styles.headerButtons}>
             {!isSelectionMode && (
               <HeaderIconButton onPress={searchButton.onPress}>
-                <Search size={22} color={COLORS.text} />
+                <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
               </HeaderIconButton>
             )}
             <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'flat' ? (
-                <Rows3 size={24} color={COLORS.text} />
+                <AppIcon icon={ListViewIcon} size={24} color={COLORS.text} />
               ) : (
-                <List size={24} color={COLORS.text} />
+                <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
               )}
             </HeaderIconButton>
           </View>
@@ -369,7 +368,7 @@ export default function SeasonRatingsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={Star}
+          icon={StarIcon}
           title={t('library.emptySeasonRatings')}
           description={t('library.emptySeasonRatingsHint')}
         />

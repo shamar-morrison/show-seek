@@ -1,12 +1,14 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
-import { ChevronRight, LucideIcon } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import React, { memo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 interface LibraryNavigationCardProps {
-  icon: LucideIcon;
+  icon: IconSvgElement;
   title: string;
   onPress: () => void;
   testID?: string;
@@ -32,10 +34,10 @@ export const LibraryNavigationCard = memo<LibraryNavigationCardProps>(
         onPress={handlePress}
         testID={testID}
       >
-        <Icon size={24} color={isLocked ? COLORS.textSecondary : accentColor} />
+        <AppIcon icon={Icon} size={24} color={isLocked ? COLORS.textSecondary : accentColor} />
         <Text style={[styles.title, isLocked && styles.titleLocked]}>{title}</Text>
         {badge}
-        <ChevronRight size={20} color={COLORS.textSecondary} />
+        <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
       </Pressable>
     );
   }

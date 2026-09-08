@@ -2,7 +2,13 @@ import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronDown, Search, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowDown01Icon,
+  Cancel01Icon,
+  Search01Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -67,9 +73,9 @@ const FilterSelect = ({
         activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
-          {selectedOption ? selectedOption.label : placeholder ?? t('filters.selectPlaceholder')}
+          {selectedOption ? selectedOption.label : (placeholder ?? t('filters.selectPlaceholder'))}
         </Text>
-        <ChevronDown size={20} color={COLORS.textSecondary} />
+        <AppIcon icon={ArrowDown01Icon} size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
 
       <Modal
@@ -87,7 +93,7 @@ const FilterSelect = ({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
               <TouchableOpacity onPress={() => setVisible(false)} activeOpacity={ACTIVE_OPACITY}>
-                <X size={24} color={COLORS.text} />
+                <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -119,7 +125,9 @@ const FilterSelect = ({
                   >
                     {item.label}
                   </Text>
-                  {item.value === value && <Check size={20} color={accentColor} />}
+                  {item.value === value && (
+                    <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
+                  )}
                 </TouchableOpacity>
               )}
             />
@@ -165,9 +173,9 @@ const SearchableFilterSelect = ({
         activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
-          {selectedOption ? selectedOption.label : placeholder ?? t('filters.selectPlaceholder')}
+          {selectedOption ? selectedOption.label : (placeholder ?? t('filters.selectPlaceholder'))}
         </Text>
-        <ChevronDown size={20} color={COLORS.textSecondary} />
+        <AppIcon icon={ArrowDown01Icon} size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
 
       <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={handleClose}>
@@ -176,11 +184,11 @@ const SearchableFilterSelect = ({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
               <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
-                <X size={24} color={COLORS.text} />
+                <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
             <View style={styles.searchContainer}>
-              <Search size={18} color={COLORS.textSecondary} />
+              <AppIcon icon={Search01Icon} size={18} color={COLORS.textSecondary} />
               <TextInput
                 style={styles.searchInput}
                 placeholder={searchPlaceholder ?? t('filters.searchPlaceholder')}
@@ -192,7 +200,7 @@ const SearchableFilterSelect = ({
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={ACTIVE_OPACITY}>
-                  <X size={18} color={COLORS.textSecondary} />
+                  <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               )}
             </View>
@@ -232,7 +240,9 @@ const SearchableFilterSelect = ({
                   >
                     {item.label}
                   </Text>
-                  {item.value === value && <Check size={20} color={accentColor} />}
+                  {item.value === value && (
+                    <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
+                  )}
                 </TouchableOpacity>
               )}
             />
@@ -329,7 +339,7 @@ export default function DiscoverFilters({
   ];
 
   return (
-      <View style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.row}>
         <View style={styles.col}>
           <FilterSelect
@@ -408,7 +418,7 @@ export default function DiscoverFilters({
         onPress={onClearFilters}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <X size={18} color={COLORS.textSecondary} />
+        <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
         <Text style={styles.clearButtonText}>{t('common.clearFilters')}</Text>
       </TouchableOpacity>
     </View>

@@ -11,7 +11,8 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Sparkles, Star, TrendingUp } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { AnalyticsUpIcon, StarIcon, UserAiIcon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -41,9 +42,15 @@ export default function ForYouScreen() {
   const { isReady } = useProgressiveRender();
 
   // Memoize section icons so memoized RecommendationSection props stay stable.
-  const starIcon = useMemo(() => <Star size={20} color={COLORS.warning} />, []);
-  const hiddenGemsIcon = useMemo(() => <Sparkles size={20} color={accentColor} />, [accentColor]);
-  const trendingIcon = useMemo(() => <TrendingUp size={20} color={COLORS.success} />, []);
+  const starIcon = useMemo(() => <AppIcon icon={StarIcon} size={20} color={COLORS.warning} />, []);
+  const hiddenGemsIcon = useMemo(
+    () => <AppIcon icon={UserAiIcon} size={20} color={accentColor} />,
+    [accentColor]
+  );
+  const trendingIcon = useMemo(
+    () => <AppIcon icon={AnalyticsUpIcon} size={20} color={COLORS.success} />,
+    []
+  );
 
   // Haptic feedback on mount (fire-and-forget, never blocks render)
   useEffect(() => {
@@ -74,11 +81,14 @@ export default function ForYouScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
-            <Sparkles size={64} color={accentColor} />
+            <AppIcon icon={UserAiIcon} size={64} color={accentColor} />
           </View>
           <Text style={styles.emptyTitle}>{t('forYou.notEnoughData')}</Text>
           <Text style={styles.emptyDescription}>{t('forYou.notEnoughDataDescription')}</Text>
-          <Pressable style={[styles.primaryButton, { backgroundColor: accentColor }]} onPress={handleGoToDiscover}>
+          <Pressable
+            style={[styles.primaryButton, { backgroundColor: accentColor }]}
+            onPress={handleGoToDiscover}
+          >
             <Text style={styles.primaryButtonText}>{t('forYou.goToDiscover')}</Text>
           </Pressable>
         </View>
@@ -161,7 +171,11 @@ const RecommendationSection = memo(function RecommendationSection({
   const listExtraData = useMemo(() => ({ overrides }), [overrides]);
   const renderItem = useCallback(
     ({ item }: { item: Movie | TVShow }) =>
-      mediaType === 'tv' ? <TVShowCard show={item as TVShow} /> : <MovieCard movie={item as Movie} />,
+      mediaType === 'tv' ? (
+        <TVShowCard show={item as TVShow} />
+      ) : (
+        <MovieCard movie={item as Movie} />
+      ),
     [mediaType]
   );
 

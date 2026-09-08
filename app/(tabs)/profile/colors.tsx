@@ -2,10 +2,18 @@
  * Accent Color Selection Screen
  * Allows users to select their preferred accent/primary color
  */
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING, hexToRGBA } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  SPACING,
+  hexToRGBA,
+} from '@/src/constants/theme';
 import { SUPPORTED_ACCENT_COLORS, useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -78,7 +86,7 @@ export default function AccentColorScreen() {
                         { backgroundColor: hexToRGBA(accentColor, 0.2) },
                       ]}
                     >
-                      <Check size={20} color={accentColor} />
+                      <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
                     </View>
                   ) : null}
                 </View>

@@ -26,7 +26,13 @@ import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, FolderPlus, Plus, Search } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowUpDownIcon,
+  FolderAddIcon,
+  PlusSignIcon,
+  Search01Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -216,16 +222,16 @@ export default function CustomListsScreen() {
       headerRight: () => (
         <View style={styles.headerButtons}>
           <HeaderIconButton onPress={searchButton.onPress}>
-            <Search size={22} color={COLORS.text} />
+            <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
           </HeaderIconButton>
           <HeaderIconButton onPress={() => setSortModalVisible(true)}>
             <View style={iconBadgeStyles.wrapper}>
-              <ArrowUpDown size={22} color={COLORS.text} />
+              <AppIcon icon={ArrowUpDownIcon} size={22} color={COLORS.text} />
               {hasActiveSort && <View style={iconBadgeStyles.badge} />}
             </View>
           </HeaderIconButton>
           <HeaderIconButton onPress={handleCreateList}>
-            <Plus size={24} color={COLORS.text} />
+            <AppIcon icon={PlusSignIcon} size={24} color={COLORS.text} />
           </HeaderIconButton>
         </View>
       ),
@@ -265,7 +271,7 @@ export default function CustomListsScreen() {
     if (customLists.length === 0) {
       return (
         <EmptyState
-          icon={FolderPlus}
+          icon={FolderAddIcon}
           title={t('library.emptyLists')}
           description={t('library.emptyListsHint')}
           actionLabel={t('library.createList')}
@@ -279,7 +285,15 @@ export default function CustomListsScreen() {
     }
 
     return null;
-  }, [customLists.length, handleCreateList, insets.bottom, insets.top, searchQuery, t, windowHeight]);
+  }, [
+    customLists.length,
+    handleCreateList,
+    insets.bottom,
+    insets.top,
+    searchQuery,
+    t,
+    windowHeight,
+  ]);
 
   if (isLoading) {
     return <FullScreenLoading />;

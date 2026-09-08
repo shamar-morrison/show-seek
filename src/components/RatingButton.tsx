@@ -1,6 +1,7 @@
 import { COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -26,7 +27,8 @@ export default function RatingButton({
       {isLoading ? (
         <ActivityIndicator size="small" color={accentColor} />
       ) : (
-        <Star
+        <AppIcon
+          icon={StarIcon}
           size={24}
           color={isRated ? accentColor : COLORS.text}
           fill={isRated ? accentColor : 'transparent'}

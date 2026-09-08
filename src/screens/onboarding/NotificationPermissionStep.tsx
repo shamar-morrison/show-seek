@@ -4,7 +4,8 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Bell } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Notification01Icon } from '@hugeicons/core-free-icons';
 
 interface NotificationPermissionStepProps {
   onPermissionGranted: () => void;
@@ -38,7 +39,7 @@ export default function NotificationPermissionStep({
     <View style={styles.container}>
       <Animated.View style={styles.content} entering={FadeInDown.duration(400).delay(100)}>
         <View style={[styles.iconContainer, { backgroundColor: `${accentColor}20` }]}>
-          <Bell size={48} color={accentColor} />
+          <AppIcon icon={Notification01Icon} size={48} color={accentColor} />
         </View>
 
         <Text style={styles.title}>{t('personalOnboarding.notificationsTitle')}</Text>
@@ -49,10 +50,8 @@ export default function NotificationPermissionStep({
           onPress={handleEnable}
           disabled={isRequesting}
         >
-          <Bell size={18} color={COLORS.white} />
-          <Text style={styles.enableButtonText}>
-            {t('personalOnboarding.notificationsEnable')}
-          </Text>
+          <AppIcon icon={Notification01Icon} size={18} color={COLORS.white} />
+          <Text style={styles.enableButtonText}>{t('personalOnboarding.notificationsEnable')}</Text>
         </Pressable>
       </Animated.View>
     </View>

@@ -1,6 +1,7 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Check, Trash2, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, Delete02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -50,8 +51,12 @@ export function MultiSelectActionBar({
           style={[styles.buttonsRow, !showPrimaryAction && styles.singleButtonRow]}
           testID="multi-select-top-row"
         >
-          <Pressable style={styles.cancelButton} onPress={onCancel} testID="multi-select-cancel-button">
-            <X size={18} color={COLORS.textSecondary} />
+          <Pressable
+            style={styles.cancelButton}
+            onPress={onCancel}
+            testID="multi-select-cancel-button"
+          >
+            <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
             <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
           </Pressable>
 
@@ -66,7 +71,7 @@ export function MultiSelectActionBar({
               disabled={selectedCount === 0}
               testID="multi-select-primary-button"
             >
-              <Check size={18} color={COLORS.white} />
+              <AppIcon icon={Tick02Icon} size={18} color={COLORS.white} />
               <Text style={styles.addButtonText}>{bulkPrimaryLabel}</Text>
             </Pressable>
           )}
@@ -78,7 +83,7 @@ export function MultiSelectActionBar({
           disabled={selectedCount === 0}
           testID="multi-select-remove-button"
         >
-          <Trash2 size={18} color={COLORS.error} />
+          <AppIcon icon={Delete02Icon} size={18} color={COLORS.error} />
           <Text style={styles.removeButtonText}>{removeLabel ?? t('library.removeItems')}</Text>
         </Pressable>
       </View>

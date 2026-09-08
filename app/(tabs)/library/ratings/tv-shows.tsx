@@ -35,16 +35,11 @@ import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLa
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'tvShowRatingsViewMode';
@@ -69,12 +64,7 @@ export default function TVShowRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
-  const {
-    data: enrichedRatings,
-    isLoading,
-    error,
-    refetch,
-  } = useEnrichedTVRatings();
+  const { data: enrichedRatings, isLoading, error, refetch } = useEnrichedTVRatings();
   const deleteRatingMutation = useDeleteRating();
   const { t } = useTranslation();
   const { resolvePosterPath } = usePosterOverrides();
@@ -86,16 +76,11 @@ export default function TVShowRatingsScreen() {
     getThreeColumnGridMetrics(windowWidth);
 
   // Search functionality using shared hook (initialize with empty array first)
-  const {
-    searchQuery,
-    isSearchActive,
-    deactivateSearch,
-    setSearchQuery,
-    searchButton,
-  } = useHeaderSearch({
-    items: [] as EnrichedTVRating[],
-    getSearchableText: (item) => item.tvShow?.name || '',
-  });
+  const { searchQuery, isSearchActive, deactivateSearch, setSearchQuery, searchButton } =
+    useHeaderSearch({
+      items: [] as EnrichedTVRating[],
+      getSearchableText: (item) => item.tvShow?.name || '',
+    });
 
   const handleShowToast = useCallback((message: string) => {
     toastRef.current?.show(message);
@@ -263,7 +248,12 @@ export default function TVShowRatingsScreen() {
                   {item.tvShow.vote_average > 0 && (
                     <>
                       <Text style={mediaMetaStyles.separator}> • </Text>
-                      <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                      <AppIcon
+                        icon={StarIcon}
+                        size={10}
+                        fill={COLORS.warning}
+                        color={COLORS.warning}
+                      />
                       <Text style={mediaMetaStyles.rating}>
                         {item.tvShow.vote_average.toFixed(1)}
                       </Text>
@@ -326,7 +316,7 @@ export default function TVShowRatingsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={Star}
+          icon={StarIcon}
           title={t('library.emptyRatings')}
           description={t('library.emptyRatingsHint')}
         />

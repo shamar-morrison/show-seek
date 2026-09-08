@@ -8,7 +8,10 @@ import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
-import { HORIZONTAL_LIST_CONTENT_STYLE, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
+import {
+  HORIZONTAL_LIST_CONTENT_STYLE,
+  HORIZONTAL_SCROLL_PROPS,
+} from '@/src/components/ui/horizontalScrollProps';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -33,18 +36,19 @@ import { partitionMoviePersonCredits, partitionTVPersonCredits } from '@/src/uti
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
-  ArrowLeft,
-  Calendar,
-  Facebook,
-  Heart,
-  Instagram,
-  MapPin,
-  Music2,
-  Star,
-  Twitter,
-  Youtube,
-} from 'lucide-react-native';
+  ArrowLeft01Icon,
+  Calendar03Icon,
+  Facebook01Icon,
+  FavouriteIcon,
+  InstagramIcon,
+  MapPinIcon,
+  MusicNote02Icon,
+  StarIcon,
+  TwitterIcon,
+  YoutubeIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -350,7 +354,7 @@ export default function PersonDetailScreen() {
             key: 'instagram',
             label: t('media.instagram'),
             url: `https://www.instagram.com/${instagramId}`,
-            icon: <Instagram size={20} color={COLORS.text} />,
+            icon: <AppIcon icon={InstagramIcon} size={20} color={COLORS.text} />,
           }
         : null,
       twitterId
@@ -358,7 +362,7 @@ export default function PersonDetailScreen() {
             key: 'twitter',
             label: t('media.twitter'),
             url: `https://twitter.com/${twitterId}`,
-            icon: <Twitter size={20} color={COLORS.text} />,
+            icon: <AppIcon icon={TwitterIcon} size={20} color={COLORS.text} />,
           }
         : null,
       facebookId
@@ -366,7 +370,7 @@ export default function PersonDetailScreen() {
             key: 'facebook',
             label: t('media.facebook'),
             url: `https://www.facebook.com/${facebookId}`,
-            icon: <Facebook size={20} color={COLORS.text} />,
+            icon: <AppIcon icon={Facebook01Icon} size={20} color={COLORS.text} />,
           }
         : null,
       tiktokId
@@ -374,7 +378,7 @@ export default function PersonDetailScreen() {
             key: 'tiktok',
             label: t('media.tiktok'),
             url: `https://www.tiktok.com/@${tiktokId}`,
-            icon: <Music2 size={20} color={COLORS.text} />,
+            icon: <AppIcon icon={MusicNote02Icon} size={20} color={COLORS.text} />,
           }
         : null,
       youtubeId
@@ -382,7 +386,7 @@ export default function PersonDetailScreen() {
             key: 'youtube',
             label: t('media.youtube'),
             url: `https://www.youtube.com/${youtubeId}`,
-            icon: <Youtube size={20} color={COLORS.text} />,
+            icon: <AppIcon icon={YoutubeIcon} size={20} color={COLORS.text} />,
           }
         : null,
     ] as (SocialLink | null)[]
@@ -425,7 +429,12 @@ export default function PersonDetailScreen() {
             <Text style={styles.sectionTitle}>{title}</Text>
           </View>
         )}
-        <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACING.l }} contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}>
+        <ScrollView
+          {...HORIZONTAL_SCROLL_PROPS}
+          showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: -SPACING.l }}
+          contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}
+        >
           {items.map((item, index) => {
             const listIds = getListsForMedia(item.id, mediaType);
             const posterPath = resolvePosterPath(mediaType, item.id, item.poster_path);
@@ -458,7 +467,12 @@ export default function PersonDetailScreen() {
                     <>
                       {year && <Text style={styles.creditYear}> • </Text>}
                       <View style={styles.creditRating}>
-                        <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                        <AppIcon
+                          icon={StarIcon}
+                          size={12}
+                          fill={COLORS.warning}
+                          color={COLORS.warning}
+                        />
                         <Text style={styles.creditRatingText}>{item.vote_average.toFixed(1)}</Text>
                       </View>
                     </>
@@ -502,7 +516,7 @@ export default function PersonDetailScreen() {
             onPress={() => router.back()}
             activeOpacity={ACTIVE_OPACITY}
           >
-            <ArrowLeft size={24} color={COLORS.white} />
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
           </TouchableOpacity>
         </SafeAreaView>
 
@@ -544,7 +558,7 @@ export default function PersonDetailScreen() {
             <View style={styles.detailsContainer}>
               {person.birthday && (
                 <View style={styles.detailItem}>
-                  <Calendar size={14} color={COLORS.textSecondary} />
+                  <AppIcon icon={Calendar03Icon} size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>
                     {formatTmdbDate(person.birthday, {
                       year: 'numeric',
@@ -561,7 +575,7 @@ export default function PersonDetailScreen() {
 
               {person.place_of_birth && (
                 <View style={styles.detailItem}>
-                  <MapPin size={14} color={COLORS.textSecondary} />
+                  <AppIcon icon={MapPinIcon} size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>{person.place_of_birth}</Text>
                 </View>
               )}
@@ -585,7 +599,8 @@ export default function PersonDetailScreen() {
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
               <>
-                <Heart
+                <AppIcon
+                  icon={FavouriteIcon}
                   size={24}
                   color={COLORS.white}
                   fill={isFavorited ? COLORS.white : 'transparent'}

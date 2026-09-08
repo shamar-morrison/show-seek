@@ -4,7 +4,8 @@ import { COLORS, SPACING } from '@/src/constants/theme';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { getSortableTitle } from '@/src/utils/sortUtils';
 import { useNavigation } from 'expo-router';
-import { ArrowUpDown } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowUpDownIcon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -104,7 +105,7 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
           style={sortHeaderStyles.headerButton}
         >
           <View style={iconBadgeStyles.wrapper}>
-            <ArrowUpDown size={22} color={COLORS.text} />
+            <AppIcon icon={ArrowUpDownIcon} size={22} color={COLORS.text} />
             {hasActiveSort && <View style={iconBadgeStyles.badge} />}
           </View>
         </HeaderIconButton>

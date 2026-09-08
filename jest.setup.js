@@ -8,9 +8,7 @@ jest.mock('react-i18next', () => {
   // Helper to get nested translation value
   const getNestedValue = (obj, path, params) => {
     const pluralizedPath =
-      typeof params?.count === 'number'
-        ? `${path}_${params.count === 1 ? 'one' : 'other'}`
-        : null;
+      typeof params?.count === 'number' ? `${path}_${params.count === 1 ? 'one' : 'other'}` : null;
     const value =
       (pluralizedPath
         ? pluralizedPath.split('.').reduce((current, key) => current?.[key], obj)
@@ -58,7 +56,9 @@ jest.mock('react-native-reanimated', () => {
       View: React.forwardRef((props, ref) => React.createElement(View, { ...props, ref })),
       Text: React.forwardRef((props, ref) => React.createElement(Text, { ...props, ref })),
       Image: React.forwardRef((props, ref) => React.createElement(Image, { ...props, ref })),
-      ScrollView: React.forwardRef((props, ref) => React.createElement(ScrollView, { ...props, ref })),
+      ScrollView: React.forwardRef((props, ref) =>
+        React.createElement(ScrollView, { ...props, ref })
+      ),
       createAnimatedComponent,
       call: () => {},
     },
@@ -284,7 +284,7 @@ jest.mock('expo-store-review', () => ({
   hasAction: jest.fn(() => Promise.resolve(false)),
 }));
 
-// Mock react-native-svg (required for lucide-react-native icons)
+// Mock react-native-svg (required for HugeIcons rendering)
 jest.mock('react-native-svg', () => {
   const React = require('react');
   const createMockComponent = (name) => (props) => React.createElement(name, props, props.children);
@@ -524,10 +524,6 @@ jest.mock('react-native-safe-area-context', () => {
     useSafeAreaFrame: () => ({ x: 0, y: 0, width: 390, height: 844 }),
     SafeAreaProvider: ({ children }) => children,
     SafeAreaConsumer: ({ children }) => children({ top: 0, right: 0, bottom: 0, left: 0 }),
-    SafeAreaView: React.forwardRef((props, ref) =>
-      React.createElement(View, { ...props, ref })
-    ),
+    SafeAreaView: React.forwardRef((props, ref) => React.createElement(View, { ...props, ref })),
   };
 });
-
-

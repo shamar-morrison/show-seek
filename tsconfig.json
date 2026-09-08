@@ -4,6 +4,7 @@
     "baseUrl": ".",
     "strict": true,
     "jsx": "react-native",
+    "types": ["jest", "@hugeicons/core-free-icons", "@hugeicons/react-native"],
     "paths": {
       "@/*": ["./*"]
     }

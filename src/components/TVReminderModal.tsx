@@ -25,7 +25,8 @@ import {
   isReleaseToday,
 } from '@/src/utils/reminderHelpers';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Calendar, Tv } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Calendar03Icon, Tv01Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -230,7 +231,7 @@ export default function TVReminderModal({
 
       {/* Show Title */}
       <View style={styles.titleRow}>
-        <Tv size={18} color={accentColor} />
+        <AppIcon icon={Tv01Icon} size={18} color={accentColor} />
         <Text style={styles.showTitle} numberOfLines={2}>
           {tvTitle}
         </Text>
@@ -325,7 +326,7 @@ export default function TVReminderModal({
       {/* Date Display */}
       {displayDate && hasFrequencyDate && (
         <View style={sharedStyles.dateContainer}>
-          <Calendar size={16} color={COLORS.textSecondary} />
+          <AppIcon icon={Calendar03Icon} size={16} color={COLORS.textSecondary} />
           <Text style={sharedStyles.dateText}>
             {isDateInPast(displayDate) ? t('reminder.aired') : t('reminder.airs')}{' '}
             {formatDate(displayDate)}
@@ -388,9 +389,7 @@ export default function TVReminderModal({
       {/* No options available message */}
       {!canSetEpisodeReminder && !canSetSeasonReminder && (
         <View style={styles.noOptionsContainer}>
-          <Text style={styles.noOptionsText}>
-            {t('reminder.noUpcomingEpisodesOrSeasons')}
-          </Text>
+          <Text style={styles.noOptionsText}>{t('reminder.noUpcomingEpisodesOrSeasons')}</Text>
         </View>
       )}
 

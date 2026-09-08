@@ -2,7 +2,15 @@ import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, WatchProvider } from '@/src/api
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING, hexToRGBA } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+  hexToRGBA,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
@@ -18,10 +26,27 @@ import { FlashList } from '@shopify/flash-list';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, ChevronDown, Crown, List, Tv2, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowDown01Icon,
+  Cancel01Icon,
+  CrownIcon,
+  Menu01Icon,
+  Tick02Icon,
+  Tv01Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PROVIDER_LIST_GC_TIME = 1000 * 60 * 60 * 24 * 30; // 30 days
@@ -38,22 +63,19 @@ const triggerLightHaptic = () => {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 };
 
-function getDisplayListName(list: UserList, t: (key: string, options?: Record<string, unknown>) => string) {
+function getDisplayListName(
+  list: UserList,
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
   const labelKey = DEFAULT_LIST_LABEL_KEYS[list.id];
   return labelKey ? t(labelKey) : list.name;
 }
 
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function EmptyState({ title, description }: { title: string; description: string }) {
   return (
     <View style={styles.emptyState}>
       <View style={styles.emptyIconContainer}>
-        <Tv2 size={56} color={COLORS.textSecondary} />
+        <AppIcon icon={Tv01Icon} size={56} color={COLORS.textSecondary} />
       </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyDescription}>{description}</Text>
@@ -95,10 +117,10 @@ export default function WhereToWatchScreen() {
     [selectedList]
   );
 
-  const {
-    providerMap,
-    isLoadingEnrichment,
-  } = useWatchProviderEnrichment(selectedListItems, !!selectedList);
+  const { providerMap, isLoadingEnrichment } = useWatchProviderEnrichment(
+    selectedListItems,
+    !!selectedList
+  );
 
   const movieProvidersQuery = useQuery({
     queryKey: ['watch-providers-catalog', region, 'movie'],
@@ -106,7 +128,8 @@ export default function WhereToWatchScreen() {
     staleTime: Infinity,
     gcTime: PROVIDER_LIST_GC_TIME,
     enabled: !!selectedList,
-    initialData: () => queryClient.getQueryData<WatchProvider[]>(['watch-providers-catalog', region, 'movie']),
+    initialData: () =>
+      queryClient.getQueryData<WatchProvider[]>(['watch-providers-catalog', region, 'movie']),
   });
 
   const tvProvidersQuery = useQuery({
@@ -115,7 +138,8 @@ export default function WhereToWatchScreen() {
     staleTime: Infinity,
     gcTime: PROVIDER_LIST_GC_TIME,
     enabled: !!selectedList,
-    initialData: () => queryClient.getQueryData<WatchProvider[]>(['watch-providers-catalog', region, 'tv']),
+    initialData: () =>
+      queryClient.getQueryData<WatchProvider[]>(['watch-providers-catalog', region, 'tv']),
   });
 
   const mergedProviders = useMemo(() => {
@@ -160,7 +184,9 @@ export default function WhereToWatchScreen() {
       return mergedProviders;
     }
 
-    return mergedProviders.filter((provider) => (providerCounts.get(provider.provider_id) || 0) > 0);
+    return mergedProviders.filter(
+      (provider) => (providerCounts.get(provider.provider_id) || 0) > 0
+    );
   }, [isLoadingEnrichment, mergedProviders, providerCounts]);
 
   const filteredItems = useMemo(() => {
@@ -171,7 +197,11 @@ export default function WhereToWatchScreen() {
     return selectedListItems.filter((item) => {
       const providerKey = `${item.media_type}-${item.id}`;
       const providers = providerMap.get(providerKey);
-      return providers?.flatrate?.some((provider) => provider.provider_id === selectedService.provider_id) ?? false;
+      return (
+        providers?.flatrate?.some(
+          (provider) => provider.provider_id === selectedService.provider_id
+        ) ?? false
+      );
     });
   }, [providerMap, selectedListItems, selectedService]);
 
@@ -336,11 +366,11 @@ export default function WhereToWatchScreen() {
             ]}
             onPress={handleOpenListModal}
           >
-            <List size={18} color={accentColor} />
+            <AppIcon icon={Menu01Icon} size={18} color={accentColor} />
             <Text style={styles.selectorText} numberOfLines={1}>
               {selectedListName || t('whereToWatch.selectList')}
             </Text>
-            <ChevronDown size={18} color={accentColor} />
+            <AppIcon icon={ArrowDown01Icon} size={18} color={accentColor} />
           </Pressable>
 
           <Pressable
@@ -355,9 +385,17 @@ export default function WhereToWatchScreen() {
             disabled={!selectedList}
           >
             {selectedServiceLogo ? (
-              <MediaImage source={{ uri: selectedServiceLogo }} style={styles.selectorLogo} contentFit="contain" />
+              <MediaImage
+                source={{ uri: selectedServiceLogo }}
+                style={styles.selectorLogo}
+                contentFit="contain"
+              />
             ) : (
-              <Tv2 size={18} color={selectedList ? accentColor : COLORS.textSecondary} />
+              <AppIcon
+                icon={Tv01Icon}
+                size={18}
+                color={selectedList ? accentColor : COLORS.textSecondary}
+              />
             )}
             <Text
               style={[styles.selectorText, !selectedList && styles.selectorTextDisabled]}
@@ -365,7 +403,11 @@ export default function WhereToWatchScreen() {
             >
               {selectedService?.provider_name || t('whereToWatch.selectService')}
             </Text>
-            <ChevronDown size={18} color={selectedList ? accentColor : COLORS.textSecondary} />
+            <AppIcon
+              icon={ArrowDown01Icon}
+              size={18}
+              color={selectedList ? accentColor : COLORS.textSecondary}
+            />
           </Pressable>
         </View>
 
@@ -414,9 +456,11 @@ export default function WhereToWatchScreen() {
                 <View style={styles.premiumOverlayFallback} />
               )}
               <View style={styles.premiumCard}>
-                <Crown size={26} color={accentColor} />
+                <AppIcon icon={CrownIcon} size={26} color={accentColor} />
                 <Text style={styles.premiumTitle}>{t('whereToWatch.upgradeTitle')}</Text>
-                <Text style={styles.premiumDescription}>{t('whereToWatch.upgradeDescription')}</Text>
+                <Text style={styles.premiumDescription}>
+                  {t('whereToWatch.upgradeDescription')}
+                </Text>
                 <Pressable
                   testID="where-to-watch-upgrade-button"
                   style={({ pressed }) => [
@@ -442,13 +486,16 @@ export default function WhereToWatchScreen() {
       >
         <View style={modalLayoutStyles.container}>
           <ModalBackground />
-          <Pressable style={modalLayoutStyles.backdrop} onPress={() => setIsListModalVisible(false)} />
+          <Pressable
+            style={modalLayoutStyles.backdrop}
+            onPress={() => setIsListModalVisible(false)}
+          />
 
           <View style={styles.modalCard}>
             <View style={modalHeaderStyles.header}>
               <Text style={modalHeaderStyles.title}>{t('whereToWatch.selectListTitle')}</Text>
               <Pressable onPress={() => setIsListModalVisible(false)} hitSlop={HIT_SLOP.m}>
-                <X size={22} color={COLORS.text} />
+                <AppIcon icon={Cancel01Icon} size={22} color={COLORS.text} />
               </Pressable>
             </View>
             <View style={styles.modalListContainer}>
@@ -474,12 +521,16 @@ export default function WhereToWatchScreen() {
                     ]}
                     onPress={handleRetryLists}
                   >
-                    <Text style={[styles.modalRetryText, { color: accentColor }]}>{t('common.retry')}</Text>
+                    <Text style={[styles.modalRetryText, { color: accentColor }]}>
+                      {t('common.retry')}
+                    </Text>
                   </Pressable>
                 </View>
               ) : lists.length === 0 ? (
                 <View style={styles.modalLoadingState} testID="where-to-watch-empty-state">
-                  <Text style={styles.modalLoadingText}>{t('whereToWatch.emptyNoListDescription')}</Text>
+                  <Text style={styles.modalLoadingText}>
+                    {t('whereToWatch.emptyNoListDescription')}
+                  </Text>
                 </View>
               ) : (
                 <FlatList
@@ -511,7 +562,7 @@ export default function WhereToWatchScreen() {
                               : t('library.itemCount', { count: itemCount })}
                           </Text>
                         </View>
-                        {isSelected && <Check size={20} color={accentColor} />}
+                        {isSelected && <AppIcon icon={Tick02Icon} size={20} color={accentColor} />}
                       </Pressable>
                     );
                   }}
@@ -530,13 +581,16 @@ export default function WhereToWatchScreen() {
       >
         <View style={modalLayoutStyles.container}>
           <ModalBackground />
-          <Pressable style={modalLayoutStyles.backdrop} onPress={() => setIsServiceModalVisible(false)} />
+          <Pressable
+            style={modalLayoutStyles.backdrop}
+            onPress={() => setIsServiceModalVisible(false)}
+          />
 
           <View style={styles.modalCard}>
             <View style={modalHeaderStyles.header}>
               <Text style={modalHeaderStyles.title}>{t('whereToWatch.selectServiceTitle')}</Text>
               <Pressable onPress={() => setIsServiceModalVisible(false)} hitSlop={HIT_SLOP.m}>
-                <X size={22} color={COLORS.text} />
+                <AppIcon icon={Cancel01Icon} size={22} color={COLORS.text} />
               </Pressable>
             </View>
             <View style={styles.modalListContainer}>
@@ -551,7 +605,9 @@ export default function WhereToWatchScreen() {
                 </View>
               ) : visibleProviders.length === 0 ? (
                 <View style={styles.modalLoadingState}>
-                  <Text style={styles.modalLoadingText}>{t('whereToWatch.noServicesAvailable')}</Text>
+                  <Text style={styles.modalLoadingText}>
+                    {t('whereToWatch.noServicesAvailable')}
+                  </Text>
                 </View>
               ) : (
                 <FlatList
@@ -593,7 +649,7 @@ export default function WhereToWatchScreen() {
                             </Text>
                           )}
                         </View>
-                        {isSelected && <Check size={20} color={accentColor} />}
+                        {isSelected && <AppIcon icon={Tick02Icon} size={20} color={accentColor} />}
                       </Pressable>
                     );
                   }}

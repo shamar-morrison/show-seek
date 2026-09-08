@@ -7,7 +7,8 @@ import { useWidgets } from '@/src/hooks/useWidgets';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { WidgetConfig } from '@/src/types';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { Save } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { FloppyDiskIcon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -135,7 +136,11 @@ export default function ConfigureWidgetScreen() {
 
       <View style={styles.footer}>
         <Pressable
-          style={[styles.saveButton, { backgroundColor: accentColor }, isSaving && styles.disabledButton]}
+          style={[
+            styles.saveButton,
+            { backgroundColor: accentColor },
+            isSaving && styles.disabledButton,
+          ]}
           onPress={handleSave}
           disabled={isSaving}
         >
@@ -143,7 +148,7 @@ export default function ConfigureWidgetScreen() {
             <ActivityIndicator color={COLORS.white} />
           ) : (
             <>
-              <Save size={20} color={COLORS.white} />
+              <AppIcon icon={FloppyDiskIcon} size={20} color={COLORS.white} />
               <Text style={styles.saveButtonText}>{t('widgets.saveConfiguration')}</Text>
             </>
           )}

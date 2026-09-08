@@ -1,7 +1,8 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
-import { X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,12 +32,7 @@ interface BaseReminderModalProps {
  * Base wrapper component for reminder modals.
  * Provides the modal chrome: backdrop, container, header with title and close button.
  */
-export function BaseReminderModal({
-  visible,
-  onClose,
-  title,
-  children,
-}: BaseReminderModalProps) {
+export function BaseReminderModal({ visible, onClose, title, children }: BaseReminderModalProps) {
   const { t } = useTranslation();
   const styles = useReminderModalStyles();
   const resolvedTitle = title ?? t('reminder.setReminder');
@@ -58,7 +54,7 @@ export function BaseReminderModal({
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{resolvedTitle}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
 

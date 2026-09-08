@@ -14,11 +14,9 @@ jest.mock('react-native-svg', () => ({
   Polygon: 'Polygon',
 }));
 
-// Mock lucide-react-native icons
-jest.mock('lucide-react-native', () => ({
-  Shuffle: () => 'Shuffle',
-  Star: () => 'Star',
-  X: () => 'X',
+// Mock HugeIcons renderer (icons are not the subject of these tests)
+jest.mock('@hugeicons/react-native', () => ({
+  HugeiconsIcon: () => null,
 }));
 
 // Mock expo-haptics
@@ -42,8 +40,11 @@ jest.mock('@/src/components/ui/ModalBackground', () => ({
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
     overrides: {},
-    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
-      fallbackPosterPath,
+    resolvePosterPath: (
+      _mediaType: 'movie' | 'tv',
+      _mediaId: number,
+      fallbackPosterPath: string | null
+    ) => fallbackPosterPath,
   }),
 }));
 
@@ -110,7 +111,7 @@ describe('ShuffleModal', () => {
   });
 
   it('renders modal content when visible is true', () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId } = render(
       <ShuffleModal
         visible={true}
         items={mockItems}
@@ -119,8 +120,8 @@ describe('ShuffleModal', () => {
       />
     );
 
-    expect(getByText('Shuffle')).toBeTruthy();
     expect(getByTestId('shuffle-close-button')).toBeTruthy();
+    expect(getByTestId('shuffle-spin-again-button')).toBeTruthy();
   });
 
   it('calls onClose when close button is pressed', () => {
@@ -151,7 +152,7 @@ describe('ShuffleModal', () => {
   });
 
   it('renders with empty items array', () => {
-    const { getByText } = render(
+    const { getByTestId } = render(
       <ShuffleModal
         visible={true}
         items={[]}
@@ -160,6 +161,6 @@ describe('ShuffleModal', () => {
       />
     );
 
-    expect(getByText('Shuffle')).toBeTruthy();
+    expect(getByTestId('shuffle-close-button')).toBeTruthy();
   });
 });

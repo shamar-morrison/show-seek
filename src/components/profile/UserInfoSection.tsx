@@ -3,7 +3,8 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { User } from 'firebase/auth';
-import { Crown } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { CrownIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -59,7 +60,9 @@ export function UserInfoSection({
             style={[styles.signOutButton, { borderColor: accentColor }]}
             onPress={onSignOut}
           >
-            <Text style={[styles.signOutButtonText, { color: accentColor }]}>{t('auth.signOut')}</Text>
+            <Text style={[styles.signOutButtonText, { color: accentColor }]}>
+              {t('auth.signOut')}
+            </Text>
           </TouchableOpacity>
         ) : (
           <Text style={styles.email} numberOfLines={1}>
@@ -71,7 +74,7 @@ export function UserInfoSection({
             style={[styles.upgradeButton, { backgroundColor: accentColor }]}
             onPress={onUpgradePress}
           >
-            <Crown size={12} color={COLORS.white} style={{ marginRight: 6 }} />
+            <AppIcon icon={CrownIcon} size={12} color={COLORS.white} style={{ marginRight: 6 }} />
             <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
           </TouchableOpacity>
         )}

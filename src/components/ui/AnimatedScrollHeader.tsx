@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { ArrowLeft } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,7 +54,7 @@ export function AnimatedScrollHeader({
             style={styles.backButton}
             activeOpacity={ACTIVE_OPACITY}
           >
-            <ArrowLeft size={24} color={COLORS.white} />
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
           </TouchableOpacity>
           <View style={styles.titleContainer}>
             <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">

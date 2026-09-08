@@ -4,7 +4,8 @@ import { useRenameList } from '@/src/hooks/useLists';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
-import { X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,7 +19,11 @@ import {
 import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface RenameListModalRef {
-  present: (params: { listId: string; currentName: string; currentDescription?: string }) => Promise<void>;
+  present: (params: {
+    listId: string;
+    currentName: string;
+    currentDescription?: string;
+  }) => Promise<void>;
   dismiss: () => Promise<void>;
 }
 
@@ -108,7 +113,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('library.editList')}</Text>
             <Pressable onPress={() => sheetRef.current?.dismiss()}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </Pressable>
           </View>
 

@@ -5,7 +5,8 @@ import { OpenWithButton } from '@/src/components/ui/OpenWithButton';
 import { ShareButton } from '@/src/components/ui/ShareButton';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import React, { memo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,11 +54,7 @@ export const TVHeroSection = memo<TVHeroSectionProps>(
 
     return (
       <View style={styles.heroContainer}>
-        <MediaImage
-          source={{ uri: backdropUrl }}
-          style={styles.backdrop}
-          contentFit="cover"
-        />
+        <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
         <LinearGradient colors={['transparent', COLORS.background]} style={styles.gradient} />
 
         <SafeAreaView style={styles.headerSafe} edges={['top']}>
@@ -66,7 +63,7 @@ export const TVHeroSection = memo<TVHeroSectionProps>(
             onPress={onBackPress}
             activeOpacity={ACTIVE_OPACITY}
           >
-            <ArrowLeft size={22} color={COLORS.white} />
+            <AppIcon icon={ArrowLeft01Icon} size={22} color={COLORS.white} />
           </TouchableOpacity>
         </SafeAreaView>
 

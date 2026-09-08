@@ -1,13 +1,18 @@
 import { ActionButton } from '@/src/components/profile/ActionButton';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { Text, View } from 'react-native';
 
-// Mock lucide-react-native
-jest.mock('lucide-react-native', () => ({
-  Star: ({ color, size, testID }: { color: string; size: number; testID?: string }) => {
+// Mock HugeIcons renderer
+jest.mock('@hugeicons/react-native', () => ({
+  HugeiconsIcon: ({ color, testID }: { color?: string; testID?: string }) => {
     const { View } = require('react-native');
-    return <View testID={testID || 'star-icon'} accessibilityLabel={`star-${color}`} />;
+    const React = require('react');
+    return React.createElement(View, {
+      testID: testID || 'star-icon',
+      accessibilityLabel: `star-${color}`,
+    });
   },
 }));
 
@@ -38,9 +43,8 @@ describe('ActionButton', () => {
   });
 
   it('should render with icon', () => {
-    const { Star } = require('lucide-react-native');
     const { getByTestId } = render(
-      <ActionButton icon={Star} label="Rate App" onPress={mockOnPress} />
+      <ActionButton icon={StarIcon} label="Rate App" onPress={mockOnPress} />
     );
     expect(getByTestId('star-icon')).toBeTruthy();
   });

@@ -1,19 +1,27 @@
-import { Ionicons } from '@expo/vector-icons';
-import { ComponentProps } from 'react';
+import {
+  AlarmClockIcon,
+  Calendar03Icon,
+  CheckmarkCircle02Icon,
+  CloudUploadIcon,
+  DashboardSquare03Icon,
+  Download01Icon,
+  FavouriteIcon,
+  File01Icon,
+  Infinity01Icon,
+  Menu01Icon,
+  RefreshIcon,
+  Tv01Icon,
+  UserAiIcon,
+  Video01Icon,
+  ViewOffIcon,
+} from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 
-/**
- * Ionicons name type for type-safe icon references
- */
-type IoniconsName = ComponentProps<typeof Ionicons>['name'];
-
-/**
- * Represents a single premium feature
- */
 export interface PremiumFeature {
   /** Unique identifier for the feature */
   id: string;
-  /** Ionicons icon name */
-  icon: IoniconsName;
+  /** HugeIcons icon data */
+  icon: IconSvgElement;
   /** Translation key for display title */
   titleKey: string;
   /** Translation key for optional short description */
@@ -49,25 +57,25 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
     features: [
       {
         id: 'unlimited-lists',
-        icon: 'list',
+        icon: Menu01Icon,
         titleKey: 'premiumFeatures.features.unlimited-lists.title',
         descriptionKey: 'premiumFeatures.features.unlimited-lists.description',
       },
       {
         id: 'unlimited-items',
-        icon: 'infinite',
+        icon: Infinity01Icon,
         titleKey: 'premiumFeatures.features.unlimited-items.title',
         descriptionKey: 'premiumFeatures.features.unlimited-items.description',
       },
       {
         id: 'personal-notes',
-        icon: 'document-text-outline',
+        icon: File01Icon,
         titleKey: 'premiumFeatures.features.personal-notes.title',
         descriptionKey: 'premiumFeatures.features.personal-notes.description',
       },
       {
         id: 'release-reminders',
-        icon: 'alarm-outline',
+        icon: AlarmClockIcon,
         titleKey: 'premiumFeatures.features.release-reminders.title',
         descriptionKey: 'premiumFeatures.features.release-reminders.description',
       },
@@ -79,26 +87,26 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
     features: [
       {
         id: 'widgets',
-        icon: 'apps-outline',
+        icon: DashboardSquare03Icon,
         titleKey: 'premiumFeatures.features.widgets.title',
         descriptionKey: 'premiumFeatures.features.widgets.description',
         isNew: true,
       },
       {
         id: 'latest-trailers',
-        icon: 'videocam-outline',
+        icon: Video01Icon,
         titleKey: 'premiumFeatures.features.latest-trailers.title',
         descriptionKey: 'premiumFeatures.features.latest-trailers.description',
       },
       {
         id: 'release-calendar',
-        icon: 'calendar-outline',
+        icon: Calendar03Icon,
         titleKey: 'premiumFeatures.features.release-calendar.title',
         descriptionKey: 'premiumFeatures.features.release-calendar.description',
       },
       {
         id: 'where-to-watch',
-        icon: 'tv-outline',
+        icon: Tv01Icon,
         titleKey: 'premiumFeatures.features.where-to-watch.title',
         descriptionKey: 'premiumFeatures.features.where-to-watch.description',
         isNew: true,
@@ -111,13 +119,13 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
     features: [
       {
         id: 'blur-spoilers',
-        icon: 'eye-off-outline',
+        icon: ViewOffIcon,
         titleKey: 'premiumFeatures.features.blur-spoilers.title',
         descriptionKey: 'premiumFeatures.features.blur-spoilers.description',
       },
       {
         id: 'hide-watched',
-        icon: 'checkmark-circle-outline',
+        icon: CheckmarkCircle02Icon,
         titleKey: 'premiumFeatures.features.hide-watched.title',
         descriptionKey: 'premiumFeatures.features.hide-watched.description',
       },
@@ -129,19 +137,19 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
     features: [
       {
         id: 'trakt-integration',
-        icon: 'sync',
+        icon: RefreshIcon,
         titleKey: 'premiumFeatures.features.trakt-integration.title',
         descriptionKey: 'premiumFeatures.features.trakt-integration.description',
       },
       {
         id: 'export-data',
-        icon: 'download-outline',
+        icon: Download01Icon,
         titleKey: 'premiumFeatures.features.export-data.title',
         descriptionKey: 'premiumFeatures.features.export-data.description',
       },
       {
         id: 'import-imdb',
-        icon: 'cloud-upload-outline',
+        icon: CloudUploadIcon,
         titleKey: 'premiumFeatures.features.import-imdb.title',
         descriptionKey: 'premiumFeatures.features.import-imdb.description',
         isNew: true,
@@ -154,13 +162,13 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
     features: [
       {
         id: 'future-features',
-        icon: 'sparkles',
+        icon: UserAiIcon,
         titleKey: 'premiumFeatures.features.future-features.title',
         descriptionKey: 'premiumFeatures.features.future-features.description',
       },
       {
         id: 'indie-support',
-        icon: 'heart',
+        icon: FavouriteIcon,
         titleKey: 'premiumFeatures.features.indie-support.title',
         descriptionKey: 'premiumFeatures.features.indie-support.description',
       },

@@ -6,7 +6,15 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Calendar, ChevronRight, LogOut, Palette, Sparkles, Tv2 } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  ArrowRight01Icon,
+  Calendar03Icon,
+  Logout01Icon,
+  PaintBoardIcon,
+  Tv01Icon,
+  UserAiIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -182,9 +190,9 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
               ]}
               onPress={handleForYouPress}
             >
-              <Sparkles size={24} color={accentColor} />
+              <AppIcon icon={UserAiIcon} size={24} color={accentColor} />
               <Text style={styles.navigationTitle}>{t('forYou.title')}</Text>
-              <ChevronRight size={20} color={COLORS.textSecondary} />
+              <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
             </Pressable>
 
             <Pressable
@@ -194,9 +202,9 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
               ]}
               onPress={handleCalendarPress}
             >
-              <Calendar size={24} color={accentColor} />
+              <AppIcon icon={Calendar03Icon} size={24} color={accentColor} />
               <Text style={styles.navigationTitle}>{t('calendar.title')}</Text>
-              <ChevronRight size={20} color={COLORS.textSecondary} />
+              <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
             </Pressable>
 
             <Pressable
@@ -206,9 +214,9 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
               ]}
               onPress={handleMoodPickerPress}
             >
-              <Palette size={24} color={accentColor} />
+              <AppIcon icon={PaintBoardIcon} size={24} color={accentColor} />
               <Text style={styles.navigationTitle}>{t('mood.picker')}</Text>
-              <ChevronRight size={20} color={COLORS.textSecondary} />
+              <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
             </Pressable>
 
             <Pressable
@@ -218,9 +226,9 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
               ]}
               onPress={handleWhereToWatchPress}
             >
-              <Tv2 size={24} color={accentColor} />
+              <AppIcon icon={Tv01Icon} size={24} color={accentColor} />
               <Text style={styles.navigationTitle}>{t('whereToWatch.title')}</Text>
-              <ChevronRight size={20} color={COLORS.textSecondary} />
+              <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
             </Pressable>
           </View>
 
@@ -241,7 +249,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
               {isSigningOut ? (
                 <ActivityIndicator size="small" color={COLORS.error} />
               ) : (
-                <LogOut size={24} color={COLORS.error} />
+                <AppIcon icon={Logout01Icon} size={24} color={COLORS.error} />
               )}
               <Text style={styles.signOutText}>
                 {isSigningOut ? t('auth.signingOut') : t('auth.signOut')}

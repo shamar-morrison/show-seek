@@ -1,6 +1,5 @@
 import ManageListsScreen from '@/app/manage-lists';
 import { fireEvent, render } from '@testing-library/react-native';
-import { Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
 
@@ -72,6 +71,18 @@ jest.mock('@/src/components/ui/FullScreenLoading', () => ({
   FullScreenLoading: () => null,
 }));
 
+// Mock HugeIcons renderer, tagging the delete icon so tests can count it
+jest.mock('@hugeicons/react-native', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    HugeiconsIcon: ({ icon, testID }: { icon: unknown; testID?: string }) => {
+      const { Delete02Icon } = require('@hugeicons/core-free-icons');
+      return <View testID={testID || (icon === Delete02Icon ? 'delete-icon' : 'hugeicons-icon')} />;
+    },
+  };
+});
+
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -88,17 +99,19 @@ describe('ManageListsScreen', () => {
   });
 
   it('does not render delete controls for default lists', () => {
-    const { UNSAFE_queryAllByType } = render(<ManageListsScreen />);
+    const { queryAllByTestId } = render(<ManageListsScreen />);
 
-    expect(UNSAFE_queryAllByType(Trash2)).toHaveLength(0);
+    expect(queryAllByTestId('delete-icon')).toHaveLength(0);
   });
 
   it('renders enabled rename and trash actions for idle custom lists', () => {
     mockListsState.data = [defaultList, customList1];
 
-    const { UNSAFE_queryAllByType, getByText, getByTestId } = render(<ManageListsScreen />);
+    const { UNSAFE_queryAllByType, queryAllByTestId, getByText, getByTestId } = render(
+      <ManageListsScreen />
+    );
 
-    expect(UNSAFE_queryAllByType(Trash2)).toHaveLength(1);
+    expect(queryAllByTestId('delete-icon')).toHaveLength(1);
     expect(UNSAFE_queryAllByType(ActivityIndicator)).toHaveLength(0);
     expect(getByText('My Custom List')).toBeTruthy();
     expect(getByTestId('rename-list-custom-1')).toBeEnabled();
@@ -111,10 +124,10 @@ describe('ManageListsScreen', () => {
     mockDeleteMutation.isPending = true;
     mockDeleteMutation.variables = customList1.id;
 
-    const { UNSAFE_queryAllByType, getByTestId } = render(<ManageListsScreen />);
+    const { UNSAFE_queryAllByType, queryAllByTestId, getByTestId } = render(<ManageListsScreen />);
 
     expect(UNSAFE_queryAllByType(ActivityIndicator)).toHaveLength(1);
-    expect(UNSAFE_queryAllByType(Trash2)).toHaveLength(0);
+    expect(queryAllByTestId('delete-icon')).toHaveLength(0);
     expect(getByTestId('manage-list-row-custom-1')).toHaveStyle({ opacity: 0.5 });
     expect(getByTestId('rename-list-custom-1')).toBeDisabled();
     expect(getByTestId('delete-list-custom-1')).toBeDisabled();
@@ -133,7 +146,7 @@ describe('ManageListsScreen', () => {
     mockDeleteMutation.isPending = true;
     mockDeleteMutation.variables = customList1.id;
 
-    const { UNSAFE_queryAllByType, getByTestId } = render(<ManageListsScreen />);
+    const { UNSAFE_queryAllByType, queryAllByTestId, getByTestId } = render(<ManageListsScreen />);
 
     // custom-1 is actively deleting: spinner, dimmed, actions disabled
     expect(getByTestId('manage-list-row-custom-1')).toHaveStyle({ opacity: 0.5 });
@@ -147,6 +160,6 @@ describe('ManageListsScreen', () => {
 
     // 1 spinner for custom-1 and 1 trash icon for custom-2
     expect(UNSAFE_queryAllByType(ActivityIndicator)).toHaveLength(1);
-    expect(UNSAFE_queryAllByType(Trash2)).toHaveLength(1);
+    expect(queryAllByTestId('delete-icon')).toHaveLength(1);
   });
 });

@@ -13,7 +13,8 @@ import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLa
 import { FlashList, FlashListRef, ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { ArrowLeft, Grid3X3, List } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowLeft01Icon, GridIcon, Menu01Icon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -264,7 +265,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           onPress={() => router.back()}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <ArrowLeft size={24} color={COLORS.text} />
+          <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>{t('media.castAndCrew')}</Text>
@@ -277,9 +278,9 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
         <View style={styles.headerActions}>
           <HeaderIconButton onPress={toggleViewMode}>
             {viewMode === 'grid' ? (
-              <List size={24} color={COLORS.text} />
+              <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
             ) : (
-              <Grid3X3 size={24} color={COLORS.text} />
+              <AppIcon icon={GridIcon} size={24} color={COLORS.text} />
             )}
           </HeaderIconButton>
         </View>

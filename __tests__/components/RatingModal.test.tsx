@@ -58,13 +58,6 @@ jest.mock('@/src/components/ui/ModalBackground', () => ({
   ModalBackground: () => null,
 }));
 
-// Mock lucide-react-native to avoid SVG import issues in tests
-jest.mock('lucide-react-native', () => ({
-  Star: () => 'Star',
-  StarHalf: () => 'StarHalf',
-  X: () => 'X',
-}));
-
 describe('RatingModal', () => {
   const defaultProps = {
     visible: true,

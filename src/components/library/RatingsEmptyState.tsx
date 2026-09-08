@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { SlidersHorizontal } from 'lucide-react-native';
+import { SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
@@ -32,7 +32,7 @@ export const RatingsEmptyState = ({
   return (
     <View style={{ height }}>
       <EmptyState
-        icon={SlidersHorizontal}
+        icon={SlidersHorizontalIcon}
         title={t('discover.noResultsWithFilters')}
         description={t('discover.adjustFilters')}
         actionLabel={t('common.reset')}

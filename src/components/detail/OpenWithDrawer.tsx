@@ -9,7 +9,8 @@ import {
   OpenWithServiceId,
 } from '@/src/utils/openWithLinks';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
-import { Globe, Search } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Globe02Icon, Search01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Linking, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -87,12 +88,12 @@ export default function OpenWithDrawer({
       {
         id: 'wikipedia',
         label: t('media.wikipedia'),
-        icon: <Globe size={22} color={COLORS.text} />,
+        icon: <AppIcon icon={Globe02Icon} size={22} color={COLORS.text} />,
       },
       {
         id: 'webSearch',
         label: t('media.webSearch'),
-        icon: <Search size={22} color={COLORS.text} />,
+        icon: <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />,
       },
     ],
     [t]

@@ -7,7 +7,8 @@ import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { parseTmdbDate } from '@/src/utils/dateUtils';
-import { Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
@@ -95,12 +96,10 @@ export const MovieRatingListCard = memo<MovieRatingListCardProps>(
           </Text>
           <View style={styles.metaContainer}>
             {year && <Text style={metaTextStyles.secondary}>{year}</Text>}
-            {movie.vote_average > 0 && year && (
-              <Text style={metaTextStyles.secondary}> • </Text>
-            )}
+            {movie.vote_average > 0 && year && <Text style={metaTextStyles.secondary}> • </Text>}
             {movie.vote_average > 0 && (
               <View style={styles.tmdbRating}>
-                <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                <AppIcon icon={StarIcon} size={12} fill={COLORS.warning} color={COLORS.warning} />
                 <Text style={styles.ratingText}>{movie.vote_average.toFixed(1)}</Text>
               </View>
             )}

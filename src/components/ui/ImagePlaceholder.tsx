@@ -1,5 +1,6 @@
 import { COLORS } from '@/src/constants/theme';
-import { Film, Tv, User } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Film01Icon, Tv01Icon, UserIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -11,15 +12,21 @@ interface ImagePlaceholderProps {
 
 /**
  * A placeholder for images that fail to load or are missing.
- * Displays an appropriate Lucide icon based on the type.
+ * Displays an appropriate HugeIcons icon based on the type.
  * Fills its container with a background color and centers the icon.
  */
 export const ImagePlaceholder = ({ type = 'movie' }: ImagePlaceholderProps) => {
-  const IconComponent = type === 'person' ? User : type === 'tv' ? Tv : Film;
+  const IconComponent = type === 'person' ? UserIcon : type === 'tv' ? Tv01Icon : Film01Icon;
 
   return (
     <View style={styles.container}>
-      <IconComponent size={48} color={COLORS.textSecondary} opacity={0.3} strokeWidth={1.5} />
+      <AppIcon
+        icon={IconComponent}
+        size={48}
+        color={COLORS.textSecondary}
+        opacity={0.3}
+        strokeWidth={1.5}
+      />
     </View>
   );
 };

@@ -2,7 +2,8 @@ import { COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { getInitials } from '@/src/utils/userUtils';
 import { Image } from 'expo-image';
-import { Crown } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { CrownIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -76,7 +77,7 @@ export function UserAvatar({
             },
           ]}
         >
-          <Crown size={crownSize} color={COLORS.white} />
+          <AppIcon icon={CrownIcon} size={crownSize} color={COLORS.white} />
         </View>
       )}
     </View>

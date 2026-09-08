@@ -5,7 +5,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as MediaLibrary from 'expo-media-library';
-import { Download, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, Download01Icon } from '@hugeicons/core-free-icons';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -120,16 +121,13 @@ export default function ImageLightbox({
         <SafeAreaView edges={['top']} style={styles.headerSafe}>
           <View style={styles.header}>
             <Pressable
-              style={({ pressed }) => [
-                styles.headerButton,
-                pressed && { opacity: ACTIVE_OPACITY },
-              ]}
+              style={({ pressed }) => [styles.headerButton, pressed && { opacity: ACTIVE_OPACITY }]}
               onPress={onClose}
               testID="image-lightbox-close-button"
               accessibilityRole="button"
               accessibilityLabel={t('common.close')}
             >
-              <X size={28} color={COLORS.white} />
+              <AppIcon icon={Cancel01Icon} size={28} color={COLORS.white} />
             </Pressable>
 
             {images.length > 1 && (
@@ -139,10 +137,7 @@ export default function ImageLightbox({
             )}
 
             <Pressable
-              style={({ pressed }) => [
-                styles.headerButton,
-                pressed && { opacity: ACTIVE_OPACITY },
-              ]}
+              style={({ pressed }) => [styles.headerButton, pressed && { opacity: ACTIVE_OPACITY }]}
               onPress={handleDownload}
               disabled={isDownloading}
               testID="image-lightbox-download-button"
@@ -151,7 +146,7 @@ export default function ImageLightbox({
               {isDownloading ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
-                <Download size={24} color={COLORS.white} />
+                <AppIcon icon={Download01Icon} size={24} color={COLORS.white} />
               )}
             </Pressable>
           </View>

@@ -5,7 +5,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { Info, Plus, RefreshCw } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { InformationCircleIcon, PlusSignIcon, RefreshIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -28,25 +29,21 @@ export default function WidgetsScreen() {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert(
-      t('widgets.deleteWidgetTitle'),
-      t('widgets.deleteWidgetMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: () => removeWidget(id),
-        },
-      ]
-    );
+    Alert.alert(t('widgets.deleteWidgetTitle'), t('widgets.deleteWidgetMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: () => removeWidget(id),
+      },
+    ]);
   };
 
   return (
     <PremiumWidgetGate>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.infoCard}>
-          <Info size={20} color={accentColor} />
+          <AppIcon icon={InformationCircleIcon} size={20} color={accentColor} />
           <Text style={styles.infoText}>{t('widgets.info')}</Text>
         </View>
 
@@ -75,14 +72,17 @@ export default function WidgetsScreen() {
                 }}
                 style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 8 })}
               >
-                <RefreshCw size={20} color={COLORS.text} />
+                <AppIcon icon={RefreshIcon} size={20} color={COLORS.text} />
               </Pressable>
             ),
           }}
         />
 
-        <Pressable style={[styles.addButton, { backgroundColor: accentColor }]} onPress={handleAddWidget}>
-          <Plus size={20} color={COLORS.white} />
+        <Pressable
+          style={[styles.addButton, { backgroundColor: accentColor }]}
+          onPress={handleAddWidget}
+        >
+          <AppIcon icon={PlusSignIcon} size={20} color={COLORS.white} />
           <Text style={styles.addButtonText}>{t('widgets.addNew')}</Text>
         </Pressable>
       </ScrollView>

@@ -7,7 +7,14 @@ import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { Calendar, Globe, Layers, Star, Tv } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  Calendar03Icon,
+  Globe02Icon,
+  Layers01Icon,
+  StarIcon,
+  Tv01Icon,
+} from '@hugeicons/core-free-icons';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -36,84 +43,86 @@ export interface TVMetaSectionProps {
  */
 export const TVMetaSection = memo<TVMetaSectionProps>(
   ({ show, displayTitle, onSeasonsPress, onShowToast }) => {
-  const { t } = useTranslation();
-  const styles = useDetailStyles();
-  const { accentColor } = useAccentColor();
+    const { t } = useTranslation();
+    const styles = useDetailStyles();
+    const { accentColor } = useAccentColor();
 
-  const handleTitleLongPress = useCallback(async () => {
-    await Clipboard.setStringAsync(displayTitle);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onShowToast(t('common.copiedToClipboard'));
-  }, [displayTitle, onShowToast, t]);
+    const handleTitleLongPress = useCallback(async () => {
+      await Clipboard.setStringAsync(displayTitle);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onShowToast(t('common.copiedToClipboard'));
+    }, [displayTitle, onShowToast, t]);
 
-  return (
-    <>
-      <TouchableOpacity activeOpacity={1} onLongPress={handleTitleLongPress}>
-        <Text style={styles.title}>{displayTitle}</Text>
-      </TouchableOpacity>
-
-      <View style={styles.metaContainer}>
-        <View style={styles.metaItem}>
-          <Calendar size={14} color={COLORS.textSecondary} />
-          <Text style={styles.metaText}>
-            {show.first_air_date
-              ? formatTmdbDate(show.first_air_date, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })
-              : t('media.unknown')}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.metaItem}
-          onPress={onSeasonsPress}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Layers size={14} color={accentColor} />
-          <Text style={[styles.metaText, { color: accentColor }]}>
-            {t('media.numberOfSeasons', { count: show.number_of_seasons })}
-          </Text>
+    return (
+      <>
+        <TouchableOpacity activeOpacity={1} onLongPress={handleTitleLongPress}>
+          <Text style={styles.title}>{displayTitle}</Text>
         </TouchableOpacity>
-        <View style={styles.metaItem}>
-          <Tv size={14} color={COLORS.textSecondary} />
-          <Text style={styles.metaText}>{t('media.numberOfEpisodes', { count: show.number_of_episodes })}</Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
-          <Text style={[styles.metaText, { color: COLORS.warning }]}>
-            {show.vote_average.toFixed(1)}
-          </Text>
-        </View>
-        {show.original_language !== 'en' && (
-          <View style={styles.metaItem}>
-            <Globe size={14} color={COLORS.textSecondary} />
-            <Text style={styles.metaText}>{getLanguageName(show.original_language)}</Text>
-          </View>
-        )}
-        {(show.status === 'Ended' || show.status === 'Canceled') && (
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusBadgeText}>{show.status}</Text>
-          </View>
-        )}
-      </View>
 
-      <ScrollView
-        {...HORIZONTAL_SCROLL_PROPS}
-        showsHorizontalScrollIndicator={false}
-        style={{ marginHorizontal: -SPACING.l }}
-        contentContainerStyle={{ paddingHorizontal: SPACING.l }}
-      >
-        <View style={styles.genresContainer}>
-          {show.genres.map((genre) => (
-            <View key={genre.id} style={styles.genreTag}>
-              <Text style={styles.genreText}>{genre.name}</Text>
+        <View style={styles.metaContainer}>
+          <View style={styles.metaItem}>
+            <AppIcon icon={Calendar03Icon} size={14} color={COLORS.textSecondary} />
+            <Text style={styles.metaText}>
+              {show.first_air_date
+                ? formatTmdbDate(show.first_air_date, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
+                : t('media.unknown')}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.metaItem}
+            onPress={onSeasonsPress}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <AppIcon icon={Layers01Icon} size={14} color={accentColor} />
+            <Text style={[styles.metaText, { color: accentColor }]}>
+              {t('media.numberOfSeasons', { count: show.number_of_seasons })}
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.metaItem}>
+            <AppIcon icon={Tv01Icon} size={14} color={COLORS.textSecondary} />
+            <Text style={styles.metaText}>
+              {t('media.numberOfEpisodes', { count: show.number_of_episodes })}
+            </Text>
+          </View>
+          <View style={styles.metaItem}>
+            <AppIcon icon={StarIcon} size={14} color={COLORS.warning} fill={COLORS.warning} />
+            <Text style={[styles.metaText, { color: COLORS.warning }]}>
+              {show.vote_average.toFixed(1)}
+            </Text>
+          </View>
+          {show.original_language !== 'en' && (
+            <View style={styles.metaItem}>
+              <AppIcon icon={Globe02Icon} size={14} color={COLORS.textSecondary} />
+              <Text style={styles.metaText}>{getLanguageName(show.original_language)}</Text>
             </View>
-          ))}
+          )}
+          {(show.status === 'Ended' || show.status === 'Canceled') && (
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>{show.status}</Text>
+            </View>
+          )}
         </View>
-      </ScrollView>
-    </>
-  );
+
+        <ScrollView
+          {...HORIZONTAL_SCROLL_PROPS}
+          showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: -SPACING.l }}
+          contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+        >
+          <View style={styles.genresContainer}>
+            {show.genres.map((genre) => (
+              <View key={genre.id} style={styles.genreTag}>
+                <Text style={styles.genreText}>{genre.name}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </>
+    );
   }
 );
 

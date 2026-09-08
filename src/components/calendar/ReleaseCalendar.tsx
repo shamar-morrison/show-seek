@@ -19,7 +19,14 @@ import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Bell, Calendar, CrownIcon, Film, Tv } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  Calendar03Icon,
+  CrownIcon,
+  Film01Icon,
+  Notification01Icon,
+  Tv01Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -218,7 +225,7 @@ export function ReleaseCalendar({
       if (item.type === 'section-header') {
         return (
           <View style={[styles.sectionHeader, index !== 0 && styles.sectionHeaderWithMargin]}>
-            <Calendar size={18} color={accentColor} />
+            <AppIcon icon={Calendar03Icon} size={18} color={accentColor} />
             <Text style={styles.sectionTitle}>{item.title}</Text>
           </View>
         );
@@ -275,7 +282,7 @@ export function ReleaseCalendar({
           style={styles.upgradeShadow}
         />
         <View style={styles.upgradeCard}>
-          <CrownIcon size={30} color={accentColor} style={styles.upgradeIcon} />
+          <AppIcon icon={CrownIcon} size={30} color={accentColor} style={styles.upgradeIcon} />
           <Text style={styles.upgradeTitle}>{t('calendar.upgradeForFullExperience')}</Text>
           <Pressable
             testID={buildMediaTestId(activeMediaFilter, 'upgrade-button')}
@@ -552,9 +559,9 @@ function CardMediaInfoShell({
         ) : (
           <View style={[styles.backdrop, styles.placeholderBackdrop]}>
             {mediaType === 'movie' ? (
-              <Film size={32} color={COLORS.textSecondary} />
+              <AppIcon icon={Film01Icon} size={32} color={COLORS.textSecondary} />
             ) : (
-              <Tv size={32} color={COLORS.textSecondary} />
+              <AppIcon icon={Tv01Icon} size={32} color={COLORS.textSecondary} />
             )}
           </View>
         )}
@@ -567,7 +574,7 @@ function CardMediaInfoShell({
           </Text>
           {isReminder ? (
             <View style={styles.reminderBadge}>
-              <Bell size={12} color={COLORS.warning} />
+              <AppIcon icon={Notification01Icon} size={12} color={COLORS.warning} />
             </View>
           ) : null}
         </View>
@@ -577,9 +584,9 @@ function CardMediaInfoShell({
           <View style={styles.metaBadgeRow}>
             <View style={styles.mediaTypeBadge}>
               {mediaType === 'movie' ? (
-                <Film size={12} color={COLORS.white} />
+                <AppIcon icon={Film01Icon} size={12} color={COLORS.white} />
               ) : (
-                <Tv size={12} color={COLORS.white} />
+                <AppIcon icon={Tv01Icon} size={12} color={COLORS.white} />
               )}
             </View>
           </View>

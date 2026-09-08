@@ -10,7 +10,8 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { CalendarSortMode } from '@/src/utils/calendarViewModel';
-import { Check, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Cancel01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,12 +32,7 @@ interface CalendarSortModalProps {
   onApply: (sortMode: CalendarSortMode) => void;
 }
 
-export function CalendarSortModal({
-  visible,
-  sortMode,
-  onClose,
-  onApply,
-}: CalendarSortModalProps) {
+export function CalendarSortModal({ visible, sortMode, onClose, onApply }: CalendarSortModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const [localSortMode, setLocalSortMode] = useState<CalendarSortMode>(sortMode);
@@ -68,17 +64,13 @@ export function CalendarSortModal({
         style={modalLayoutStyles.container}
       >
         <ModalBackground />
-        <TouchableOpacity
-          style={modalLayoutStyles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+        <TouchableOpacity style={modalLayoutStyles.backdrop} activeOpacity={1} onPress={onClose} />
 
         <View style={modalLayoutStyles.card} testID="calendar-sort-modal">
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('calendar.sortReleases')}</Text>
             <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </Pressable>
           </View>
 
@@ -106,7 +98,7 @@ export function CalendarSortModal({
                   >
                     {option.label}
                   </Text>
-                  {isSelected ? <Check size={20} color={accentColor} /> : null}
+                  {isSelected ? <AppIcon icon={Tick02Icon} size={20} color={accentColor} /> : null}
                 </Pressable>
               );
             })}

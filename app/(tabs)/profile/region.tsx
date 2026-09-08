@@ -14,7 +14,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { SUPPORTED_REGIONS, useRegion } from '@/src/context/RegionProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -53,9 +54,7 @@ export default function RegionScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.description}>
-          {t('settings.regionScreenDescription')}
-        </Text>
+        <Text style={styles.description}>{t('settings.regionScreenDescription')}</Text>
 
         <View style={styles.regionList}>
           {SUPPORTED_REGIONS.map((r) => {
@@ -85,9 +84,12 @@ export default function RegionScreen() {
                     <ActivityIndicator size="small" color={accentColor} />
                   ) : isSelected ? (
                     <View
-                      style={[styles.checkContainer, { backgroundColor: hexToRGBA(accentColor, 0.2) }]}
+                      style={[
+                        styles.checkContainer,
+                        { backgroundColor: hexToRGBA(accentColor, 0.2) },
+                      ]}
                     >
-                      <Check size={20} color={accentColor} />
+                      <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
                     </View>
                   ) : null}
                 </View>
@@ -96,9 +98,7 @@ export default function RegionScreen() {
           })}
         </View>
 
-        <Text style={styles.note}>
-          {t('settings.regionScreenNote')}
-        </Text>
+        <Text style={styles.note}>{t('settings.regionScreenNote')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

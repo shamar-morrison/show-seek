@@ -8,7 +8,8 @@ import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { ListMediaItem } from '@/src/services/ListService';
-import { Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
@@ -53,11 +54,14 @@ export const MediaListCard = memo<MediaListCardProps>(
     const handleLongPress = useCallback(() => {
       onLongPress?.(item);
     }, [onLongPress, item]);
-    const { handlePress: handleCardPress, handleLongPress: handleCardLongPress, handlePressOut } =
-      useLongPressPressGuard({
-        onPress: handlePress,
-        onLongPress: onLongPress ? handleLongPress : undefined,
-      });
+    const {
+      handlePress: handleCardPress,
+      handleLongPress: handleCardLongPress,
+      handlePressOut,
+    } = useLongPressPressGuard({
+      onPress: handlePress,
+      onLongPress: onLongPress ? handleLongPress : undefined,
+    });
 
     const year = item.release_date
       ? new Date(item.release_date).getFullYear()
@@ -115,7 +119,7 @@ export const MediaListCard = memo<MediaListCardProps>(
             {item.vote_average > 0 && year && <Text style={metaTextStyles.secondary}> • </Text>}
             {item.vote_average > 0 && (
               <View style={styles.tmdbRating}>
-                <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                <AppIcon icon={StarIcon} size={12} fill={COLORS.warning} color={COLORS.warning} />
                 <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
               </View>
             )}

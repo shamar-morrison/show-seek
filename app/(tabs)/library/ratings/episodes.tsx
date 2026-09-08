@@ -24,14 +24,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { List, Rows3, Search, Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ListViewIcon, Menu01Icon, Search01Icon, StarIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'flat' | 'grouped';
@@ -68,7 +65,7 @@ export default function EpisodeRatingsScreen() {
     return ratings.filter((r) => r.mediaType === 'episode').sort((a, b) => b.ratedAt - a.ratedAt);
   }, [ratings]);
 
-  // Search functionality using shared hook
+  // Search01Icon functionality using shared hook
   const {
     searchQuery,
     isSearchActive,
@@ -121,11 +118,7 @@ export default function EpisodeRatingsScreen() {
         return;
       }
 
-      if (
-        rating.tvShowId == null ||
-        rating.seasonNumber == null ||
-        rating.episodeNumber == null
-      ) {
+      if (rating.tvShowId == null || rating.seasonNumber == null || rating.episodeNumber == null) {
         console.warn('Cannot navigate to episode: missing route params', {
           id: rating.id,
           tvShowId: rating.tvShowId,
@@ -217,14 +210,14 @@ export default function EpisodeRatingsScreen() {
           <View style={styles.headerButtons}>
             {!isSelectionMode && (
               <HeaderIconButton onPress={searchButton.onPress}>
-                <Search size={22} color={COLORS.text} />
+                <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
               </HeaderIconButton>
             )}
             <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'flat' ? (
-                <Rows3 size={24} color={COLORS.text} />
+                <AppIcon icon={ListViewIcon} size={24} color={COLORS.text} />
               ) : (
-                <List size={24} color={COLORS.text} />
+                <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
               )}
             </HeaderIconButton>
           </View>
@@ -376,7 +369,7 @@ export default function EpisodeRatingsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={Star}
+          icon={StarIcon}
           title={t('library.emptyRatings')}
           description={t('library.emptyRatingsHint')}
         />

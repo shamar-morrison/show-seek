@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
-import { ExternalLink } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { SquareArrowUpRightIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +18,7 @@ export function OpenWithButton({ onPress, rightOffset = 58 }: OpenWithButtonProp
         onPress={onPress}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <ExternalLink size={20} color={COLORS.white} />
+        <AppIcon icon={SquareArrowUpRightIcon} size={20} color={COLORS.white} />
       </TouchableOpacity>
     </SafeAreaView>
   );

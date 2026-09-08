@@ -10,7 +10,8 @@ import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLa
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { Image as ImageIcon } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Image01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
@@ -124,7 +125,7 @@ export default function PersonPhotosScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         {photos.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <ImageIcon size={48} color={COLORS.textSecondary} />
+            <AppIcon icon={Image01Icon} size={48} color={COLORS.textSecondary} />
             <Text style={styles.emptyTitle}>{t('person.noPhotosTitle')}</Text>
             <Text style={styles.emptyDescription}>{t('person.noPhotosDescription')}</Text>
           </View>
@@ -135,7 +136,10 @@ export default function PersonPhotosScreen() {
             keyExtractor={(item) => item.file_path}
             numColumns={GRID_COLUMN_COUNT}
             drawDistance={400}
-            contentContainerStyle={[styles.gridContent, { paddingHorizontal: listPaddingHorizontal }]}
+            contentContainerStyle={[
+              styles.gridContent,
+              { paddingHorizontal: listPaddingHorizontal },
+            ]}
             showsVerticalScrollIndicator={false}
           />
         )}

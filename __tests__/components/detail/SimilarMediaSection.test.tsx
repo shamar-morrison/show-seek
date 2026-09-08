@@ -13,8 +13,11 @@ jest.mock('@/src/hooks/useListMembership', () => ({
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
     overrides: {},
-    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
-      fallbackPosterPath,
+    resolvePosterPath: (
+      _mediaType: 'movie' | 'tv',
+      _mediaId: number,
+      fallbackPosterPath: string | null
+    ) => fallbackPosterPath,
   }),
 }));
 
@@ -39,13 +42,6 @@ jest.mock('@shopify/flash-list', () => ({
         ))}
       </View>
     );
-  },
-}));
-
-jest.mock('lucide-react-native', () => ({
-  Star: () => {
-    const { View } = require('react-native');
-    return <View testID="star-icon" />;
   },
 }));
 

@@ -1,4 +1,7 @@
-import { SUPPORTED_LANGUAGES, type SupportedLanguageCode } from '@/src/constants/supportedLanguages';
+import {
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguageCode,
+} from '@/src/constants/supportedLanguages';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -8,7 +11,8 @@ import {
   hexToRGBA,
 } from '@/src/constants/theme';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -82,7 +86,7 @@ export function LanguageSelectionList({
                 <View
                   style={[styles.checkContainer, { backgroundColor: hexToRGBA(accentColor, 0.2) }]}
                 >
-                  <Check size={20} color={accentColor} />
+                  <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
                 </View>
               ) : null}
             </View>

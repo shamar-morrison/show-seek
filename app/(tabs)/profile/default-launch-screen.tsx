@@ -15,7 +15,15 @@ import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences'
 import { LaunchScreenRoute } from '@/src/types/preferences';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
-import { Bookmark, Check, Compass, Home, Search, User } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  BinocularsIcon,
+  Bookmark02Icon,
+  Home01Icon,
+  Search01Icon,
+  Tick02Icon,
+  UserIcon,
+} from '@hugeicons/core-free-icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -38,11 +46,11 @@ export default function DefaultLaunchScreen() {
 
   const SCREEN_OPTIONS = useMemo(
     () => [
-      { label: t('tabs.home'), value: '/(tabs)/home' as const, icon: Home },
-      { label: t('tabs.discover'), value: '/(tabs)/discover' as const, icon: Compass },
-      { label: t('tabs.search'), value: '/(tabs)/search' as const, icon: Search },
-      { label: t('tabs.library'), value: '/(tabs)/library' as const, icon: Bookmark },
-      { label: t('tabs.profile'), value: '/(tabs)/profile' as const, icon: User },
+      { label: t('tabs.home'), value: '/(tabs)/home' as const, icon: Home01Icon },
+      { label: t('tabs.discover'), value: '/(tabs)/discover' as const, icon: BinocularsIcon },
+      { label: t('tabs.search'), value: '/(tabs)/search' as const, icon: Search01Icon },
+      { label: t('tabs.library'), value: '/(tabs)/library' as const, icon: Bookmark02Icon },
+      { label: t('tabs.profile'), value: '/(tabs)/profile' as const, icon: UserIcon },
     ],
     [t]
   );
@@ -88,7 +96,8 @@ export default function DefaultLaunchScreen() {
                 disabled={isUpdating !== null}
               >
                 <View style={styles.optionInfo}>
-                  <Icon
+                  <AppIcon
+                    icon={Icon}
                     size={22}
                     color={isSelected ? accentColor : COLORS.textSecondary}
                     style={styles.optionIcon}
@@ -103,9 +112,12 @@ export default function DefaultLaunchScreen() {
                     <ActivityIndicator size="small" color={accentColor} />
                   ) : isSelected ? (
                     <View
-                      style={[styles.checkContainer, { backgroundColor: hexToRGBA(accentColor, 0.2) }]}
+                      style={[
+                        styles.checkContainer,
+                        { backgroundColor: hexToRGBA(accentColor, 0.2) },
+                      ]}
                     >
-                      <Check size={20} color={accentColor} />
+                      <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
                     </View>
                   ) : null}
                 </View>

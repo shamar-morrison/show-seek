@@ -18,7 +18,14 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, Plus, Search, Settings2, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  Cancel01Icon,
+  PlusSignIcon,
+  Search01Icon,
+  Settings02Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import React, {
   forwardRef,
   memo,
@@ -99,7 +106,7 @@ const ListItemRow = memo<{
           <AnimatedCheck visible={isSelected} />
         </View>
         <View style={styles.listIcon}>
-          <ListIcon size={20} color={COLORS.textSecondary} />
+          <AppIcon icon={ListIcon} size={20} color={COLORS.textSecondary} />
         </View>
         <Text style={styles.listName}>{list.name}</Text>
         <Text style={styles.itemCount}>
@@ -120,7 +127,15 @@ ListItemRow.displayName = 'ListItemRow';
 
 const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
   (
-    { mediaItem, mediaItems, sourceListId, bulkAddMode = 'move', onShowToast, onDismiss, onComplete },
+    {
+      mediaItem,
+      mediaItems,
+      sourceListId,
+      bulkAddMode = 'move',
+      onShowToast,
+      onDismiss,
+      onComplete,
+    },
     ref
   ) => {
     const router = useRouter();
@@ -231,7 +246,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       return listsWithCounts.filter((list) => list.name.toLowerCase().includes(normalizedQuery));
     }, [listsWithCounts, searchQuery]);
 
-    // Check if there are unsaved changes
+    // Tick02Icon if there are unsaved changes
     const hasChanges = useMemo(() => {
       if (isBulkMode) {
         return Object.values(pendingSelections).some(Boolean);
@@ -433,10 +448,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
       maybeWarnTraktManagedListEdit(
         isTraktConnected,
-        [
-          ...targetLists.map((list) => list.id),
-          bulkAddMode === 'copy' ? null : sourceListId,
-        ],
+        [...targetLists.map((list) => list.id), bulkAddMode === 'copy' ? null : sourceListId],
         onShowToast,
         t('trakt.localListEditWarning')
       );
@@ -560,47 +572,43 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       }
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      Alert.alert(
-        t('library.deleteList'),
-        t('library.deleteListConfirmMessage', { listName }),
-        [
-          {
-            text: t('common.cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('common.delete'),
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                maybeWarnTraktManagedListEdit(
-                  isTraktConnected,
-                  [listId],
-                  onShowToast,
-                  t('trakt.localListEditWarning')
-                );
-                await deleteMutation.mutateAsync(listId);
-                setPendingSelections((prev) => {
-                  const updated = { ...prev };
-                  delete updated[listId];
-                  return updated;
-                });
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                if (onShowToast) {
-                  onShowToast(t('library.listDeleted'));
-                }
-              } catch (error) {
-                console.error('Failed to delete list:', error);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                Alert.alert(
-                  t('common.error'),
-                  error instanceof Error ? error.message : t('errors.deleteFailed')
-                );
+      Alert.alert(t('library.deleteList'), t('library.deleteListConfirmMessage', { listName }), [
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              maybeWarnTraktManagedListEdit(
+                isTraktConnected,
+                [listId],
+                onShowToast,
+                t('trakt.localListEditWarning')
+              );
+              await deleteMutation.mutateAsync(listId);
+              setPendingSelections((prev) => {
+                const updated = { ...prev };
+                delete updated[listId];
+                return updated;
+              });
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              if (onShowToast) {
+                onShowToast(t('library.listDeleted'));
               }
-            },
+            } catch (error) {
+              console.error('Failed to delete list:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(
+                t('common.error'),
+                error instanceof Error ? error.message : t('errors.deleteFailed')
+              );
+            }
           },
-        ]
-      );
+        },
+      ]);
     };
 
     const handleCreateCustomListPress = async () => {
@@ -694,7 +702,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
             {!isLoadingLists && listsWithCounts.length > 0 && (
               <View style={styles.searchContainer}>
-                <Search size={18} color={COLORS.textSecondary} />
+                <AppIcon icon={Search01Icon} size={18} color={COLORS.textSecondary} />
                 <TextInput
                   style={styles.searchInput}
                   placeholder={t('library.searchListPlaceholder')}
@@ -714,7 +722,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                     hitSlop={8}
                     testID="add-to-list-clear-search-button"
                   >
-                    <X size={18} color={COLORS.textSecondary} />
+                    <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
                   </Pressable>
                 )}
               </View>
@@ -763,8 +771,14 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
                 <>
-                  <Check size={20} color={hasChanges ? COLORS.white : COLORS.textSecondary} />
-                  <Text style={[styles.saveButtonText, !hasChanges && styles.saveButtonTextDisabled]}>
+                  <AppIcon
+                    icon={Tick02Icon}
+                    size={20}
+                    color={hasChanges ? COLORS.white : COLORS.textSecondary}
+                  />
+                  <Text
+                    style={[styles.saveButtonText, !hasChanges && styles.saveButtonTextDisabled]}
+                  >
                     {t('common.saveChanges')}
                   </Text>
                 </>
@@ -780,7 +794,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               onPress={handleCreateCustomListPress}
               disabled={isSaving}
             >
-              <Plus size={20} color={COLORS.white} />
+              <AppIcon icon={PlusSignIcon} size={20} color={COLORS.white} />
               <Text style={styles.createListText}>{t('library.createCustomList')}</Text>
             </Pressable>
 
@@ -792,7 +806,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               }}
               disabled={isSaving}
             >
-              <Settings2 size={20} color={COLORS.textSecondary} />
+              <AppIcon icon={Settings02Icon} size={20} color={COLORS.textSecondary} />
               <Text style={styles.manageListsText}>{t('library.manageLists')}</Text>
             </Pressable>
           </GestureHandlerRootView>

@@ -120,19 +120,6 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-jest.mock('lucide-react-native', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  const Icon = () => React.createElement(View, null);
-
-  return {
-    Film: Icon,
-    SlidersHorizontal: Icon,
-    Star: Icon,
-    Tv: Icon,
-  };
-});
-
 jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: {
     Medium: 'medium',

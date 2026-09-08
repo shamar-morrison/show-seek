@@ -3,7 +3,8 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING, hexToRGBA } from '@/src/cons
 import { AccentColorContext } from '@/src/context/AccentColorProvider';
 import { classifyErrorKind, getTechnicalErrorMessage } from '@/src/utils/errorPresentation';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AlertCircle, Clock, Globe } from 'lucide-react-native';
+import { AlertCircleIcon, Clock01Icon, Globe02Icon } from '@hugeicons/core-free-icons';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import React, { memo, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -53,9 +54,10 @@ export const AppErrorState = memo<AppErrorStateProps>(
         ? t('errors.networkError')
         : kind === 'timeout'
           ? t('errors.timeout')
-          : message ?? t('errors.generic');
+          : (message ?? t('errors.generic'));
 
-    const Icon = kind === 'network' ? Globe : kind === 'timeout' ? Clock : AlertCircle;
+    const Icon =
+      kind === 'network' ? Globe02Icon : kind === 'timeout' ? Clock01Icon : AlertCircleIcon;
     const hasActions = Boolean(onRetry || onSecondaryAction);
 
     return (
@@ -72,8 +74,10 @@ export const AppErrorState = memo<AppErrorStateProps>(
         />
 
         <View style={styles.card}>
-          <View style={[styles.iconHalo, { backgroundColor: hexToRGBA(resolvedAccentColor, 0.18) }]}> 
-            <Icon size={30} color={resolvedAccentColor} />
+          <View
+            style={[styles.iconHalo, { backgroundColor: hexToRGBA(resolvedAccentColor, 0.18) }]}
+          >
+            <AppIcon icon={Icon} size={30} color={resolvedAccentColor} />
           </View>
 
           <Text style={styles.title}>{title ?? t('common.error')}</Text>

@@ -23,7 +23,13 @@ import { getTechnicalErrorMessage } from '@/src/utils/errorPresentation';
 import { getImdbImportErrorCode, getImdbImportErrorMessageKey } from '@/src/utils/imdbImportError';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRouter } from 'expo-router';
-import { AlertCircle, Check, Info, RefreshCw } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  AlertCircleIcon,
+  InformationCircleIcon,
+  RefreshIcon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -276,7 +282,7 @@ export default function ImdbImportProgressScreen() {
                     onPress={handleRetry}
                     activeOpacity={ACTIVE_OPACITY}
                   >
-                    <RefreshCw size={18} color={COLORS.white} />
+                    <AppIcon icon={RefreshIcon} size={18} color={COLORS.white} />
                     <Text style={styles.actionButtonText}>{t('common.retry')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -284,7 +290,9 @@ export default function ImdbImportProgressScreen() {
                     onPress={handleBackToFiles}
                     activeOpacity={ACTIVE_OPACITY}
                   >
-                    <Text style={styles.secondaryActionButtonText}>{t('imdbImport.backToFiles')}</Text>
+                    <Text style={styles.secondaryActionButtonText}>
+                      {t('imdbImport.backToFiles')}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -292,25 +300,25 @@ export default function ImdbImportProgressScreen() {
           ) : (
             <>
               <View style={styles.completeBadge}>
-                <Check size={20} color={COLORS.white} />
+                <AppIcon icon={Tick02Icon} size={20} color={COLORS.white} />
               </View>
               <ResultGroup
                 title={t('imdbImport.importedTitle')}
                 entries={importedEntries}
                 color={COLORS.success}
-                icon={<Check size={18} color={COLORS.success} />}
+                icon={<AppIcon icon={Tick02Icon} size={18} color={COLORS.success} />}
               />
               <ResultGroup
                 title={t('imdbImport.skippedTitle')}
                 entries={skippedEntries}
                 color={COLORS.warning}
-                icon={<AlertCircle size={18} color={COLORS.warning} />}
+                icon={<AppIcon icon={AlertCircleIcon} size={18} color={COLORS.warning} />}
               />
               <ResultGroup
                 title={t('imdbImport.ignoredTitle')}
                 entries={ignoredEntries}
                 color={accentColor}
-                icon={<Info size={18} color={accentColor} />}
+                icon={<AppIcon icon={InformationCircleIcon} size={18} color={accentColor} />}
               />
             </>
           )}

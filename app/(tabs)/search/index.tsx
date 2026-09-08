@@ -32,7 +32,14 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router, useSegments } from 'expo-router';
-import { Grid3X3, List, Search as SearchIcon, Star, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import {
+  Cancel01Icon,
+  GridIcon,
+  Menu01Icon,
+  Search01Icon,
+  StarIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -217,10 +224,7 @@ export default function SearchScreen() {
       resolvedMediaType === 'movie' || resolvedMediaType === 'tv'
         ? resolvePosterPath(resolvedMediaType, item.id, item.poster_path)
         : item.profile_path;
-    const posterUrl = getImageUrl(
-      resolvedPosterPath,
-      TMDB_IMAGE_SIZES.poster.small
-    );
+    const posterUrl = getImageUrl(resolvedPosterPath, TMDB_IMAGE_SIZES.poster.small);
 
     // Get genre names from genre_ids
     const genres = item.genre_ids
@@ -270,7 +274,12 @@ export default function SearchScreen() {
                 )}
                 {item.vote_average > 0 && (
                   <View style={styles.ratingContainer}>
-                    <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
+                    <AppIcon
+                      icon={StarIcon}
+                      size={14}
+                      fill={COLORS.warning}
+                      color={COLORS.warning}
+                    />
                     <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
                   </View>
                 )}
@@ -356,7 +365,12 @@ export default function SearchScreen() {
                 {year && item.vote_average > 0 && <Text style={styles.gridMetaText}> • </Text>}
                 {item.vote_average > 0 && (
                   <View style={styles.gridRatingContainer}>
-                    <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                    <AppIcon
+                      icon={StarIcon}
+                      size={10}
+                      fill={COLORS.warning}
+                      color={COLORS.warning}
+                    />
                     <Text style={styles.gridRating}>{item.vote_average.toFixed(1)}</Text>
                   </View>
                 )}
@@ -376,9 +390,9 @@ export default function SearchScreen() {
           <View style={styles.headerActions}>
             <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'list' ? (
-                <Grid3X3 size={24} color={COLORS.text} />
+                <AppIcon icon={GridIcon} size={24} color={COLORS.text} />
               ) : (
-                <List size={24} color={COLORS.text} />
+                <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
               )}
             </HeaderIconButton>
           </View>
@@ -386,7 +400,7 @@ export default function SearchScreen() {
 
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
-            <SearchIcon size={20} color={COLORS.textSecondary} />
+            <AppIcon icon={Search01Icon} size={20} color={COLORS.textSecondary} />
             <TextInput
               style={styles.searchInput}
               placeholder={t('search.placeholder')}
@@ -402,7 +416,7 @@ export default function SearchScreen() {
                 hitSlop={HIT_SLOP.l}
                 activeOpacity={ACTIVE_OPACITY}
               >
-                <X size={20} color={COLORS.textSecondary} />
+                <AppIcon icon={Cancel01Icon} size={20} color={COLORS.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -426,7 +440,7 @@ export default function SearchScreen() {
           </View>
         ) : debouncedQuery.length === 0 ? (
           <View style={styles.centerContainer}>
-            <SearchIcon size={64} color={COLORS.textSecondary} />
+            <AppIcon icon={Search01Icon} size={64} color={COLORS.textSecondary} />
             <Text style={styles.emptyText}>{t('search.prompt')}</Text>
           </View>
         ) : filteredResults.length === 0 ? (

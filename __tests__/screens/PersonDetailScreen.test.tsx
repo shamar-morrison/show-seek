@@ -140,26 +140,6 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-jest.mock('lucide-react-native', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  const Icon = () => React.createElement(View, null);
-  return {
-    ArrowLeft: Icon,
-    ArrowRight: Icon,
-    Calendar: Icon,
-    ChevronRight: Icon,
-    Facebook: Icon,
-    Heart: Icon,
-    Instagram: Icon,
-    MapPin: Icon,
-    Music2: Icon,
-    Star: Icon,
-    Twitter: Icon,
-    Youtube: Icon,
-  };
-});
-
 jest.mock('@/src/components/ui/AnimatedScrollHeader', () => ({
   AnimatedScrollHeader: () => null,
 }));
@@ -262,7 +242,8 @@ jest.mock('@/src/components/ImageLightbox', () => ({
   default: (props: any) => mockImageLightboxRender(props),
 }));
 
-jest.mock('@/src/components/AddToListModal', () => {  const React = require('react');
+jest.mock('@/src/components/AddToListModal', () => {
+  const React = require('react');
   const { Text } = require('react-native');
   const AddToListModal = React.forwardRef(({ mediaItem, onDismiss }: any, ref: any) => {
     latestAddToListModalOnDismiss = onDismiss ?? null;
@@ -641,9 +622,7 @@ describe('PersonDetailScreen', () => {
       props.onViewAll();
     });
 
-    expect(mockPush).toHaveBeenCalledWith(
-      '/(tabs)/discover/person/99/photos?name=Test%20Person'
-    );
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/discover/person/99/photos?name=Test%20Person');
   });
 
   it('opens the lightbox at the pressed photo index', () => {

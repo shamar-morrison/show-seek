@@ -6,7 +6,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -55,7 +56,7 @@ export default function StreamingProvidersStep() {
           <MediaImage source={{ uri: logoUri }} style={styles.providerLogo} contentFit="cover" />
           {isSelected && (
             <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
-              <Check size={12} color={COLORS.white} />
+              <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
             </View>
           )}
           <Text style={styles.providerName} numberOfLines={1}>

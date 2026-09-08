@@ -10,7 +10,8 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '@/src/utils/listFilters';
-import { Check, ChevronDown, X } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowDown01Icon, Cancel01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -69,9 +70,9 @@ const FilterSelect = ({
         activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
-          {selectedOption ? selectedOption.label : placeholder ?? t('filters.selectPlaceholder')}
+          {selectedOption ? selectedOption.label : (placeholder ?? t('filters.selectPlaceholder'))}
         </Text>
-        <ChevronDown size={20} color={COLORS.textSecondary} />
+        <AppIcon icon={ArrowDown01Icon} size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
 
       <Modal
@@ -89,7 +90,7 @@ const FilterSelect = ({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
               <Pressable onPress={() => setVisible(false)} hitSlop={HIT_SLOP.m}>
-                <X size={24} color={COLORS.text} />
+                <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
               </Pressable>
             </View>
             <FlatList
@@ -121,7 +122,9 @@ const FilterSelect = ({
                   >
                     {item.label}
                   </Text>
-                  {item.value === value && <Check size={20} color={accentColor} />}
+                  {item.value === value && (
+                    <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
+                  )}
                 </TouchableOpacity>
               )}
             />
@@ -208,17 +211,13 @@ export default function WatchStatusFiltersModal({
         style={modalLayoutStyles.container}
       >
         <ModalBackground />
-        <TouchableOpacity
-          style={modalLayoutStyles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+        <TouchableOpacity style={modalLayoutStyles.backdrop} activeOpacity={1} onPress={onClose} />
 
         <View style={modalLayoutStyles.card}>
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('library.filterLists')}</Text>
             <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
-              <X size={24} color={COLORS.text} />
+              <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </Pressable>
           </View>
 

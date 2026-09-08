@@ -39,13 +39,6 @@ jest.mock('@shopify/flash-list', () => ({
   },
 }));
 
-jest.mock('lucide-react-native', () => ({
-  Star: () => {
-    const { View } = require('react-native');
-    return <View testID="star-icon" />;
-  },
-}));
-
 jest.mock('@/src/api/tmdb', () => ({
   getImageUrl: jest.fn().mockReturnValue('https://test-image-url.com'),
   TMDB_IMAGE_SIZES: {

@@ -1,6 +1,7 @@
 import { COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Bell } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Notification01Icon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -26,7 +27,8 @@ export default function ReminderButton({
       {isLoading ? (
         <ActivityIndicator size="small" color={accentColor} />
       ) : (
-        <Bell
+        <AppIcon
+          icon={Notification01Icon}
           size={24}
           color={hasReminder ? accentColor : COLORS.text}
           fill={hasReminder ? accentColor : 'transparent'}

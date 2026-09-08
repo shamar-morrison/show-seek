@@ -45,7 +45,8 @@ import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft, Check, Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowLeft01Icon, StarIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
@@ -699,7 +700,8 @@ export default function TVSeasonsScreen() {
         const hasBulkMarkableEpisodes = markableEpisodes.length > 0;
         const hasWatchedEpisodesToUnmark = watchedSeasonEpisodes.length > 0;
         const shouldOfferUnmarkAll =
-          (markableEpisodes.length === 0 && hasWatchedEpisodesToUnmark) || allMarkableEpisodesWatched;
+          (markableEpisodes.length === 0 && hasWatchedEpisodesToUnmark) ||
+          allMarkableEpisodesWatched;
         const markAllUsesGenericCopy = markableEpisodes.some(
           (episode) => !hasEpisodeAired(episode.air_date)
         );
@@ -830,7 +832,8 @@ export default function TVSeasonsScreen() {
                 <View style={styles.seasonActionButtonContent}>
                   {seasonUserRating > 0 ? (
                     <>
-                      <Star
+                      <AppIcon
+                        icon={StarIcon}
                         size={14}
                         color={styles.seasonActionButtonIcon.color}
                         fill={styles.seasonActionButtonIcon.color}
@@ -1037,7 +1040,7 @@ export default function TVSeasonsScreen() {
           onPress={() => router.back()}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <ArrowLeft size={24} color={COLORS.white} />
+          <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle} numberOfLines={1}>
@@ -1060,7 +1063,8 @@ export default function TVSeasonsScreen() {
           accessibilityLabel={t('watched.markAll')}
           testID="header-mark-all-button"
         >
-          <Check
+          <AppIcon
+            icon={Tick02Icon}
             size={22}
             color={isShowFullyWatched ? COLORS.textSecondary : COLORS.white}
           />
@@ -1114,9 +1118,7 @@ export default function TVSeasonsScreen() {
             airDate: selectedSeasonForRating.air_date ?? null,
           }}
           initialRating={
-            seasonRatingsById.get(
-              `season-${tvId}-${selectedSeasonForRating.season_number}`
-            ) || 0
+            seasonRatingsById.get(`season-${tvId}-${selectedSeasonForRating.season_number}`) || 0
           }
           onRatingSuccess={() => {}}
         />

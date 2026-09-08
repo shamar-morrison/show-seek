@@ -50,7 +50,8 @@ import NotificationPermissionStep from './NotificationPermissionStep';
 import OnboardingPaywallStep from './OnboardingPaywallStep';
 import PersonalizingScreen from './PersonalizingScreen';
 import WelcomeIntroScreen from './WelcomeIntroScreen';
-import { ChevronLeft } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 
 interface OnboardingContainerProps {
   initialStepIndex?: number;
@@ -160,7 +161,11 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
 
         // Target step index: use explicit deep-link param if present, otherwise restore saved index
         const rawTargetStep = hasInitialStep ? initialStepIndex : savedProgress.stepIndex;
-        if (rawTargetStep !== undefined && rawTargetStep > 0 && rawTargetStep < ONBOARDING_STEPS.length) {
+        if (
+          rawTargetStep !== undefined &&
+          rawTargetStep > 0 &&
+          rawTargetStep < ONBOARDING_STEPS.length
+        ) {
           const targetStep =
             rawTargetStep > 7 && !restoredHasInteractedWithNotifications ? 7 : rawTargetStep;
           setCurrentStepIndex(targetStep);
@@ -179,7 +184,7 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
     return () => {
       isCancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist combined onboarding progress (step index + selections) ON STEP TRANSITIONS ONLY
@@ -525,10 +530,7 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
         );
       case 'languages':
         return (
-          <LanguagesStep
-            selectedLanguage={selections.language}
-            onSelect={handleLanguageSelect}
-          />
+          <LanguagesStep selectedLanguage={selections.language} onSelect={handleLanguageSelect} />
         );
       case 'genres':
         return (
@@ -616,7 +618,7 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
       <View style={styles.footer}>
         {!isFirstStep && (
           <Pressable style={styles.backButton} onPress={handleBack}>
-            <ChevronLeft size={20} color={COLORS.textSecondary} />
+            <AppIcon icon={ArrowLeft01Icon} size={20} color={COLORS.textSecondary} />
             <Text style={styles.backText}>{t('personalOnboarding.back')}</Text>
           </Pressable>
         )}
@@ -646,11 +648,7 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
         </Pressable>
       </View>
 
-      <ExitIntentModal
-        visible={isExitModalVisible}
-        onContinue={onContinue}
-        onExit={onExit}
-      />
+      <ExitIntentModal visible={isExitModalVisible} onContinue={onContinue} onExit={onExit} />
     </SafeAreaView>
   );
 }

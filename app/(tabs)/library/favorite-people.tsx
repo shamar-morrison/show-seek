@@ -17,15 +17,11 @@ import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { Grid3X3, List, Search, User } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { GridIcon, Menu01Icon, Search01Icon, UserIcon } from '@hugeicons/core-free-icons';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  FlatList,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { FlatList, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'grid' | 'list';
@@ -108,13 +104,13 @@ export default function FavoritePeopleScreen() {
         headerRight: () => (
           <View style={styles.headerButtons}>
             <HeaderIconButton onPress={searchButton.onPress}>
-              <Search size={22} color={COLORS.text} />
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
             </HeaderIconButton>
             <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'grid' ? (
-                <List size={24} color={COLORS.text} />
+                <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
               ) : (
-                <Grid3X3 size={24} color={COLORS.text} />
+                <AppIcon icon={GridIcon} size={24} color={COLORS.text} />
               )}
             </HeaderIconButton>
           </View>
@@ -217,7 +213,7 @@ export default function FavoritePeopleScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={User}
+          icon={UserIcon}
           title={t('library.emptyFavoritePeople')}
           description={t('library.emptyFavoritePeopleHint')}
         />

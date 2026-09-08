@@ -1,7 +1,15 @@
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
-import { Download, Globe, Info, LogOut, Star, Trash2 } from 'lucide-react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import {
+  Delete02Icon,
+  DiscordIcon,
+  Download01Icon,
+  Globe02Icon,
+  InformationCircleIcon,
+  Logout01Icon,
+  StarIcon,
+} from '@hugeicons/core-free-icons';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -70,34 +78,38 @@ export function AppSettingsSection({
         </Text>
       )}
       <View style={styles.actionsList}>
-        <ActionButton icon={Star} label={t('profile.rateApp')} onPress={onRateApp} />
+        <ActionButton icon={StarIcon} label={t('profile.rateApp')} onPress={onRateApp} />
         {isGuest ? (
           <>
-            <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
             <ActionButton
-              customIcon={<FontAwesome5 name="discord" size={20} color={COLORS.text} />}
+              icon={InformationCircleIcon}
+              label={t('settings.about')}
+              onPress={onAbout}
+            />
+            <ActionButton
+              customIcon={<AppIcon icon={DiscordIcon} size={20} color={COLORS.text} />}
               label={t('profile.joinDiscord')}
               onPress={onDiscord}
             />
             <ActionButton
-              icon={Trash2}
+              icon={Delete02Icon}
               label={isDeletingAccount ? t('profile.deletingAccount') : t('profile.deleteAccount')}
               onPress={onDeleteAccount}
               loading={isDeletingAccount}
               variant="danger"
             />
             <ActionButton
-              icon={LogOut}
+              icon={Logout01Icon}
               label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
               onPress={onSignOut}
               loading={isSigningOut}
             />
-            <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
+            <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} />
           </>
         ) : (
           <>
             <ActionButton
-              icon={Download}
+              icon={Download01Icon}
               label={t('profile.exportData')}
               onPress={onExportData}
               loading={isExporting}
@@ -105,27 +117,31 @@ export function AppSettingsSection({
               isPremium={isPremium}
             />
             <ActionButton
-              icon={Trash2}
+              icon={Delete02Icon}
               label={t('profile.clearCache')}
               onPress={onClearCache}
               loading={isClearingCache}
             />
-            <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
-            <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
+            <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} />
             <ActionButton
-              customIcon={<FontAwesome5 name="discord" size={20} color={COLORS.text} />}
+              icon={InformationCircleIcon}
+              label={t('settings.about')}
+              onPress={onAbout}
+            />
+            <ActionButton
+              customIcon={<AppIcon icon={DiscordIcon} size={20} color={COLORS.text} />}
               label={t('profile.joinDiscord')}
               onPress={onDiscord}
             />
             <ActionButton
-              icon={Trash2}
+              icon={Delete02Icon}
               label={isDeletingAccount ? t('profile.deletingAccount') : t('profile.deleteAccount')}
               onPress={onDeleteAccount}
               loading={isDeletingAccount}
               variant="danger"
             />
             <ActionButton
-              icon={LogOut}
+              icon={Logout01Icon}
               label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
               onPress={onSignOut}
               loading={isSigningOut}

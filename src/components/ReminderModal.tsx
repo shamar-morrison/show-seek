@@ -19,7 +19,8 @@ import {
 } from '@/src/utils/freemiumLimits';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { isNotificationTimeInPast, isReleaseToday } from '@/src/utils/reminderHelpers';
-import { Calendar } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Calendar03Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
@@ -138,7 +139,7 @@ export default function ReminderModal({
       {/* Release Date Display */}
       {releaseDate && (
         <View style={sharedStyles.dateContainer}>
-          <Calendar size={16} color={COLORS.textSecondary} />
+          <AppIcon icon={Calendar03Icon} size={16} color={COLORS.textSecondary} />
           <Text style={sharedStyles.dateText}>
             {t('reminder.releasesOn', { date: formatReleaseDate(releaseDate) })}
           </Text>

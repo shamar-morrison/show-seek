@@ -35,7 +35,7 @@ import {
 import { createSortAction } from '@/src/utils/listActions';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { Heart, Search, SlidersHorizontal } from 'lucide-react-native';
+import { FavouriteIcon, Search01Icon, SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -129,7 +129,7 @@ export default function FavoritesScreen() {
     });
   }, [favoritesList, sortState, filterState]);
 
-  // Search functionality
+  // Search01Icon functionality
   const {
     searchQuery,
     isSearchActive,
@@ -205,7 +205,7 @@ export default function FavoritesScreen() {
     () => [
       {
         id: 'filter',
-        icon: SlidersHorizontal,
+        icon: SlidersHorizontalIcon,
         label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
@@ -279,7 +279,7 @@ export default function FavoritesScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={Heart}
+          icon={FavouriteIcon}
           title={t('library.emptyFavorites')}
           description={t('library.emptyFavoritesHint')}
           actionLabel={t('library.browseContent')}
@@ -303,20 +303,20 @@ export default function FavoritesScreen() {
               emptyState={
                 searchQuery
                   ? {
-                      icon: Search,
+                      icon: Search01Icon,
                       title: t('common.noResults'),
                       description: t('search.adjustSearch'),
                     }
                   : hasActiveFilterState
                     ? {
-                        icon: SlidersHorizontal,
+                        icon: SlidersHorizontalIcon,
                         title: t('discover.noResultsWithFilters'),
                         description: t('discover.adjustFilters'),
                         actionLabel: t('common.reset'),
                         onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
                       }
                     : {
-                        icon: Heart,
+                        icon: FavouriteIcon,
                         title: t('library.emptyFavorites'),
                         description: t('library.emptyFavoritesHint'),
                         actionLabel: t('library.browseContent'),
@@ -338,7 +338,9 @@ export default function FavoritesScreen() {
               keyExtractor={keyExtractor}
               contentContainerStyle={[
                 libraryListStyles.listContent,
-                selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
+                selectionContentBottomPadding > 0 && {
+                  paddingBottom: selectionContentBottomPadding,
+                },
               ]}
               showsVerticalScrollIndicator={false}
               extraData={selectedMediaItems}
@@ -348,7 +350,7 @@ export default function FavoritesScreen() {
                 ) : hasActiveFilterState ? (
                   <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                     <EmptyState
-                      icon={SlidersHorizontal}
+                      icon={SlidersHorizontalIcon}
                       title={t('discover.noResultsWithFilters')}
                       description={t('discover.adjustFilters')}
                       actionLabel={t('common.reset')}

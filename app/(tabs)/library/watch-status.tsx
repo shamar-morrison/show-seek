@@ -10,7 +10,8 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Bookmark, ChevronRight } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowRight01Icon, Bookmark02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -82,7 +83,7 @@ export default function WatchStatusScreen() {
                 : t('library.itemCount', { count: itemCount })}
             </Text>
           </View>
-          <ChevronRight size={20} color={COLORS.textSecondary} />
+          <AppIcon icon={ArrowRight01Icon} size={20} color={COLORS.textSecondary} />
         </Pressable>
       );
     },
@@ -115,7 +116,7 @@ export default function WatchStatusScreen() {
       <View style={libraryListStyles.divider} />
       {watchStatusLists.length === 0 ? (
         <EmptyState
-          icon={Bookmark}
+          icon={Bookmark02Icon}
           title={t('library.emptyLists')}
           description={t('library.browseContent')}
           actionLabel={t('library.browseContent')}

@@ -2,26 +2,15 @@ import RatingButton from '@/src/components/RatingButton';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
-// Mock lucide-react-native
-jest.mock('lucide-react-native', () => ({
-  Star: ({
-    color,
-    fill,
-    size,
-    testID,
-  }: {
-    color: string;
-    fill: string;
-    size: number;
-    testID?: string;
-  }) => {
+// Mock HugeIcons renderer, preserving the filled/empty distinction via fill
+jest.mock('@hugeicons/react-native', () => ({
+  HugeiconsIcon: ({ fill, testID }: { fill?: string; testID?: string }) => {
     const { View } = require('react-native');
-    return (
-      <View
-        testID={testID || 'star-icon'}
-        accessibilityLabel={`star-${fill === 'transparent' ? 'empty' : 'filled'}`}
-      />
-    );
+    const React = require('react');
+    return React.createElement(View, {
+      testID: testID || 'star-icon',
+      accessibilityLabel: `star-${fill === 'transparent' ? 'empty' : 'filled'}`,
+    });
   },
 }));
 

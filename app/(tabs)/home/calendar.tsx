@@ -4,7 +4,10 @@ import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { ReleaseCalendarSkeleton } from '@/src/components/calendar/ReleaseCalendarSkeleton';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
-import { SegmentedControl, type SegmentedControlOption } from '@/src/components/ui/SegmentedControl';
+import {
+  SegmentedControl,
+  type SegmentedControlOption,
+} from '@/src/components/ui/SegmentedControl';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -21,7 +24,8 @@ import {
 } from '@/src/utils/calendarViewModel';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, Calendar, SlidersHorizontal } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { ArrowUpDownIcon, Calendar03Icon, SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -36,8 +40,9 @@ export default function CalendarScreen() {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const [mediaFilter, setMediaFilter] = useState<CalendarMediaFilter>('all');
   const [sortMode, setSortMode] = useState<CalendarSortMode>('soonest');
-  const [selectedSources, setSelectedSources] =
-    useState<CalendarSourceFilter[]>([...CALENDAR_SOURCE_FILTERS]);
+  const [selectedSources, setSelectedSources] = useState<CalendarSourceFilter[]>([
+    ...CALENDAR_SOURCE_FILTERS,
+  ]);
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sourceModalVisible, setSourceModalVisible] = useState(false);
 
@@ -60,15 +65,18 @@ export default function CalendarScreen() {
             onPress={() => setSourceModalVisible(true)}
           >
             <View style={iconBadgeStyles.wrapper}>
-              <SlidersHorizontal size={22} color={COLORS.text} />
+              <AppIcon icon={SlidersHorizontalIcon} size={22} color={COLORS.text} />
               {hasActiveSourceFilters ? (
-                <View style={iconBadgeStyles.badge} testID="calendar-source-filter-active-indicator" />
+                <View
+                  style={iconBadgeStyles.badge}
+                  testID="calendar-source-filter-active-indicator"
+                />
               ) : null}
             </View>
           </HeaderIconButton>
           <HeaderIconButton testID="calendar-sort-button" onPress={() => setSortModalVisible(true)}>
             <View style={iconBadgeStyles.wrapper}>
-              <ArrowUpDown size={22} color={COLORS.text} />
+              <AppIcon icon={ArrowUpDownIcon} size={22} color={COLORS.text} />
               {hasActiveSort ? (
                 <View style={iconBadgeStyles.badge} testID="calendar-sort-active-indicator" />
               ) : null}
@@ -156,7 +164,7 @@ export default function CalendarScreen() {
     content = (
       <View style={styles.emptyContainer}>
         <View style={styles.iconContainer}>
-          <Calendar size={64} color={accentColor} />
+          <AppIcon icon={Calendar03Icon} size={64} color={accentColor} />
         </View>
         <Text style={styles.emptyTitle}>{t('calendar.empty')}</Text>
         <Text style={styles.emptyDescription}>{t('calendar.emptyHint')}</Text>
@@ -181,7 +189,7 @@ export default function CalendarScreen() {
         </View>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
-            <SlidersHorizontal size={56} color={accentColor} />
+            <AppIcon icon={SlidersHorizontalIcon} size={56} color={accentColor} />
           </View>
           <Text style={styles.emptyTitle}>{t('calendar.filteredEmptyTitle')}</Text>
           <Text style={styles.emptyDescription}>{t('calendar.filteredEmptyDescription')}</Text>

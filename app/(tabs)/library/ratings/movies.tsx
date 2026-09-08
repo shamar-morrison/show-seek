@@ -34,7 +34,8 @@ import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLa
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Search, Star } from 'lucide-react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Search01Icon, StarIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -61,12 +62,7 @@ export default function MovieRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
-  const {
-    data: enrichedRatings,
-    isLoading,
-    error,
-    refetch,
-  } = useEnrichedMovieRatings();
+  const { data: enrichedRatings, isLoading, error, refetch } = useEnrichedMovieRatings();
   const deleteRatingMutation = useDeleteRating();
   const { t } = useTranslation();
   const { resolvePosterPath } = usePosterOverrides();
@@ -77,7 +73,7 @@ export default function MovieRatingsScreen() {
   const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
     getThreeColumnGridMetrics(windowWidth);
 
-  // Search functionality - create searchButton first, then pass to useRatingScreenLogic
+  // Search01Icon functionality - create searchButton first, then pass to useRatingScreenLogic
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
 
@@ -92,7 +88,7 @@ export default function MovieRatingsScreen() {
 
   const searchButton = useMemo(
     () => ({
-      icon: Search,
+      icon: Search01Icon,
       onPress: activateSearch,
       showBadge: searchQuery.length > 0,
     }),
@@ -260,7 +256,12 @@ export default function MovieRatingsScreen() {
                   {item.movie.vote_average > 0 && (
                     <>
                       <Text style={mediaMetaStyles.separator}> • </Text>
-                      <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                      <AppIcon
+                        icon={StarIcon}
+                        size={10}
+                        fill={COLORS.warning}
+                        color={COLORS.warning}
+                      />
                       <Text style={mediaMetaStyles.rating}>
                         {item.movie.vote_average.toFixed(1)}
                       </Text>
@@ -323,7 +324,7 @@ export default function MovieRatingsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
         <EmptyState
-          icon={Star}
+          icon={StarIcon}
           title={t('library.emptyRatings')}
           description={t('library.emptyRatingsHint')}
         />
