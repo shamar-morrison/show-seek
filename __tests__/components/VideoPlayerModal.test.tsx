@@ -50,16 +50,6 @@ describe('TrailerPlayer (VideoPlayerModal)', () => {
     expect(getByText('No trailer available')).toBeTruthy();
   });
 
-  it('calls onClose when close button is pressed', () => {
-    const { getByTestId } = render(
-      <TrailerPlayer visible={true} onClose={mockOnClose} videoKey="dQw4w9WgXcQ" />
-    );
-
-    fireEvent.press(getByTestId('trailer-player-close-button'));
-
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
-
   it('calls onClose when backdrop is pressed', () => {
     const { getByTestId } = render(
       <TrailerPlayer visible={true} onClose={mockOnClose} videoKey="dQw4w9WgXcQ" />

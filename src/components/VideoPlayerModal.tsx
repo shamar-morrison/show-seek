@@ -1,7 +1,7 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { extractYouTubeVideoId } from '@/src/utils/youtube';
-import { AlertCircle, ExternalLink, X } from 'lucide-react-native';
+import { AlertCircle, ExternalLink } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -138,16 +138,6 @@ export default function TrailerPlayer({ visible, onClose, videoKey, title }: Tra
             <Text style={styles.headerTitle} numberOfLines={1}>
               {title || t('media.watchTrailer')}
             </Text>
-            <Pressable
-              testID="trailer-player-close-button"
-              onPress={onClose}
-              style={({ pressed }) => [styles.closeButton, pressed && { opacity: ACTIVE_OPACITY }]}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.close')}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <X size={20} color={COLORS.text} />
-            </Pressable>
           </View>
 
           <View style={styles.edgeToEdgePlayerContainer}>
@@ -191,26 +181,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: SPACING.l,
     marginBottom: SPACING.s,
   },
   headerTitle: {
-    flex: 1,
     fontSize: FONT_SIZE.m,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginRight: SPACING.m,
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   edgeToEdgePlayerContainer: {
     width: '100%',
