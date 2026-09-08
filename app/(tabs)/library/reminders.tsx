@@ -1,9 +1,11 @@
 import EditTimingModal from '@/src/components/library/EditTimingModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { NotificationsDisabledBanner } from '@/src/components/library/NotificationsDisabledBanner';
 import { ReminderCard } from '@/src/components/library/ReminderCard';
 import { CategoryTab, CategoryTabs } from '@/src/components/ui/CategoryTabs';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { useCancelReminder, useReminders, useUpdateReminder } from '@/src/hooks/useReminders';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -11,9 +13,9 @@ import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useNavigation } from 'expo-router';
+import { useFocusEffect, useNavigation } from 'expo-router';
 import { Bell, List, Rows3 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -42,6 +44,31 @@ export default function RemindersScreen() {
   const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [isEnablingNotifications, setIsEnablingNotifications] = useState(false);
+
+  const { permissionStatus, requestPermission, checkPermission } =
+    useNotificationPermissions();
+  const showNotificationsBanner =
+    permissionStatus !== 'granted' && permissionStatus !== 'checking';
+
+  // Re-check permission when returning from OS Settings so the banner clears.
+  const checkPermissionRef = useRef(checkPermission);
+  checkPermissionRef.current = checkPermission;
+  useFocusEffect(
+    useCallback(() => {
+      checkPermissionRef.current();
+    }, [])
+  );
+
+  const handleEnableNotifications = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsEnablingNotifications(true);
+    try {
+      await requestPermission();
+    } finally {
+      setIsEnablingNotifications(false);
+    }
+  }, [requestPermission]);
 
   const updateMutation = useUpdateReminder();
   const cancelMutation = useCancelReminder();
@@ -231,6 +258,14 @@ export default function RemindersScreen() {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
+        {showNotificationsBanner && (
+          <View style={styles.bannerWrapper}>
+            <NotificationsDisabledBanner
+              onEnable={handleEnableNotifications}
+              isRequesting={isEnablingNotifications}
+            />
+          </View>
+        )}
         <EmptyState
           icon={Bell}
           title={t('library.emptyReminders')}
@@ -243,6 +278,14 @@ export default function RemindersScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom']}>
       <View style={libraryListStyles.divider} />
+      {showNotificationsBanner && (
+        <View style={styles.bannerWrapper}>
+          <NotificationsDisabledBanner
+            onEnable={handleEnableNotifications}
+            isRequesting={isEnablingNotifications}
+          />
+        </View>
+      )}
       <View style={styles.listContainer}>
         {isTabMode && (
           <CategoryTabs
@@ -276,6 +319,10 @@ export default function RemindersScreen() {
 }
 
 const styles = StyleSheet.create({
+  bannerWrapper: {
+    paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.m,
+  },
   separator: {
     height: SPACING.m,
   },
