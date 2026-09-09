@@ -117,6 +117,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
+    textAlign: 'center',
   },
   addButton: {
     flexDirection: 'row',

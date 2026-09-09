@@ -162,6 +162,7 @@ export const filterSelectStyles = StyleSheet.create({
   emptyText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
+    textAlign: 'center',
   },
   clearButtonText: {
     fontSize: FONT_SIZE.s,

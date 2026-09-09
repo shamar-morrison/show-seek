@@ -568,11 +568,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: FONT_SIZE.l,
     color: COLORS.textSecondary,
+    textAlign: 'center',
     marginTop: SPACING.m,
   },
   emptySubtext: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
+    textAlign: 'center',
     marginTop: SPACING.s,
   },
   listContainer: {

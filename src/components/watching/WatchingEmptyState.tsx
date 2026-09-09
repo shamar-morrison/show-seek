@@ -40,6 +40,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text, // was text.primary
+    textAlign: 'center',
     marginBottom: 8,
   },
   message: {

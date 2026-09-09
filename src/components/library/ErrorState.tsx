@@ -54,6 +54,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: FONT_SIZE.l,
     fontFamily: FONT_FAMILY.bold,
+    textAlign: 'center',
     marginTop: SPACING.m,
     marginBottom: SPACING.s,
   },

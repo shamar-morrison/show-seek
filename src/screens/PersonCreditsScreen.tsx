@@ -537,6 +537,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.l,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
+    textAlign: 'center',
     marginTop: SPACING.m,
     marginBottom: SPACING.s,
   },
