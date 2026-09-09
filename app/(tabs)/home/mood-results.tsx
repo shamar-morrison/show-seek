@@ -4,6 +4,7 @@ import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
+import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { getMoodById } from '@/src/constants/moods';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -30,62 +31,11 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const COLUMN_COUNT = 2;
 const ITEM_GAP = SPACING.m;
 const TARGET_OUTER_PADDING = SPACING.l;
-
-/**
- * Media type toggle component.
- */
-function MediaTypeToggle({
-  mediaType,
-  onToggle,
-  accentColor,
-}: {
-  mediaType: MoodMediaType;
-  onToggle: (type: MoodMediaType) => void;
-  accentColor: string;
-}) {
-  const { t } = useTranslation();
-  const sliderPosition = useSharedValue(mediaType === 'movie' ? 0 : 1);
-
-  useEffect(() => {
-    sliderPosition.value = withSpring(mediaType === 'movie' ? 0 : 1, {
-      damping: 15,
-      stiffness: 150,
-    });
-  }, [mediaType, sliderPosition]);
-
-  const sliderStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: sliderPosition.value * 100 }],
-  }));
-
-  const handlePress = (type: MoodMediaType) => {
-    if (type !== mediaType) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onToggle(type);
-    }
-  };
-
-  return (
-    <View style={styles.toggleContainer}>
-      <Animated.View style={[styles.toggleSlider, { backgroundColor: accentColor }, sliderStyle]} />
-      <Pressable style={styles.toggleButton} onPress={() => handlePress('movie')}>
-        <Text style={[styles.toggleText, mediaType === 'movie' && styles.toggleTextActive]}>
-          {t('discover.movies')}
-        </Text>
-      </Pressable>
-      <Pressable style={styles.toggleButton} onPress={() => handlePress('tv')}>
-        <Text style={[styles.toggleText, mediaType === 'tv' && styles.toggleTextActive]}>
-          {t('discover.tvShows')}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
 
 /**
  * Loading skeleton for the results list.
@@ -176,7 +126,7 @@ export default function MoodResultsScreen() {
     enabled: !!moodId,
   });
 
-  // Get mood name for display
+  // Get mood name for the header title so users know which mood they're viewing
   const moodKey = mood?.translationKey?.replace('mood.', '') || '';
   const moodName = t(`mood.${moodKey}.name`);
 
@@ -213,9 +163,16 @@ export default function MoodResultsScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const handleMediaTypeToggle = useCallback((type: MoodMediaType) => {
-    setMediaType(type);
-  }, []);
+  const handleMediaTypeToggle = useCallback(
+    (type: MoodMediaType) => {
+      if (type === mediaType) {
+        return;
+      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setMediaType(type);
+    },
+    [mediaType]
+  );
 
   const handleShowToast = useCallback((message: string) => {
     toastRef.current?.show(message);
@@ -307,20 +264,18 @@ export default function MoodResultsScreen() {
   const ListHeader = useMemo(
     () => (
       <View style={styles.headerContainer}>
-        <View style={[styles.moodBadge, { backgroundColor: (mood?.color || accentColor) + '20' }]}>
-          <Text style={styles.moodEmoji}>{mood?.emoji}</Text>
-          <Text style={[styles.moodBadgeText, { color: mood?.color || accentColor }]}>
-            {moodName}
-          </Text>
-        </View>
-        <MediaTypeToggle
-          mediaType={mediaType}
-          onToggle={handleMediaTypeToggle}
-          accentColor={accentColor}
+        <SegmentedControl
+          options={[
+            { key: 'movie', label: t('discover.movies') },
+            { key: 'tv', label: t('discover.tvShows') },
+          ]}
+          activeKey={mediaType}
+          onChange={handleMediaTypeToggle}
+          testID="mood-media-type-toggle"
         />
       </View>
     ),
-    [mood, moodName, mediaType, handleMediaTypeToggle, accentColor]
+    [mediaType, handleMediaTypeToggle, t]
   );
 
   const ListFooter = useMemo(() => {
@@ -408,55 +363,6 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.l,
-    alignItems: 'center',
-    gap: SPACING.m,
-  },
-  moodBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  moodEmoji: {
-    fontSize: 24,
-  },
-  moodBadgeText: {
-    fontSize: FONT_SIZE.l,
-    fontFamily: FONT_FAMILY.semiBold,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.xs,
-    position: 'relative',
-    width: 200,
-  },
-  toggleSlider: {
-    position: 'absolute',
-    top: SPACING.xs,
-    left: SPACING.xs,
-    width: 96,
-    height: 36,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  toggleButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.s,
-    zIndex: 1,
-  },
-  toggleText: {
-    fontSize: FONT_SIZE.s,
-    fontFamily: FONT_FAMILY.medium,
-    color: COLORS.textSecondary,
-  },
-  toggleTextActive: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
   },
   listContent: {
     paddingBottom: SPACING.xl,

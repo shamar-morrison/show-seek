@@ -2,11 +2,15 @@ import { getRandomMood, MOODS, type MoodConfig } from '@/src/constants/moods';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { useQueries } from '@tanstack/react-query';
+import { ImageBackground } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { ShuffleIcon } from '@hugeicons/core-free-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -21,19 +25,32 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+const TMDB_MOOD_CARD_IMAGE_SIZE = TMDB_IMAGE_SIZES.backdrop.medium;
+const MOOD_BACKDROP_CACHE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 interface MoodCardProps {
   mood: MoodConfig;
   index: number;
+  backdropPath: string | null | undefined;
   onPress: (moodId: string) => void;
 }
 
 /**
  * Individual mood card with animated entrance.
+ * Full-width image row (mirrors onboarding genre cards): TMDB backdrop with
+ * dark gradient overlay, mood icon on the left, title/description on the right.
  */
-function MoodCard({ mood, index, onPress }: MoodCardProps) {
+function MoodCard({ mood, index, backdropPath, onPress }: MoodCardProps) {
   const { t } = useTranslation();
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
+  const [hasImageError, setHasImageError] = useState(false);
+  const imageUri = backdropPath ? getImageUrl(backdropPath, TMDB_MOOD_CARD_IMAGE_SIZE) : null;
+  const shouldShowImage = Boolean(imageUri) && !hasImageError;
+
+  useEffect(() => {
+    setHasImageError(false);
+  }, [imageUri]);
 
   // Staggered entrance animation
   React.useEffect(() => {
@@ -61,14 +78,43 @@ function MoodCard({ mood, index, onPress }: MoodCardProps) {
   const nameKey = `mood.${moodKey}.name`;
   const descKey = `mood.${moodKey}.description`;
 
+  const cardContent = (
+    <LinearGradient
+      colors={['rgba(0,0,0,0.85)', 'rgba(0,0,0,0.1)']}
+      start={{ x: 0.5, y: 1 }}
+      end={{ x: 0.5, y: 0 }}
+      style={styles.moodCardOverlay}
+    >
+      <View style={[styles.moodIconBadge, { backgroundColor: mood.color + '35' }]}>
+        <AppIcon icon={mood.icon} size={28} color={COLORS.text} />
+      </View>
+      <View style={styles.moodTextContainer}>
+        <Text style={styles.moodName}>{t(nameKey)}</Text>
+        <Text style={styles.moodDescription} numberOfLines={2}>
+          {t(descKey)}
+        </Text>
+      </View>
+    </LinearGradient>
+  );
+
   return (
     <AnimatedPressable
       style={[styles.moodCard, { backgroundColor: mood.color + '20' }, animatedStyle]}
       onPress={handlePress}
     >
-      <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-      <Text style={styles.moodName}>{t(nameKey)}</Text>
-      <Text style={styles.moodDescription}>{t(descKey)}</Text>
+      {shouldShowImage ? (
+        <ImageBackground
+          source={{ uri: imageUri ?? undefined }}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          style={styles.moodCardImage}
+          onError={() => setHasImageError(true)}
+        >
+          {cardContent}
+        </ImageBackground>
+      ) : (
+        cardContent
+      )}
     </AnimatedPressable>
   );
 }
@@ -82,6 +128,34 @@ export default function MoodPickerScreen() {
   const { accentColor } = useAccentColor();
   const [isSpinning, setIsSpinning] = useState(false);
   const surpriseRotation = useSharedValue(0);
+
+  // Fetch a curated backdrop per mood (cached for 30 days, persisted across
+  // restarts via the query cache layer, so revisits don't refetch).
+  const backdropQueries = useQueries({
+    queries: MOODS.map((mood) => ({
+      queryKey: ['mood', 'backdrop', mood.id],
+      queryFn: async () => {
+        try {
+          const details =
+            mood.visual.sourceMediaType === 'tv'
+              ? await tmdbApi.getTVShowDetails(mood.visual.tmdbId)
+              : await tmdbApi.getMovieDetails(mood.visual.tmdbId);
+          return details.backdrop_path ?? null;
+        } catch {
+          return null;
+        }
+      },
+      staleTime: MOOD_BACKDROP_CACHE_MS,
+      gcTime: MOOD_BACKDROP_CACHE_MS,
+    })),
+  });
+  const backdropByMoodId = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    MOODS.forEach((mood, i) => {
+      map[mood.id] = backdropQueries[i]?.data ?? null;
+    });
+    return map;
+  }, [backdropQueries]);
 
   const handleMoodSelect = useCallback(
     (moodId: string) => {
@@ -146,10 +220,16 @@ export default function MoodPickerScreen() {
           <Text style={styles.subtitle}>{t('mood.subtitle')}</Text>
         </View>
 
-        {/* Mood Grid */}
-        <View style={styles.moodGrid}>
+        {/* Mood List */}
+        <View style={styles.moodList}>
           {MOODS.map((mood, index) => (
-            <MoodCard key={mood.id} mood={mood} index={index} onPress={handleMoodSelect} />
+            <MoodCard
+              key={mood.id}
+              mood={mood}
+              index={index}
+              backdropPath={backdropByMoodId[mood.id]}
+              onPress={handleMoodSelect}
+            />
           ))}
         </View>
 
@@ -181,7 +261,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   title: {
-    fontSize: FONT_SIZE.xxl,
+    fontSize: FONT_SIZE.xl,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
@@ -191,35 +271,46 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
   },
-  moodGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: SPACING.m,
+  moodList: {
+    gap: SPACING.s,
   },
   moodCard: {
-    width: '47%',
-    padding: SPACING.l,
+    height: 110,
     borderRadius: BORDER_RADIUS.l,
+    overflow: 'hidden',
+  },
+  moodCardImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  moodCardOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 20,
+    paddingRight: SPACING.l,
+    gap: SPACING.m,
+  },
+  moodIconBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: BORDER_RADIUS.round,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 130,
   },
-  moodEmoji: {
-    fontSize: 40,
-    marginBottom: SPACING.s,
+  moodTextContainer: {
+    flex: 1,
   },
   moodName: {
-    fontSize: 15,
+    fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
+    marginBottom: 2,
   },
   moodDescription: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    textAlign: 'center',
   },
   surpriseButton: {
     flexDirection: 'row',

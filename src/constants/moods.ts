@@ -45,6 +45,17 @@ import {
 } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react-native';
 
+/**
+ * Curated representative title whose TMDB backdrop illustrates a mood card.
+ * Mirrors the `GenreVisual` pattern in `GenresStep`.
+ */
+export interface MoodVisual {
+  /** TMDB ID of the representative movie or TV show */
+  tmdbId: number;
+  /** Media type of the representative title (defaults to 'movie') */
+  sourceMediaType?: 'movie' | 'tv';
+}
+
 export interface MoodConfig {
   /** Unique identifier for the mood */
   id: string;
@@ -56,6 +67,8 @@ export interface MoodConfig {
   icon: IconSvgElement;
   /** Unique accent color for the mood card (hex) */
   color: string;
+  /** Curated representative title used for the card backdrop image */
+  visual: MoodVisual;
   /** TMDB genre IDs for MOVIES (pipe-separated = OR logic) */
   movieGenres: number[];
   /** TMDB genre IDs for TV SHOWS (pipe-separated = OR logic) */
@@ -79,6 +92,7 @@ export const MOODS: MoodConfig[] = [
     emoji: '🧣',
     icon: Sofa01Icon,
     color: '#FF8C42', // Warm orange
+    visual: { tmdbId: 346648 }, // Paddington 2
     movieGenres: [35, 10751], // Comedy, Family
     tvGenres: [35, 10751], // Comedy, Family (same IDs)
     keywords: [
@@ -96,6 +110,7 @@ export const MOODS: MoodConfig[] = [
     emoji: '🌀',
     icon: BrainIcon,
     color: '#9B59B6', // Purple
+    visual: { tmdbId: 27205 }, // Inception
     movieGenres: [9648, 878], // Mystery, Science Fiction
     tvGenres: [9648, 10765], // Mystery, Sci-Fi & Fantasy
     keywords: [
@@ -114,6 +129,7 @@ export const MOODS: MoodConfig[] = [
     emoji: '⚡',
     icon: ZapIcon,
     color: '#E74C3C', // Red
+    visual: { tmdbId: 76341 }, // Mad Max: Fury Road
     movieGenres: [28, 12], // Action, Adventure
     tvGenres: [10759], // Action & Adventure (TV-specific genre)
     keywords: [
@@ -132,6 +148,7 @@ export const MOODS: MoodConfig[] = [
     emoji: '💔',
     icon: FavouriteIcon,
     color: '#3498DB', // Blue
+    visual: { tmdbId: 597 }, // Titanic (1997)
     movieGenres: [18, 10749], // Drama, Romance
     tvGenres: [18], // Drama (Romance doesn't exist for TV)
     keywords: [
@@ -150,6 +167,7 @@ export const MOODS: MoodConfig[] = [
     emoji: '👻',
     icon: SkullIcon,
     color: '#1A1A2E', // Dark purple/navy
+    visual: { tmdbId: 66732, sourceMediaType: 'tv' }, // Stranger Things
     movieGenres: [27, 53], // Horror, Thriller
     tvGenres: [9648], // Mystery (Horror/Thriller don't exist for TV)
     keywords: [
@@ -168,6 +186,7 @@ export const MOODS: MoodConfig[] = [
     emoji: '✨',
     icon: SparklesIcon,
     color: '#F39C12', // Gold
+    visual: { tmdbId: 354912 }, // Coco (2017)
     movieGenres: [14, 16], // Fantasy, Animation
     tvGenres: [10765, 16], // Sci-Fi & Fantasy, Animation
     keywords: [
