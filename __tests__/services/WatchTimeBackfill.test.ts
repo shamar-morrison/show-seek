@@ -274,4 +274,54 @@ describe('backfillRuntimes', () => {
     await runBackfill(more, [], { getShowRuntime, stampRuntimes });
     expect(getShowRuntime).toHaveBeenCalledTimes(10);
   });
+
+  it('prevents overlapping runs from overshooting the shared budget', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const getShowRuntime = jest.fn(async () => {
+      await gate;
+      return 42;
+    });
+    const stampRuntimes = jest.fn();
+
+    // Stats dispatches 8 fresh shows, then MonthDetail dispatches 8 more
+    // while the first run is still in flight (fast tap between screens).
+    const firstBatch = Array.from({ length: 8 }, (_, i) => ep(7000 + i, '1_1', 100 + i));
+    const secondBatch = Array.from({ length: 8 }, (_, i) => ep(7100 + i, '1_1', 200 + i));
+    const firstRun = runBackfill(firstBatch, [], { getShowRuntime, stampRuntimes });
+    const secondRun = runBackfill(secondBatch, [], { getShowRuntime, stampRuntimes });
+    release();
+    const [firstStamped, secondStamped] = await Promise.all([firstRun, secondRun]);
+
+    // 8 + 2 = 10 combined, never 16: the second run observed the first
+    // run's synchronous reservation.
+    expect(getShowRuntime).toHaveBeenCalledTimes(10);
+    expect(firstStamped).toBe(true);
+    expect(secondStamped).toBe(true);
+  });
+
+  it('refunds unused reservation when a run aborts early', async () => {
+    const abortingGetShowRuntime = jest.fn(async (): Promise<number | null> => {
+      throw { status: 429 };
+    });
+
+    // 8 fresh shows, first batch of 5 aborts: 5 issued, 3 refunded → 5 left.
+    await runBackfill(
+      Array.from({ length: 8 }, (_, i) => ep(7200 + i, '1_1', 100 + i)),
+      [],
+      { getShowRuntime: abortingGetShowRuntime, stampRuntimes: jest.fn() }
+    );
+    expect(abortingGetShowRuntime).toHaveBeenCalledTimes(5);
+
+    // The refunded remainder is spendable: exactly 5 more, total stays 10.
+    const getShowRuntime = jest.fn(async () => 30);
+    await runBackfill(
+      Array.from({ length: 9 }, (_, i) => ep(7300 + i, '1_1', 500 + i)),
+      [],
+      { getShowRuntime, stampRuntimes: jest.fn() }
+    );
+    expect(getShowRuntime).toHaveBeenCalledTimes(5);
+  });
 });

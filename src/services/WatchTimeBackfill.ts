@@ -334,7 +334,9 @@ export async function resolveMissingRuntimes(
  * TMDB traffic draws from a shared per-session budget of
  * MAX_BACKFILL_LOOKUPS_PER_LOAD lookups across all calls (overview +
  * month-detail screens share it), so a visit stays near ~25% of TMDB's
- * 10s budget no matter how many stats screens load.
+ * 10s budget no matter how many stats screens load. Budget is reserved
+ * synchronously at dispatch and reconciled against issued calls on
+ * completion, so overlapping runs can never overshoot it combined.
  */
 export function backfillRuntimes(
   episodes: UnstampedEpisode[],
@@ -353,6 +355,26 @@ export function backfillRuntimes(
   freshItems.forEach((i) =>
     attemptedThisSession.add(listItemAttemptKey(i.mediaType, i.mediaId))
   );
+
+  // Reserve session budget synchronously so overlapping runs (e.g. Stats
+  // then MonthDetail in quick succession) observe each other's holds and
+  // can never overshoot the shared cap combined. Reconciled (refunded)
+  // against actually-issued lookups on completion.
+  const distinctFreshShows = new Set<number>();
+  freshEpisodes.forEach((e) => distinctFreshShows.add(e.tvShowId));
+  const distinctFreshMovies = new Set<number>();
+  freshItems.forEach((i) => {
+    if (i.mediaType === 'tv') distinctFreshShows.add(i.mediaId);
+    else distinctFreshMovies.add(i.mediaId);
+  });
+  const reservation = Math.max(
+    0,
+    Math.min(
+      distinctFreshShows.size + distinctFreshMovies.size,
+      MAX_BACKFILL_LOOKUPS_PER_LOAD - sessionLookupsSpent
+    )
+  );
+  sessionLookupsSpent += reservation;
 
   if (freshEpisodes.length === 0 && freshItems.length === 0) {
     deps.onStampsSettled?.(false);
@@ -377,13 +399,15 @@ export function backfillRuntimes(
       await resolveMissingRuntimes(freshEpisodes, freshItems, {
         getShowRuntime: countingGetShowRuntime,
         getMovieRuntime: countingGetMovieRuntime,
-        maxLookups: Math.max(0, MAX_BACKFILL_LOOKUPS_PER_LOAD - sessionLookupsSpent),
+        maxLookups: reservation,
         stampRuntimes: (stamps) => {
           didStamp = true;
           stampRuntimes(stamps);
         },
       });
-      sessionLookupsSpent += issuedLookups;
+      // Refund the reserved-but-unused share (abort/empty runs). issued can
+      // never exceed reservation, so the session total stays within budget.
+      sessionLookupsSpent = Math.max(0, sessionLookupsSpent + issuedLookups - reservation);
     } catch (error) {
       console.warn('[WatchTimeBackfill] Background backfill failed:', error);
     } finally {
