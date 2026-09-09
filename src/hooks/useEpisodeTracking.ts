@@ -46,6 +46,7 @@ export interface MarkEpisodeWatchedParams {
     episodeId: number;
     episodeName: string;
     episodeAirDate: string | null;
+    runtimeMinutes?: number;
   };
   showMetadata: {
     tvShowName: string;

@@ -93,6 +93,7 @@ describe('MonthDetailScreen', () => {
           rated: 0,
           addedToLists: 0,
           averageRating: null,
+          totalWatchMinutes: 262,
           topGenres: [],
           comparisonToPrevious: null,
         },
@@ -137,9 +138,11 @@ describe('MonthDetailScreen', () => {
 
     expect(getAllByTestId('media-list-card')).toHaveLength(2);
     expect(queryByTestId('activity-rating-card')).toBeNull();
+    expect(queryByTestId('month-detail-refresh-indicator')).toBeNull();
     expect(getAllByText('Grouped Show')).toHaveLength(1);
     expect(getByText('2 Episodes')).toBeTruthy();
     expect(getAllByText('4')).toHaveLength(2);
+    expect(getByText('4hrs 22mins')).toBeTruthy();
   });
 
   it('filters unsupported added-item media types from the added summary and tab count', async () => {
@@ -154,6 +157,7 @@ describe('MonthDetailScreen', () => {
           rated: 0,
           addedToLists: 8,
           averageRating: null,
+          totalWatchMinutes: 0,
           topGenres: [],
           comparisonToPrevious: null,
         },
@@ -187,7 +191,7 @@ describe('MonthDetailScreen', () => {
       isLoading: false,
     });
 
-    const { getAllByTestId, getAllByText, queryByText } = render(<MonthDetailScreen />);
+    const { getAllByTestId, getAllByText, getByText, queryByText } = render(<MonthDetailScreen />);
 
     await waitFor(() => {
       expect(getAllByTestId('media-list-card')).toHaveLength(1);
@@ -198,5 +202,65 @@ describe('MonthDetailScreen', () => {
     expect(queryByText('Filtered Season')).toBeNull();
     expect(getAllByText('Valid Added Movie')).toHaveLength(1);
     expect(getAllByText('1')).toHaveLength(2);
+    expect(getByText('0hrs 0mins')).toBeTruthy();
+  });
+
+  it('renders tabs in a horizontally scrollable bar with all three labels', async () => {
+    const { getByTestId, getAllByText } = render(<MonthDetailScreen />);
+
+    await waitFor(() => {
+      expect(mockSetOptions).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'March 2026' })
+      );
+    });
+
+    expect(getByTestId('month-tab-bar').props.horizontal).toBe(true);
+    // 'Watched'/'Added' appear twice (summary card + tab bar); 'Rated' only in the tab bar.
+    expect(getAllByText('Watched')).toHaveLength(2);
+    expect(getAllByText('Rated')).toHaveLength(1);
+    expect(getAllByText('Added')).toHaveLength(2);
+  });
+
+  it('shows a subtle refresh indicator only during background refetches', async () => {
+    mockUseMonthDetail.mockReturnValue({
+      data: {
+        month: '2026-03',
+        monthName: 'March 2026',
+        stats: {
+          month: '2026-03',
+          monthName: 'March 2026',
+          watched: 1,
+          rated: 0,
+          addedToLists: 0,
+          averageRating: null,
+          totalWatchMinutes: 45,
+          topGenres: [],
+          comparisonToPrevious: null,
+        },
+        items: {
+          watched: [
+            {
+              kind: 'episode-group',
+              id: 500,
+              mediaType: 'tv',
+              title: 'Grouped Show',
+              posterPath: '/grouped-show.jpg',
+              timestamp: new Date('2026-03-07T09:30:00Z').getTime(),
+              episodeCount: 1,
+            },
+          ],
+          rated: [],
+          added: [],
+        },
+      },
+      isLoading: false,
+      isFetching: true,
+    });
+
+    const { getByTestId } = render(<MonthDetailScreen />);
+
+    await waitFor(() => {
+      expect(getByTestId('month-detail-refresh-indicator')).toBeTruthy();
+    });
   });
 });

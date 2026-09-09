@@ -378,6 +378,7 @@ export const SeasonItem = memo<SeasonItemProps>(
                             episodeId: episode.id,
                             episodeName: episode.name,
                             episodeAirDate: episode.air_date,
+                            runtimeMinutes: episode.runtime ?? undefined,
                           },
                           showMetadata: {
                             tvShowName: showName,

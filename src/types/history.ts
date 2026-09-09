@@ -69,6 +69,8 @@ export interface MonthlyStats {
   addedToLists: number;
   /** Average rating for the month (null if no ratings) */
   averageRating: number | null;
+  /** Total watch time in minutes for the month */
+  totalWatchMinutes: number;
   /** Top 3 genre names for the month */
   topGenres: string[];
   /** Percentage change compared to previous month */
@@ -113,4 +115,6 @@ export interface HistoryData {
   totalRated: number;
   /** Total items added to lists in the period */
   totalAddedToLists: number;
+  /** Total watch time in minutes in the period */
+  totalWatchMinutes: number;
 }

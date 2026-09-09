@@ -136,12 +136,13 @@ const tryAutoAddToAlreadyWatched = async (params: {
     genres?: { id: number }[];
   };
   releaseDate: string | null | undefined;
+  runtime: number | null | undefined;
   membership: Record<string, boolean>;
   lists: { id: string; items?: Record<string, unknown> }[] | undefined;
   isPremium: boolean;
   t: (key: string) => string;
 }) => {
-  const { movieId, movie, releaseDate, membership, lists, isPremium, t } = params;
+  const { movieId, movie, releaseDate, runtime, membership, lists, isPremium, t } = params;
   const isNotInAlreadyWatched = !membership['already-watched'];
 
   if (!isNotInAlreadyWatched) return false;
@@ -167,6 +168,7 @@ const tryAutoAddToAlreadyWatched = async (params: {
         vote_average: movie.vote_average,
         release_date: releaseDate || '',
         genre_ids: movie.genres?.map((g) => g.id),
+        ...(runtime != null && runtime > 0 ? { runtimeMinutes: runtime } : {}),
       },
       t('lists.alreadyWatched')
     );
@@ -591,6 +593,7 @@ export default function MovieDetailScreen() {
           movieId,
           movie,
           releaseDate: displayReleaseDate || movie.release_date,
+          runtime: movie.runtime,
           membership,
           lists,
           isPremium,

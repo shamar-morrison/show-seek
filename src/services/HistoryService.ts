@@ -12,6 +12,12 @@ import { fetchUserCollection } from './firestoreHelpers';
 import type { UserList } from './ListService';
 import { normalizeRatingItem, type RatingItem } from './RatingService';
 import { getSignedInUser } from './serviceSupport';
+import {
+  EPISODE_RUNTIME_FALLBACK_MINUTES,
+  backfillRuntimes,
+  type UnstampedEpisode,
+  type UnstampedListItem,
+} from './WatchTimeBackfill';
 
 /** Episode with show metadata for history display */
 interface EnrichedWatchedEpisode extends WatchedEpisode {
@@ -314,8 +320,18 @@ class HistoryService {
 
   /**
    * Fetch and aggregate user history data
+   *
+   * Watch-time totals are deterministic: stamped `runtimeMinutes` are used
+   * directly and anything unstamped falls back (45 min/episode, 0/movie), so
+   * every screen computes identical totals from identical documents. Missing
+   * runtimes are resolved in the background and `onBackfillSettled` fires
+   * when stamps land so callers can refresh to measured values.
    */
-  async fetchUserHistory(genreMap: Record<number, string>, monthsBack = 6): Promise<HistoryData> {
+  async fetchUserHistory(
+    genreMap: Record<number, string>,
+    monthsBack = 6,
+    onBackfillSettled: (didStamp: boolean) => void = () => {}
+  ): Promise<HistoryData> {
     const cutoffTimestamp = this.getMonthsAgoTimestamp(monthsBack);
 
     // Fetch all data in parallel
@@ -330,13 +346,25 @@ class HistoryService {
     const recentRatings = ratings.filter((r) => r.ratedAt >= cutoffTimestamp);
 
     // Extract list items with addedAt timestamps
-    const listItems: { timestamp: number; genreIds?: number[]; listName: string }[] = [];
-    // Also track already-watched items separately for "watched" stats
-    const alreadyWatchedItems: { timestamp: number }[] = [];
+    const listItems: {
+      timestamp: number;
+      genreIds?: number[];
+      listName: string;
+    }[] = [];
+    // Already-watched items separately for "watched" stats + watch time.
+    // Full refs are kept so missing runtimes can be lazily backfilled.
+    const alreadyWatchedItems: {
+      timestamp: number;
+      listId: string;
+      itemKey: string;
+      mediaType: 'movie' | 'tv';
+      mediaId: number;
+      runtimeMinutes?: number;
+    }[] = [];
 
     lists.forEach((list) => {
       if (list.items) {
-        Object.values(list.items).forEach((item) => {
+        Object.entries(list.items).forEach(([itemKey, item]) => {
           if (item.addedAt && item.addedAt >= cutoffTimestamp) {
             listItems.push({
               timestamp: item.addedAt,
@@ -345,12 +373,60 @@ class HistoryService {
             });
             // Track already-watched items for watched count
             if (list.id === 'already-watched') {
-              alreadyWatchedItems.push({ timestamp: item.addedAt });
+              alreadyWatchedItems.push({
+                timestamp: item.addedAt,
+                listId: list.id,
+                itemKey,
+                mediaType: item.media_type,
+                mediaId: item.id,
+                runtimeMinutes: item.runtimeMinutes,
+              });
             }
           }
         });
       }
     });
+
+    // Resolve watch-time minutes: stamped values are used directly; missing
+    // ones fall back for this calculation while a background backfill
+    // resolves them from TMDB and stamps Firestore (see WatchTimeBackfill).
+    // This keeps every screen's totals identical for identical documents.
+    const unstampedEpisodes: UnstampedEpisode[] = [];
+    recentEpisodes.forEach((e) => {
+      if (!(e.runtimeMinutes != null && e.runtimeMinutes > 0)) {
+        unstampedEpisodes.push({
+          tvShowId: e.tvShowId,
+          episodeKey: `${e.seasonNumber}_${e.episodeNumber}`,
+          watchedAt: e.watchedAt,
+        });
+      }
+    });
+    const unstampedListItems: UnstampedListItem[] = alreadyWatchedItems
+      .filter((i) => !(i.runtimeMinutes != null && i.runtimeMinutes > 0))
+      .map((i) => ({
+        listId: i.listId,
+        itemKey: i.itemKey,
+        mediaType: i.mediaType,
+        mediaId: i.mediaId,
+        addedAt: i.timestamp,
+      }));
+    backfillRuntimes(unstampedEpisodes, unstampedListItems, {
+      onStampsSettled: onBackfillSettled,
+    });
+
+    const episodeWatchMinutes = (e: { runtimeMinutes?: number; tvShowId: number; seasonNumber: number; episodeNumber: number }): number => {
+      if (e.runtimeMinutes != null && e.runtimeMinutes > 0) return e.runtimeMinutes;
+      return EPISODE_RUNTIME_FALLBACK_MINUTES;
+    };
+    const alreadyWatchedWatchMinutes = (i: {
+      runtimeMinutes?: number;
+      listId: string;
+      itemKey: string;
+      mediaType: 'movie' | 'tv';
+    }): number => {
+      if (i.runtimeMinutes != null && i.runtimeMinutes > 0) return i.runtimeMinutes;
+      return i.mediaType === 'movie' ? 0 : EPISODE_RUNTIME_FALLBACK_MINUTES;
+    };
 
     // Collect all timestamps for streak and pattern analysis
     const allTimestamps = [
@@ -387,6 +463,9 @@ class HistoryService {
 
       // Watched count = episodes + already-watched movies/TV
       const totalWatchedForMonth = monthEpisodes.length + monthAlreadyWatched.length;
+      const totalWatchMinutesForMonth =
+        monthEpisodes.reduce((acc, e) => acc + episodeWatchMinutes(e), 0) +
+        monthAlreadyWatched.reduce((acc, i) => acc + alreadyWatchedWatchMinutes(i), 0);
 
       // Calculate average rating
       let averageRating: number | null = null;
@@ -429,6 +508,7 @@ class HistoryService {
         rated: monthRatings.length,
         addedToLists: monthListItems.length,
         averageRating,
+        totalWatchMinutes: totalWatchMinutesForMonth,
         topGenres,
         comparisonToPrevious,
       };
@@ -449,15 +529,23 @@ class HistoryService {
       totalWatched: recentEpisodes.length + alreadyWatchedItems.length,
       totalRated: recentRatings.length,
       totalAddedToLists: listItems.length,
+      totalWatchMinutes:
+        recentEpisodes.reduce((acc, e) => acc + episodeWatchMinutes(e), 0) +
+        alreadyWatchedItems.reduce((acc, i) => acc + alreadyWatchedWatchMinutes(i), 0),
     };
   }
 
   /**
    * Fetch detailed data for a specific month
+   *
+   * Watch-time totals follow the same deterministic rule as fetchUserHistory
+   * (stamped values, else fallback), so detail screens always agree with the
+   * overview cards for identical documents. See fetchUserHistory.
    */
   async fetchMonthDetail(
     month: string,
-    genreMap: Record<number, string>
+    genreMap: Record<number, string>,
+    onBackfillSettled: (didStamp: boolean) => void = () => {}
   ): Promise<MonthlyDetail | null> {
     const user = getSignedInUser();
     if (!user) return null;
@@ -513,6 +601,8 @@ class HistoryService {
 
     const watchedItems: MonthWatchedItem[] = [];
     let alreadyWatchedMediaCount = 0;
+    const detailAlreadyWatchedRefs: { itemKey: string; mediaType: 'movie' | 'tv' }[] = [];
+    const monthAlreadyWatchedMinutes: { minutes: number }[] = [];
 
     const episodesByShow = new Map<
       number,
@@ -556,10 +646,24 @@ class HistoryService {
 
     // Also include movies and TV shows from the "already-watched" list
     const alreadyWatchedList = lists.find((l) => l.id === 'already-watched');
+    const unstampedDetailItems: UnstampedListItem[] = [];
+    const stampedDetailMinutes = new Map<string, number>();
     if (alreadyWatchedList?.items) {
-      Object.values(alreadyWatchedList.items).forEach((item) => {
+      Object.entries(alreadyWatchedList.items).forEach(([itemKey, item]) => {
         if (item.addedAt && item.addedAt >= startOfMonth && item.addedAt <= endOfMonth) {
           alreadyWatchedMediaCount += 1;
+          detailAlreadyWatchedRefs.push({ itemKey, mediaType: item.media_type });
+          if (item.runtimeMinutes != null && item.runtimeMinutes > 0) {
+            stampedDetailMinutes.set(itemKey, item.runtimeMinutes);
+          } else {
+            unstampedDetailItems.push({
+              listId: alreadyWatchedList.id,
+              itemKey,
+              mediaType: item.media_type,
+              mediaId: item.id,
+              addedAt: item.addedAt,
+            });
+          }
           watchedItems.push({
             kind: 'media',
             id: item.id,
@@ -623,6 +727,38 @@ class HistoryService {
       averageRating = Math.round((sum / monthRatings.length) * 10) / 10;
     }
 
+    // Resolve watch-time minutes for this month: stamped values are used
+    // directly while missing ones fall back here; the background backfill
+    // resolves and stamps them without blocking this calculation.
+    const unstampedDetailEpisodes: UnstampedEpisode[] = [];
+    monthEpisodes.forEach((e) => {
+      if (!(e.runtimeMinutes != null && e.runtimeMinutes > 0)) {
+        unstampedDetailEpisodes.push({
+          tvShowId: e.tvShowId,
+          episodeKey: `${e.seasonNumber}_${e.episodeNumber}`,
+          watchedAt: e.watchedAt,
+        });
+      }
+    });
+    backfillRuntimes(unstampedDetailEpisodes, unstampedDetailItems, {
+      onStampsSettled: onBackfillSettled,
+    });
+    detailAlreadyWatchedRefs.forEach(({ itemKey, mediaType }) => {
+      const stamped = stampedDetailMinutes.get(itemKey);
+      monthAlreadyWatchedMinutes.push({
+        minutes: stamped ?? (mediaType === 'movie' ? 0 : EPISODE_RUNTIME_FALLBACK_MINUTES),
+      });
+    });
+    const monthWatchMinutes =
+      monthEpisodes.reduce(
+        (acc, e) =>
+          acc +
+          (e.runtimeMinutes != null && e.runtimeMinutes > 0
+            ? e.runtimeMinutes
+            : EPISODE_RUNTIME_FALLBACK_MINUTES),
+        0
+      ) + monthAlreadyWatchedMinutes.reduce((acc, entry) => acc + entry.minutes, 0);
+
     // Calculate top genres
     const genreIdCounts = new Map<number, number>();
     monthListItems.forEach((item) => {
@@ -642,6 +778,7 @@ class HistoryService {
         rated: ratedItems.length,
         addedToLists: monthListItems.length,
         averageRating,
+        totalWatchMinutes: monthWatchMinutes,
         topGenres,
         comparisonToPrevious: null,
       },

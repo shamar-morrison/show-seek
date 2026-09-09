@@ -13,23 +13,35 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { formatWatchHours } from '@/src/utils/formatWatchTime';
 import type { ListMediaItem } from '@/src/services/ListService';
 import type { ActivityItem, MonthWatchedItem } from '@/src/types/history';
 import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { Calendar03Icon, PlusSignIcon, StarIcon, Tv01Icon } from '@hugeicons/core-free-icons';
+import {
+  Calendar03Icon,
+  Clock01Icon,
+  PlusSignIcon,
+  StarIcon,
+  Tv01Icon,
+} from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, ScrollView, ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type TabType = 'watched' | 'rated' | 'added';
 
 /**
  * Tab button component
+ *
+ * Follows the app-wide tab pattern (Cast/Crew tabs, CategoryTabs):
+ * compact content-sized pills, borderless surface background, accent fill
+ * when active. Tabs that overflow the screen width scroll horizontally.
  */
 function TabButton({
   label,
@@ -51,19 +63,18 @@ function TabButton({
 
   return (
     <TouchableOpacity
-      style={[styles.tabButton, isActive && [styles.tabButtonActive, { borderColor: accentColor }]]}
+      style={[styles.tabButton, isActive && { backgroundColor: accentColor }]}
       onPress={onPress}
       activeOpacity={ACTIVE_OPACITY}
     >
-      <AppIcon icon={Icon} size={16} color={isActive ? iconColor : COLORS.textSecondary} />
-      <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
-      <View
-        style={[
-          styles.countBadge,
-          isActive && [styles.countBadgeActive, { backgroundColor: accentColor }],
-        ]}
-      >
-        <Text style={[styles.countText, isActive && styles.countTextActive]}>{displayCount}</Text>
+      <AppIcon icon={Icon} size={16} color={isActive ? COLORS.white : iconColor} />
+      <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]} numberOfLines={1}>
+        {label}
+      </Text>
+      <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
+        <Text style={[styles.countText, isActive && { color: accentColor }]}>
+          {displayCount}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -84,7 +95,9 @@ export default function MonthDetailScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
-  const { data: monthDetail, isLoading } = useMonthDetail(month || null);
+  const { data: monthDetail, isLoading, isFetching } = useMonthDetail(month || null);
+  // Background refresh (e.g. measured watch-time runtimes landing) only.
+  const showRefreshIndicator = isFetching && !isLoading && !!monthDetail;
   const addedItems = useMemo(() => {
     if (!monthDetail) return [];
 
@@ -257,6 +270,15 @@ export default function MonthDetailScreen() {
 
       {/* Summary Card */}
       <View style={styles.summaryCard}>
+        {showRefreshIndicator && (
+          <ActivityIndicator
+            size="small"
+            color={COLORS.textSecondary}
+            style={styles.summaryRefreshIndicator}
+            accessibilityLabel={t('stats.updatingTotals')}
+            testID="month-detail-refresh-indicator"
+          />
+        )}
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
             <AppIcon icon={Tv01Icon} size={20} color={accentColor} />
@@ -275,6 +297,16 @@ export default function MonthDetailScreen() {
           </View>
         </View>
 
+        <View style={styles.summaryWatchTimeRow}>
+          <View style={styles.summaryWatchTimeTotal}>
+            <AppIcon icon={Clock01Icon} size={20} color={accentColor} />
+            <Text style={styles.summaryValue}>
+              {formatWatchHours(monthDetail.stats.totalWatchMinutes)}
+            </Text>
+          </View>
+          <Text style={styles.summaryLabel}>{t('stats.watchTime')}</Text>
+        </View>
+
         {monthDetail.stats.topGenres.length > 0 && (
           <View style={styles.topGenresRow}>
             <Text style={styles.topGenresLabel}>{t('stats.topGenres')}</Text>
@@ -285,6 +317,12 @@ export default function MonthDetailScreen() {
 
       {/* Tab Bar */}
       <View style={styles.tabBar}>
+        <ScrollView
+          {...HORIZONTAL_SCROLL_PROPS}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabBarContent}
+          testID="month-tab-bar"
+        >
         <TabButton
           label={t('stats.watched')}
           count={monthDetail.stats.watched}
@@ -309,6 +347,7 @@ export default function MonthDetailScreen() {
           icon={PlusSignIcon}
           iconColor={COLORS.success}
         />
+        </ScrollView>
       </View>
 
       {/* Content based on active tab */}
@@ -328,6 +367,8 @@ export default function MonthDetailScreen() {
             />
           )}
           keyExtractor={(item) => `${item.id}-${item.addedAt}`}
+          getItemType={(item) => item.media_type}
+          drawDistance={400}
           contentContainerStyle={styles.listContent}
         />
       ) : activeTab === 'watched' ? (
@@ -343,6 +384,10 @@ export default function MonthDetailScreen() {
             />
           )}
           keyExtractor={({ item }) => `${item.kind}-${item.mediaType}-${item.id}`}
+          getItemType={({ item }) =>
+            item.kind === 'episode-group' ? 'episode-group' : `media-${item.mediaType}`
+          }
+          drawDistance={400}
           contentContainerStyle={styles.listContent}
         />
       ) : (
@@ -351,7 +396,9 @@ export default function MonthDetailScreen() {
           renderItem={({ item }) => (
             <ActivityRatingCard item={item} onPress={handleItemPress} t={t} />
           )}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
+          keyExtractor={(item) => `${item.id}-${item.timestamp}`}
+          getItemType={(item) => `rated-${item.mediaType}`}
+          drawDistance={400}
           contentContainerStyle={styles.listContent}
         />
       )}
@@ -370,6 +417,11 @@ const styles = StyleSheet.create({
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.l,
   },
+  summaryRefreshIndicator: {
+    position: 'absolute',
+    top: SPACING.s,
+    right: SPACING.s,
+  },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -386,6 +438,20 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
+  },
+  summaryWatchTimeRow: {
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: SPACING.m,
+    paddingTop: SPACING.m,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceLight,
+  },
+  summaryWatchTimeTotal: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   topGenresRow: {
     flexDirection: 'row',
@@ -406,35 +472,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabBar: {
-    flexDirection: 'row',
-    paddingHorizontal: SPACING.m,
-    gap: SPACING.s,
     marginBottom: SPACING.s,
   },
+  tabBarContent: {
+    paddingHorizontal: SPACING.m,
+    gap: SPACING.s,
+  },
   tabButton: {
-    flex: 1,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.xs,
     paddingVertical: SPACING.s,
-    paddingHorizontal: SPACING.s,
+    paddingHorizontal: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
-  tabButtonActive: {
     backgroundColor: COLORS.surface,
   },
   tabLabel: {
-    fontSize: FONT_SIZE.xs,
+    fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.medium,
+    fontFamily: FONT_FAMILY.semiBold,
   },
   tabLabelActive: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
+    color: COLORS.white,
   },
   countBadge: {
     backgroundColor: COLORS.surfaceLight,
@@ -444,14 +506,13 @@ const styles = StyleSheet.create({
     minWidth: 20,
     alignItems: 'center',
   },
-  countBadgeActive: {},
+  countBadgeActive: {
+    backgroundColor: COLORS.white,
+  },
   countText: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
-  },
-  countTextActive: {
-    color: COLORS.white,
   },
   listContent: {
     paddingHorizontal: SPACING.m,

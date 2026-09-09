@@ -74,6 +74,30 @@ describe('HistoryService', () => {
     jest.useRealTimers();
   });
 
+  it('reads exactly the episode_tracking, ratings, and lists collections per history load', async () => {
+    await historyService.fetchUserHistory({}, 1);
+
+    // Regression guard: the stats screens must never add per-item or
+    // per-month Firestore reads beyond these three collection scans.
+    expect(mockFetchUserCollection).toHaveBeenCalledTimes(3);
+    expect(mockFetchUserCollection.mock.calls.map(([path]) => path)).toEqual([
+      ['episode_tracking'],
+      ['ratings'],
+      ['lists'],
+    ]);
+  });
+
+  it('reads exactly the episode_tracking, ratings, and lists collections per month detail load', async () => {
+    await historyService.fetchMonthDetail('2026-03', {});
+
+    expect(mockFetchUserCollection).toHaveBeenCalledTimes(3);
+    expect(mockFetchUserCollection.mock.calls.map(([path]) => path)).toEqual([
+      ['episode_tracking'],
+      ['ratings'],
+      ['lists'],
+    ]);
+  });
+
   it('ignores invalid ratings when aggregating monthly history stats', async () => {
     const result = await historyService.fetchUserHistory({}, 1);
 
