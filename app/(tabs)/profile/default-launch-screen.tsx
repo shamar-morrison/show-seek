@@ -146,6 +146,8 @@ const styles = StyleSheet.create({
   optionsList: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
     overflow: 'hidden',
   },
   optionItem: {

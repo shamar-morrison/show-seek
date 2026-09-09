@@ -118,6 +118,8 @@ const styles = StyleSheet.create({
   regionList: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
     overflow: 'hidden',
   },
   regionItem: {

@@ -119,6 +119,8 @@ const styles = StyleSheet.create({
   colorList: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
     overflow: 'hidden',
   },
   colorItem: {

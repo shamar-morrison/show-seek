@@ -106,11 +106,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
     padding: SPACING.m,
     gap: SPACING.m,
   },
   actionButtonDanger: {
     backgroundColor: hexToRGBA(COLORS.error, 0.1),
+    borderColor: hexToRGBA(COLORS.error, 0.5),
   },
   actionButtonLocked: {
     opacity: 0.6,

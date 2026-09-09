@@ -115,6 +115,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
     padding: SPACING.m,
     gap: SPACING.m,
   },

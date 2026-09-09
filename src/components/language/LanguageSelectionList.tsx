@@ -102,6 +102,8 @@ const styles = StyleSheet.create({
   languageList: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
     overflow: 'hidden',
   },
   languageItem: {
