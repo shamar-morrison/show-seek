@@ -25,7 +25,11 @@ export function useHistory(monthsBack = 6) {
     queryFn: () =>
       historyService.fetchUserHistory(genreMap, monthsBack, (didStamp) => {
         if (didStamp) {
-          void queryClient.invalidateQueries({ queryKey: ['userHistory'] });
+          // Invalidate only this exact query: sibling variants (other
+          // monthsBack windows, languages) are unaffected by these stamps.
+          void queryClient.invalidateQueries({
+            queryKey: ['userHistory', userId, monthsBack, i18n.language],
+          });
         }
       }),
     enabled: !!userId && Object.keys(genreMap).length > 0,
@@ -49,7 +53,10 @@ export function useMonthDetail(month: string | null) {
       month
         ? historyService.fetchMonthDetail(month, genreMap, (didStamp) => {
             if (didStamp) {
-              void queryClient.invalidateQueries({ queryKey: ['monthDetail'] });
+              // Exact key only: other months' cached details are not refetched.
+              void queryClient.invalidateQueries({
+                queryKey: ['monthDetail', userId, month, i18n.language],
+              });
             }
           })
         : null,

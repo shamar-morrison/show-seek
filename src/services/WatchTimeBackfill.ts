@@ -51,6 +51,13 @@ export interface BackfillDeps {
   stampRuntimes?: (stamps: RuntimeStamps) => void;
   /** Called when a background backfill run settles; true when values were stamped. */
   onStampsSettled?: (didStamp: boolean) => void;
+  /**
+   * Cap on distinct-title TMDB lookups for this call. Defaults to
+   * MAX_BACKFILL_LOOKUPS_PER_LOAD and is always clamped to it, so callers
+   * can only spend *less* than the per-call ceiling (used to enforce the
+   * shared per-session budget in backfillRuntimes).
+   */
+  maxLookups?: number;
 }
 
 export interface RuntimeStamps {
@@ -140,9 +147,18 @@ const episodeAttemptKey = (tvShowId: number): string => `show:${tvShowId}`;
 const listItemAttemptKey = (mediaType: 'movie' | 'tv', mediaId: number): string =>
   `${mediaType}:${mediaId}`;
 
+/**
+ * TMDB lookups issued this session across all backfillRuntimes calls.
+ * Together with the per-call ceiling, this enforces the shared session
+ * budget: overview + month-detail screens draw from the same 10 lookups,
+ * keeping total TMDB traffic near ~25% of the 10s budget per visit.
+ */
+let sessionLookupsSpent = 0;
+
 /** For tests: reset the session attempt tracking. */
 export function resetBackfillSessionForTests(): void {
   attemptedThisSession.clear();
+  sessionLookupsSpent = 0;
 }
 
 /**
@@ -159,6 +175,7 @@ export async function resolveMissingRuntimes(
     getShowRuntime = defaultGetShowRuntime,
     getMovieRuntime = defaultGetMovieRuntime,
     stampRuntimes = defaultStampRuntimes,
+    maxLookups = MAX_BACKFILL_LOOKUPS_PER_LOAD,
   } = deps;
 
   const episodeMinutes = new Map<string, number>();
@@ -204,7 +221,10 @@ export async function resolveMissingRuntimes(
     ),
   ]
     .sort((a, b) => b.recency - a.recency)
-    .slice(0, MAX_BACKFILL_LOOKUPS_PER_LOAD);
+    .slice(
+      0,
+      Math.max(0, Math.min(maxLookups, MAX_BACKFILL_LOOKUPS_PER_LOAD))
+    );
 
   const measuredShowRuntimes = new Map<number, number>();
   const measuredMovieRuntimes = new Map<number, number>();
@@ -310,6 +330,11 @@ export async function resolveMissingRuntimes(
  * Titles already attempted this session are skipped, so settle-triggered
  * refetches can never loop: a refetch finds nothing new to resolve, stamps
  * nothing, and settles with `false`.
+ *
+ * TMDB traffic draws from a shared per-session budget of
+ * MAX_BACKFILL_LOOKUPS_PER_LOAD lookups across all calls (overview +
+ * month-detail screens share it), so a visit stays near ~25% of TMDB's
+ * 10s budget no matter how many stats screens load.
  */
 export function backfillRuntimes(
   episodes: UnstampedEpisode[],
@@ -338,14 +363,27 @@ export function backfillRuntimes(
   void (async () => {
     let didStamp = false;
     try {
+      // Count issued TMDB calls (not just resolved titles) so the shared
+      // session budget reflects real traffic even when calls abort or 404.
+      let issuedLookups = 0;
+      const countingGetShowRuntime = async (tvShowId: number) => {
+        issuedLookups += 1;
+        return (deps.getShowRuntime ?? defaultGetShowRuntime)(tvShowId);
+      };
+      const countingGetMovieRuntime = async (movieId: number) => {
+        issuedLookups += 1;
+        return (deps.getMovieRuntime ?? defaultGetMovieRuntime)(movieId);
+      };
       await resolveMissingRuntimes(freshEpisodes, freshItems, {
-        getShowRuntime: deps.getShowRuntime,
-        getMovieRuntime: deps.getMovieRuntime,
+        getShowRuntime: countingGetShowRuntime,
+        getMovieRuntime: countingGetMovieRuntime,
+        maxLookups: Math.max(0, MAX_BACKFILL_LOOKUPS_PER_LOAD - sessionLookupsSpent),
         stampRuntimes: (stamps) => {
           didStamp = true;
           stampRuntimes(stamps);
         },
       });
+      sessionLookupsSpent += issuedLookups;
     } catch (error) {
       console.warn('[WatchTimeBackfill] Background backfill failed:', error);
     } finally {

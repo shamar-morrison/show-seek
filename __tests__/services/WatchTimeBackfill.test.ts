@@ -214,4 +214,64 @@ describe('backfillRuntimes', () => {
     expect(await runBackfill([], [], { getShowRuntime })).toBe(false);
     expect(getShowRuntime).not.toHaveBeenCalled();
   });
+
+  it('shares the lookup budget across calls in a session', async () => {
+    const getShowRuntime = jest.fn(async () => 42);
+    const stampRuntimes = jest.fn();
+
+    // 12 fresh shows but only 10 lookups of session budget: overview spends it.
+    const firstBatch = Array.from({ length: 12 }, (_, i) => ep(3000 + i, '1_1', 9000 + i));
+    expect(await runBackfill(firstBatch, [], { getShowRuntime, stampRuntimes })).toBe(true);
+    expect(getShowRuntime).toHaveBeenCalledTimes(10);
+
+    // Month detail loading after overview in the same session: budget spent,
+    // so nothing is issued and it settles false (estimates stay this session).
+    const secondBatch = [ep(4000, '1_1', 9500), ep(4001, '1_1', 9600)];
+    expect(await runBackfill(secondBatch, [], { getShowRuntime, stampRuntimes })).toBe(
+      false
+    );
+    expect(getShowRuntime).toHaveBeenCalledTimes(10);
+  });
+
+  it('respects a maxLookups override while clamping to the per-call ceiling', async () => {
+    const getShowRuntime = jest.fn(async () => 42);
+    const episodes = Array.from({ length: 6 }, (_, i) => ep(5000 + i, '1_1', 1000 + i));
+
+    const result = await resolveMissingRuntimes(episodes, [], {
+      getShowRuntime,
+      maxLookups: 3,
+      stampRuntimes: jest.fn(),
+    });
+
+    expect(getShowRuntime).toHaveBeenCalledTimes(3);
+    // Most-recent-first: newest three resolve, oldest three fall back.
+    expect(result.episodeMinutes.get('5005/1_1')).toBe(42);
+    expect(result.episodeMinutes.get('5000/1_1')).toBe(EPISODE_RUNTIME_FALLBACK_MINUTES);
+
+    getShowRuntime.mockClear();
+    const many = Array.from({ length: 12 }, (_, i) => ep(5100 + i, '1_1', 2000 + i));
+    await resolveMissingRuntimes(many, [], {
+      getShowRuntime,
+      maxLookups: 99,
+      stampRuntimes: jest.fn(),
+    });
+    expect(getShowRuntime).toHaveBeenCalledTimes(MAX_BACKFILL_LOOKUPS_PER_LOAD);
+  });
+
+  it('carries remaining budget across calls', async () => {
+    const getShowRuntime = jest.fn(async () => 42);
+    const stampRuntimes = jest.fn();
+
+    await runBackfill(
+      [ep(6000, '1_1', 100), ep(6001, '1_1', 200), ep(6002, '1_1', 300)],
+      [],
+      { getShowRuntime, stampRuntimes }
+    );
+    expect(getShowRuntime).toHaveBeenCalledTimes(3);
+
+    // 7 of budget left: the next call resolves exactly 7 of 9 fresh shows.
+    const more = Array.from({ length: 9 }, (_, i) => ep(6100 + i, '1_1', 1000 + i));
+    await runBackfill(more, [], { getShowRuntime, stampRuntimes });
+    expect(getShowRuntime).toHaveBeenCalledTimes(10);
+  });
 });
