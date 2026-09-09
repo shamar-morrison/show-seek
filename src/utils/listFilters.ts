@@ -2,15 +2,19 @@ import { ListMediaItem } from '../services/ListService';
 
 export type MediaTypeFilter = 'all' | 'movie' | 'tv';
 
+export type GenreOperator = 'and' | 'or';
+
 export interface WatchStatusFilterState {
-  genre: number | null;
+  genres: number[];
+  genreOperator: GenreOperator;
   year: number | null;
   rating: number;
   mediaType: MediaTypeFilter;
 }
 
 export const DEFAULT_WATCH_STATUS_FILTERS: WatchStatusFilterState = {
-  genre: null,
+  genres: [],
+  genreOperator: 'or',
   year: null,
   rating: 0,
   mediaType: 'all',
@@ -39,11 +43,20 @@ export function filterMediaItems(
       }
     }
 
-    // Genre filter
-    if (filters.genre !== null) {
+    // Genre filter (multi-select with AND/OR operator, matching Discover)
+    if (filters.genres.length > 0) {
       // Skip items without genre_ids
-      if (!item.genre_ids || !item.genre_ids.includes(filters.genre)) {
+      if (!item.genre_ids) {
         return false;
+      }
+      if (filters.genreOperator === 'and') {
+        if (!filters.genres.every((genreId) => item.genre_ids!.includes(genreId))) {
+          return false;
+        }
+      } else {
+        if (!filters.genres.some((genreId) => item.genre_ids!.includes(genreId))) {
+          return false;
+        }
       }
     }
 
@@ -91,11 +104,21 @@ export function filterRatingItems<T>(
     if (!media) return false;
 
     // Genre filter - check both genre_ids (list response) and genres (detail response)
-    if (filters.genre !== null) {
-      const hasGenreId = media.genre_ids?.includes(filters.genre);
-      const hasGenre = media.genres?.some((g) => g.id === filters.genre);
-      if (!hasGenreId && !hasGenre) {
-        return false;
+    // Supports multi-select with AND/OR operator, matching Discover
+    if (filters.genres.length > 0) {
+      const matchesGenre = (genreId: number) => {
+        const hasGenreId = media.genre_ids?.includes(genreId);
+        const hasGenre = media.genres?.some((g) => g.id === genreId);
+        return hasGenreId || hasGenre;
+      };
+      if (filters.genreOperator === 'and') {
+        if (!filters.genres.every(matchesGenre)) {
+          return false;
+        }
+      } else {
+        if (!filters.genres.some(matchesGenre)) {
+          return false;
+        }
       }
     }
 
@@ -133,7 +156,7 @@ export function filterRatingItems<T>(
  */
 export function hasActiveFilters(filters: WatchStatusFilterState): boolean {
   return (
-    filters.genre !== DEFAULT_WATCH_STATUS_FILTERS.genre ||
+    filters.genres.length > 0 ||
     filters.year !== DEFAULT_WATCH_STATUS_FILTERS.year ||
     filters.rating !== DEFAULT_WATCH_STATUS_FILTERS.rating ||
     filters.mediaType !== DEFAULT_WATCH_STATUS_FILTERS.mediaType

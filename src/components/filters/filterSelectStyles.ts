@@ -1,0 +1,171 @@
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
+import { StyleSheet } from 'react-native';
+
+export const FILTER_SELECT_ITEM_HEIGHT = 56;
+
+export const filterSelectStyles = StyleSheet.create({
+  selectContainer: {
+    gap: SPACING.xs,
+  },
+  selectLabel: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  selectButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+  },
+  selectButtonLoading: {
+    opacity: 0.5,
+  },
+  selectButtonText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.text,
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    padding: SPACING.l,
+  },
+  modalContent: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    maxHeight: '70%',
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+  },
+  searchableModalContent: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    height: '60%',
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+  },
+  searchableList: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.m,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZE.l,
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.text,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.m,
+    height: FILTER_SELECT_ITEM_HEIGHT,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+  },
+  optionLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+  },
+  optionLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    flex: 1,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.textSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  operatorToggle: {
+    paddingHorizontal: SPACING.m,
+    marginTop: SPACING.s,
+    paddingBottom: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: SPACING.s,
+    padding: SPACING.m,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceLight,
+  },
+  footerClearButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    padding: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+  },
+  footerApplyButton: {
+    flex: 1,
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerApplyButtonText: {
+    fontSize: FONT_SIZE.m,
+    fontFamily: FONT_FAMILY.semiBold,
+    color: COLORS.white,
+  },
+  optionText: { fontSize: FONT_SIZE.m, color: COLORS.textSecondary },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+    gap: SPACING.s,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: FONT_SIZE.m,
+    color: COLORS.text,
+    paddingVertical: SPACING.xs,
+  },
+  emptyContainer: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
+  },
+  clearButtonText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+});

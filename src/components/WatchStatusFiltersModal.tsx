@@ -1,5 +1,10 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import {
+  FilterSelect,
+  MultiSelectFilter,
+  SelectOption,
+} from '@/src/components/filters';
+import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
@@ -12,11 +17,10 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '@/src/utils/listFilters';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { ArrowDown01Icon, Cancel01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -36,105 +40,6 @@ interface WatchStatusFiltersModalProps {
   /** Whether to show the media type filter. Defaults to true. Set to false for single-type screens. */
   showMediaTypeFilter?: boolean;
 }
-
-const ITEM_HEIGHT = 56;
-
-interface SelectOption {
-  label: string;
-  value: any;
-}
-
-const FilterSelect = ({
-  label,
-  value,
-  options,
-  onSelect,
-  placeholder,
-}: {
-  label: string;
-  value: any;
-  options: SelectOption[];
-  onSelect: (val: any) => void;
-  placeholder?: string;
-}) => {
-  const { t } = useTranslation();
-  const { accentColor } = useAccentColor();
-  const [visible, setVisible] = useState(false);
-  const selectedOption = options.find((opt) => opt.value === value);
-
-  return (
-    <View style={styles.selectContainer}>
-      <Text style={styles.selectLabel}>{label}</Text>
-      <TouchableOpacity
-        style={styles.selectButton}
-        onPress={() => setVisible(true)}
-        activeOpacity={ACTIVE_OPACITY}
-      >
-        <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
-          {selectedOption ? selectedOption.label : (placeholder ?? t('filters.selectPlaceholder'))}
-        </Text>
-        <AppIcon icon={ArrowDown01Icon} size={20} color={COLORS.textSecondary} />
-      </TouchableOpacity>
-
-      <Modal
-        visible={visible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setVisible(false)}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
-              <Pressable onPress={() => setVisible(false)} hitSlop={HIT_SLOP.m}>
-                <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
-              </Pressable>
-            </View>
-            <FlatList
-              data={options}
-              keyExtractor={(item) => String(item.value)}
-              getItemLayout={(_, index) => ({
-                length: ITEM_HEIGHT,
-                offset: ITEM_HEIGHT * index,
-                index,
-              })}
-              initialNumToRender={10}
-              maxToRenderPerBatch={10}
-              windowSize={5}
-              removeClippedSubviews={true}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.optionItem}
-                  activeOpacity={ACTIVE_OPACITY}
-                  onPress={() => {
-                    onSelect(item.value);
-                    setVisible(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      item.value === value && [styles.optionTextSelected, { color: accentColor }],
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                  {item.value === value && (
-                    <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
-                  )}
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    </View>
-  );
-};
 
 export default function WatchStatusFiltersModal({
   visible,
@@ -173,13 +78,10 @@ export default function WatchStatusFiltersModal({
     setLocalFilters(DEFAULT_WATCH_STATUS_FILTERS);
   };
 
-  // Genre options
-  const genreOptions = [
-    { label: t('discover.anyGenre'), value: null },
-    ...Object.entries(genreMap)
-      .map(([id, name]) => ({ label: name, value: Number(id) }))
-      .sort((a, b) => a.label.localeCompare(b.label)),
-  ];
+  // Genre options (multi-select, matching Discover)
+  const genreOptions = Object.entries(genreMap)
+    .map(([id, name]) => ({ label: name, value: Number(id) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   // Year options
   const currentYear = new Date().getFullYear();
@@ -232,12 +134,18 @@ export default function WatchStatusFiltersModal({
               />
             )}
 
-            <FilterSelect
+            <MultiSelectFilter
               label={t('discover.genres')}
-              value={localFilters.genre}
+              selectedIds={localFilters.genres}
+              operator={localFilters.genreOperator}
+              showOperatorTabs
+              operatorTestID="genre-operator-toggle"
               options={genreOptions}
-              onSelect={(val) => updateFilter('genre', val)}
+              onApply={(ids, op) =>
+                setLocalFilters((prev) => ({ ...prev, genres: ids, genreOperator: op }))
+              }
               placeholder={t('discover.anyGenre')}
+              isActive={localFilters.genres.length > 0}
             />
 
             <FilterSelect
@@ -282,71 +190,6 @@ const styles = StyleSheet.create({
   filtersContainer: {
     gap: SPACING.m,
     marginBottom: SPACING.l,
-  },
-  selectContainer: {
-    gap: SPACING.xs,
-  },
-  selectLabel: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-  },
-  selectButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceLight,
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
-  selectButtonText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.text,
-    flex: 1,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    padding: SPACING.l,
-  },
-  modalContent: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    maxHeight: '70%',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SPACING.m,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  modalTitle: {
-    fontSize: FONT_SIZE.l,
-    fontFamily: FONT_FAMILY.bold,
-    color: COLORS.text,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SPACING.m,
-    height: ITEM_HEIGHT,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  optionText: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.textSecondary,
-  },
-  optionTextSelected: {
-    fontFamily: FONT_FAMILY.semiBold,
   },
   actions: {
     flexDirection: 'row',

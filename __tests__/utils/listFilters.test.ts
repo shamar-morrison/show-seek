@@ -73,20 +73,51 @@ describe('listFilters', () => {
       expect(result[0].id).toBe(2);
     });
 
-    it('should filter by genre', () => {
+    it('should filter by genre (OR, single)', () => {
       const filters: WatchStatusFilterState = {
         ...DEFAULT_WATCH_STATUS_FILTERS,
-        genre: 28, // Action
+        genres: [28], // Action
       };
       const result = filterMediaItems(mockItems, filters);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(1);
     });
 
+    it('should filter by multiple genres with OR operator (match any)', () => {
+      const filters: WatchStatusFilterState = {
+        ...DEFAULT_WATCH_STATUS_FILTERS,
+        genres: [28, 18], // Action OR Drama
+        genreOperator: 'or',
+      };
+      const result = filterMediaItems(mockItems, filters);
+      expect(result.map((item) => item.id).sort()).toEqual([1, 2]);
+    });
+
+    it('should filter by multiple genres with AND operator (match all)', () => {
+      const filters: WatchStatusFilterState = {
+        ...DEFAULT_WATCH_STATUS_FILTERS,
+        genres: [28, 12], // Action AND Adventure
+        genreOperator: 'and',
+      };
+      const result = filterMediaItems(mockItems, filters);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
+    });
+
+    it('should exclude items missing a required genre with AND operator', () => {
+      const filters: WatchStatusFilterState = {
+        ...DEFAULT_WATCH_STATUS_FILTERS,
+        genres: [28, 18], // Action AND Drama — no item has both
+        genreOperator: 'and',
+      };
+      const result = filterMediaItems(mockItems, filters);
+      expect(result).toHaveLength(0);
+    });
+
     it('should exclude items without genre_ids when filtering by genre', () => {
       const filters: WatchStatusFilterState = {
         ...DEFAULT_WATCH_STATUS_FILTERS,
-        genre: 28,
+        genres: [28],
       };
       const result = filterMediaItems(mockItems, filters);
       // Item 4 has no genre_ids, should be excluded
@@ -115,7 +146,8 @@ describe('listFilters', () => {
 
     it('should apply multiple filters together', () => {
       const filters: WatchStatusFilterState = {
-        genre: null,
+        genres: [],
+        genreOperator: 'or',
         year: 2024,
         rating: 7,
         mediaType: 'movie',
@@ -168,7 +200,7 @@ describe('listFilters', () => {
     it('should filter items using getter function', () => {
       const filters: WatchStatusFilterState = {
         ...DEFAULT_WATCH_STATUS_FILTERS,
-        genre: 28,
+        genres: [28],
       };
       const result = filterRatingItems(mockRatingItems, filters, (item) => item.media);
       expect(result).toHaveLength(1);
@@ -188,11 +220,43 @@ describe('listFilters', () => {
     it('should support genres array (from detail response) in addition to genre_ids', () => {
       const filters: WatchStatusFilterState = {
         ...DEFAULT_WATCH_STATUS_FILTERS,
-        genre: 18, // Drama
+        genres: [18], // Drama
       };
       const result = filterRatingItems(mockRatingItems, filters, (item) => item.media);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('2');
+    });
+
+    it('should apply AND operator across genre_ids and genres sources', () => {
+      const itemsWithBoth: MockRatingItem[] = [
+        {
+          id: 'both',
+          rating: 9,
+          media: {
+            genre_ids: [28],
+            genres: [{ id: 12, name: 'Adventure' }],
+            vote_average: 8.0,
+            release_date: '2024-01-01',
+          },
+        },
+        {
+          id: 'single',
+          rating: 9,
+          media: {
+            genre_ids: [28],
+            vote_average: 8.0,
+            release_date: '2024-01-01',
+          },
+        },
+      ];
+      const filters: WatchStatusFilterState = {
+        ...DEFAULT_WATCH_STATUS_FILTERS,
+        genres: [28, 12],
+        genreOperator: 'and',
+      };
+      const result = filterRatingItems(itemsWithBoth, filters, (item) => item.media);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('both');
     });
   });
 
@@ -201,8 +265,8 @@ describe('listFilters', () => {
       expect(hasActiveFilters(DEFAULT_WATCH_STATUS_FILTERS)).toBe(false);
     });
 
-    it('should return true when genre is set', () => {
-      expect(hasActiveFilters({ ...DEFAULT_WATCH_STATUS_FILTERS, genre: 28 })).toBe(true);
+    it('should return true when genres are set', () => {
+      expect(hasActiveFilters({ ...DEFAULT_WATCH_STATUS_FILTERS, genres: [28] })).toBe(true);
     });
 
     it('should return true when year is set', () => {
