@@ -129,6 +129,7 @@ export function normalizeEpisodeTrackingDoc(
     const watchedAt = toMillis(rawEpisode.watchedAt) ?? 0;
     latestWatchedAt = Math.max(latestWatchedAt, watchedAt);
     const normalizedEpisodeKey = `${seasonNumber}_${episodeNumber}`;
+    const runtimeMinutes = toInteger(rawEpisode.runtimeMinutes);
 
     episodes[normalizedEpisodeKey] = {
       episodeId: toInteger(rawEpisode.episodeId) ?? 0,
@@ -139,6 +140,7 @@ export function normalizeEpisodeTrackingDoc(
       episodeName:
         getNonEmptyString(rawEpisode.episodeName) ?? buildEpisodeNameFallback(episodeNumber),
       episodeAirDate: getStringOrNull(rawEpisode.episodeAirDate),
+      ...(runtimeMinutes !== null && runtimeMinutes > 0 ? { runtimeMinutes } : {}),
     };
   });
 

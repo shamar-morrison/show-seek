@@ -12,6 +12,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useHistory } from '@/src/hooks/useHistory';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { formatWatchHours } from '@/src/utils/formatWatchTime';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import type { MonthlyStats } from '@/src/types/history';
 import { useRouter } from 'expo-router';
@@ -32,7 +33,7 @@ import {
 import type { IconSvgElement } from '@hugeicons/react-native';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
@@ -95,7 +96,11 @@ function ComparisonBadge({ value, label }: { value: number; label: string }) {
  */
 function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void }) {
   const { t } = useTranslation();
-  const hasActivity = stats.watched > 0 || stats.rated > 0 || stats.addedToLists > 0;
+  const hasActivity =
+    stats.watched > 0 ||
+    stats.rated > 0 ||
+    stats.addedToLists > 0 ||
+    stats.totalWatchMinutes > 0;
 
   return (
     <TouchableOpacity style={styles.monthRow} onPress={onPress} activeOpacity={ACTIVE_OPACITY}>
@@ -110,7 +115,8 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
       </View>
 
       {hasActivity ? (
-        <View style={styles.monthStats}>
+        <>
+          <View style={styles.monthStats}>
           <View style={styles.monthStatItem}>
             <AppIcon icon={Tv01Icon} size={16} color={COLORS.textSecondary} />
             <Text style={styles.monthStatValue}>{stats.watched}</Text>
@@ -129,6 +135,14 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
             <Text style={styles.monthStatLabel}>{t('stats.added')}</Text>
           </View>
         </View>
+        <View style={styles.monthWatchTimeRow}>
+          <View style={styles.monthWatchTimeTotal}>
+            <AppIcon icon={Clock01Icon} size={16} color={COLORS.textSecondary} />
+            <Text style={styles.monthStatValue}>{formatWatchHours(stats.totalWatchMinutes)}</Text>
+          </View>
+          <Text style={styles.monthStatLabel}>{t('stats.watchTime')}</Text>
+        </View>
+        </>
       ) : (
         <Text style={styles.noActivityText}>{t('stats.noActivityThisMonth')}</Text>
       )}
@@ -150,7 +164,9 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { data: historyData, isLoading, error, refetch } = useHistory();
+  const { data: historyData, isLoading, isFetching, error, refetch } = useHistory();
+  // Background refresh (e.g. measured watch-time runtimes landing) only.
+  const showRefreshIndicator = isFetching && !isLoading && !!historyData;
 
   const handleMonthPress = useCallback(
     (month: string) => {
@@ -205,9 +221,17 @@ export default function StatsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Overview Section */}
         <View style={styles.section}>
-          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>
-            {t('stats.last6MonthsOverview')}
-          </Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={sectionTitleStyles.title}>{t('stats.last6MonthsOverview')}</Text>
+            {showRefreshIndicator && (
+              <ActivityIndicator
+                size="small"
+                color={COLORS.textSecondary}
+                accessibilityLabel={t('stats.updatingTotals')}
+                testID="stats-refresh-indicator"
+              />
+            )}
+          </View>
           <View style={styles.statsGrid}>
             <StatCard
               icon={Tv01Icon}
@@ -226,6 +250,14 @@ export default function StatsScreen() {
               label={t('stats.added')}
               value={historyData.totalAddedToLists}
               iconColor={COLORS.success}
+            />
+          </View>
+          <View style={[styles.statsGrid, styles.overviewWatchRow]}>
+            <StatCard
+              icon={Clock01Icon}
+              label={t('stats.totalHours')}
+              value={formatWatchHours(historyData.totalWatchMinutes)}
+              iconColor={accentColor}
             />
           </View>
         </View>
@@ -313,9 +345,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: SPACING.m,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.m,
+  },
   statsGrid: {
     flexDirection: 'row',
     gap: SPACING.m,
+  },
+  overviewWatchRow: {
+    marginTop: SPACING.m,
   },
   statCard: {
     flex: 1,
@@ -423,6 +464,20 @@ const styles = StyleSheet.create({
   monthStatLabel: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
+  },
+  monthWatchTimeRow: {
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: SPACING.m,
+    paddingTop: SPACING.m,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceLight,
+  },
+  monthWatchTimeTotal: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   noActivityText: {
     textAlign: 'center',

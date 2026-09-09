@@ -69,6 +69,7 @@ class EpisodeTrackingService {
       episodeId: number;
       episodeName: string;
       episodeAirDate: string | null;
+      runtimeMinutes?: number;
     },
     showMetadata: {
       tvShowName: string;
@@ -90,6 +91,9 @@ class EpisodeTrackingService {
         watchedAt: Date.now(),
         episodeName: episodeData.episodeName,
         episodeAirDate: episodeData.episodeAirDate,
+        ...(episodeData.runtimeMinutes !== undefined && episodeData.runtimeMinutes > 0
+          ? { runtimeMinutes: episodeData.runtimeMinutes }
+          : {}),
       };
 
       const metadata: EpisodeTrackingMetadata = {
@@ -198,6 +202,9 @@ class EpisodeTrackingService {
           watchedAt: now,
           episodeName: episode.name,
           episodeAirDate: episode.air_date,
+          ...(episode.runtime != null && episode.runtime > 0
+            ? { runtimeMinutes: episode.runtime }
+            : {}),
         };
       });
 
@@ -285,6 +292,9 @@ class EpisodeTrackingService {
           watchedAt: now,
           episodeName: episode.name,
           episodeAirDate: episode.air_date,
+          ...(episode.runtime != null && episode.runtime > 0
+            ? { runtimeMinutes: episode.runtime }
+            : {}),
         };
       });
 

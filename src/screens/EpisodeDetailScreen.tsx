@@ -316,6 +316,7 @@ export default function EpisodeDetailScreen() {
           episodeId: episode.id,
           episodeName: episode.name,
           episodeAirDate: episode.air_date,
+          runtimeMinutes: episode.runtime ?? undefined,
         },
         showMetadata: {
           tvShowName: tvShow.name,

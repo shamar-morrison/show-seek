@@ -1704,8 +1704,11 @@
       "night": "Night"
     },
     "topGenres": "Top Genres",
+    "totalHours": "Total Hours Watched",
+    "updatingTotals": "Updating totals…",
     "vsLastMonth": "vs last month",
-    "watched": "Watched"
+    "watched": "Watched",
+    "watchTime": "Watch Time"
   },
   "tvDetail": {
     "failedToLoad": "Failed to load TV show details"

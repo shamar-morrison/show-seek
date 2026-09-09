@@ -21,6 +21,8 @@ export interface ListMediaItem {
   release_date: string;
   addedAt: number;
   genre_ids?: number[];
+  /** Runtime in minutes, stamped at write time from TMDB (optional for legacy items) */
+  runtimeMinutes?: number;
   // TV show fields (optional, used when media_type is 'tv')
   name?: string;
   first_air_date?: string;
