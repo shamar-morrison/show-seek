@@ -53,7 +53,8 @@ type ViewMode = 'list' | 'grid';
 
 const DEFAULT_FILTERS: FilterState = {
   sortBy: 'popularity.desc',
-  genre: null,
+  genres: [],
+  genreOperator: 'or',
   year: null,
   rating: 0,
   language: null,
@@ -91,7 +92,10 @@ export default function DiscoverScreen() {
     queryKey: ['discover', mediaType, filters, preferences?.hideUnreleasedContent],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
-        genre: filters.genre?.toString(),
+        genre:
+          filters.genres.length > 0
+            ? filters.genres.join(filters.genreOperator === 'and' ? ',' : '|')
+            : undefined,
         year: filters.year || undefined,
         sortBy: filters.sortBy,
         voteAverageGte: filters.rating,
@@ -116,9 +120,9 @@ export default function DiscoverScreen() {
     initialPageParam: 1,
   });
 
-  // Reset genre when media type changes
+  // Reset genres when media type changes
   useEffect(() => {
-    setFilters((prev) => ({ ...prev, genre: null }));
+    setFilters((prev) => ({ ...prev, genres: [] }));
   }, [mediaType]);
 
   useEffect(() => {
@@ -150,7 +154,7 @@ export default function DiscoverScreen() {
   const hasActiveFilters = () => {
     return (
       filters.sortBy !== DEFAULT_FILTERS.sortBy ||
-      filters.genre !== DEFAULT_FILTERS.genre ||
+      filters.genres.length > 0 ||
       filters.year !== DEFAULT_FILTERS.year ||
       filters.rating !== DEFAULT_FILTERS.rating ||
       filters.language !== DEFAULT_FILTERS.language ||

@@ -5,7 +5,7 @@ import {
   BORDER_RADIUS,
   COLORS,
   FONT_FAMILY,
-  hexToRGBA,
+  accentBorder,
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -44,7 +44,7 @@ export const UpNextEpisodeSection = memo<UpNextEpisodeSectionProps>(
 
     return (
       <TouchableOpacity
-        style={[styles.card, { borderColor: hexToRGBA(accentColor, 0.5) }, style]}
+        style={[styles.card, { borderColor: accentBorder(accentColor) }, style]}
         onPress={handlePress}
         activeOpacity={ACTIVE_OPACITY}
         testID="up-next-episode-card"

@@ -6,8 +6,10 @@ import {
   FONT_FAMILY,
   FONT_SIZE,
   SPACING,
+  accentBorder,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { useQuery } from '@tanstack/react-query';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
@@ -16,13 +18,14 @@ import {
   Search01Icon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export interface FilterState {
   sortBy: string;
-  genre: number | null;
+  genres: number[];
+  genreOperator: 'and' | 'or';
   year: number | null;
   rating: number;
   language: string | null;
@@ -75,11 +78,16 @@ const FilterSelect = ({
     <View style={styles.selectContainer}>
       <Text style={styles.selectLabel}>{label}</Text>
       <TouchableOpacity
-        style={[styles.selectButton, isActive && styles.selectButtonActive]}
+        style={[styles.selectButton, isActive && { borderColor: accentBorder(accentColor) }]}
         onPress={() => setVisible(true)}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
+        <Text
+          style={[
+            styles.selectButtonText,
+            (value == null || value === 0) && { color: COLORS.textSecondary },
+          ]}
+        >
           {selectedOption ? selectedOption.label : (placeholder ?? t('filters.selectPlaceholder'))}
         </Text>
         <AppIcon icon={ArrowDown01Icon} size={20} color={COLORS.textSecondary} />
@@ -178,11 +186,17 @@ const SearchableFilterSelect = ({
     <View style={styles.selectContainer}>
       <Text style={styles.selectLabel}>{label}</Text>
       <TouchableOpacity
-        style={[styles.selectButton, isActive && styles.selectButtonActive]}
+        style={[styles.selectButton, isActive && { borderColor: accentBorder(accentColor) }]}
         onPress={() => setVisible(true)}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
+        <Text
+          style={[
+            styles.selectButtonText,
+            (value == null || value === 0) && { color: COLORS.textSecondary },
+          ]}
+          numberOfLines={1}
+        >
           {selectedOption ? selectedOption.label : (placeholder ?? t('filters.selectPlaceholder'))}
         </Text>
         <AppIcon icon={ArrowDown01Icon} size={20} color={COLORS.textSecondary} />
@@ -266,6 +280,199 @@ const SearchableFilterSelect = ({
   );
 };
 
+interface GenreFilterSelectProps {
+  label: string;
+  selectedIds: number[];
+  operator: 'and' | 'or';
+  options: { label: string; value: number }[];
+  onApply: (ids: number[], operator: 'and' | 'or') => void;
+  placeholder?: string;
+  isActive?: boolean;
+}
+
+/**
+ * Multi-select genre picker with checkboxes and an And/Or combination toggle.
+ * The operator tabs only appear once at least one genre is selected.
+ * Selection is staged in draft state and committed via Apply, so toggling
+ * options doesn't refetch the discover query on every tap; closing via the
+ * X button or backdrop discards the draft. Clear + Apply appear in a footer
+ * once the draft has at least one genre.
+ */
+const GenreFilterSelect = ({
+  label,
+  selectedIds,
+  operator,
+  options,
+  onApply,
+  placeholder,
+  isActive = false,
+}: GenreFilterSelectProps) => {
+  const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
+  const [visible, setVisible] = useState(false);
+  const [draftIds, setDraftIds] = useState<number[]>(selectedIds);
+  const [draftOperator, setDraftOperator] = useState<'and' | 'or'>(operator);
+
+  // Snapshot committed selection into the draft each time the modal opens.
+  useEffect(() => {
+    if (visible) {
+      setDraftIds(selectedIds);
+      setDraftOperator(operator);
+    }
+  }, [visible, selectedIds, operator]);
+
+  const draftSet = useMemo(() => new Set(draftIds), [draftIds]);
+  const buttonLabel = useMemo(() => {
+    if (selectedIds.length === 0) return placeholder ?? t('filters.selectPlaceholder');
+    const selectedSet = new Set(selectedIds);
+    const names = options.filter((opt) => selectedSet.has(opt.value)).map((opt) => opt.label);
+    if (names.length <= 2) return names.join(', ');
+    return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
+  }, [selectedIds, options, placeholder, t]);
+
+  const handleToggleDraft = (id: number) => {
+    setDraftIds((prev) =>
+      prev.includes(id) ? prev.filter((genreId) => genreId !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearDraft = () => {
+    setDraftIds([]);
+    setDraftOperator('or');
+  };
+
+  const handleApply = () => {
+    onApply(draftIds, draftOperator);
+    setVisible(false);
+  };
+
+  return (
+    <View style={styles.selectContainer}>
+      <Text style={styles.selectLabel}>{label}</Text>
+      <TouchableOpacity
+        style={[styles.selectButton, isActive && { borderColor: accentBorder(accentColor) }]}
+        onPress={() => setVisible(true)}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <Text
+          style={[
+            styles.selectButtonText,
+            selectedIds.length === 0 && { color: COLORS.textSecondary },
+          ]}
+          numberOfLines={1}
+        >
+          {buttonLabel}
+        </Text>
+        <AppIcon icon={ArrowDown01Icon} size={20} color={COLORS.textSecondary} />
+      </TouchableOpacity>
+
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
+              <TouchableOpacity onPress={() => setVisible(false)} activeOpacity={ACTIVE_OPACITY}>
+                <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+            {draftIds.length > 0 && (
+              <SegmentedControl
+                options={[
+                  { key: 'and', label: t('discover.and') },
+                  { key: 'or', label: t('discover.or') },
+                ]}
+                activeKey={draftOperator}
+                onChange={setDraftOperator}
+                testID="genre-operator-toggle"
+                style={styles.operatorToggle}
+              />
+            )}
+            <FlatList
+              data={options}
+              keyExtractor={(item) => String(item.value)}
+              getItemLayout={(_, index) => ({
+                length: ITEM_HEIGHT,
+                offset: ITEM_HEIGHT * index,
+                index,
+              })}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={true}
+              renderItem={({ item }) => {
+                const isSelected = draftSet.has(item.value);
+                return (
+                  <TouchableOpacity
+                    style={styles.optionItem}
+                    activeOpacity={ACTIVE_OPACITY}
+                    onPress={() => handleToggleDraft(item.value)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isSelected }}
+                    accessibilityLabel={item.label}
+                  >
+                    <View style={styles.optionLabelGroup}>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          isSelected && {
+                            backgroundColor: accentColor,
+                            borderColor: accentColor,
+                          },
+                        ]}
+                      >
+                        {isSelected && <AppIcon icon={Tick02Icon} size={14} color={COLORS.white} />}
+                      </View>
+                      <Text
+                        style={[
+                          styles.optionText,
+                          isSelected && {
+                            color: accentColor,
+                            fontFamily: FONT_FAMILY.semiBold,
+                          },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+            {(draftIds.length > 0 || selectedIds.length > 0) && (
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={styles.footerClearButton}
+                  onPress={handleClearDraft}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
+                  <Text style={styles.clearButtonText}>{t('common.clear')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.footerApplyButton, { backgroundColor: accentColor }]}
+                  onPress={handleApply}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <Text style={styles.footerApplyButtonText}>{t('common.apply')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+};
+
 const FilterLoadingSkeleton = ({ label }: { label: string }) => {
   const { t } = useTranslation();
   return (
@@ -326,10 +533,7 @@ export default function DiscoverFilters({
     return { label: t('filters.starsPlus', { count: value }), value };
   });
 
-  const genreOptions = [
-    { label: t('discover.anyGenre'), value: null },
-    ...genres.map((g) => ({ label: g.name, value: g.id })),
-  ];
+  const genreOptions = genres.map((g) => ({ label: g.name, value: g.id }));
 
   const languageOptions = [
     { label: t('discover.anyLanguage'), value: null },
@@ -364,13 +568,14 @@ export default function DiscoverFilters({
           />
         </View>
         <View style={styles.col}>
-          <FilterSelect
+          <GenreFilterSelect
             label={t('discover.genres')}
-            value={filters.genre}
+            selectedIds={filters.genres}
+            operator={filters.genreOperator}
             options={genreOptions}
-            onSelect={(val) => updateFilter('genre', val)}
+            onApply={(ids, op) => onChange({ ...filters, genres: ids, genreOperator: op })}
             placeholder={t('discover.anyGenre')}
-            isActive={filters.genre !== null}
+            isActive={filters.genres.length > 0}
           />
         </View>
       </View>
@@ -468,9 +673,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
   },
-  selectButtonActive: {
-    borderColor: COLORS.error,
-  },
   selectButtonLoading: {
     opacity: 0.5,
   },
@@ -536,10 +738,60 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
   },
-  optionText: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.textSecondary,
+  optionLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    flex: 1,
   },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.textSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  operatorToggle: {
+    paddingHorizontal: SPACING.m,
+    marginTop: SPACING.s,
+    paddingBottom: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: SPACING.s,
+    padding: SPACING.m,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceLight,
+  },
+  footerClearButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    padding: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+  },
+  footerApplyButton: {
+    flex: 1,
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerApplyButtonText: {
+    fontSize: FONT_SIZE.m,
+    fontFamily: FONT_FAMILY.semiBold,
+    color: COLORS.white,
+  },
+  optionText: { fontSize: FONT_SIZE.m, color: COLORS.textSecondary },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

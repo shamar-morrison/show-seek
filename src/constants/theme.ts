@@ -100,3 +100,10 @@ export const hexToRGBA = (hex: string, alpha: number) => {
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
+
+/**
+ * Consistent "modified/active" border color: accent at 50% alpha.
+ * Shared by filter pickers (DiscoverFilters) and the up-next episode card.
+ * A helper (not a const) because the accent color is user-dynamic.
+ */
+export const accentBorder = (accentColor: string) => hexToRGBA(accentColor, 0.5);
