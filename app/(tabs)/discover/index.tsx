@@ -58,7 +58,7 @@ const DEFAULT_FILTERS: FilterState = {
   year: null,
   rating: 0,
   language: null,
-  watchProvider: null,
+  watchProviders: [],
 };
 const VIEW_MODE_STORAGE_KEY = 'discoverViewMode';
 
@@ -100,7 +100,8 @@ export default function DiscoverScreen() {
         sortBy: filters.sortBy,
         voteAverageGte: filters.rating,
         withOriginalLanguage: filters.language || undefined,
-        withWatchProviders: filters.watchProvider || undefined,
+        withWatchProviders:
+          filters.watchProviders.length > 0 ? filters.watchProviders.join('|') : undefined,
         page: pageParam,
         hideUnreleased: preferences?.hideUnreleasedContent,
       };
@@ -158,7 +159,7 @@ export default function DiscoverScreen() {
       filters.year !== DEFAULT_FILTERS.year ||
       filters.rating !== DEFAULT_FILTERS.rating ||
       filters.language !== DEFAULT_FILTERS.language ||
-      filters.watchProvider !== DEFAULT_FILTERS.watchProvider
+      filters.watchProviders.length > 0
     );
   };
 

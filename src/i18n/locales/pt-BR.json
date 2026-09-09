@@ -1340,7 +1340,6 @@
     "anyRating": "Qualquer avaliação",
     "mediaType": "Tipo de mídia",
     "searchPlaceholder": "Pesquisar...",
-    "selectLabel": "Selecionar {{label}}",
     "selectPlaceholder": "Selecionar...",
     "starsPlus": "{{count}}+ estrelas"
   },

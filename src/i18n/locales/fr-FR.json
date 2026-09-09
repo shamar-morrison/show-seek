@@ -1539,7 +1539,6 @@
     "anyRating": "Toute note",
     "mediaType": "Type de média",
     "searchPlaceholder": "Rechercher...",
-    "selectLabel": "Sélectionner {{label}}",
     "selectPlaceholder": "Sélectionner...",
     "starsPlus": "{{count}}+ étoiles"
   },

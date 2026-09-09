@@ -152,10 +152,7 @@ const normalizeTmdbError = (error: unknown): TmdbApiError => {
   };
   const status = maybeError.response?.status ?? null;
 
-  if (
-    maybeError.code === 'ECONNABORTED' ||
-    maybeError.message?.toLowerCase().includes('timeout')
-  ) {
+  if (maybeError.code === 'ECONNABORTED' || maybeError.message?.toLowerCase().includes('timeout')) {
     return new TmdbApiError({
       code: 'TMDB_TIMEOUT',
       message: 'TMDB request timed out',
@@ -735,7 +732,7 @@ export const tmdbApi = {
     sortBy?: string;
     voteAverageGte?: number;
     withOriginalLanguage?: string;
-    withWatchProviders?: number;
+    withWatchProviders?: number | string;
     watchRegion?: string;
     hideUnreleased?: boolean;
   }) => {
@@ -765,7 +762,7 @@ export const tmdbApi = {
     sortBy?: string;
     voteAverageGte?: number;
     withOriginalLanguage?: string;
-    withWatchProviders?: number;
+    withWatchProviders?: number | string;
     watchRegion?: string;
     hideUnreleased?: boolean;
   }) => {
@@ -874,9 +871,7 @@ export const tmdbApi = {
 
   getTVWatchProviders: async (id: number) => {
     const data = await tmdbRequest(() =>
-      tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(
-        `/tv/${id}/watch/providers`
-      )
+      tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(`/tv/${id}/watch/providers`)
     );
     return data.results[currentRegion] || null;
   },
@@ -950,7 +945,12 @@ export const tmdbApi = {
 
     // Process items sequentially with early termination to reduce API calls
     const collectTrailers = async (
-      items: Array<{ id: number; title: string; originalTitle: string; poster_path: string | null }>,
+      items: Array<{
+        id: number;
+        title: string;
+        originalTitle: string;
+        poster_path: string | null;
+      }>,
       type: 'movie' | 'tv',
       targetCount: number
     ): Promise<TrailerItem[]> => {

@@ -1486,7 +1486,6 @@
     "anyRating": "Tüm puanlar",
     "mediaType": "Medya türü",
     "searchPlaceholder": "Ara...",
-    "selectLabel": "Seç {{label}}",
     "selectPlaceholder": "Seç...",
     "starsPlus": "{{count}}+ yıldız"
   },

@@ -1506,7 +1506,6 @@
     "anyRating": "Any rating",
     "mediaType": "Media type",
     "searchPlaceholder": "Search...",
-    "selectLabel": "Select {{label}}",
     "selectPlaceholder": "Select...",
     "starsPlus": "{{count}}+ stars"
   },

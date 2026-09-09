@@ -193,7 +193,7 @@ export default function WatchStatusFiltersModal({
 
   const ratingOptions: SelectOption[] = [
     { label: t('filters.anyRating'), value: 0 },
-    ...[5, 6, 7, 8, 9].map((value) => ({
+    ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((value) => ({
       label: t('filters.starsPlus', { count: value }),
       value,
     })),

@@ -1,4 +1,5 @@
-import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
+import { getImageUrl, tmdbApi, WatchProvider } from '@/src/api/tmdb';
+import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -11,6 +12,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   ArrowDown01Icon,
@@ -29,7 +31,7 @@ export interface FilterState {
   year: number | null;
   rating: number;
   language: string | null;
-  watchProvider: number | null;
+  watchProviders: number[];
 }
 
 interface DiscoverFiltersProps {
@@ -40,7 +42,7 @@ interface DiscoverFiltersProps {
   genreMap: Record<number, string>;
 }
 
-const RATING_VALUES = [0, 5, 6, 7, 8, 9] as const;
+const RATING_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 interface SelectOption {
   label: string;
@@ -106,7 +108,7 @@ const FilterSelect = ({
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
+              <Text style={styles.modalTitle}>{label}</Text>
               <TouchableOpacity onPress={() => setVisible(false)} activeOpacity={ACTIVE_OPACITY}>
                 <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
               </TouchableOpacity>
@@ -206,7 +208,7 @@ const SearchableFilterSelect = ({
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleClose}>
           <View style={styles.searchableModalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
+              <Text style={styles.modalTitle}>{label}</Text>
               <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
                 <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
               </TouchableOpacity>
@@ -280,38 +282,57 @@ const SearchableFilterSelect = ({
   );
 };
 
-interface GenreFilterSelectProps {
+export interface MultiSelectOption {
+  label: string;
+  value: number;
+  /** TMDB logo path for the option (streaming providers); omit for text-only rows */
+  logoPath?: string | null;
+}
+
+interface MultiSelectFilterProps {
   label: string;
   selectedIds: number[];
-  operator: 'and' | 'or';
-  options: { label: string; value: number }[];
+  options: MultiSelectOption[];
   onApply: (ids: number[], operator: 'and' | 'or') => void;
   placeholder?: string;
   isActive?: boolean;
+  /** Initial And/Or operator (only used when showOperatorTabs is true) */
+  operator?: 'and' | 'or';
+  /** Show the And/Or combination tabs once the draft is non-empty (genres only) */
+  showOperatorTabs?: boolean;
+  operatorTestID?: string;
+  /** Show a search box above the options (streaming providers) */
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 /**
- * Multi-select genre picker with checkboxes and an And/Or combination toggle.
- * The operator tabs only appear once at least one genre is selected.
+ * Staged multi-select picker with checkboxes, optional option logos, an
+ * optional search box, and an optional And/Or combination toggle.
  * Selection is staged in draft state and committed via Apply, so toggling
  * options doesn't refetch the discover query on every tap; closing via the
  * X button or backdrop discards the draft. Clear + Apply appear in a footer
- * once the draft has at least one genre.
+ * once there is something to confirm.
  */
-const GenreFilterSelect = ({
+const MultiSelectFilter = ({
   label,
   selectedIds,
-  operator,
   options,
   onApply,
   placeholder,
   isActive = false,
-}: GenreFilterSelectProps) => {
+  operator = 'or',
+  showOperatorTabs = false,
+  operatorTestID,
+  searchable = false,
+  searchPlaceholder,
+}: MultiSelectFilterProps) => {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const [visible, setVisible] = useState(false);
   const [draftIds, setDraftIds] = useState<number[]>(selectedIds);
   const [draftOperator, setDraftOperator] = useState<'and' | 'or'>(operator);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Snapshot committed selection into the draft each time the modal opens.
   useEffect(() => {
@@ -322,6 +343,12 @@ const GenreFilterSelect = ({
   }, [visible, selectedIds, operator]);
 
   const draftSet = useMemo(() => new Set(draftIds), [draftIds]);
+  const showLogos = useMemo(() => options.some((opt) => opt.logoPath), [options]);
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !searchQuery.trim()) return options;
+    const query = searchQuery.toLowerCase().trim();
+    return options.filter((opt) => opt.label.toLowerCase().includes(query));
+  }, [options, searchable, searchQuery]);
   const buttonLabel = useMemo(() => {
     if (selectedIds.length === 0) return placeholder ?? t('filters.selectPlaceholder');
     const selectedSet = new Set(selectedIds);
@@ -330,6 +357,11 @@ const GenreFilterSelect = ({
     return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
   }, [selectedIds, options, placeholder, t]);
 
+  const handleClose = () => {
+    setVisible(false);
+    setSearchQuery('');
+  };
+
   const handleToggleDraft = (id: number) => {
     setDraftIds((prev) =>
       prev.includes(id) ? prev.filter((genreId) => genreId !== id) : [...prev, id]
@@ -337,13 +369,14 @@ const GenreFilterSelect = ({
   };
 
   const handleClearDraft = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setDraftIds([]);
     setDraftOperator('or');
   };
 
   const handleApply = () => {
     onApply(draftIds, draftOperator);
-    setVisible(false);
+    handleClose();
   };
 
   return (
@@ -366,25 +399,16 @@ const GenreFilterSelect = ({
         <AppIcon icon={ArrowDown01Icon} size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
 
-      <Modal
-        visible={visible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setVisible(false)}
-        >
+      <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={handleClose}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleClose}>
           <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
-              <TouchableOpacity onPress={() => setVisible(false)} activeOpacity={ACTIVE_OPACITY}>
+              <Text style={styles.modalTitle}>{label}</Text>
+              <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
                 <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
-            {draftIds.length > 0 && (
+            {showOperatorTabs && draftIds.length > 0 && (
               <SegmentedControl
                 options={[
                   { key: 'and', label: t('discover.and') },
@@ -392,12 +416,34 @@ const GenreFilterSelect = ({
                 ]}
                 activeKey={draftOperator}
                 onChange={setDraftOperator}
-                testID="genre-operator-toggle"
+                testID={operatorTestID}
                 style={styles.operatorToggle}
               />
             )}
+            {searchable && (
+              <View style={styles.searchContainer}>
+                <AppIcon icon={Search01Icon} size={18} color={COLORS.textSecondary} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder={searchPlaceholder ?? t('filters.searchPlaceholder')}
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery('')}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
             <FlatList
-              data={options}
+              data={filteredOptions}
               keyExtractor={(item) => String(item.value)}
               getItemLayout={(_, index) => ({
                 length: ITEM_HEIGHT,
@@ -408,6 +454,12 @@ const GenreFilterSelect = ({
               maxToRenderPerBatch={10}
               windowSize={5}
               removeClippedSubviews={true}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>{t('common.noResults')}</Text>
+                </View>
+              }
               renderItem={({ item }) => {
                 const isSelected = draftSet.has(item.value);
                 return (
@@ -431,6 +483,17 @@ const GenreFilterSelect = ({
                       >
                         {isSelected && <AppIcon icon={Tick02Icon} size={14} color={COLORS.white} />}
                       </View>
+                      {showLogos &&
+                        (item.logoPath ? (
+                          <MediaImage
+                            source={{ uri: getImageUrl(item.logoPath, '/w92') }}
+                            style={styles.optionLogo}
+                            contentFit="contain"
+                            cachePolicy="memory-disk"
+                          />
+                        ) : (
+                          <View style={styles.optionLogo} />
+                        ))}
                       <Text
                         style={[
                           styles.optionText,
@@ -541,8 +604,11 @@ export default function DiscoverFilters({
   ];
 
   const watchProviderOptions = [
-    { label: t('discover.anyStreamingService'), value: null },
-    ...watchProviders.map((p: WatchProvider) => ({ label: p.provider_name, value: p.provider_id })),
+    ...watchProviders.map((p: WatchProvider) => ({
+      label: p.provider_name,
+      value: p.provider_id,
+      logoPath: p.logo_path,
+    })),
   ];
 
   // Generate year options from current year down to 1950
@@ -568,10 +634,12 @@ export default function DiscoverFilters({
           />
         </View>
         <View style={styles.col}>
-          <GenreFilterSelect
+          <MultiSelectFilter
             label={t('discover.genres')}
             selectedIds={filters.genres}
             operator={filters.genreOperator}
+            showOperatorTabs
+            operatorTestID="genre-operator-toggle"
             options={genreOptions}
             onApply={(ids, op) => onChange({ ...filters, genres: ids, genreOperator: op })}
             placeholder={t('discover.anyGenre')}
@@ -618,13 +686,14 @@ export default function DiscoverFilters({
           {watchProvidersQuery.isLoading ? (
             <FilterLoadingSkeleton label={t('discover.streamingService')} />
           ) : (
-            <SearchableFilterSelect
+            <MultiSelectFilter
               label={t('discover.streamingService')}
-              value={filters.watchProvider}
+              selectedIds={filters.watchProviders}
               options={watchProviderOptions}
-              onSelect={(val) => updateFilter('watchProvider', val)}
+              onApply={(ids) => onChange({ ...filters, watchProviders: ids })}
               placeholder={t('discover.anyStreamingService')}
-              isActive={filters.watchProvider !== null}
+              isActive={filters.watchProviders.length > 0}
+              searchable
               searchPlaceholder={t('discover.searchStreamingServices')}
             />
           )}
@@ -633,7 +702,10 @@ export default function DiscoverFilters({
 
       <TouchableOpacity
         style={styles.clearButton}
-        onPress={onClearFilters}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onClearFilters();
+        }}
         activeOpacity={ACTIVE_OPACITY}
       >
         <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
@@ -737,6 +809,11 @@ const styles = StyleSheet.create({
     height: ITEM_HEIGHT,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
+  },
+  optionLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
   },
   optionLabelGroup: {
     flexDirection: 'row',
