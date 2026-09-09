@@ -382,14 +382,14 @@ const styles = StyleSheet.create({
   },
   streakItem: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
     padding: SPACING.m,
+    gap: SPACING.s,
   },
   streakInfo: {
-    marginLeft: SPACING.m,
+    alignItems: 'center',
   },
   streakValue: {
     fontSize: FONT_SIZE.l,
