@@ -4,7 +4,6 @@ import {
   CheckmarkCircle02Icon,
   CloudUploadIcon,
   DashboardSquare03Icon,
-  Download01Icon,
   FavouriteIcon,
   File01Icon,
   Infinity01Icon,
@@ -140,12 +139,6 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         icon: RefreshIcon,
         titleKey: 'premiumFeatures.features.trakt-integration.title',
         descriptionKey: 'premiumFeatures.features.trakt-integration.description',
-      },
-      {
-        id: 'export-data',
-        icon: Download01Icon,
-        titleKey: 'premiumFeatures.features.export-data.title',
-        descriptionKey: 'premiumFeatures.features.export-data.description',
       },
       {
         id: 'import-imdb',

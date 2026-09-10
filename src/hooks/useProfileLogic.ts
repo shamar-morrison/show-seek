@@ -89,15 +89,6 @@ export function useProfileLogic() {
   const handleExportData = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (isPremiumLoading) {
-      return;
-    }
-
-    if (!isPremium) {
-      router.push('/premium');
-      return;
-    }
-
     Alert.alert(t('profile.exportDataTitle'), t('profile.exportDataMessage'), [
       {
         text: t('common.cancel'),
@@ -112,7 +103,7 @@ export function useProfileLogic() {
         onPress: () => performExport('markdown'),
       },
     ]);
-  }, [isPremium, isPremiumLoading, router, performExport, t]);
+  }, [performExport, t]);
 
   const handleImdbImport = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

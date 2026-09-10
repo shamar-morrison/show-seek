@@ -1618,10 +1618,6 @@
         "description": "Masquez les spoilers dans les avis.",
         "title": "Flouter les spoilers"
       },
-      "export-data": {
-        "description": "Exportez vos listes, notes, évaluations et plus.",
-        "title": "Exporter les données"
-      },
       "import-imdb": {
         "description": "Importez vos notes, listes et check-ins IMDb dans ShowSeek.",
         "title": "Importer depuis IMDb"

@@ -135,7 +135,7 @@ describe('useProfileLogic', () => {
     );
   });
 
-  it('does not route to premium or export data while premium status is still loading', () => {
+  it('shows export options for free users without routing to premium', () => {
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = true;
 
@@ -145,9 +145,12 @@ describe('useProfileLogic', () => {
       result.current.handleExportData();
     });
 
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(mockExportUserData).not.toHaveBeenCalled();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalledWith('/premium');
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'profile.exportDataTitle',
+      'profile.exportDataMessage',
+      expect.anything()
+    );
   });
 
   it('runs account deletion, local cleanup, and routes to sign-in after double confirmation', async () => {

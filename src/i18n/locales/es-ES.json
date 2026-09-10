@@ -1542,10 +1542,6 @@
         "title": "Integración con Trakt",
         "description": "Sincroniza tu historial con Trakt."
       },
-      "export-data": {
-        "title": "Exportar datos",
-        "description": "Exporta tus listas, puntuaciones, notas y más."
-      },
       "import-imdb": {
         "title": "Importar desde IMDb",
         "description": "Trae tus valoraciones, listas y check-ins de IMDb a ShowSeek."

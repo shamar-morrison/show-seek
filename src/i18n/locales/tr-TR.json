@@ -1565,10 +1565,6 @@
         "description": "İncelemelerdeki sürprizleri gizleyin.",
         "title": "Sürprizleri bulanıklaştır"
       },
-      "export-data": {
-        "description": "Listelerinizi, puanlarınızı, notlarınızı ve daha fazlasını dışa aktarın.",
-        "title": "Verileri dışa aktar"
-      },
       "import-imdb": {
         "description": "IMDb puanlarınızı, listelerinizi ve kontrol kayıtlarınızı ShowSeek'e getirin.",
         "title": "IMDb'den içe aktar"

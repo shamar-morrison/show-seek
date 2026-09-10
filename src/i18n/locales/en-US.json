@@ -1585,10 +1585,6 @@
         "description": "Hide spoilers in reviews.",
         "title": "Blur spoilers"
       },
-      "export-data": {
-        "description": "Export your lists, ratings, notes, and more.",
-        "title": "Export data"
-      },
       "import-imdb": {
         "description": "Bring your IMDb ratings, lists, and check-ins into ShowSeek.",
         "title": "Import from IMDb"

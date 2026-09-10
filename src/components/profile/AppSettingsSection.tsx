@@ -18,8 +18,6 @@ import { ActionButton } from './ActionButton';
 export interface AppSettingsSectionProps {
   /** Whether user is a guest */
   isGuest: boolean;
-  /** Whether user has premium */
-  isPremium: boolean;
   /** Whether export is in progress */
   isExporting: boolean;
   /** Whether cache clear is in progress */
@@ -53,7 +51,6 @@ export interface AppSettingsSectionProps {
  */
 export function AppSettingsSection({
   isGuest,
-  isPremium,
   isExporting,
   isClearingCache,
   isSigningOut,
@@ -113,8 +110,6 @@ export function AppSettingsSection({
               label={t('profile.exportData')}
               onPress={onExportData}
               loading={isExporting}
-              isPremiumFeature
-              isPremium={isPremium}
             />
             <ActionButton
               icon={Delete02Icon}

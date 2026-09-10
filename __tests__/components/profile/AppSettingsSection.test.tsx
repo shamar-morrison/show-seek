@@ -10,7 +10,6 @@ describe('AppSettingsSection', () => {
     overrides: Partial<AppSettingsSectionProps> = {}
   ): AppSettingsSectionProps => ({
     isGuest: false,
-    isPremium: true,
     isExporting: false,
     isClearingCache: false,
     isSigningOut: false,

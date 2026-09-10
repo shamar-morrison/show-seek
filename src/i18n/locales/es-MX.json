@@ -1498,10 +1498,6 @@
         "description": "Oculta spoilers en las reseñas.",
         "title": "Difuminar spoilers"
       },
-      "export-data": {
-        "description": "Exporta tus listas, puntuaciones, notas y más.",
-        "title": "Exportar datos"
-      },
       "import-imdb": {
         "description": "Trae tus valoraciones, listas y check-ins de IMDb a ShowSeek.",
         "title": "Importar desde IMDb"

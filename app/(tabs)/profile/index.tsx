@@ -191,7 +191,6 @@ export default function ProfileScreen() {
         return (
           <AppSettingsSection
             isGuest={isGuest}
-            isPremium={isPremium}
             isExporting={isExporting}
             isClearingCache={isClearingCache}
             isSigningOut={isSigningOut}
