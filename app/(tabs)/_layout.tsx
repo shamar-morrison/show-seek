@@ -6,7 +6,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   BinocularsIcon,
-  Bookmark02Icon,
+  FolderLibraryIcon,
   Home01Icon,
   Search01Icon,
   UserIcon,
@@ -102,7 +102,7 @@ export default function TabLayout() {
         options={{
           title: t('tabs.library'),
           tabBarIcon: ({ color, size }) => (
-            <AppIcon icon={Bookmark02Icon} color={color} size={size} />
+            <AppIcon icon={FolderLibraryIcon} color={color} size={size} />
           ),
         }}
       />
