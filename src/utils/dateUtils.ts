@@ -48,6 +48,48 @@ export function formatTmdbDate(
 }
 
 /**
+ * English short months that take a trailing period (e.g. "Dec.").
+ * May, June, and July are already complete and stay bare.
+ */
+const DOTTED_SHORT_MONTHS = new Set([
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Aug',
+  'Sep',
+  'Sept',
+  'Oct',
+  'Nov',
+  'Dec',
+]);
+
+/**
+ * Format a TMDB date string with an abbreviated month, adding a trailing
+ * period for English locales (e.g. "Dec. 25, 1990").
+ * Non-English locales use Intl's short format untouched.
+ *
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns Formatted date string with abbreviated month
+ */
+export function formatTmdbDateShort(dateString: string): string {
+  const formatted = formatTmdbDate(dateString, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const locale = (i18n.language || 'en-US').toLowerCase();
+  if (!locale.startsWith('en')) return formatted;
+
+  const [month, ...rest] = formatted.split(' ');
+  if (month && DOTTED_SHORT_MONTHS.has(month)) {
+    const normalized = month === 'Sept' ? 'Sep' : month;
+    return `${normalized}. ${rest.join(' ')}`;
+  }
+  return formatted;
+}
+
+/**
  * Calculate age from TMDB date strings without timezone shifts.
  *
  * @param birthday - YYYY-MM-DD birthday string

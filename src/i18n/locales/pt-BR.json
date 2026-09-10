@@ -1398,6 +1398,7 @@
     "ageYearsOld_one": "({{count}} ano)",
     "ageYearsOld_other": "({{count}} anos)",
     "biography": "Biografia",
+    "born": "Nascimento",
     "directedWrittenMovies": "Dirigiu/Escreveu (Filmes)",
     "directedWrittenTV": "Dirigiu/Escreveu (TV)",
     "failedToLoadDetails": "Falha ao carregar detalhes da pessoa",

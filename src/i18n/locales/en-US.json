@@ -1555,6 +1555,7 @@
     "ageYearsOld_one": "({{count}} year old)",
     "ageYearsOld_other": "({{count}} years old)",
     "biography": "Biography",
+    "born": "Born",
     "directedWrittenMovies": "Directed/Written (Movies)",
     "directedWrittenTV": "Directed/Written (TV)",
     "failedToLoadDetails": "Failed to load person details",

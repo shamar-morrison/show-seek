@@ -37,7 +37,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { calculateTmdbAge, formatTmdbDate } from '@/src/utils/dateUtils';
+import { calculateTmdbAge, formatTmdbDate, formatTmdbDateShort } from '@/src/utils/dateUtils';
 import { getDisplayMediaTitle, type MediaTitleFields } from '@/src/utils/mediaTitle';
 import { partitionMoviePersonCredits, partitionTVPersonCredits } from '@/src/utils/personCredits';
 import { useQuery } from '@tanstack/react-query';
@@ -567,15 +567,26 @@ export default function PersonDetailScreen() {
                 <View style={styles.detailItem}>
                   <AppIcon icon={Calendar03Icon} size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>
-                    {formatTmdbDate(person.birthday, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {person.deathday
+                      ? `${t('person.born')}: ${formatTmdbDateShort(person.birthday)}`
+                      : formatTmdbDate(person.birthday, {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
                     {age !== null &&
                       ` ${t(person.deathday ? 'person.ageAtDeath' : 'person.ageYearsOld', {
                         count: age,
                       })}`}
+                  </Text>
+                </View>
+              )}
+
+              {person.deathday && (
+                <View style={styles.detailItem}>
+                  <AppIcon icon={Calendar03Icon} size={14} color={COLORS.textSecondary} />
+                  <Text style={styles.detailText}>
+                    {`${t('media.deathday')}: ${formatTmdbDateShort(person.deathday)}`}
                   </Text>
                 </View>
               )}

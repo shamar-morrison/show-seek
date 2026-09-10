@@ -1,6 +1,8 @@
+import i18n from '@/src/i18n';
 import {
   calculateTmdbAge,
   formatTmdbDate,
+  formatTmdbDateShort,
   isTmdbDateOnOrBefore,
   parseTmdbDate,
 } from '@/src/utils/dateUtils';
@@ -82,6 +84,35 @@ describe('dateUtils', () => {
     it('should handle different months correctly', () => {
       expect(formatTmdbDate('2024-01-01')).toContain('Jan');
       expect(formatTmdbDate('2024-12-25')).toContain('Dec');
+    });
+  });
+
+  describe('formatTmdbDateShort', () => {
+    it('should abbreviate December with a trailing period', () => {
+      expect(formatTmdbDateShort('2020-12-25')).toBe('Dec. 25, 2020');
+    });
+
+    it('should abbreviate January and February with trailing periods', () => {
+      expect(formatTmdbDateShort('1990-01-05')).toBe('Jan. 5, 1990');
+      expect(formatTmdbDateShort('1990-02-10')).toBe('Feb. 10, 1990');
+    });
+
+    it('should leave May, June, and July bare', () => {
+      expect(formatTmdbDateShort('1990-05-05')).toBe('May 5, 1990');
+      expect(formatTmdbDateShort('1990-06-15')).toBe('Jun 15, 1990');
+      expect(formatTmdbDateShort('1990-07-20')).toBe('Jul 20, 1990');
+    });
+
+    it('should pass non-English locales through untouched', () => {
+      const previousLanguage = i18n.language;
+      i18n.language = 'fr-FR';
+      try {
+        expect(formatTmdbDateShort('2020-12-25')).toBe(
+          formatTmdbDate('2020-12-25', { month: 'short', day: 'numeric', year: 'numeric' })
+        );
+      } finally {
+        i18n.language = previousLanguage;
+      }
     });
   });
 

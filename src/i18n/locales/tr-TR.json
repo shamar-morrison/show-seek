@@ -1535,6 +1535,7 @@
     "ageYearsOld_one": "({{count}} yaşında)",
     "ageYearsOld_other": "({{count}} yaşında)",
     "biography": "Biyografi",
+    "born": "Doğum",
     "directedWrittenMovies": "Yönetmenlik/Senaryo (filmler)",
     "directedWrittenTV": "Yönetmenlik/Senaryo (diziler)",
     "failedToLoadDetails": "Kişi ayrıntıları yüklenemedi",

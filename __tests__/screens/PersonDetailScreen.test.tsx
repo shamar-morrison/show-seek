@@ -1,5 +1,5 @@
 import PersonDetailScreen from '@/src/screens/PersonDetailScreen';
-import { calculateTmdbAge, formatTmdbDate } from '@/src/utils/dateUtils';
+import { calculateTmdbAge, formatTmdbDate, formatTmdbDateShort } from '@/src/utils/dateUtils';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
@@ -10,6 +10,7 @@ const mockUseQuery = jest.fn();
 const mockPresent = jest.fn();
 const mockRequireAccount = jest.fn();
 const mockFormatTmdbDate = jest.mocked(formatTmdbDate);
+const mockFormatTmdbDateShort = jest.mocked(formatTmdbDateShort);
 const mockCalculateTmdbAge = jest.mocked(calculateTmdbAge);
 let mockProgressiveReady = true;
 const mockAuthState = {
@@ -121,6 +122,7 @@ jest.mock('@tanstack/react-query', () => ({
 
 jest.mock('@/src/utils/dateUtils', () => ({
   formatTmdbDate: jest.fn(),
+  formatTmdbDateShort: jest.fn(),
   calculateTmdbAge: jest.fn(),
 }));
 
@@ -316,6 +318,7 @@ describe('PersonDetailScreen', () => {
     mockAuthState.isGuest = false;
     latestAddToListModalOnDismiss = null;
     mockFormatTmdbDate.mockReturnValue('June 15, 1990');
+    mockFormatTmdbDateShort.mockReturnValue('Jun. 15, 1990');
     mockCalculateTmdbAge.mockReturnValue(null);
     setupQueries();
   });
@@ -415,15 +418,39 @@ describe('PersonDetailScreen', () => {
     mockCalculateTmdbAge.mockReturnValue(35);
     setupQueries(personWithBirthday);
 
-    const { getByText } = render(<PersonDetailScreen />);
+    const { getByText, queryByText } = render(<PersonDetailScreen />);
 
     expect(mockFormatTmdbDate).toHaveBeenCalledWith('1990-06-15', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
+    expect(mockFormatTmdbDateShort).not.toHaveBeenCalled();
     expect(mockCalculateTmdbAge).toHaveBeenCalledWith('1990-06-15', null);
     expect(getByText('June 15, 1990 person.ageYearsOld:35')).toBeTruthy();
+    expect(queryByText('media.deathday: Dec. 25, 2020')).toBeNull();
+  });
+
+  it('renders Born and Died labels with short dates for deceased people', () => {
+    const personWithDeathday = {
+      ...mockPerson,
+      birthday: '1990-06-15',
+      deathday: '2020-12-25',
+    };
+
+    mockFormatTmdbDateShort.mockImplementation((dateString: string) =>
+      dateString === '2020-12-25' ? 'Dec. 25, 2020' : 'Jun. 15, 1990'
+    );
+    mockCalculateTmdbAge.mockReturnValue(30);
+    setupQueries(personWithDeathday);
+
+    const { getByText } = render(<PersonDetailScreen />);
+
+    expect(mockFormatTmdbDateShort).toHaveBeenCalledWith('1990-06-15');
+    expect(mockFormatTmdbDateShort).toHaveBeenCalledWith('2020-12-25');
+    expect(mockFormatTmdbDate).not.toHaveBeenCalled();
+    expect(getByText('person.born: Jun. 15, 1990 person.ageAtDeath:30')).toBeTruthy();
+    expect(getByText('media.deathday: Dec. 25, 2020')).toBeTruthy();
   });
 
   it('shows separate directed/written and acting sections for acting-classified people and routes directed movies to crew credits', () => {
