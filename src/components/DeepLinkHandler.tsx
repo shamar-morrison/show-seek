@@ -8,38 +8,6 @@ import { AppState, NativeModules, Platform } from 'react-native';
 // on cold start). Separate taps seconds apart still navigate.
 const DEDUPE_WINDOW_MS = 2000;
 
-export interface DeepLinkDebugInfo {
-  url: string;
-  source: string;
-  target: string | null;
-  action: 'navigated' | 'queued' | 'duplicate' | 'ignored' | 'error';
-  at: string;
-}
-
-type DeepLinkDebugListener = (info: DeepLinkDebugInfo | null) => void;
-
-// TEMPORARY diagnostic store for the widget-tap investigation. Powers the
-// on-screen debug overlay (console.* is stripped in production builds, so
-// logcat markers never survive). Remove together with DeepLinkDebugOverlay.
-const deepLinkDebugListeners = new Set<DeepLinkDebugListener>();
-let lastDeepLinkDebugInfo: DeepLinkDebugInfo | null = null;
-
-export function getLastDeepLinkDebugInfo(): DeepLinkDebugInfo | null {
-  return lastDeepLinkDebugInfo;
-}
-
-export function subscribeDeepLinkDebug(listener: DeepLinkDebugListener): () => void {
-  deepLinkDebugListeners.add(listener);
-  return () => {
-    deepLinkDebugListeners.delete(listener);
-  };
-}
-
-function recordDeepLinkDebug(info: DeepLinkDebugInfo) {
-  lastDeepLinkDebugInfo = info;
-  deepLinkDebugListeners.forEach((listener) => listener(info));
-}
-
 /**
  * App-wide deep-link listener. Navigation is deferred until the root navigator
  * is mounted — pushing into a half-built tree during cold start used to leave
@@ -62,21 +30,18 @@ export function DeepLinkHandler() {
     const last = lastHandledRef.current;
     if (last && last.url === url && now - last.at < DEDUPE_WINDOW_MS) {
       console.log('[DeepLink] Ignoring duplicate:', { url, source });
-      recordDeepLinkDebug({ url, source, target: null, action: 'duplicate', at: new Date(now).toISOString() });
       return;
     }
 
     const target = resolveDeepLinkTarget(url);
     console.log('[DeepLink] Received:', { url, source, target });
     if (!target) {
-      recordDeepLinkDebug({ url, source, target, action: 'ignored', at: new Date(now).toISOString() });
       return;
     }
 
     if (!liveRef.current.isReady) {
       pendingUrlRef.current = url;
       console.log('[DeepLink] Navigator not ready, queued:', { url });
-      recordDeepLinkDebug({ url, source, target, action: 'queued', at: new Date(now).toISOString() });
       return;
     }
 
@@ -85,11 +50,9 @@ export function DeepLinkHandler() {
     try {
       liveRef.current.router.push(target as any);
       console.log('[DeepLink] Navigated:', { url, target });
-      recordDeepLinkDebug({ url, source, target, action: 'navigated', at: new Date(now).toISOString() });
     } catch (error) {
       // A push must never throw uncaught out of a link handler.
       console.warn('[DeepLink] Push failed:', { url, target, error });
-      recordDeepLinkDebug({ url, source, target, action: 'error', at: new Date(now).toISOString() });
     }
   }, []);
 
@@ -126,13 +89,11 @@ export function DeepLinkHandler() {
       }
       console.log('[DeepLink] Widget target:', { target, route });
       if (!route) {
-        recordDeepLinkDebug({ url: key, source: 'widget-target', target: route, action: 'ignored', at: new Date(now).toISOString() });
         return;
       }
       lastHandledRef.current = { url: key, at: now };
       liveRef.current.router.push(route as any);
       console.log('[DeepLink] Navigated:', { url: key, target: route });
-      recordDeepLinkDebug({ url: key, source: 'widget-target', target: route, action: 'navigated', at: new Date(now).toISOString() });
     } catch (error) {
       console.warn('[DeepLink] Widget target poll failed:', error);
     }
@@ -165,7 +126,6 @@ export function DeepLinkHandler() {
     });
 
     return () => {
-      cancelled = true;
       subscription.remove();
     };
   }, [navigateUrl]);
