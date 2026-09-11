@@ -1,3 +1,4 @@
+import { listService } from '@/src/services/ListService';
 import { syncAllWidgetData } from '@/src/services/widgetDataService';
 import { WidgetConfig } from '@/src/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,6 +43,39 @@ async function triggerNativeWidgetUpdate(): Promise<void> {
   }
 }
 
+function hasItems(list: { items?: Record<string, unknown> }): boolean {
+  return Object.keys(list.items ?? {}).length > 0;
+}
+
+/**
+ * Resolve which list backs the watchlist widget. An explicitly configured
+ * list always wins. Otherwise we must pick a list whose Firestore document
+ * physically exists — DEFAULT_LISTS entries are merged client-side and their
+ * docs often don't exist, in which case syncing them writes nothing and the
+ * widget falls back to opening the library screen.
+ */
+async function resolveWatchlistListId(
+  userId: string | null,
+  configuredListId?: string
+): Promise<string | undefined> {
+  if (configuredListId) {
+    return configuredListId;
+  }
+  if (!userId) {
+    return undefined;
+  }
+
+  try {
+    const lists = await listService.getUserLists(userId);
+    const preferred =
+      lists.find((l) => l.id === DEFAULT_WATCHLIST_LIST_ID && hasItems(l)) ??
+      lists.find((l) => hasItems(l));
+    return preferred?.id ?? DEFAULT_WATCHLIST_LIST_ID;
+  } catch {
+    return DEFAULT_WATCHLIST_LIST_ID;
+  }
+}
+
 /**
  * Keeps native home-screen widget data in sync app-wide.
  *
@@ -58,6 +92,12 @@ export function useWidgetAutoSync(userId?: string | null) {
   const userIdRef = useRef<string | null>(userId ?? null);
   userIdRef.current = userId ?? null;
   const syncInFlightRef = useRef(false);
+  // Resolved list id per user, so foreground syncs don't re-read the lists
+  // collection every time. Reset whenever the signed-in user changes.
+  const resolvedListIdRef = useRef<{ uid: string | null; listId: string | undefined }>({
+    uid: null,
+    listId: undefined,
+  });
 
   const runSync = async () => {
     if (syncInFlightRef.current) {
@@ -69,8 +109,17 @@ export function useWidgetAutoSync(userId?: string | null) {
       const currentUserId = userIdRef.current;
       const configs = await loadStoredWidgetConfigs(currentUserId);
       const watchlistWidget = configs.find((w) => w.type === 'watchlist');
-      const listId =
-        watchlistWidget?.listId ?? (currentUserId ? DEFAULT_WATCHLIST_LIST_ID : undefined);
+
+      let listId: string | undefined;
+      const cached = resolvedListIdRef.current;
+      if (watchlistWidget?.listId) {
+        listId = watchlistWidget.listId;
+      } else if (cached.uid === currentUserId) {
+        listId = cached.listId;
+      } else {
+        listId = await resolveWatchlistListId(currentUserId, undefined);
+        resolvedListIdRef.current = { uid: currentUserId, listId };
+      }
 
       await syncAllWidgetData(currentUserId ?? undefined, listId, configs);
       await triggerNativeWidgetUpdate();
