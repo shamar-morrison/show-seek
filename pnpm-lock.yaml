@@ -118,8 +118,8 @@ dependencies:
     specifier: ~3.0.8
     version: 3.0.8(react-native@0.81.5)(react@19.1.0)
   expo-store-review:
-    specifier: ^57.0.2
-    version: 57.0.2(expo@54.0.25)(react-native@0.81.5)
+    specifier: ^9.0.9
+    version: 9.0.9(expo@54.0.25)(react-native@0.81.5)
   expo-symbols:
     specifier: ~1.0.7
     version: 1.0.7(expo@54.0.25)(react-native@0.81.5)
@@ -7592,8 +7592,8 @@ packages:
       react-native-is-edge-to-edge: 1.2.1(react-native@0.81.5)(react@19.1.0)
     dev: false
 
-  /expo-store-review@57.0.2(expo@54.0.25)(react-native@0.81.5):
-    resolution: {integrity: sha512-C/cMUe0blmdLOeuA/rlfKTIb6znlmSfdm1Rx+khCfRL2qbMEfY0jZkGeVv/H3xObo9AyoaKJF8Vc0J8+Vz8CWg==}
+  /expo-store-review@9.0.9(expo@54.0.25)(react-native@0.81.5):
+    resolution: {integrity: sha512-99vS7edXlKzPcdjrzVlMQWc4zOyq4khQfFjhNqJgpGP+AgRn4U0LaZkHIrVjmzolryD3rcHJSiUQH9Vi0sD0MQ==}
     peerDependencies:
       expo: '*'
       react-native: '*'
