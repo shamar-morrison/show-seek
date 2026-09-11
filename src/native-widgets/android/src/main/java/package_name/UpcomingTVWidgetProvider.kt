@@ -6,8 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
@@ -36,12 +34,18 @@ class UpcomingTVWidgetProvider : AppWidgetProvider() {
         val layoutId = context.resources.getIdentifier("widget_upcoming_tv", "layout", context.packageName)
         val views = RemoteViews(context.packageName, layoutId)
         
-        // Set click intent to open app
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("showseek://home"))
+        // Set click intent to open app. Explicit intent (no data URI) so cold
+        // boot is identical to a launcher launch; the tap target travels as
+        // an extra and is consumed from JS after boot.
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = "app.horizon.showseek.action.WIDGET_TAP"
+            putExtra("widget_kind", "upcoming_tv")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
         val pendingIntent = PendingIntent.getActivity(
-            context, 
-            0, 
-            intent, 
+            context,
+            appWidgetId,
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val containerId = context.resources.getIdentifier("widget_container", "id", context.packageName)

@@ -36,4 +36,18 @@ class SharedDataModule(reactContext: ReactApplicationContext) : ReactContextBase
             promise.reject("READ_ERROR", e)
         }
     }
+
+    /**
+     * Returns the widget tap target captured from the launch/new intent
+     * (see MainActivity.pendingWidgetTarget) and clears it so each tap
+     * navigates exactly once. Null on ordinary launches.
+     */
+    @ReactMethod
+    fun getLaunchWidgetTarget(promise: Promise) {
+        try {
+            promise.resolve(MainActivity.consumeWidgetTarget())
+        } catch (e: Exception) {
+            promise.reject("WIDGET_TARGET_ERROR", e)
+        }
+    }
 }

@@ -1,7 +1,8 @@
-import { resolveDeepLinkTarget } from '@/src/hooks/useDeepLinking';
+import { resolveDeepLinkTarget, resolveWidgetTarget } from '@/src/hooks/useDeepLinking';
 import * as Linking from 'expo-linking';
 import { useRootNavigationState, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
+import { AppState, NativeModules, Platform } from 'react-native';
 
 // Drop repeat deliveries of the same URL (initial URL + url event both fire
 // on cold start). Separate taps seconds apart still navigate.
@@ -100,6 +101,55 @@ export function DeepLinkHandler() {
       navigateUrl(url, 'queue');
     }
   }, [isReady, navigateUrl]);
+
+  // Consume a widget tap target captured from the launch/new intent
+  // (MainActivity.pendingWidgetTarget via the native bridge). Polled on mount
+  // and every foreground so both cold and warm taps navigate exactly once.
+  const pollWidgetTarget = useCallback(async () => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+    try {
+      const mod = NativeModules.SharedPreferences as
+        | { getLaunchWidgetTarget?: () => Promise<string | null> }
+        | undefined;
+      const target = await mod?.getLaunchWidgetTarget?.();
+      if (!target) {
+        return;
+      }
+      const route = resolveWidgetTarget(target);
+      const key = `widget-target:${target}`;
+      const now = Date.now();
+      const last = lastHandledRef.current;
+      if (last && last.url === key && now - last.at < DEDUPE_WINDOW_MS) {
+        return;
+      }
+      console.log('[DeepLink] Widget target:', { target, route });
+      if (!route) {
+        recordDeepLinkDebug({ url: key, source: 'widget-target', target: route, action: 'ignored', at: new Date(now).toISOString() });
+        return;
+      }
+      lastHandledRef.current = { url: key, at: now };
+      liveRef.current.router.push(route as any);
+      console.log('[DeepLink] Navigated:', { url: key, target: route });
+      recordDeepLinkDebug({ url: key, source: 'widget-target', target: route, action: 'navigated', at: new Date(now).toISOString() });
+    } catch (error) {
+      console.warn('[DeepLink] Widget target poll failed:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    void pollWidgetTarget();
+  }, [pollWidgetTarget]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void pollWidgetTarget();
+      }
+    });
+    return () => subscription.remove();
+  }, [pollWidgetTarget]);
 
   useEffect(() => {
     let cancelled = false;

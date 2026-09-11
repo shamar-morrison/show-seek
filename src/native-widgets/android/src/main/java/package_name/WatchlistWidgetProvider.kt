@@ -6,8 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
@@ -72,17 +70,19 @@ class WatchlistWidgetProvider : AppWidgetProvider() {
         val titleId = context.resources.getIdentifier("widget_title", "id", context.packageName)
         views.setTextViewText(titleId, listName)
         
-        // Set click intent to open list detail screen
-        val deepLink = if (listId.isNotEmpty()) {
-            "showseek://library/custom-list/$listId"
-        } else {
-            "showseek://library"
+        // Set click intent to open list detail screen. Explicit intent (no data
+        // URI) so cold boot is identical to a launcher launch; the list id
+        // travels as an extra and is consumed from JS after boot.
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = "app.horizon.showseek.action.WIDGET_TAP"
+            putExtra("widget_kind", "watchlist")
+            putExtra("widget_list_id", listId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink))
         val pendingIntent = PendingIntent.getActivity(
-            context, 
-            0, 
-            intent, 
+            context,
+            appWidgetId,
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val containerId = context.resources.getIdentifier("widget_container", "id", context.packageName)
