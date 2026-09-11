@@ -69,6 +69,9 @@ export async function getUserWatchlist(
   const cacheKey = `${WIDGET_CACHE_PREFIX}watchlist_${userId}_${listId}`;
   const cached = await getCachedData<{ items: WidgetMediaItem[]; listName: string }>(cacheKey);
   if (cached) {
+    // Write-through: native widgets only read SharedPreferences, so cached
+    // data must be re-written even when the AsyncStorage cache is warm.
+    await writeToSharedPreferences('watchlist', cached);
     await setWidgetLoadingState('watchlist', false);
     return cached;
   }
@@ -209,6 +212,9 @@ async function fetchAndCacheWidgetData<T extends Movie | TVShow>(
   await setWidgetLoadingState(prefsKey, true);
   const cached = await getCachedData<WidgetMediaItem[]>(cacheKey);
   if (cached) {
+    // Write-through: native widgets only read SharedPreferences, so cached
+    // data must be re-written even when the AsyncStorage cache is warm.
+    await writeToSharedPreferences(prefsKey, cached);
     await setWidgetLoadingState(prefsKey, false);
     return cached;
   }
