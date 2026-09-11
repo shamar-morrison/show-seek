@@ -1,97 +1,58 @@
 import * as Linking from 'expo-linking';
-import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
 
 /**
- * Hook to handle deep links
+ * Pure URL-to-route resolver for app deep links. Returns the href to navigate
+ * to, or null when the URL carries no in-app destination.
+ *
+ * Custom-scheme URLs (showseek://library/...) land their first section in
+ * `hostname` rather than `path`, so the hostname is folded back into the
+ * segments for non-http(s) schemes. Web URLs keep hostname separate.
  */
-export function useDeepLinking() {
-  const router = useRouter();
+export function resolveDeepLinkTarget(url: string): string | null {
+  const parsed = Linking.parse(url);
 
-  useEffect(() => {
-    const handleInitialURL = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        handleDeepLink(initialUrl);
-      }
-    };
+  const rawSegments = (parsed.path || '').split('/').filter(Boolean);
+  const segments = [
+    ...(parsed.hostname && parsed.scheme !== 'http' && parsed.scheme !== 'https'
+      ? [parsed.hostname]
+      : []),
+    ...rawSegments,
+  ];
 
-    const subscription = Linking.addEventListener('url', (event) => {
-      handleDeepLink(event.url);
-    });
+  if (segments.length < 1) {
+    console.warn('[DeepLink] Invalid deep link format:', url);
+    return null;
+  }
 
-    handleInitialURL();
-    return () => {
-      subscription.remove();
-    };
-  }, []);
+  const [first, second, third] = segments;
 
-  const handleDeepLink = (url: string) => {
-    try {
-      const parsed = Linking.parse(url);
+  // showseek://home (sent by the home-screen widgets)
+  if (first === 'home') {
+    return '/(tabs)/home';
+  }
 
-      const rawSegments = (parsed.path || '').split('/').filter(Boolean);
-      // For custom-scheme URLs (showseek://library/...) the first section
-      // lands in `hostname`, not `path` — fold it back so routing sees the
-      // full path. Web (http/https) URLs keep hostname separate.
-      const segments = [
-        ...(parsed.hostname && parsed.scheme !== 'http' && parsed.scheme !== 'https'
-          ? [parsed.hostname]
-          : []),
-        ...rawSegments,
-      ];
+  // showseek://library (fallback when a widget has no list bound)
+  if (first === 'library' && segments.length === 1) {
+    return '/(tabs)/library';
+  }
 
-      if (segments.length < 1) {
-        console.warn('Invalid deep link format:', url);
-        return;
-      }
+  // showseek://library/custom-list/<id> (sent by the watchlist widget)
+  if (first === 'library' && second === 'custom-list' && third) {
+    return `/(tabs)/library/custom-list/${third}`;
+  }
 
-      const [first, second, third] = segments;
+  if (segments.length < 2) {
+    console.warn('[DeepLink] Invalid deep link format:', url);
+    return null;
+  }
 
-      // showseek://home (sent by the home-screen widgets)
-      if (first === 'home') {
-        router.push('/(tabs)/home' as any);
-        console.log('Deep link handled:', { route: '/(tabs)/home' });
-        return;
-      }
+  const mediaType = segments[0]; // 'movie' or 'tv'
+  const mediaId = segments[1]; // the ID
 
-      // showseek://library (fallback when a widget has no list bound)
-      if (first === 'library' && segments.length === 1) {
-        router.push('/(tabs)/library' as any);
-        console.log('Deep link handled:', { route: '/(tabs)/library' });
-        return;
-      }
+  if (mediaType !== 'movie' && mediaType !== 'tv') {
+    console.warn('[DeepLink] Invalid media type in deep link:', mediaType);
+    return null;
+  }
 
-      // showseek://library/custom-list/<id> (sent by the watchlist widget)
-      if (first === 'library' && second === 'custom-list' && third) {
-        router.push(`/(tabs)/library/custom-list/${third}` as any);
-        console.log('Deep link handled:', {
-          listId: third,
-          route: `/(tabs)/library/custom-list/${third}`,
-        });
-        return;
-      }
-
-      if (segments.length < 2) {
-        console.warn('Invalid deep link format:', url);
-        return;
-      }
-
-      const mediaType = segments[0]; // 'movie' or 'tv'
-      const mediaId = segments[1]; // the ID
-
-      if (mediaType !== 'movie' && mediaType !== 'tv') {
-        console.warn('Invalid media type in deep link:', mediaType);
-        return;
-      }
-
-      const route = `/(tabs)/home/${mediaType}/${mediaId}` as const;
-
-      router.push(route);
-
-      console.log('Deep link handled:', { mediaType, mediaId, route });
-    } catch (error) {
-      console.error('Error handling deep link:', error);
-    }
-  };
+  return `/(tabs)/home/${mediaType}/${mediaId}`;
 }

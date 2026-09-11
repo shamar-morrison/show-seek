@@ -8,6 +8,7 @@ import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { BASE_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
 import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import ErrorBoundary from '@/src/components/ErrorBoundary';
+import { DeepLinkHandler } from '@/src/components/DeepLinkHandler';
 import { AccentColorProvider, useAccentColor } from '@/src/context/AccentColorProvider';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { GuestAccessProvider } from '@/src/context/GuestAccessContext';
@@ -15,7 +16,6 @@ import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { PremiumProvider } from '@/src/context/PremiumContext';
 import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
 import { TraktProvider } from '@/src/context/TraktContext';
-import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
 import { useWidgetAutoSync } from '@/src/hooks/useWidgetAutoSync';
@@ -652,7 +652,6 @@ function RootLayoutNav() {
     void initializeReviewSession();
   }, [loading, hasCompletedOnboarding, isLanguageReady, isRegionReady, isAccentReady]);
 
-  useDeepLinking();
   useQuickActions();
   useWidgetAutoSync(user?.uid ?? null);
 
@@ -860,6 +859,7 @@ export default function RootLayout() {
                         <GestureHandlerRootView
                           style={{ flex: 1, backgroundColor: COLORS.background }}
                         >
+                          <DeepLinkHandler />
                           <RootLayoutNav />
                         </GestureHandlerRootView>
                       </AccentColorProvider>
