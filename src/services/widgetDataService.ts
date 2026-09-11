@@ -26,6 +26,12 @@ export interface WidgetMediaItem {
   mediaType: 'movie' | 'tv';
 }
 
+export interface WatchlistWidgetData {
+  items: WidgetMediaItem[];
+  listName: string;
+  listId: string;
+}
+
 export async function getUpcomingMovies(limitCount: number = 5): Promise<WidgetMediaItem[]> {
   return fetchAndCacheWidgetData<Movie>(
     'upcoming_movies',
@@ -64,13 +70,14 @@ export async function getUserWatchlist(
   userId: string,
   listId: string,
   limitCount: number = 5
-): Promise<{ items: WidgetMediaItem[]; listName: string }> {
+): Promise<WatchlistWidgetData> {
   await setWidgetLoadingState('watchlist', true);
   const cacheKey = `${WIDGET_CACHE_PREFIX}watchlist_${userId}_${listId}`;
-  const cached = await getCachedData<{ items: WidgetMediaItem[]; listName: string }>(cacheKey);
+  const cached = await getCachedData<WatchlistWidgetData>(cacheKey);
   if (cached) {
     // Write-through: native widgets only read SharedPreferences, so cached
     // data must be re-written even when the AsyncStorage cache is warm.
+    // The cached object carries listId so widget taps keep resolving.
     await writeToSharedPreferences('watchlist', cached);
     await setWidgetLoadingState('watchlist', false);
     return cached;
@@ -90,7 +97,7 @@ export async function getUserWatchlist(
 
     if (!docSnap.exists()) {
       await setWidgetLoadingState('watchlist', false);
-      return { items: [], listName: listId };
+      return { items: [], listName: listId, listId };
     }
 
     const data = docSnap.data();
@@ -109,15 +116,13 @@ export async function getUserWatchlist(
         mediaType: item.media_type,
       }));
 
-    const result = { items, listName };
+    // Single object for cache and SharedPreferences so the two can never
+    // drift apart (notably listId, which widget taps need to resolve).
+    const result: WatchlistWidgetData = { items, listName, listId };
     await cacheData(cacheKey, result);
 
     // Write to SharedPreferences for native widgets
-    await writeToSharedPreferences('watchlist', {
-      items,
-      listName,
-      listId,
-    });
+    await writeToSharedPreferences('watchlist', result);
 
     await setWidgetLoadingState('watchlist', false);
     return result;
