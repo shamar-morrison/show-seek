@@ -11,7 +11,7 @@ export interface DeepLinkDebugInfo {
   url: string;
   source: string;
   target: string | null;
-  action: 'navigated' | 'queued' | 'duplicate' | 'ignored';
+  action: 'navigated' | 'queued' | 'duplicate' | 'ignored' | 'error';
   at: string;
 }
 
@@ -81,9 +81,15 @@ export function DeepLinkHandler() {
 
     lastHandledRef.current = { url, at: now };
     pendingUrlRef.current = null;
-    liveRef.current.router.push(target as any);
-    console.log('[DeepLink] Navigated:', { url, target });
-    recordDeepLinkDebug({ url, source, target, action: 'navigated', at: new Date(now).toISOString() });
+    try {
+      liveRef.current.router.push(target as any);
+      console.log('[DeepLink] Navigated:', { url, target });
+      recordDeepLinkDebug({ url, source, target, action: 'navigated', at: new Date(now).toISOString() });
+    } catch (error) {
+      // A push must never throw uncaught out of a link handler.
+      console.warn('[DeepLink] Push failed:', { url, target, error });
+      recordDeepLinkDebug({ url, source, target, action: 'error', at: new Date(now).toISOString() });
+    }
   }, []);
 
   // Flush a queued URL as soon as the navigator is ready.
