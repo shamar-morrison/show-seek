@@ -18,6 +18,7 @@ import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
+import { useWidgetAutoSync } from '@/src/hooks/useWidgetAutoSync';
 import {
   getAnalyticsScreenName,
   initializeAnalytics,
@@ -653,6 +654,7 @@ function RootLayoutNav() {
 
   useDeepLinking();
   useQuickActions();
+  useWidgetAutoSync(user?.uid ?? null);
 
   // Handle notification taps
   useEffect(() => {
