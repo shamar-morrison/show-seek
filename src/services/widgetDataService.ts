@@ -130,7 +130,7 @@ export async function getUserWatchlist(
     await setWidgetLoadingState('watchlist', false);
     const errorMessage = getFirestoreErrorMessage(error);
     console.error('Failed to fetch user watchlist for widget:', errorMessage, error);
-    return { items: [], listName: 'Unavailable' };
+    return { items: [], listName: 'Unavailable', listId };
   }
 }
 
