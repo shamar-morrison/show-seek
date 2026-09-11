@@ -1,3 +1,4 @@
+import { TmdbLogo } from '@/src/components/icons/TmdbLogo';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import {
@@ -9,7 +10,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDetailStyles } from './detailStyles';
 import { getAvatarUrl } from './detailUtils';
 import type { ReviewsSectionProps } from './types';
@@ -22,9 +23,12 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            {t('media.tmdbReviews')}
-          </Text>
+          <View style={localStyles.headerContainer}>
+            <TmdbLogo size={24} />
+            <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>
+              {t('media.tmdbReviews')}
+            </Text>
+          </View>
           <ScrollView
             {...HORIZONTAL_SCROLL_PROPS}
             showsHorizontalScrollIndicator={false}
@@ -54,9 +58,12 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
     if (isError && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            {t('media.tmdbReviews')}
-          </Text>
+          <View style={localStyles.headerContainer}>
+            <TmdbLogo size={24} />
+            <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>
+              {t('media.tmdbReviews')}
+            </Text>
+          </View>
           <View style={styles.reviewErrorBox}>
             <Text style={styles.reviewErrorText}>{t('errors.failedToLoadReviews')}</Text>
           </View>
@@ -67,9 +74,12 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
     if (!isLoading && !isError && reviews.length > 0) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            {t('media.tmdbReviews')}
-          </Text>
+          <View style={localStyles.headerContainer}>
+            <TmdbLogo size={24} />
+            <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>
+              {t('media.tmdbReviews')}
+            </Text>
+          </View>
           <View style={{ marginHorizontal: -SPACING.l }}>
             <HorizontalFlashList
               data={reviews}
@@ -140,3 +150,12 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
 );
 
 ReviewsSection.displayName = 'ReviewsSection';
+
+const localStyles = StyleSheet.create({
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    paddingBottom: SPACING.s,
+  },
+});
