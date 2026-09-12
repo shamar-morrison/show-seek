@@ -1,4 +1,12 @@
-import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  BUTTON_HEIGHT,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+  hexToRGBA,
+} from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 
 export const useSeasonScreenStyles = () =>
@@ -128,18 +136,18 @@ export const useSeasonScreenStyles = () =>
     },
     seasonActionButton: {
       flex: 1,
-      backgroundColor: accentColor,
-      paddingVertical: SPACING.s,
-      paddingHorizontal: SPACING.m,
+      height: BUTTON_HEIGHT,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
       borderRadius: BORDER_RADIUS.m,
+      overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 44,
     },
-    seasonActionButtonSecondary: {
-      backgroundColor: COLORS.surfaceLight,
-      borderWidth: 1,
-      borderColor: accentColor,
+    seasonActionButtonActive: {
+      backgroundColor: hexToRGBA(accentColor, 0.15),
+      borderColor: hexToRGBA(accentColor, 0.5),
     },
     seasonActionButtonDisabled: {
       opacity: 0.7,
@@ -152,17 +160,8 @@ export const useSeasonScreenStyles = () =>
     seasonActionButtonTextSmall: {
       fontSize: FONT_SIZE.xs,
     },
-    seasonActionButtonTextSecondary: {
+    seasonActionButtonTextActive: {
       color: accentColor,
-    },
-    seasonActionButtonContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: SPACING.xs,
-    },
-    seasonActionButtonIcon: {
-      color: COLORS.warning,
     },
     episodesContainer: {
       paddingTop: SPACING.s,

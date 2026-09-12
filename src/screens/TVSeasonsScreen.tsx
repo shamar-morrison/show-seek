@@ -55,7 +55,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { ArrowLeft01Icon, NoteDoneIcon, StarIcon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
@@ -929,84 +929,56 @@ export default function TVSeasonsScreen() {
                     >
                       {shouldOfferUnmarkAll ? t('watched.unmarkAll') : t('watched.markAll')}
                     </Text>
-                  )}                </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
               ) : null}
               <TouchableOpacity
                 style={[
                   styles.seasonActionButton,
-                  styles.seasonActionButtonSecondary,
+                  seasonUserRating > 0 && styles.seasonActionButtonActive,
                   !shouldShowMarkAllButton && { flex: 0, alignSelf: 'flex-start', minWidth: 140 },
                 ]}
                 onPress={() => handleOpenSeasonRating(seasonData)}
                 activeOpacity={ACTIVE_OPACITY}
-                                testID={`season-rate-button-${seasonData.season_number}`}
+                testID={`season-rate-button-${seasonData.season_number}`}
               >
-                <View style={styles.seasonActionButtonContent}>
-                  {seasonUserRating > 0 ? (
-                    <>
-                      <AppIcon
-                        icon={StarIcon}
-                        size={14}
-                        color={styles.seasonActionButtonIcon.color}
-                        fill={styles.seasonActionButtonIcon.color}
-                        testID={`season-rate-icon-${seasonData.season_number}`}
-                      />
-                      <Text
-                        style={[
-                          styles.seasonActionButtonText,
-                          styles.seasonActionButtonTextSecondary,
-                          styles.seasonActionButtonTextSmall,
-                        ]}
-                      >
-                        {displaySeasonUserRating}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text
-                      style={[
-                        styles.seasonActionButtonText,
-                        styles.seasonActionButtonTextSecondary,
-                        styles.seasonActionButtonTextSmall,
-                      ]}
-                    >
-                      {t('tvSeasons.rateSeason')}
-                    </Text>
-                  )}
-                </View>
+                <Text
+                  style={[
+                    styles.seasonActionButtonText,
+                    styles.seasonActionButtonTextSmall,
+                    seasonUserRating > 0 && styles.seasonActionButtonTextActive,
+                  ]}
+                >
+                  {seasonUserRating > 0 ? displaySeasonUserRating : t('tvSeasons.rateSeason')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.seasonActionButton, styles.seasonActionButtonSecondary]}
+                style={[
+                  styles.seasonActionButton,
+                  hasSeasonNote && styles.seasonActionButtonActive,
+                ]}
                 onPress={() => handleOpenSeasonNote(seasonData)}
                 disabled={isOpeningSeasonNote}
                 activeOpacity={ACTIVE_OPACITY}
                 testID={`season-note-button-${seasonData.season_number}`}
               >
-                <View style={styles.seasonActionButtonContent}>
-                  {isOpeningSeasonNote ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={styles.seasonActionButtonTextSecondary.color}
-                      testID={`season-note-spinner-${seasonData.season_number}`}
-                    />
-                  ) : hasSeasonNote ? (
-                    <AppIcon
-                      icon={NoteDoneIcon}
-                      size={16}
-                      color={styles.seasonActionButtonTextSecondary.color}
-                      testID={`season-note-icon-${seasonData.season_number}`}
-                    />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.seasonActionButtonText,
-                        styles.seasonActionButtonTextSecondary,
-                        styles.seasonActionButtonTextSmall,
-                      ]}
-                    >
-                      {t('notes.addNote')}
-                    </Text>
-                  )}
-                </View>
+                {isOpeningSeasonNote ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={COLORS.white}
+                    testID={`season-note-spinner-${seasonData.season_number}`}
+                  />
+                ) : (
+                  <Text
+                    style={[
+                      styles.seasonActionButtonText,
+                      styles.seasonActionButtonTextSmall,
+                      hasSeasonNote && styles.seasonActionButtonTextActive,
+                    ]}
+                  >
+                    {hasSeasonNote ? t('notes.editNote') : t('notes.addNote')}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1153,9 +1125,9 @@ export default function TVSeasonsScreen() {
       styles.seasonExpandedActionsRow,
       styles.seasonActionButton,
       styles.seasonActionButtonDisabled,
-      styles.seasonActionButtonSecondary,
+      styles.seasonActionButtonActive,
       styles.seasonActionButtonText,
-      styles.seasonActionButtonTextSecondary,
+      styles.seasonActionButtonTextActive,
       episodeRatingsById,
       seasonProgressBySeasonNumber,
       getProjectedSeasonProgress,

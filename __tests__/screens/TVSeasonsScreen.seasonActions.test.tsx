@@ -280,14 +280,13 @@ describe('TVSeasonsScreen season actions', () => {
     expect(screen.getByTestId('season-rate-button-1')).toBeTruthy();
   });
 
-  it('shows the saved season rating with a star icon after the season has been rated', () => {
+  it('shows the saved season rating as text after the season has been rated', () => {
     mockQueries();
     mockRatingsData = [{ id: 'season-101-1', mediaType: 'season', rating: 8.5 }];
 
     const screen = renderWithProviders(<TVSeasonsScreen />);
 
     expect(screen.getByTestId('season-rate-button-1')).toBeTruthy();
-    expect(screen.getAllByTestId('season-rate-icon-1').length).toBeGreaterThan(0);
     expect(screen.getByText('8.5')).toBeTruthy();
   });
 
@@ -324,7 +323,7 @@ describe('TVSeasonsScreen season actions', () => {
     );
   });
 
-  it('shows the filled note icon when the season already has a note', () => {
+  it('shows edit affordance text when the season already has a note', () => {
     mockQueries();
     mockNotesData = [
       {
@@ -345,6 +344,6 @@ describe('TVSeasonsScreen season actions', () => {
     const screen = renderWithProviders(<TVSeasonsScreen />);
 
     expect(screen.getByTestId('season-note-button-1')).toBeTruthy();
-    expect(screen.getAllByTestId('season-note-icon-1').length).toBeGreaterThan(0);
+    expect(screen.getByText('Edit Note')).toBeTruthy();
   });
 });
