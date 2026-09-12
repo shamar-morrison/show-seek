@@ -16,8 +16,8 @@ dependencies:
     specifier: ^15.0.3
     version: 15.0.3(expo-font@14.0.9)(react-native@0.81.5)(react@19.1.0)
   '@hugeicons/core-free-icons':
-    specifier: 3.1.1
-    version: 3.1.1
+    specifier: 4.3.2
+    version: 4.3.2
   '@hugeicons/react-native':
     specifier: ^1.0.16
     version: 1.0.16(react-native-svg@15.12.1)(react-native@0.81.5)(react@19.1.0)
@@ -2828,8 +2828,8 @@ packages:
       hono: 4.11.3
     dev: true
 
-  /@hugeicons/core-free-icons@3.1.1:
-    resolution: {integrity: sha512-UpS2lUQFi5sKyJSWwM6rO+BnPLvVz1gsyCpPHeZyVuZqi89YH8ksliza4cwaODqKOZyeXmG8juo1ty4QtQofkg==}
+  /@hugeicons/core-free-icons@4.3.2:
+    resolution: {integrity: sha512-31uDdIq71YcVxeltjcS/tsmYFt4VjmgyNTZfG1bY6mbeFmsYL6Nwz9PdDZetGtGPZOAEVg0bHoQFOoPWDC51bg==}
     dev: false
 
   /@hugeicons/react-native@1.0.16(react-native-svg@15.12.1)(react-native@0.81.5)(react@19.1.0):

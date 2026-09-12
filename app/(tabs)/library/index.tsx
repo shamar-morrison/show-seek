@@ -10,17 +10,19 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   AddToListIcon,
   BarChartIcon,
-  CameraVideoIcon,
   DashboardSquare03Icon,
   FavouriteIcon,
-  Layers01Icon,
+  CalendarFavorite01Icon,
+  ListVideoIcon,
   MessageFavourite01Icon,
+  MonitorPlayIcon,
   Notification01Icon,
   PlayIcon,
   Settings02Icon,
   Note01Icon,
+  TicketStarIcon,
   Tv01Icon,
-  UserIcon,
+  UserLove02Icon,
 } from '@hugeicons/core-free-icons';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -59,7 +61,7 @@ export default function LibraryScreen() {
           },
           {
             id: 'collection-progress',
-            icon: Layers01Icon,
+            icon: ListVideoIcon,
             title: t('library.collectionProgress'),
             route: '/(tabs)/library/collection-progress',
           },
@@ -100,19 +102,19 @@ export default function LibraryScreen() {
           },
           {
             id: 'season-ratings',
-            icon: Layers01Icon,
+            icon: CalendarFavorite01Icon,
             title: t('library.seasonRatings'),
             route: '/(tabs)/library/ratings/seasons',
           },
           {
             id: 'movie-ratings',
-            icon: CameraVideoIcon,
+            icon: TicketStarIcon,
             title: t('library.movieRatings'),
             route: '/(tabs)/library/ratings/movies',
           },
           {
             id: 'tv-ratings',
-            icon: Tv01Icon,
+            icon: MonitorPlayIcon,
             title: t('library.tvShowRatings'),
             route: '/(tabs)/library/ratings/tv-shows',
           },
@@ -135,7 +137,7 @@ export default function LibraryScreen() {
           },
           {
             id: 'favorite-people',
-            icon: UserIcon,
+            icon: UserLove02Icon,
             title: t('library.favoritePeople'),
             route: '/(tabs)/library/favorite-people',
           },
