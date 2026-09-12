@@ -318,7 +318,8 @@ describe('TVSeasonsScreen season actions', () => {
         mediaId: 101,
         seasonNumber: 1,
         showId: 101,
-        mediaTitle: 'Season 1',
+        mediaTitle: 'Mock Show - Season 1',
+        posterPath: '/season1.jpg',
       })
     );
   });

@@ -588,9 +588,10 @@ export default function TVSeasonsScreen() {
           mediaType: 'season',
           mediaId: tvId,
           seasonNumber,
-          posterPath: showPosterPath,
-          mediaTitle:
-            seasonData.name || t('media.seasonNumber', { number: seasonNumber }),
+          posterPath: seasonData.poster_path ?? showPosterPath,
+          mediaTitle: displayShowTitle
+            ? `${displayShowTitle} - ${seasonData.name || t('media.seasonNumber', { number: seasonNumber })}`
+            : seasonData.name || t('media.seasonNumber', { number: seasonNumber }),
           showId: tvId,
           initialNote: resolvedNote?.content ?? '',
         });
@@ -605,6 +606,7 @@ export default function TVSeasonsScreen() {
       seasonNotesByNumber,
       userId,
       canCreateNote,
+      displayShowTitle,
       showPosterPath,
       t,
       tvId,

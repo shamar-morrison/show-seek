@@ -369,8 +369,8 @@ export default function NotesScreen() {
       const resolvedPosterPath =
         item.mediaType === 'episode' && item.showId
           ? resolvePosterPath('tv', item.showId, item.posterPath)
-          : item.mediaType === 'season' && item.showId
-            ? resolvePosterPath('tv', item.showId, item.posterPath)
+          : item.mediaType === 'season'
+            ? item.posterPath
             : item.mediaType === 'movie' || item.mediaType === 'tv'
               ? resolvePosterPath(item.mediaType, item.mediaId, item.posterPath)
               : item.posterPath;
@@ -390,7 +390,7 @@ export default function NotesScreen() {
             contentFit="cover"
           />
           <View style={listCardStyles.info}>
-            <Text style={styles.mediaTitle} numberOfLines={1}>
+            <Text style={styles.mediaTitle} numberOfLines={2}>
               {item.mediaTitle}
             </Text>
             <Text style={styles.noteText} numberOfLines={2}>
