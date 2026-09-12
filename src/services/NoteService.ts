@@ -26,10 +26,10 @@ class NoteService {
 
   /**
    * Generate note document ID
-   * Format: "{mediaType}-{mediaId}" (e.g., "movie-550", "tv-1396", "episode-tvId-season-episode")
+   * Format: "{mediaType}-{mediaId}" (e.g., "movie-550", "tv-1396", "episode-tvId-season-episode", "season-tvId-season")
    */
   private getNoteId(
-    mediaType: 'movie' | 'tv' | 'episode',
+    mediaType: 'movie' | 'tv' | 'episode' | 'season',
     mediaId: number,
     season?: number,
     episode?: number
@@ -40,6 +40,12 @@ class NoteService {
       }
       return `episode-${mediaId}-${season}-${episode}`;
     }
+    if (mediaType === 'season') {
+      if (season === undefined) {
+        throw new Error('Missing season for season mediaType');
+      }
+      return `season-${mediaId}-${season}`;
+    }
     return `${mediaType}-${mediaId}`;
   }
 
@@ -48,7 +54,7 @@ class NoteService {
    */
   private getNoteRef(
     userId: string,
-    mediaType: 'movie' | 'tv' | 'episode',
+    mediaType: 'movie' | 'tv' | 'episode' | 'season',
     mediaId: number,
     season?: number,
     episode?: number
@@ -72,7 +78,7 @@ class NoteService {
     return {
       id: doc.id,
       userId: data.userId as string,
-      mediaType: data.mediaType as 'movie' | 'tv' | 'episode',
+      mediaType: data.mediaType as 'movie' | 'tv' | 'episode' | 'season',
       mediaId: data.mediaId as number,
       content: data.content as string,
       posterPath: (data.posterPath as string | null) ?? null,
@@ -174,7 +180,7 @@ class NoteService {
    */
   async getNote(
     userId: string,
-    mediaType: 'movie' | 'tv' | 'episode',
+    mediaType: 'movie' | 'tv' | 'episode' | 'season',
     mediaId: number,
     season?: number,
     episode?: number
@@ -240,7 +246,7 @@ class NoteService {
    */
   async deleteNote(
     userId: string,
-    mediaType: 'movie' | 'tv' | 'episode',
+    mediaType: 'movie' | 'tv' | 'episode' | 'season',
     mediaId: number,
     season?: number,
     episode?: number

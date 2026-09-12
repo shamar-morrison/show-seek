@@ -95,6 +95,57 @@ describe('navigateFromLibraryNote', () => {
     );
   });
 
+  it('navigates season notes to the seasons screen with the season preselected', () => {
+    const queryClient = new QueryClient();
+    const push = jest.fn();
+    const note = createNote({
+      id: 'season-100-2',
+      mediaType: 'season',
+      mediaId: 100,
+      showId: 100,
+      seasonNumber: 2,
+      mediaTitle: 'Season 2',
+    });
+
+    const path = navigateFromLibraryNote({
+      note,
+      currentTab: 'library',
+      queryClient,
+      push,
+    });
+
+    expect(path).toBe('/(tabs)/library/tv/100/seasons?season=2');
+    expect(push).toHaveBeenCalledWith('/(tabs)/library/tv/100/seasons?season=2');
+    expect(queryClient.getQueryData(getMediaNoteQueryKey('user-1', 'season', 100, 2, undefined))).toEqual(
+      note
+    );
+  });
+
+  it('does not navigate when a season note is missing its season number', () => {
+    const queryClient = new QueryClient();
+    const push = jest.fn();
+    const onInvalidEpisodeNote = jest.fn();
+    const note = createNote({
+      id: 'season-100-2',
+      mediaType: 'season',
+      mediaId: 100,
+      showId: 100,
+      seasonNumber: undefined,
+    });
+
+    const path = navigateFromLibraryNote({
+      note,
+      currentTab: 'library',
+      queryClient,
+      push,
+      onInvalidEpisodeNote,
+    });
+
+    expect(path).toBeNull();
+    expect(onInvalidEpisodeNote).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it('does not navigate or seed cache when current tab is missing', () => {
     const queryClient = new QueryClient();
     const push = jest.fn();

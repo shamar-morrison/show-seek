@@ -40,7 +40,7 @@ export interface NoteModalRef {
 }
 
 export interface NoteModalPresentParams {
-  mediaType: 'movie' | 'tv' | 'episode';
+  mediaType: 'movie' | 'tv' | 'episode' | 'season';
   mediaId: number;
   posterPath: string | null;
   mediaTitle: string;
@@ -64,7 +64,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
   const saveNoteMutation = useSaveNote();
   const deleteNoteMutation = useDeleteNote();
 
-  const [mediaType, setMediaType] = useState<'movie' | 'tv' | 'episode'>('movie');
+  const [mediaType, setMediaType] = useState<'movie' | 'tv' | 'episode' | 'season'>('movie');
   const [mediaId, setMediaId] = useState(0);
   const [posterPath, setPosterPath] = useState<string | null>(null);
   const [mediaTitle, setMediaTitle] = useState('');

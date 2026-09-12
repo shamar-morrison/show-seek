@@ -61,7 +61,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'list' | 'grouped';
-type NoteCategory = 'all' | 'movie' | 'tv' | 'episode';
+type NoteCategory = 'all' | 'movie' | 'tv' | 'episode' | 'season';
 
 const VIEW_MODE_STORAGE_KEY = 'notesViewMode';
 const SORT_STATE_STORAGE_KEY = 'notesSortState';
@@ -282,6 +282,7 @@ export default function NotesScreen() {
       { key: 'movie', label: t('media.movies') },
       { key: 'tv', label: t('media.tvShows') },
       { key: 'episode', label: t('media.episodes') },
+      { key: 'season', label: t('media.seasons') },
     ],
     [t, i18n.language]
   );
@@ -368,9 +369,11 @@ export default function NotesScreen() {
       const resolvedPosterPath =
         item.mediaType === 'episode' && item.showId
           ? resolvePosterPath('tv', item.showId, item.posterPath)
-          : item.mediaType === 'movie' || item.mediaType === 'tv'
-            ? resolvePosterPath(item.mediaType, item.mediaId, item.posterPath)
-            : item.posterPath;
+          : item.mediaType === 'season' && item.showId
+            ? resolvePosterPath('tv', item.showId, item.posterPath)
+            : item.mediaType === 'movie' || item.mediaType === 'tv'
+              ? resolvePosterPath(item.mediaType, item.mediaId, item.posterPath)
+              : item.posterPath;
       const posterUrl = getImageUrl(resolvedPosterPath, TMDB_IMAGE_SIZES.poster.small);
 
       return (

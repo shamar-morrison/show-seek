@@ -152,6 +152,12 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
 
 jest.mock('@/src/components/RatingModal', () => () => null);
 
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({ user: { uid: 'user-1', isAnonymous: false }, isGuest: false }),
+}));
+
+jest.mock('@/src/components/NotesModal', () => () => null);
+
 jest.mock('@/src/components/ui/LoadingModal', () => {
   return function LoadingModalMock({
     visible,

@@ -5,6 +5,20 @@ import { Alert } from 'react-native';
 
 const mockUseQuery = jest.fn();
 let mockRatingsData: Array<{ id: string; mediaType: 'season'; rating: number }> = [];
+let mockNotesData: Array<{
+  id: string;
+  userId: string;
+  mediaType: 'season';
+  mediaId: number;
+  content: string;
+  posterPath: string | null;
+  mediaTitle: string;
+  createdAt: Date;
+  updatedAt: Date;
+  seasonNumber: number;
+  showId: number;
+}> = [];
+const mockNotePresent = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('@tanstack/react-query', () => {
   const actual = jest.requireActual('@tanstack/react-query');
@@ -47,6 +61,10 @@ jest.mock('@shopify/flash-list', () => {
 
   return { FlashList };
 });
+
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({ user: { uid: 'user-1', isAnonymous: false }, isGuest: false }),
+}));
 
 jest.mock('@/src/hooks/useNavigation', () => ({
   useCurrentTab: () => 'library',
@@ -128,6 +146,22 @@ jest.mock('@/src/components/RatingModal', () => {
 
 jest.mock('@/src/components/ui/LoadingModal', () => () => null);
 
+jest.mock('@/src/components/NotesModal', () => {
+  const React = require('react');
+  const MockNoteModal = React.forwardRef((_: unknown, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      present: (...args: any[]) => mockNotePresent(...args),
+      dismiss: jest.fn().mockResolvedValue(undefined),
+    }));
+    return null;
+  });
+  MockNoteModal.displayName = 'MockNoteModal';
+  return {
+    __esModule: true,
+    default: MockNoteModal,
+  };
+});
+
 jest.mock('@/src/components/tv/EpisodeItem', () => ({
   EpisodeItem: () => null,
 }));
@@ -181,6 +215,7 @@ describe('TVSeasonsScreen season actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRatingsData = [];
+    mockNotesData = [];
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
 
@@ -193,6 +228,14 @@ describe('TVSeasonsScreen season actions', () => {
       if (Array.isArray(queryKey) && queryKey[2] === 'all-seasons') {
         return {
           data: [buildSeason(overview)],
+          isLoading: false,
+          isError: false,
+        } as any;
+      }
+
+      if (Array.isArray(queryKey) && queryKey[0] === 'notes') {
+        return {
+          data: mockNotesData,
           isLoading: false,
           isError: false,
         } as any;
@@ -256,5 +299,52 @@ describe('TVSeasonsScreen season actions', () => {
 
     expect(screen.getByText('8')).toBeTruthy();
     expect(screen.queryByText('8.0')).toBeNull();
+  });
+
+  it('renders the season note button and presents the note editor on press', async () => {
+    mockQueries();
+
+    const screen = renderWithProviders(<TVSeasonsScreen />);
+
+    expect(screen.getByTestId('season-note-button-1')).toBeTruthy();
+
+    await act(async () => {
+      screen.getByTestId('season-note-button-1').props.onPress();
+    });
+
+    expect(mockNotePresent).toHaveBeenCalledTimes(1);
+    expect(mockNotePresent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mediaType: 'season',
+        mediaId: 101,
+        seasonNumber: 1,
+        showId: 101,
+        mediaTitle: 'Season 1',
+      })
+    );
+  });
+
+  it('shows the filled note icon when the season already has a note', () => {
+    mockQueries();
+    mockNotesData = [
+      {
+        id: 'season-101-1',
+        userId: 'user-1',
+        mediaType: 'season',
+        mediaId: 101,
+        content: 'Great season',
+        posterPath: '/show.jpg',
+        mediaTitle: 'Season 1',
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+        seasonNumber: 1,
+        showId: 101,
+      },
+    ];
+
+    const screen = renderWithProviders(<TVSeasonsScreen />);
+
+    expect(screen.getByTestId('season-note-button-1')).toBeTruthy();
+    expect(screen.getAllByTestId('season-note-icon-1').length).toBeGreaterThan(0);
   });
 });

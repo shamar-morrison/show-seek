@@ -521,7 +521,7 @@
     "noteDeleted": "Note deleted",
     "confirmDeleteNote": "Delete this note?",
     "privateNote": "Only you can see this note",
-    "premiumDescription": "Save personal notes for movies, shows, and episodes.",
+    "premiumDescription": "Save personal notes for movies, shows, seasons, and episodes.",
     "limitReachedTitle": "Limit Reached",
     "limitReachedMessage": "Free users can save up to {{max}} notes. Upgrade to Premium for unlimited notes.",
     "searchPlaceholder": "Search notes..."
@@ -1712,7 +1712,7 @@
   },
   "tvSeasons": {
     "failedToLoadSeasons": "Failed to load seasons",
-    "rateSeason": "Rate season"
+    "rateSeason": "Rate"
   },
   "whereToWatch": {
     "title": "Where to Watch",

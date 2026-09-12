@@ -8,12 +8,19 @@ import {
 } from '@/src/components/tv/SeasonItem';
 import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
 import RatingModal from '@/src/components/RatingModal';
+import NoteModal, { type NoteModalRef } from '@/src/components/NotesModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
+import { useAuth } from '@/src/context/auth';
+import {
+  getMediaNoteQueryKey,
+  useCanCreateNote,
+  useNotes,
+} from '@/src/hooks/useNotes';
 import {
   type MarkAllEpisodesUnwatchedParams,
   type MarkAllEpisodesWatchedParams,
@@ -37,16 +44,18 @@ import {
   type TVSeasonsListRow,
 } from '@/src/screens/tvSeasonsListRows';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
+import { noteService } from '@/src/services/NoteService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import type { SeasonProgress, WatchedEpisode } from '@/src/types/episodeTracking';
+import type { Note } from '@/src/types/note';
 import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { ArrowLeft01Icon, StarIcon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, NoteDoneIcon, StarIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
@@ -115,6 +124,13 @@ export default function TVSeasonsScreen() {
 
   const { data: ratings } = useRatings();
   const isAccountRequired = useAccountRequired();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
+  const { data: allNotes } = useNotes();
+  const canCreateNote = useCanCreateNote();
+  const noteSheetRef = useRef<NoteModalRef | null>(null);
+  const [openingNoteSeasonNumber, setOpeningNoteSeasonNumber] = useState<number | null>(null);
 
   // Progressive render: defer heavy content until navigation animation completes
   const { isReady } = useProgressiveRender();
@@ -506,6 +522,95 @@ export default function TVSeasonsScreen() {
     [isAccountRequired]
   );
 
+  const seasonNotesByNumber = useMemo(() => {
+    const map = new Map<number, Note>();
+    const notesList = Array.isArray(allNotes) ? allNotes : [];
+
+    notesList.forEach((note) => {
+      if (note.mediaType === 'season' && note.mediaId === tvId) {
+        map.set(note.seasonNumber as number, note);
+      }
+    });
+
+    return map;
+  }, [allNotes, tvId]);
+
+  const handleOpenSeasonNote = useCallback(
+    async (seasonData: SeasonWithEpisodes) => {
+      if (isAccountRequired() || openingNoteSeasonNumber !== null) {
+        return;
+      }
+
+      const seasonNumber = seasonData.season_number;
+      setOpeningNoteSeasonNumber(seasonNumber);
+
+      try {
+        const detailKey = getMediaNoteQueryKey(userId, 'season', tvId, seasonNumber);
+        let resolvedNote =
+          queryClient.getQueryData<Note | null>(detailKey) ??
+          seasonNotesByNumber.get(seasonNumber) ??
+          null;
+
+        if (resolvedNote) {
+          queryClient.setQueryData<Note | null>(detailKey, resolvedNote);
+        } else if (userId) {
+          try {
+            const fetchedNote = await queryClient.fetchQuery({
+              queryKey: detailKey,
+              queryFn: () => noteService.getNote(userId, 'season', tvId, seasonNumber),
+            });
+            resolvedNote = fetchedNote;
+          } catch (error) {
+            console.error('[TVSeasonsScreen] Failed to load season note:', error);
+            Alert.alert(t('common.error'), t('common.tryAgain'));
+            return;
+          }
+        }
+
+        if (!resolvedNote) {
+          try {
+            const canCreate = await canCreateNote({
+              mediaType: 'season',
+              mediaId: tvId,
+              seasonNumber,
+            });
+            if (!canCreate) {
+              return;
+            }
+          } catch (error) {
+            console.error('[TVSeasonsScreen] Failed to check note limit:', error);
+            Alert.alert(t('common.error'), t('common.tryAgain'));
+            return;
+          }
+        }
+
+        await noteSheetRef.current?.present({
+          mediaType: 'season',
+          mediaId: tvId,
+          seasonNumber,
+          posterPath: showPosterPath,
+          mediaTitle:
+            seasonData.name || t('media.seasonNumber', { number: seasonNumber }),
+          showId: tvId,
+          initialNote: resolvedNote?.content ?? '',
+        });
+      } finally {
+        setOpeningNoteSeasonNumber(null);
+      }
+    },
+    [
+      isAccountRequired,
+      openingNoteSeasonNumber,
+      queryClient,
+      seasonNotesByNumber,
+      userId,
+      canCreateNote,
+      showPosterPath,
+      t,
+      tvId,
+    ]
+  );
+
   const seasonProgressBySeasonNumber = useMemo(() => {
     const progressMap = new Map<number, SeasonProgress>();
 
@@ -715,6 +820,9 @@ export default function TVSeasonsScreen() {
           !!bulkActionState.action;
         const seasonDocId = `season-${tvId}-${seasonData.season_number}`;
         const seasonUserRating = seasonRatingsById.get(seasonDocId) || 0;
+        const hasSeasonNote = seasonNotesByNumber.has(seasonData.season_number);
+        const isOpeningSeasonNote =
+          openingNoteSeasonNumber === seasonData.season_number;
         const displaySeasonUserRating = Number.isInteger(seasonUserRating)
           ? seasonUserRating.toString()
           : seasonUserRating.toFixed(1);
@@ -813,11 +921,15 @@ export default function TVSeasonsScreen() {
                       testID={`season-mark-all-spinner-${seasonData.season_number}`}
                     />
                   ) : (
-                    <Text style={styles.seasonActionButtonText}>
+                    <Text
+                      style={[
+                        styles.seasonActionButtonText,
+                        styles.seasonActionButtonTextSmall,
+                      ]}
+                    >
                       {shouldOfferUnmarkAll ? t('watched.unmarkAll') : t('watched.markAll')}
                     </Text>
-                  )}
-                </TouchableOpacity>
+                  )}                </TouchableOpacity>
               ) : null}
               <TouchableOpacity
                 style={[
@@ -827,7 +939,7 @@ export default function TVSeasonsScreen() {
                 ]}
                 onPress={() => handleOpenSeasonRating(seasonData)}
                 activeOpacity={ACTIVE_OPACITY}
-                testID={`season-rate-button-${seasonData.season_number}`}
+                                testID={`season-rate-button-${seasonData.season_number}`}
               >
                 <View style={styles.seasonActionButtonContent}>
                   {seasonUserRating > 0 ? (
@@ -843,6 +955,7 @@ export default function TVSeasonsScreen() {
                         style={[
                           styles.seasonActionButtonText,
                           styles.seasonActionButtonTextSecondary,
+                          styles.seasonActionButtonTextSmall,
                         ]}
                       >
                         {displaySeasonUserRating}
@@ -853,9 +966,44 @@ export default function TVSeasonsScreen() {
                       style={[
                         styles.seasonActionButtonText,
                         styles.seasonActionButtonTextSecondary,
+                        styles.seasonActionButtonTextSmall,
                       ]}
                     >
                       {t('tvSeasons.rateSeason')}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.seasonActionButton, styles.seasonActionButtonSecondary]}
+                onPress={() => handleOpenSeasonNote(seasonData)}
+                disabled={isOpeningSeasonNote}
+                activeOpacity={ACTIVE_OPACITY}
+                testID={`season-note-button-${seasonData.season_number}`}
+              >
+                <View style={styles.seasonActionButtonContent}>
+                  {isOpeningSeasonNote ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={styles.seasonActionButtonTextSecondary.color}
+                      testID={`season-note-spinner-${seasonData.season_number}`}
+                    />
+                  ) : hasSeasonNote ? (
+                    <AppIcon
+                      icon={NoteDoneIcon}
+                      size={16}
+                      color={styles.seasonActionButtonTextSecondary.color}
+                      testID={`season-note-icon-${seasonData.season_number}`}
+                    />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.seasonActionButtonText,
+                        styles.seasonActionButtonTextSecondary,
+                        styles.seasonActionButtonTextSmall,
+                      ]}
+                    >
+                      {t('notes.addNote')}
                     </Text>
                   )}
                 </View>
@@ -983,6 +1131,9 @@ export default function TVSeasonsScreen() {
       handleMarkAllWatched,
       handleMarkAllUnwatched,
       handleOpenSeasonRating,
+      handleOpenSeasonNote,
+      seasonNotesByNumber,
+      openingNoteSeasonNumber,
       episodeTracking,
       markWatched.isPending,
       markWatched.variables,
@@ -1124,6 +1275,7 @@ export default function TVSeasonsScreen() {
           onRatingSuccess={() => {}}
         />
       ) : null}
+      <NoteModal ref={noteSheetRef} />
     </View>
   );
 }

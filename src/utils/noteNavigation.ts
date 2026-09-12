@@ -13,6 +13,16 @@ export const getNoteDetailPath = (note: Note, currentTab: string): string | null
     return `/(tabs)/${currentTab}/tv/${showOrMediaId}/season/${note.seasonNumber}/episode/${note.episodeNumber}`;
   }
 
+  if (note.mediaType === 'season') {
+    if (note.seasonNumber === undefined) {
+      return null;
+    }
+
+    const showOrMediaId = note.showId ?? note.mediaId;
+
+    return `/(tabs)/${currentTab}/tv/${showOrMediaId}/seasons?season=${note.seasonNumber}`;
+  }
+
   const mediaPath = note.mediaType === 'movie' ? 'movie' : 'tv';
   return `/(tabs)/${currentTab}/${mediaPath}/${note.mediaId}`;
 };

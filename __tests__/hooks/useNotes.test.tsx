@@ -87,10 +87,12 @@ const getEpisodeNoteKey = (
   episodeNumber: number,
   userId = 'test-user-id'
 ) => ['note', userId, 'episode', mediaId, seasonNumber, episodeNumber] as const;
+const getSeasonNoteKey = (mediaId: number, seasonNumber: number, userId = 'test-user-id') =>
+  ['note', userId, 'season', mediaId, seasonNumber, null] as const;
 
 const createNote = (params: {
   id: string;
-  mediaType: 'movie' | 'tv' | 'episode';
+  mediaType: 'movie' | 'tv' | 'episode' | 'season';
   mediaId: number;
   content: string;
   mediaTitle: string;
@@ -418,6 +420,70 @@ describe('useNotes optimistic cache behavior', () => {
       expect(updatedEpisode1?.id).toBe('episode-100-1-1');
       expect(updatedEpisode1?.content).toBe('Updated episode 1 note');
       expect(untouchedEpisode2?.content).toBe('Episode 2 note');
+    });
+
+    await act(async () => {
+      saveDeferred.resolve(undefined);
+      await saveDeferred.promise;
+    });
+  });
+
+  it('season note uses season key/id and matches only the same season', async () => {
+    const client = createQueryClient();
+    const season1Note = createNote({
+      id: 'season-100-1',
+      mediaType: 'season',
+      mediaId: 100,
+      seasonNumber: 1,
+      content: 'Season 1 note',
+      mediaTitle: 'Season 1',
+    });
+    const season2Note = createNote({
+      id: 'season-100-2',
+      mediaType: 'season',
+      mediaId: 100,
+      seasonNumber: 2,
+      content: 'Season 2 note',
+      mediaTitle: 'Season 2',
+    });
+    const saveDeferred = createDeferred<void>();
+    mockSaveNote.mockReturnValueOnce(saveDeferred.promise);
+    mockGetNote.mockResolvedValue(season1Note);
+
+    client.setQueryData(getSeasonNoteKey(100, 1), season1Note);
+    client.setQueryData(getSeasonNoteKey(100, 2), season2Note);
+    client.setQueryData(getNotesKey(), [season1Note, season2Note]);
+
+    const { result } = renderHook(
+      () => ({
+        mediaNote: useMediaNote('season', 100, 1),
+        saveNote: useSaveNote(),
+      }),
+      { wrapper: createWrapper(client) }
+    );
+
+    await waitFor(() => {
+      expect(result.current.mediaNote.note?.id).toBe('season-100-1');
+    });
+
+    act(() => {
+      result.current.saveNote.mutate({
+        mediaType: 'season',
+        mediaId: 100,
+        seasonNumber: 1,
+        content: 'Updated season 1 note',
+        posterPath: null,
+        mediaTitle: 'Season 1',
+        showId: 100,
+      });
+    });
+
+    await waitFor(() => {
+      const updatedSeason1 = client.getQueryData<Note | null>(getSeasonNoteKey(100, 1));
+      const untouchedSeason2 = client.getQueryData<Note | null>(getSeasonNoteKey(100, 2));
+      expect(updatedSeason1?.id).toBe('season-100-1');
+      expect(updatedSeason1?.content).toBe('Updated season 1 note');
+      expect(untouchedSeason2?.content).toBe('Season 2 note');
     });
 
     await act(async () => {

@@ -521,7 +521,7 @@
     "noteDeleted": "Not silindi",
     "confirmDeleteNote": "Bu not silinsin mi?",
     "privateNote": "Bu notu yalnızca siz görebilirsiniz",
-    "premiumDescription": "Film, dizi ve bölümler için kişisel notlar kaydedin.",
+    "premiumDescription": "Film, dizi, sezon ve bölümler için kişisel notlar kaydedin.",
     "limitReachedTitle": "Sınıra ulaşıldı",
     "limitReachedMessage": "Ücretsiz kullanıcılar en fazla {{max}} not kaydedebilir. Sınırsız not için Premium'a yükseltin.",
     "searchPlaceholder": "Notlarda ara..."
@@ -1683,7 +1683,7 @@
     "watched": "İzlendi"
   },
   "tvDetail": { "failedToLoad": "Dizi ayrıntıları yüklenemedi" },
-  "tvSeasons": { "failedToLoadSeasons": "Sezonlar yüklenemedi", "rateSeason": "Sezonu puanla" },
+  "tvSeasons": { "failedToLoadSeasons": "Sezonlar yüklenemedi", "rateSeason": "Puanla" },
   "whereToWatch": {
     "title": "Nereden izlenir",
     "intro": "Şu anda izlenebilecekleri görmek için listelerinizden birini ve bir yayın hizmetini seçin.",

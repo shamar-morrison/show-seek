@@ -149,6 +149,9 @@ export const useSeasonScreenStyles = () =>
       fontSize: FONT_SIZE.s,
       fontFamily: FONT_FAMILY.semiBold,
     },
+    seasonActionButtonTextSmall: {
+      fontSize: FONT_SIZE.xs,
+    },
     seasonActionButtonTextSecondary: {
       color: accentColor,
     },

@@ -24,7 +24,7 @@ export { getMediaNoteQueryKey };
 type NoteTarget = Pick<NoteInput, 'mediaType' | 'mediaId' | 'seasonNumber' | 'episodeNumber'>;
 
 const getNoteId = (
-  mediaType: 'movie' | 'tv' | 'episode',
+  mediaType: 'movie' | 'tv' | 'episode' | 'season',
   mediaId: number,
   seasonNumber?: number,
   episodeNumber?: number
@@ -34,6 +34,13 @@ const getNoteId = (
       throw new Error('Missing season/episode for episode note');
     }
     return `episode-${mediaId}-${seasonNumber}-${episodeNumber}`;
+  }
+
+  if (mediaType === 'season') {
+    if (seasonNumber === undefined) {
+      throw new Error('Missing season for season note');
+    }
+    return `season-${mediaId}-${seasonNumber}`;
   }
 
   return `${mediaType}-${mediaId}`;
@@ -48,7 +55,7 @@ const upsertNoteInList = (notes: Note[], nextNote: Note): Note[] => {
 
 const isSameMediaNote = (
   note: Note,
-  mediaType: 'movie' | 'tv' | 'episode',
+  mediaType: 'movie' | 'tv' | 'episode' | 'season',
   mediaId: number,
   seasonNumber?: number,
   episodeNumber?: number
@@ -57,11 +64,15 @@ const isSameMediaNote = (
     return false;
   }
 
-  if (mediaType !== 'episode') {
-    return true;
+  if (mediaType === 'episode') {
+    return note.seasonNumber === seasonNumber && note.episodeNumber === episodeNumber;
   }
 
-  return note.seasonNumber === seasonNumber && note.episodeNumber === episodeNumber;
+  if (mediaType === 'season') {
+    return note.seasonNumber === seasonNumber;
+  }
+
+  return true;
 };
 
 const loadNotesForLimitCheck = async (
@@ -169,7 +180,7 @@ export const useNotes = () => {
  * Hook to get a specific note for a media item.
  */
 export const useMediaNote = (
-  mediaType: 'movie' | 'tv' | 'episode',
+  mediaType: 'movie' | 'tv' | 'episode' | 'season',
   mediaId: number,
   seasonNumber?: number,
   episodeNumber?: number
@@ -417,7 +428,7 @@ export const useDeleteNote = () => {
       seasonNumber,
       episodeNumber,
     }: {
-      mediaType: 'movie' | 'tv' | 'episode';
+      mediaType: 'movie' | 'tv' | 'episode' | 'season';
       mediaId: number;
       seasonNumber?: number;
       episodeNumber?: number;

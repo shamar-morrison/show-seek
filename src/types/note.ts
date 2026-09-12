@@ -5,7 +5,7 @@
 export interface Note {
   id: string;
   userId: string;
-  mediaType: 'movie' | 'tv' | 'episode';
+  mediaType: 'movie' | 'tv' | 'episode' | 'season';
   mediaId: number;
   content: string;
   posterPath: string | null;
@@ -20,7 +20,7 @@ export interface Note {
 }
 
 export interface NoteInput {
-  mediaType: 'movie' | 'tv' | 'episode';
+  mediaType: 'movie' | 'tv' | 'episode' | 'season';
   mediaId: number;
   content: string;
   posterPath: string | null;

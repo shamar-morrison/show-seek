@@ -106,6 +106,54 @@ describe('NoteService', () => {
         })
       );
     });
+
+    it('should save a season note with season metadata', async () => {
+      const mockDocRef = { path: 'users/test-user-id/notes/season-123-2' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      const noteData = {
+        mediaType: 'season' as const,
+        mediaId: 123,
+        content: 'Strong season!',
+        mediaTitle: 'Season 2',
+        posterPath: '/path.jpg',
+        seasonNumber: 2,
+        showId: 123,
+      };
+
+      await noteService.saveNote('test-user-id', noteData);
+
+      expect(doc).toHaveBeenCalledWith(
+        expect.anything(),
+        'users',
+        'test-user-id',
+        'notes',
+        'season-123-2'
+      );
+      expect(setDoc).toHaveBeenCalledWith(
+        mockDocRef,
+        expect.objectContaining({
+          mediaType: 'season',
+          seasonNumber: 2,
+          showId: 123,
+          content: 'Strong season!',
+        })
+      );
+    });
+
+    it('should reject a season note without a season number', async () => {
+      await expect(
+        noteService.saveNote('test-user-id', {
+          mediaType: 'season',
+          mediaId: 123,
+          content: 'Missing season',
+          mediaTitle: 'Season ?',
+          posterPath: null,
+        })
+      ).rejects.toThrow('Missing season for season mediaType');
+    });
   });
 
   describe('getNote', () => {

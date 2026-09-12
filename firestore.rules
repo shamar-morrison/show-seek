@@ -179,7 +179,7 @@ service cloud.firestore {
       function isValidNoteData(targetUserId) {
         return hasAllowedNoteKeys()
           && request.resource.data.userId == targetUserId
-          && request.resource.data.mediaType in ['movie', 'tv', 'episode']
+          && request.resource.data.mediaType in ['movie', 'tv', 'episode', 'season']
           && request.resource.data.content is string
           && request.resource.data.content.size() <= 200
           && request.resource.data.mediaId is int
@@ -193,7 +193,7 @@ service cloud.firestore {
           && (!('showId' in request.resource.data) || request.resource.data.showId is int);
       }
 
-      // Notes collection (personal notes for movies/TV shows/episodes)
+      // Notes collection (personal notes for movies/TV shows/episodes/seasons)
       match /notes/{noteId} {
         allow read: if isNonAnonymousOwner(userId);
         allow create: if canWriteUserData(userId) && isValidNoteData(userId);

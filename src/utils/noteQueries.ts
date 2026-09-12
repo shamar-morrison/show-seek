@@ -1,4 +1,4 @@
-export type NoteMediaType = 'movie' | 'tv' | 'episode';
+export type NoteMediaType = 'movie' | 'tv' | 'episode' | 'season';
 
 export const getNotesQueryKey = (userId: string | undefined) => ['notes', userId] as const;
 

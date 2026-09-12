@@ -521,7 +521,7 @@
     "noteDeleted": "Nota eliminada",
     "confirmDeleteNote": "¿Eliminar esta nota?",
     "privateNote": "Solo tú puedes ver esta nota",
-    "premiumDescription": "Guarda notas personales para películas, series y episodios.",
+    "premiumDescription": "Guarda notas personales para películas, series, temporadas y episodios.",
     "limitReachedTitle": "Límite alcanzado",
     "limitReachedMessage": "Los usuarios gratuitos pueden guardar hasta {{max}} notas. Actualiza a Premium para notas ilimitadas.",
     "searchPlaceholder": "Buscar notas..."
@@ -1673,7 +1673,7 @@
   },
   "tvSeasons": {
     "failedToLoadSeasons": "No se pudieron cargar las temporadas",
-    "rateSeason": "Puntuar temporada"
+    "rateSeason": "Puntuar"
   },
   "whereToWatch": {
     "title": "Dónde ver",
