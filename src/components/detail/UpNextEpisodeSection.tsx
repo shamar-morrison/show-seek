@@ -21,7 +21,7 @@ import type { UpNextEpisodeSectionProps } from './types';
 /**
  * "Up Next" card showing the next episode to air for an ongoing show.
  * Rendered underneath the Seasons header; tapping navigates to the episode details screen.
- * The still thumbnail is omitted entirely when the episode has no still_path.
+ * MediaImage renders a placeholder when the episode has no still_path.
  */
 export const UpNextEpisodeSection = memo<UpNextEpisodeSectionProps>(
   ({ episode, onEpisodePress, style }) => {
@@ -51,14 +51,12 @@ export const UpNextEpisodeSection = memo<UpNextEpisodeSectionProps>(
         accessibilityRole="button"
         accessibilityLabel={`${t('media.upNext')}: ${episode.name}`}
       >
-        {stillUrl ? (
-          <MediaImage
-            source={{ uri: stillUrl }}
-            style={styles.still}
-            contentFit="cover"
-            placeholderType="tv"
-          />
-        ) : null}
+        <MediaImage
+          source={{ uri: stillUrl }}
+          style={styles.still}
+          contentFit="cover"
+          placeholderType="tv"
+        />
         <View style={styles.info}>
           <Text style={[styles.upNextLabel, { color: accentColor }]}>{t('media.upNext')}</Text>
           <Text style={styles.title} numberOfLines={1}>

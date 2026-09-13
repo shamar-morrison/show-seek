@@ -57,8 +57,8 @@ describe('UpNextEpisodeSection', () => {
     expect(onEpisodePress).toHaveBeenCalledWith(1, 1);
   });
 
-  it('renders without a still image when still_path is null', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('renders the still slot (placeholder) when still_path is null', () => {
+    const { getByTestId } = render(
       <UpNextEpisodeSection
         episode={{ ...baseEpisode, still_path: null }}
         onEpisodePress={jest.fn()}
@@ -66,7 +66,7 @@ describe('UpNextEpisodeSection', () => {
     );
 
     expect(getByTestId('up-next-episode-card')).toBeTruthy();
-    expect(queryByTestId('media-image')).toBeNull();
+    expect(getByTestId('media-image')).toBeTruthy();
   });
 
   it('shows TBA when air date is missing', () => {
