@@ -190,9 +190,15 @@ describe('useCurrentlyWatching', () => {
         tvShowId: 700,
         tvShowName: 'Latest Pace Show',
         posterPath: '/tmdb-latest-pace.jpg',
-        percentage: 100,
-        timeRemaining: 0,
-        nextEpisode: null,
+        percentage: 10,
+        timeRemaining: 330,
+        showEnded: false,
+        nextEpisode: {
+          kind: 'unwatched',
+          season: 2,
+          episode: 4,
+          title: i18n.t('media.episodeNumber', { number: 4 }),
+        },
         lastWatchedEpisode: {
           season: 2,
           episode: 3,
@@ -211,6 +217,24 @@ describe('useCurrentlyWatching', () => {
           lastUpdated: 8000,
         },
         episodes: {
+          '1_1': {
+            episodeId: 101,
+            tvShowId: 701,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            watchedAt: 1000,
+            episodeName: 'Episode 1',
+            episodeAirDate: '2026-03-01',
+          },
+          '1_2': {
+            episodeId: 102,
+            tvShowId: 701,
+            seasonNumber: 1,
+            episodeNumber: 2,
+            watchedAt: 2000,
+            episodeName: 'Episode 2',
+            episodeAirDate: '2026-03-02',
+          },
           '1_3': {
             episodeId: 103,
             tvShowId: 701,
@@ -252,20 +276,20 @@ describe('useCurrentlyWatching', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data[0]?.nextEpisode?.airDate).toBe('2026-03-04');
+      expect(result.current.data[0]?.nextEpisode?.kind).toBe('unwatched');
     });
 
     expect(result.current.data[0]).toEqual(
       expect.objectContaining({
         tvShowId: 701,
         posterPath: '/tmdb-behind.jpg',
-        percentage: 60,
+        percentage: 50,
         timeRemaining: 60,
         nextEpisode: {
+          kind: 'unwatched',
           season: 1,
           episode: 4,
           title: 'Episode 4',
-          airDate: '2026-03-04',
         },
       })
     );
@@ -317,14 +341,14 @@ describe('useCurrentlyWatching', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data[0]?.nextEpisode?.airDate).toBe('2026-03-02');
+      expect(result.current.data[0]?.nextEpisode?.kind).toBe('unwatched');
     });
 
     expect(result.current.data[0]?.nextEpisode).toEqual({
+      kind: 'unwatched',
       season: 1,
       episode: 2,
       title: i18n.t('media.episodeNumber', { number: 2 }),
-      airDate: '2026-03-02',
     });
   });
 
@@ -374,20 +398,20 @@ describe('useCurrentlyWatching', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data[0]?.nextEpisode?.title).toBe('Season 2 Premiere');
+      expect(result.current.data[0]?.nextEpisode?.kind).toBe('unwatched');
     });
 
     expect(result.current.data[0]).toEqual(
       expect.objectContaining({
         tvShowId: 704,
         posterPath: '/tmdb-partial.jpg',
-        percentage: 83,
-        timeRemaining: 60,
+        percentage: 5,
+        timeRemaining: 330,
         nextEpisode: {
+          kind: 'unwatched',
           season: 2,
           episode: 1,
           title: 'Season 2 Premiere',
-          airDate: '2026-03-01',
         },
       })
     );
@@ -403,6 +427,42 @@ describe('useCurrentlyWatching', () => {
           lastUpdated: 9200,
         },
         episodes: {
+          '1_1': {
+            episodeId: 301,
+            tvShowId: 705,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            watchedAt: 3000,
+            episodeName: 'Episode 1',
+            episodeAirDate: '2026-03-01',
+          },
+          '1_2': {
+            episodeId: 302,
+            tvShowId: 705,
+            seasonNumber: 1,
+            episodeNumber: 2,
+            watchedAt: 4000,
+            episodeName: 'Episode 2',
+            episodeAirDate: '2026-03-02',
+          },
+          '1_3': {
+            episodeId: 303,
+            tvShowId: 705,
+            seasonNumber: 1,
+            episodeNumber: 3,
+            watchedAt: 5000,
+            episodeName: 'Episode 3',
+            episodeAirDate: '2026-03-03',
+          },
+          '1_4': {
+            episodeId: 304,
+            tvShowId: 705,
+            seasonNumber: 1,
+            episodeNumber: 4,
+            watchedAt: 6000,
+            episodeName: 'Episode 4',
+            episodeAirDate: '2026-03-10',
+          },
           '1_5': {
             episodeId: 305,
             tvShowId: 705,
@@ -446,7 +506,7 @@ describe('useCurrentlyWatching', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data[0]?.nextEpisode?.airDate).toBe('2026-03-24');
+      expect(result.current.data[0]?.nextEpisode?.kind).toBe('upcoming');
     });
 
     expect(result.current.data[0]).toEqual(
@@ -454,18 +514,18 @@ describe('useCurrentlyWatching', () => {
         tvShowId: 705,
         posterPath: '/tmdb-ahead.jpg',
         percentage: 83,
-        timeRemaining: 30,
+        timeRemaining: 0,
         nextEpisode: {
+          kind: 'upcoming',
           season: 1,
           episode: 6,
           title: 'Episode 6',
-          airDate: '2026-03-24',
         },
       })
     );
   });
 
-  it('hides fully completed ended shows from the list', async () => {
+  it('includes fully completed ended shows in the list with kind complete', async () => {
     mockGetAllWatchedShows.mockResolvedValue([
       {
         metadata: {
@@ -474,6 +534,42 @@ describe('useCurrentlyWatching', () => {
           lastUpdated: 9000,
         },
         episodes: {
+          '1_1': {
+            episodeId: 101,
+            tvShowId: 702,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            watchedAt: 1000,
+            episodeName: 'Episode 1',
+            episodeAirDate: '2026-02-01',
+          },
+          '1_2': {
+            episodeId: 102,
+            tvShowId: 702,
+            seasonNumber: 1,
+            episodeNumber: 2,
+            watchedAt: 2000,
+            episodeName: 'Episode 2',
+            episodeAirDate: '2026-02-08',
+          },
+          '1_3': {
+            episodeId: 103,
+            tvShowId: 702,
+            seasonNumber: 1,
+            episodeNumber: 3,
+            watchedAt: 3000,
+            episodeName: 'Episode 3',
+            episodeAirDate: '2026-02-15',
+          },
+          '1_4': {
+            episodeId: 104,
+            tvShowId: 702,
+            seasonNumber: 1,
+            episodeNumber: 4,
+            watchedAt: 4000,
+            episodeName: 'Episode 4',
+            episodeAirDate: '2026-02-22',
+          },
           '1_5': {
             episodeId: 105,
             tvShowId: 702,
@@ -512,8 +608,122 @@ describe('useCurrentlyWatching', () => {
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
+      expect(result.current.data).toHaveLength(1);
     });
 
-    expect(result.current.data).toEqual([]);
+    expect(result.current.data[0]).toEqual(
+      expect.objectContaining({
+        tvShowId: 702,
+        tvShowName: 'Finished Show',
+        percentage: 100,
+        timeRemaining: 0,
+        showEnded: true,
+        nextEpisode: {
+          kind: 'complete',
+        },
+        lastWatchedEpisode: {
+          season: 1,
+          episode: 5,
+          title: 'Finale',
+        },
+      })
+    );
+  });
+
+  it('handles caught-up-but-still-airing shows with percentage < 100% and upcoming nextEpisode', async () => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Ongoing Airing Show',
+          posterPath: '/stored-poster.jpg',
+          lastUpdated: 9500,
+        },
+        episodes: {
+          '1_1': {
+            episodeId: 401,
+            tvShowId: 706,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            watchedAt: 1000,
+            episodeName: 'Episode 1',
+            episodeAirDate: '2026-03-01',
+          },
+          '1_2': {
+            episodeId: 402,
+            tvShowId: 706,
+            seasonNumber: 1,
+            episodeNumber: 2,
+            watchedAt: 2000,
+            episodeName: 'Episode 2',
+            episodeAirDate: '2026-03-02',
+          },
+          '1_3': {
+            episodeId: 403,
+            tvShowId: 706,
+            seasonNumber: 1,
+            episodeNumber: 3,
+            watchedAt: 3000,
+            episodeName: 'Episode 3',
+            episodeAirDate: '2026-03-03',
+          },
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 706,
+        poster_path: '/tmdb-ongoing.jpg',
+        status: 'Returning Series',
+        seasons: [{ season_number: 1, episode_count: 6, air_date: '2026-03-01' }],
+        last_episode_to_air: {
+          season_number: 1,
+          episode_number: 3,
+          air_date: '2026-03-03',
+        },
+        next_episode_to_air: {
+          season_number: 1,
+          episode_number: 4,
+          name: 'The Reckoning',
+          air_date: '2026-03-15',
+        },
+      })
+    );
+    mockGetSeasonDetails.mockResolvedValue(
+      buildSeasonDetails([
+        { season_number: 1, episode_number: 4, name: 'The Reckoning', air_date: '2026-03-15' },
+      ])
+    );
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.data).toHaveLength(1);
+    });
+
+    expect(result.current.data[0]).toEqual(
+      expect.objectContaining({
+        tvShowId: 706,
+        tvShowName: 'Ongoing Airing Show',
+        // 3 watched aired episodes out of 6 total known = 50%, NOT 100%
+        percentage: 50,
+        timeRemaining: 0,
+        showEnded: false,
+        nextEpisode: {
+          kind: 'upcoming',
+          season: 1,
+          episode: 4,
+          title: 'The Reckoning',
+        },
+        lastWatchedEpisode: {
+          season: 1,
+          episode: 3,
+          title: 'Episode 3',
+        },
+      })
+    );
   });
 });

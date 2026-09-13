@@ -2,7 +2,7 @@ import { tmdbApi, type Episode, type Season, type TVShowDetails } from '@/src/ap
 import { useAuth } from '@/src/context/auth';
 import i18n from '@/src/i18n';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
-import { InProgressShow, WatchedEpisode } from '@/src/types/episodeTracking';
+import { InProgressShow, NextEpisodeState, WatchedEpisode } from '@/src/types/episodeTracking';
 import { isTmdbDateOnOrBefore } from '@/src/utils/dateUtils';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
@@ -399,44 +399,55 @@ export function useCurrentlyWatching() {
         const lastAiredEpisode = resolveLastAiredEpisode(showDetails, today, seasonsData);
         const totalKnownEpisodes = seasonCounts.reduce((sum, [, count]) => sum + count, 0);
 
-        if (!lastAiredEpisode || seasonCounts.length === 0 || totalKnownEpisodes <= 0) {
+        if (seasonCounts.length === 0 || totalKnownEpisodes <= 0) {
           return;
         }
 
-        const totalAiredEpisodes = getEpisodePosition(
-          seasonCounts,
-          lastAiredEpisode.seasonNumber,
-          lastAiredEpisode.episodeNumber
-        );
+        // Determine aired episode count for "remaining unwatched aired" calculation
+        const totalAiredEpisodes = lastAiredEpisode
+          ? getEpisodePosition(
+              seasonCounts,
+              lastAiredEpisode.seasonNumber,
+              lastAiredEpisode.episodeNumber
+            )
+          : 0;
 
-        if (totalAiredEpisodes <= 0) {
-          return;
-        }
+        const showStillActive = isShowStillActive(showDetails);
+        const showEnded = !showStillActive;
 
-        const furthestWatchedPosition = getEpisodePosition(
-          seasonCounts,
-          furthestWatched.seasonNumber,
-          furthestWatched.episodeNumber
-        );
-        const hasWatchedAhead = furthestWatchedPosition > totalAiredEpisodes;
-        const progressTotalEpisodes = hasWatchedAhead ? totalKnownEpisodes : totalAiredEpisodes;
-        const progressPosition = Math.min(furthestWatchedPosition, progressTotalEpisodes);
-        const remainingEpisodes = Math.max(0, progressTotalEpisodes - progressPosition);
-        const percentage = Math.round((progressPosition / progressTotalEpisodes) * 100);
-        const timeRemaining = remainingEpisodes > 0 ? remainingEpisodes * avgRuntime : 0;
+        const hasWatchedAhead = episodesList.some((ep) => {
+          if (!ep.episodeAirDate) return false;
+          return !isAiredOnOrBefore(ep.episodeAirDate, today);
+        });
 
-        if (remainingEpisodes === 0 && !isShowStillActive(showDetails)) {
-          return;
-        }
+        // Numerator: count of watched episodes (all watched if watched ahead, otherwise watched aired)
+        const watchedAiredCount = episodesList.filter((ep) => {
+          if (showEnded || hasWatchedAhead) return true;
+          if (ep.episodeAirDate) {
+            return isAiredOnOrBefore(ep.episodeAirDate, today);
+          }
+          const epPos = getEpisodePosition(seasonCounts, ep.seasonNumber, ep.episodeNumber);
+          return epPos <= totalAiredEpisodes;
+        }).length;
 
-        let nextEpisodeCandidate: {
-          season: number;
-          episode: number;
-          title: string;
-          airDate: string | null;
-        } | null = null;
+        // Denominator: always total known episodes (aired + announced unaired)
+        const percentage =
+          totalKnownEpisodes > 0
+            ? Math.round((watchedAiredCount / totalKnownEpisodes) * 100)
+            : 0;
 
-        if (remainingEpisodes > 0) {
+        const remainingAiredEpisodes = hasWatchedAhead
+          ? 0
+          : Math.max(0, totalAiredEpisodes - watchedAiredCount);
+
+        // Time remaining: only for unwatched aired episodes, not unaired ones
+        const timeRemaining = remainingAiredEpisodes > 0 ? remainingAiredEpisodes * avgRuntime : 0;
+
+        // Build nextEpisode using discriminated union
+        let nextEpisode: NextEpisodeState = null;
+
+        if (remainingAiredEpisodes > 0) {
+          // State: has unwatched aired episodes → kind: 'unwatched'
           const nextEpisodeNumbers = getNextEpisodeAfter(
             seasonCounts,
             furthestWatched.seasonNumber,
@@ -453,13 +464,66 @@ export function useCurrentlyWatching() {
                     episode.episode_number === nextEpisodeNumbers.episode
                 ) ?? null;
 
-            nextEpisodeCandidate = {
+            nextEpisode = {
+              kind: 'unwatched',
               season: nextEpisodeNumbers.season,
               episode: nextEpisodeNumbers.episode,
               title: fetchedEpisode?.name || buildEpisodeNameFallback(nextEpisodeNumbers.episode),
-              airDate: fetchedEpisode?.air_date ?? null,
             };
           }
+        } else if (showStillActive) {
+          // State: caught up on all aired episodes, show still airing → kind: 'upcoming'
+          const nextEpisodeNumbers = getNextEpisodeAfter(
+            seasonCounts,
+            furthestWatched.seasonNumber,
+            furthestWatched.episodeNumber
+          );
+
+          const nextToAir = showDetails.next_episode_to_air;
+          const isNextToAirBeyondFurthest =
+            nextToAir &&
+            nextToAir.season_number > 0 &&
+            nextToAir.episode_number > 0 &&
+            (!nextEpisodeNumbers ||
+              nextToAir.season_number > furthestWatched.seasonNumber ||
+              (nextToAir.season_number === furthestWatched.seasonNumber &&
+                nextToAir.episode_number > furthestWatched.episodeNumber));
+
+          if (isNextToAirBeyondFurthest && nextToAir) {
+            nextEpisode = {
+              kind: 'upcoming',
+              season: nextToAir.season_number,
+              episode: nextToAir.episode_number,
+              title: nextToAir.name || buildEpisodeNameFallback(nextToAir.episode_number),
+            };
+          } else if (nextEpisodeNumbers) {
+            const fetchedEpisode =
+              seasonsData
+                .get(nextEpisodeNumbers.season)
+                ?.episodes.find(
+                  (episode) =>
+                    episode.season_number === nextEpisodeNumbers.season &&
+                    episode.episode_number === nextEpisodeNumbers.episode
+                ) ?? null;
+
+            nextEpisode = {
+              kind: 'upcoming',
+              season: nextEpisodeNumbers.season,
+              episode: nextEpisodeNumbers.episode,
+              title: fetchedEpisode?.name || buildEpisodeNameFallback(nextEpisodeNumbers.episode),
+            };
+          } else {
+            // Still active but no future episodes announced yet
+            nextEpisode = {
+              kind: 'upcoming',
+              season: 0,
+              episode: 0,
+              title: i18n.t('watching.caughtUp'),
+            };
+          }
+        } else {
+          // State: show has ended and user has watched everything → kind: 'complete'
+          nextEpisode = { kind: 'complete' };
         }
 
         processedShows.push({
@@ -471,12 +535,13 @@ export function useCurrentlyWatching() {
           percentage,
           timeRemaining,
           isHidden: metadata.hiddenFromProgress === true,
+          showEnded,
           lastWatchedEpisode: {
             season: furthestWatched.seasonNumber,
             episode: furthestWatched.episodeNumber,
             title: furthestWatched.episodeName,
           },
-          nextEpisode: nextEpisodeCandidate,
+          nextEpisode,
         });
       } catch (e) {
         console.error(`Error processing show:`, e);

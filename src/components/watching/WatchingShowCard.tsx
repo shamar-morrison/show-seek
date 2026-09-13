@@ -54,13 +54,14 @@ export function WatchingShowCard({
 
   const handleDefaultPress = () => {
     const tab = currentTab || 'library';
-    // Navigate to seasons screen, passing the next episode's season to auto-expand
-    if (show.nextEpisode) {
-      router.push(
-        `/(tabs)/${tab}/tv/${show.tvShowId}/seasons?season=${show.nextEpisode.season}` as any
-      );
+    if (show.nextEpisode?.kind === 'unwatched') {
+      // Has unwatched aired episode → deep-link to that season
+      router.push(`/(tabs)/${tab}/tv/${show.tvShowId}/seasons?season=${show.nextEpisode.season}` as any);
+    } else if (show.nextEpisode?.kind === 'complete') {
+      // Series complete → navigate to show detail page
+      router.push(`/(tabs)/${tab}/tv/${show.tvShowId}` as any);
     } else {
-      // If caught up, just go to the seasons screen without a specific season
+      // Caught up (upcoming) or null → generic seasons screen
       router.push(`/(tabs)/${tab}/tv/${show.tvShowId}/seasons` as any);
     }
   };
@@ -132,21 +133,31 @@ export function WatchingShowCard({
           <Text style={styles.title} numberOfLines={1}>
             {show.tvShowName}
           </Text>
-          <Text style={styles.timeRemaining}>{getFormatTimeRemaining(show.timeRemaining)}</Text>
+          {show.nextEpisode?.kind === 'unwatched' && show.timeRemaining > 0 && (
+            <Text style={styles.timeRemaining}>{getFormatTimeRemaining(show.timeRemaining)}</Text>
+          )}
         </View>
 
         <View style={styles.episodeInfo}>
           <Text style={styles.episodeText} numberOfLines={1}>
-            <Text style={[styles.seasonEpLabel, { color: accentColor }]}>{t('watching.next')}</Text>{' '}
-            {show.nextEpisode
-              ? t('watching.nextEpisode', {
-                  seasonEpisode: t('media.seasonEpisode', {
-                    season: show.nextEpisode.season,
-                    episode: show.nextEpisode.episode,
-                  }),
-                  title: show.nextEpisode.title,
-                })
-              : t('watching.caughtUp')}
+            {show.nextEpisode?.kind === 'complete' ? (
+              <Text style={styles.episodeText}>{t('watching.seriesComplete')}</Text>
+            ) : (
+              <>
+                <Text style={[styles.seasonEpLabel, { color: accentColor }]}>{t('watching.next')}</Text>{' '}
+                {show.nextEpisode?.kind === 'unwatched' || show.nextEpisode?.kind === 'upcoming'
+                  ? show.nextEpisode.season > 0
+                    ? t('watching.nextEpisode', {
+                        seasonEpisode: t('media.seasonEpisode', {
+                          season: show.nextEpisode.season,
+                          episode: show.nextEpisode.episode,
+                        }),
+                        title: show.nextEpisode.title,
+                      })
+                    : show.nextEpisode.title || t('watching.caughtUp')
+                  : t('watching.caughtUp')}
+              </>
+            )}
           </Text>
         </View>
 
@@ -163,7 +174,7 @@ export function WatchingShowCard({
         </View>
       </View>
 
-      {!show.nextEpisode ? null : (
+      {show.nextEpisode?.kind !== 'unwatched' ? null : (
         <View style={styles.playIconContainer}>
           <AppIcon icon={PlayIcon} size={16} color={COLORS.text} fill={COLORS.text} />
         </View>

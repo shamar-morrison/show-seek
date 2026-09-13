@@ -54,7 +54,7 @@ const DEFAULT_SORT_STATE: SortState = {
   direction: 'desc',
 };
 
-type WatchProgressTab = 'watching' | 'hidden';
+type WatchProgressTab = 'watching' | 'caughtUp' | 'hidden';
 
 export default function WatchProgressScreen() {
   const navigation = useNavigation();
@@ -115,10 +115,27 @@ export default function WatchProgressScreen() {
     }
   }, []);
 
-  // Split into watching vs hidden shows (mirrors web WatchProgressClient)
-  const activeShows = useMemo(() => (data ?? []).filter((show) => !show.isHidden), [data]);
+  // Split into watching vs caught up vs hidden shows
+  const watchingShows = useMemo(
+    () => (data ?? []).filter((show) => !show.isHidden && show.nextEpisode?.kind === 'unwatched'),
+    [data]
+  );
+  const caughtUpShows = useMemo(
+    () =>
+      (data ?? []).filter(
+        (show) =>
+          !show.isHidden &&
+          (show.nextEpisode?.kind === 'upcoming' || show.nextEpisode?.kind === 'complete')
+      ),
+    [data]
+  );
   const hiddenShows = useMemo(() => (data ?? []).filter((show) => show.isHidden), [data]);
-  const currentTabShows = activeTab === 'watching' ? activeShows : hiddenShows;
+  const currentTabShows =
+    activeTab === 'watching'
+      ? watchingShows
+      : activeTab === 'caughtUp'
+        ? caughtUpShows
+        : hiddenShows;
 
   // Sort the data based on current sort state
   const sortedData = useMemo(() => {
@@ -185,10 +202,12 @@ export default function WatchProgressScreen() {
   const navigateToShow = useCallback(
     (show: InProgressShow) => {
       const tab = currentTab || 'library';
-      if (show.nextEpisode) {
+      if (show.nextEpisode?.kind === 'unwatched') {
         router.push(
           `/(tabs)/${tab}/tv/${show.tvShowId}/seasons?season=${show.nextEpisode.season}` as any
         );
+      } else if (show.nextEpisode?.kind === 'complete') {
+        router.push(`/(tabs)/${tab}/tv/${show.tvShowId}` as any);
       } else {
         router.push(`/(tabs)/${tab}/tv/${show.tvShowId}/seasons` as any);
       }
@@ -344,7 +363,7 @@ export default function WatchProgressScreen() {
   }
 
   const hasAnyData = (data?.length ?? 0) > 0;
-  const hiding = activeTab === 'watching';
+  const hiding = activeTab === 'watching' || activeTab === 'caughtUp';
 
   if (!hasAnyData) {
     return (
@@ -377,7 +396,8 @@ export default function WatchProgressScreen() {
       <View style={styles.tabsContainer}>
         <SegmentedControl<WatchProgressTab>
           options={[
-            { key: 'watching', label: `${t('library.watchingTab')} (${activeShows.length})` },
+            { key: 'watching', label: `${t('library.watchingTab')} (${watchingShows.length})` },
+            { key: 'caughtUp', label: `${t('library.caughtUpTab')} (${caughtUpShows.length})` },
             { key: 'hidden', label: `${t('library.hiddenTab')} (${hiddenShows.length})` },
           ]}
           activeKey={activeTab}
@@ -398,11 +418,17 @@ export default function WatchProgressScreen() {
         ListEmptyComponent={
           searchQuery ? (
             <SearchEmptyState height={EMPTY_STATE_HEIGHT} />
-          ) : hiding ? (
+          ) : activeTab === 'watching' ? (
             <EmptyState
               icon={Tv01Icon}
               title={t('library.emptyWatchProgress')}
               description={t('library.emptyWatchProgressHint')}
+            />
+          ) : activeTab === 'caughtUp' ? (
+            <EmptyState
+              icon={Tv01Icon}
+              title={t('library.emptyCaughtUpProgress')}
+              description={t('library.emptyCaughtUpProgressHint')}
             />
           ) : (
             <EmptyState
