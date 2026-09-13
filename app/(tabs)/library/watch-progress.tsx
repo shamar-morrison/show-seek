@@ -396,9 +396,9 @@ export default function WatchProgressScreen() {
       <View style={styles.tabsContainer}>
         <SegmentedControl<WatchProgressTab>
           options={[
-            { key: 'watching', label: `${t('library.watchingTab')} (${watchingShows.length})` },
-            { key: 'caughtUp', label: `${t('library.caughtUpTab')} (${caughtUpShows.length})` },
-            { key: 'hidden', label: `${t('library.hiddenTab')} (${hiddenShows.length})` },
+            { key: 'watching', label: t('library.watchingTab') },
+            { key: 'caughtUp', label: t('library.caughtUpTab') },
+            { key: 'hidden', label: t('library.hiddenTab') },
           ]}
           activeKey={activeTab}
           onChange={handleTabChange}

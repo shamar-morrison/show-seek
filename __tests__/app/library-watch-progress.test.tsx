@@ -333,9 +333,9 @@ describe('WatchProgressScreen', () => {
       expect(getByTestId('watch-progress-tabs')).toBeTruthy();
     });
 
-    expect(getByText('Watching (1)')).toBeTruthy();
-    expect(getByText('Caught Up (0)')).toBeTruthy();
-    expect(getByText('Hidden (1)')).toBeTruthy();
+    expect(getByText('Watching')).toBeTruthy();
+    expect(getByText('Caught Up')).toBeTruthy();
+    expect(getByText('Hidden')).toBeTruthy();
   });
 
   it('keeps hidden shows out of the Watching tab and shows them in the Hidden tab', async () => {
@@ -456,9 +456,9 @@ describe('WatchProgressScreen', () => {
     const { getByTestId, getByText, queryByText } = render(<WatchProgressScreen />);
 
     await waitFor(() => {
-      expect(getByText('Watching (1)')).toBeTruthy();
-      expect(getByText('Caught Up (2)')).toBeTruthy();
-      expect(getByText('Hidden (1)')).toBeTruthy();
+      expect(getByText('Watching')).toBeTruthy();
+      expect(getByText('Caught Up')).toBeTruthy();
+      expect(getByText('Hidden')).toBeTruthy();
     });
 
     // In Watching tab by default
