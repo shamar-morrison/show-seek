@@ -443,6 +443,10 @@
     "emptyCollectionProgressHint": "Start tracking a collection from a movie's collection page to see your progress here.",
     "emptyWatchProgress": "No shows in progress",
     "emptyWatchProgressHint": "Start watching a show to see your progress tracked here.",
+    "watchingTab": "Watching",
+    "hiddenTab": "Hidden",
+    "emptyHiddenWatchProgress": "No hidden shows",
+    "emptyHiddenWatchProgressHint": "Shows you hide from watch progress will appear here.",
     "emptyFavoritePeople": "No favorite people",
     "emptyFavoritePeopleHint": "Favorite actors and directors to see them here.",
     "emptySeasonRatings": "No season ratings yet",
@@ -1756,7 +1760,16 @@
     "nextEpisode": "{{seasonEpisode}} · {{title}}",
     "timeRemainingHours": "{{count}}h left",
     "timeRemainingHoursMinutes": "{{hours}}h {{minutes}}m left",
-    "timeRemainingMinutes": "{{count}}m left"
+    "timeRemainingMinutes": "{{count}}m left",
+    "hideSelected": "Hide",
+    "restoreSelected": "Restore",
+    "hiddenToast": "{{count}} shows hidden",
+    "hiddenToast_one": "{{count}} show hidden",
+    "hiddenToast_other": "{{count}} shows hidden",
+    "restoredToast": "{{count}} shows restored",
+    "restoredToast_one": "{{count}} show restored",
+    "restoredToast_other": "{{count}} shows restored",
+    "hideFailed": "Failed to update hidden shows"
   },
   "mood": {
     "picker": "Mood Picker",

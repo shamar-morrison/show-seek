@@ -470,6 +470,7 @@ export function useCurrentlyWatching() {
           lastUpdated: metadata.lastUpdated,
           percentage,
           timeRemaining,
+          isHidden: metadata.hiddenFromProgress === true,
           lastWatchedEpisode: {
             season: furthestWatched.seasonNumber,
             episode: furthestWatched.episodeNumber,

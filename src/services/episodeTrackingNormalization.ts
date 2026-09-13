@@ -150,6 +150,9 @@ export function normalizeEpisodeTrackingDoc(
       tvShowName: getNonEmptyString(rawMetadata.tvShowName) ?? i18n.t('media.unknownShow'),
       posterPath: getStringOrNull(rawMetadata.posterPath),
       lastUpdated: toMillis(rawMetadata.lastUpdated) ?? latestWatchedAt,
+      ...(typeof rawMetadata.hiddenFromProgress === 'boolean'
+        ? { hiddenFromProgress: rawMetadata.hiddenFromProgress }
+        : {}),
     },
   };
 }

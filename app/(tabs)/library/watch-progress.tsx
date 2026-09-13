@@ -3,12 +3,26 @@ import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { SortOption, SortState } from '@/src/components/MediaSortModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
+import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
-import { COLORS, EMPTY_STATE_HEIGHT } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  EMPTY_STATE_HEIGHT,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
+import { useBulkSetHiddenFromProgress } from '@/src/hooks/useEpisodeTracking';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -17,13 +31,20 @@ import { InProgressShow } from '@/src/types/episodeTracking';
 import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
-import { useNavigation } from 'expo-router';
-import { AppIcon } from '@/src/components/ui/AppIcon';
-import { ArrowUpDownIcon, Search01Icon, Tv01Icon } from '@hugeicons/core-free-icons';
+import * as Haptics from 'expo-haptics';
+import { useNavigation, useRouter } from 'expo-router';
+import {
+  ArrowUpDownIcon,
+  Cancel01Icon,
+  Search01Icon,
+  Tv01Icon,
+  ViewIcon,
+  ViewOffSlashIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
 const ALLOWED_SORT_OPTIONS: SortOption[] = ['progress', 'alphabetical', 'lastWatched'];
@@ -33,12 +54,19 @@ const DEFAULT_SORT_STATE: SortState = {
   direction: 'desc',
 };
 
+type WatchProgressTab = 'watching' | 'hidden';
+
 export default function WatchProgressScreen() {
   const navigation = useNavigation();
+  const router = useRouter();
+  const currentTab = useCurrentTab();
+  const insets = useSafeAreaInsets();
   const { data, isLoading, isFetching, error, refresh } = useCurrentlyWatching();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const iconBadgeStyles = useIconBadgeStyles();
   const listRef = useRef<React.ComponentRef<typeof FlashList<InProgressShow>>>(null);
+  const toastRef = useRef<ToastRef>(null);
   const isInitialMount = useRef(true);
   const hasCompletedInitialPreferenceLoad = useRef(false);
 
@@ -49,6 +77,12 @@ export default function WatchProgressScreen() {
 
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+  const [activeTab, setActiveTab] = useState<WatchProgressTab>('watching');
+  const [selectedIds, setSelectedIds] = useState<Record<number, true>>({});
+  const [actionBarHeight, setActionBarHeight] = useState<number | null>(null);
+
+  const bulkSetHidden = useBulkSetHiddenFromProgress();
+  const isAccountRequired = useAccountRequired();
 
   // Load sort preference from AsyncStorage
   useEffect(() => {
@@ -81,11 +115,14 @@ export default function WatchProgressScreen() {
     }
   }, []);
 
+  // Split into watching vs hidden shows (mirrors web WatchProgressClient)
+  const activeShows = useMemo(() => (data ?? []).filter((show) => !show.isHidden), [data]);
+  const hiddenShows = useMemo(() => (data ?? []).filter((show) => show.isHidden), [data]);
+  const currentTabShows = activeTab === 'watching' ? activeShows : hiddenShows;
+
   // Sort the data based on current sort state
   const sortedData = useMemo(() => {
-    if (!data) return [];
-
-    const sorted = [...data];
+    const sorted = [...currentTabShows];
     const { option, direction } = sortState;
     const multiplier = direction === 'asc' ? 1 : -1;
 
@@ -102,7 +139,7 @@ export default function WatchProgressScreen() {
     });
 
     return sorted;
-  }, [data, sortState]);
+  }, [currentTabShows, sortState]);
 
   // Search01Icon functionality
   const {
@@ -116,6 +153,102 @@ export default function WatchProgressScreen() {
     items: sortedData,
     getSearchableText: (item) => item.tvShowName,
   });
+
+  // --- Multi-select state ---
+  const selectedCount = useMemo(() => Object.keys(selectedIds).length, [selectedIds]);
+  const isSelectionMode = selectedCount > 0;
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds({});
+  }, []);
+
+  const toggleSelection = useCallback((tvShowId: number) => {
+    setSelectedIds((prev) => {
+      const next = { ...prev };
+      if (next[tvShowId]) {
+        delete next[tvShowId];
+      } else {
+        next[tvShowId] = true;
+      }
+      return next;
+    });
+  }, []);
+
+  const handleTabChange = useCallback(
+    (tab: WatchProgressTab) => {
+      setActiveTab(tab);
+      clearSelection();
+    },
+    [clearSelection]
+  );
+
+  const navigateToShow = useCallback(
+    (show: InProgressShow) => {
+      const tab = currentTab || 'library';
+      if (show.nextEpisode) {
+        router.push(
+          `/(tabs)/${tab}/tv/${show.tvShowId}/seasons?season=${show.nextEpisode.season}` as any
+        );
+      } else {
+        router.push(`/(tabs)/${tab}/tv/${show.tvShowId}/seasons` as any);
+      }
+    },
+    [currentTab, router]
+  );
+
+  const handleCardPress = useCallback(
+    (show: InProgressShow) => {
+      if (isSelectionMode) {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        toggleSelection(show.tvShowId);
+        return;
+      }
+      navigateToShow(show);
+    },
+    [isSelectionMode, navigateToShow, toggleSelection]
+  );
+
+  const handleLongPress = useCallback(
+    (show: InProgressShow) => {
+      if (isLoading || isLoadingPreference) return;
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (isSearchActive) {
+        deactivateSearch();
+      }
+      toggleSelection(show.tvShowId);
+    },
+    [deactivateSearch, isLoading, isLoadingPreference, isSearchActive, toggleSelection]
+  );
+
+  const isItemSelected = useCallback(
+    (tvShowId: number) => !!selectedIds[tvShowId],
+    [selectedIds]
+  );
+
+  const handleBulkToggleHidden = useCallback(async () => {
+    const tvShowIds = Object.keys(selectedIds).map(Number);
+    if (tvShowIds.length === 0 || bulkSetHidden.isPending) return;
+    if (isAccountRequired()) return;
+    const hidden = activeTab === 'watching';
+    try {
+      await bulkSetHidden.mutateAsync({ tvShowIds, hidden });
+      toastRef.current?.show(
+        hidden
+          ? t('watching.hiddenToast', { count: tvShowIds.length })
+          : t('watching.restoredToast', { count: tvShowIds.length })
+      );
+      clearSelection();
+    } catch {
+      toastRef.current?.show(t('watching.hideFailed'));
+    }
+  }, [activeTab, bulkSetHidden, clearSelection, isAccountRequired, selectedIds, t]);
+
+  const handleActionBarLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setActionBarHeight((prev) => (prev === height ? prev : height));
+  }, []);
+
+  const selectionContentBottomPadding = isSelectionMode ? (actionBarHeight ?? 176) + 16 : 0;
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -181,7 +314,16 @@ export default function WatchProgressScreen() {
     t,
   ]);
 
-  const renderItem = ({ item }: { item: InProgressShow }) => <WatchingShowCard show={item} t={t} />;
+  const renderItem = ({ item }: { item: InProgressShow }) => (
+    <WatchingShowCard
+      show={item}
+      t={t}
+      onPress={handleCardPress}
+      onLongPress={handleLongPress}
+      selectionMode={isSelectionMode}
+      isSelected={isItemSelected(item.tvShowId)}
+    />
+  );
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading message={t('library.loadingWatchHistory')} />;
@@ -201,7 +343,10 @@ export default function WatchProgressScreen() {
     );
   }
 
-  if (sortedData.length === 0) {
+  const hasAnyData = (data?.length ?? 0) > 0;
+  const hiding = activeTab === 'watching';
+
+  if (!hasAnyData) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
@@ -229,14 +374,88 @@ export default function WatchProgressScreen() {
           testID="watch-progress-updating-indicator"
         />
       )}
+      <View style={styles.tabsContainer}>
+        <SegmentedControl<WatchProgressTab>
+          options={[
+            { key: 'watching', label: `${t('library.watchingTab')} (${activeShows.length})` },
+            { key: 'hidden', label: `${t('library.hiddenTab')} (${hiddenShows.length})` },
+          ]}
+          activeKey={activeTab}
+          onChange={handleTabChange}
+          testID="watch-progress-tabs"
+        />
+      </View>
       <FlashList
         ref={listRef}
         data={displayItems}
         renderItem={renderItem}
-        contentContainerStyle={libraryListStyles.listContent}
+        contentContainerStyle={[
+          libraryListStyles.listContent,
+          selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
+        ]}
         keyExtractor={(item) => item.tvShowId.toString()}
-        ListEmptyComponent={searchQuery ? <SearchEmptyState height={EMPTY_STATE_HEIGHT} /> : null}
+        extraData={[selectedIds, activeTab]}
+        ListEmptyComponent={
+          searchQuery ? (
+            <SearchEmptyState height={EMPTY_STATE_HEIGHT} />
+          ) : hiding ? (
+            <EmptyState
+              icon={Tv01Icon}
+              title={t('library.emptyWatchProgress')}
+              description={t('library.emptyWatchProgressHint')}
+            />
+          ) : (
+            <EmptyState
+              icon={ViewOffSlashIcon}
+              title={t('library.emptyHiddenWatchProgress')}
+              description={t('library.emptyHiddenWatchProgressHint')}
+            />
+          )
+        }
       />
+
+      {isSelectionMode && (
+        <View
+          style={[styles.actionBar, { paddingBottom: Math.max(insets.bottom, SPACING.s) }]}
+          onLayout={handleActionBarLayout}
+          testID="watch-progress-bulk-bar"
+        >
+          <Text style={styles.countLabel}>
+            {t('library.selectedItemsCount', { count: selectedCount })}
+          </Text>
+          <View style={styles.buttonsRow}>
+            <Pressable
+              style={styles.cancelButton}
+              onPress={clearSelection}
+              testID="watch-progress-bulk-cancel"
+            >
+              <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
+              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.hideButton,
+                { backgroundColor: accentColor },
+                bulkSetHidden.isPending && styles.hideButtonDisabled,
+              ]}
+              onPress={() => void handleBulkToggleHidden()}
+              disabled={bulkSetHidden.isPending}
+              testID={
+                hiding ? 'watch-progress-bulk-hide-button' : 'watch-progress-bulk-restore-button'
+              }
+            >
+              <AppIcon
+                icon={hiding ? ViewOffSlashIcon : ViewIcon}
+                size={18}
+                color={COLORS.white}
+              />
+              <Text style={styles.hideButtonText}>
+                {hiding ? t('watching.hideSelected') : t('watching.restoreSelected')}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       <LibrarySortModal
         visible={sortModalVisible}
@@ -245,6 +464,7 @@ export default function WatchProgressScreen() {
         onApplySort={handleApplySort}
         allowedOptions={ALLOWED_SORT_OPTIONS}
       />
+      <Toast ref={toastRef} />
     </SafeAreaView>
   );
 }
@@ -253,5 +473,64 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  tabsContainer: {
+    paddingHorizontal: SPACING.m,
+    paddingTop: SPACING.s,
+    paddingBottom: SPACING.s,
+  },
+  actionBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.s,
+    backgroundColor: COLORS.background,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceLight,
+    gap: SPACING.s,
+  },
+  countLabel: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    gap: SPACING.s,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.s,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    flex: 1,
+  },
+  cancelButtonText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  hideButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.s,
+    borderRadius: BORDER_RADIUS.m,
+    flex: 1,
+  },
+  hideButtonDisabled: {
+    opacity: 0.5,
+  },
+  hideButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.s,
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });

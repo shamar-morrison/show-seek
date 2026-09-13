@@ -420,6 +420,140 @@ export const useMarkAllEpisodesUnwatched = () => {
 };
 
 /**
+ * Parameters for setting the hidden state of a single show in Watch Progress
+ */
+export interface SetHiddenFromProgressParams {
+  tvShowId: number;
+  hidden: boolean;
+}
+
+/**
+ * Parameters for setting the hidden state of multiple shows in Watch Progress
+ */
+export interface BulkSetHiddenFromProgressParams {
+  tvShowIds: number[];
+  hidden: boolean;
+}
+
+const patchHiddenInAllShowsCache = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  userId: string,
+  tvShowIds: number[],
+  hidden: boolean
+) => {
+  queryClient.setQueryData<TVShowEpisodeTracking[]>(
+    ['episodeTracking', 'allShows', userId],
+    (previous) => {
+      if (!previous) return previous;
+      const idSet = new Set(tvShowIds);
+      return previous.map((show) => {
+        const matches = Object.values(show.episodes).some((ep) => idSet.has(ep.tvShowId));
+        if (!matches) return show;
+        return {
+          ...show,
+          metadata: { ...show.metadata, hiddenFromProgress: hidden },
+        };
+      });
+    }
+  );
+};
+
+/**
+ * Mutation hook for hiding / restoring a single show in Watch Progress.
+ * Includes optimistic cache update with rollback.
+ */
+export const useSetHiddenFromProgress = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: SetHiddenFromProgressParams) =>
+      episodeTrackingService.setHiddenFromProgress(params.tvShowId, params.hidden),
+    onMutate: async (params) => {
+      const userId = getUserId();
+      if (userId) {
+        await queryClient.cancelQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
+      }
+      const previous = userId
+        ? queryClient.getQueryData<TVShowEpisodeTracking[]>([
+            'episodeTracking',
+            'allShows',
+            userId,
+          ])
+        : undefined;
+      if (userId) {
+        patchHiddenInAllShowsCache(queryClient, userId, [params.tvShowId], params.hidden);
+      }
+      return { previous, userId };
+    },
+    onError: (_error, _params, context) => {
+      if (context?.userId && context.previous) {
+        queryClient.setQueryData(
+          ['episodeTracking', 'allShows', context.userId],
+          context.previous
+        );
+      }
+    },
+    onSettled: async (_result, _error, params) => {
+      const userId = getUserId();
+      if (userId) {
+        await invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId);
+      }
+    },
+  });
+};
+
+/**
+ * Mutation hook for hiding / restoring multiple shows in Watch Progress
+ * with a single batched Firestore write. Includes optimistic cache update.
+ */
+export const useBulkSetHiddenFromProgress = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: BulkSetHiddenFromProgressParams) =>
+      episodeTrackingService.setHiddenFromProgressBatch(params.tvShowIds, params.hidden),
+    onMutate: async (params) => {
+      const userId = getUserId();
+      if (userId) {
+        await queryClient.cancelQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
+      }
+      const previous = userId
+        ? queryClient.getQueryData<TVShowEpisodeTracking[]>([
+            'episodeTracking',
+            'allShows',
+            userId,
+          ])
+        : undefined;
+      if (userId) {
+        patchHiddenInAllShowsCache(queryClient, userId, params.tvShowIds, params.hidden);
+      }
+      return { previous, userId };
+    },
+    onError: (_error, _params, context) => {
+      if (context?.userId && context.previous) {
+        queryClient.setQueryData(
+          ['episodeTracking', 'allShows', context.userId],
+          context.previous
+        );
+      }
+    },
+    onSettled: async (_result, _error, params) => {
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] }),
+          ...params.tvShowIds.map((tvShowId) =>
+            queryClient.invalidateQueries({
+              queryKey: getShowEpisodeTrackingQueryKey(userId, tvShowId),
+            })
+          ),
+        ]);
+      }
+    },
+  });
+};
+
+/**
  * Mutation hook for marking all episodes across all seasons in a TV show as watched
  */
 export const useMarkShowAllEpisodesWatched = () => {
