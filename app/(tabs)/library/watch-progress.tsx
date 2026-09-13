@@ -22,6 +22,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import { useBulkSetHiddenFromProgress } from '@/src/hooks/useEpisodeTracking';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -81,6 +82,7 @@ export default function WatchProgressScreen() {
   const [actionBarHeight, setActionBarHeight] = useState<number | null>(null);
 
   const bulkSetHidden = useBulkSetHiddenFromProgress();
+  const isAccountRequired = useAccountRequired();
 
   // Load sort preference from AsyncStorage
   useEffect(() => {
@@ -226,6 +228,7 @@ export default function WatchProgressScreen() {
   const handleBulkToggleHidden = useCallback(async () => {
     const tvShowIds = Object.keys(selectedIds).map(Number);
     if (tvShowIds.length === 0 || bulkSetHidden.isPending) return;
+    if (isAccountRequired()) return;
     const hidden = activeTab === 'watching';
     try {
       await bulkSetHidden.mutateAsync({ tvShowIds, hidden });
@@ -238,7 +241,7 @@ export default function WatchProgressScreen() {
     } catch {
       toastRef.current?.show(t('watching.hideFailed'));
     }
-  }, [activeTab, bulkSetHidden, clearSelection, selectedIds, t]);
+  }, [activeTab, bulkSetHidden, clearSelection, isAccountRequired, selectedIds, t]);
 
   const handleActionBarLayout = useCallback((event: LayoutChangeEvent) => {
     const { height } = event.nativeEvent.layout;

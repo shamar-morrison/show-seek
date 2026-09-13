@@ -88,6 +88,12 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
 }));
 
+const mockIsAccountRequired = jest.fn(() => false);
+
+jest.mock('@/src/hooks/useAccountRequired', () => ({
+  useAccountRequired: () => mockIsAccountRequired,
+}));
+
 jest.mock('@/src/hooks/useCurrentlyWatching', () => ({
   useCurrentlyWatching: () => mockUseCurrentlyWatching(),
 }));
@@ -112,9 +118,9 @@ jest.mock('@/src/components/ui/HeaderIconButton', () => ({
 }));
 
 jest.mock('@/src/components/watching/WatchingShowCard', () => ({
-  WatchingShowCard: ({ show }: { show: { tvShowName: string } }) => {
+  WatchingShowCard: ({ show, onLongPress }: any) => {
     const { Text } = require('react-native');
-    return <Text>{show.tvShowName}</Text>;
+    return <Text onLongPress={() => onLongPress?.(show)}>{show.tvShowName}</Text>;
   },
 }));
 
@@ -188,6 +194,7 @@ describe('WatchProgressScreen', () => {
     jest.clearAllMocks();
     mockRefresh.mockReset();
     mockScrollToOffset.mockReset();
+    mockIsAccountRequired.mockReturnValue(false);
     latestSortModalProps = null;
     mockUseCurrentlyWatching.mockReturnValue({
       data: mockShows,
@@ -360,5 +367,49 @@ describe('WatchProgressScreen', () => {
     });
 
     expect(queryByTestId('watch-progress-bulk-bar')).toBeNull();
+  });
+
+  it('selects via long-press and hides via the bulk bar', async () => {
+    const { getByText, getByTestId } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByText('Mock Show')).toBeTruthy();
+    });
+
+    fireEvent(getByText('Mock Show'), 'onLongPress');
+
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-bulk-bar')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('watch-progress-bulk-hide-button'));
+
+    await waitFor(() => {
+      expect(mockBulkMutateAsync).toHaveBeenCalledWith({ tvShowIds: [101], hidden: true });
+    });
+  });
+
+  it('blocks bulk hide for guests via the account guard', async () => {
+    mockIsAccountRequired.mockReturnValue(true);
+
+    const { getByText, getByTestId } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByText('Mock Show')).toBeTruthy();
+    });
+
+    fireEvent(getByText('Mock Show'), 'onLongPress');
+
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-bulk-bar')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('watch-progress-bulk-hide-button'));
+
+    // Allow any pending promises to flush, then assert no write was attempted
+    await waitFor(() => {
+      expect(mockIsAccountRequired).toHaveBeenCalled();
+    });
+    expect(mockBulkMutateAsync).not.toHaveBeenCalled();
   });
 });

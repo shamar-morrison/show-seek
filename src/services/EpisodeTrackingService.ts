@@ -14,6 +14,9 @@ import type {
   WatchedEpisode,
 } from '../types/episodeTracking';
 
+/** Maximum writes per Firestore WriteBatch commit. */
+const MAX_HIDDEN_BATCH_WRITES = 500;
+
 class EpisodeTrackingService {
   /**
    * Get reference to a TV show's episode tracking document
@@ -519,7 +522,8 @@ class EpisodeTrackingService {
   }
 
   /**
-   * Set the hidden state for multiple shows in a single batched write.
+   * Set the hidden state for multiple shows in batched writes.
+   * Splits into chunks of at most MAX_HIDDEN_BATCH_WRITES (Firestore WriteBatch limit).
    */
   async setHiddenFromProgressBatch(tvShowIds: number[], hidden: boolean): Promise<void> {
     try {
@@ -527,17 +531,19 @@ class EpisodeTrackingService {
       if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
       if (tvShowIds.length === 0) return;
 
-      const batch = writeBatch(db);
-      tvShowIds.forEach((tvShowId) => {
-        batch.update(this.getShowTrackingRef(user.uid, tvShowId), {
-          'metadata.hiddenFromProgress': hidden,
+      for (let i = 0; i < tvShowIds.length; i += MAX_HIDDEN_BATCH_WRITES) {
+        const batch = writeBatch(db);
+        tvShowIds.slice(i, i + MAX_HIDDEN_BATCH_WRITES).forEach((tvShowId) => {
+          batch.update(this.getShowTrackingRef(user.uid, tvShowId), {
+            'metadata.hiddenFromProgress': hidden,
+          });
         });
-      });
 
-      const timeout = createTimeoutWithCleanup(10000);
-      await Promise.race([batch.commit(), timeout.promise]).finally(() => {
-        timeout.cancel();
-      });
+        const timeout = createTimeoutWithCleanup(10000);
+        await Promise.race([batch.commit(), timeout.promise]).finally(() => {
+          timeout.cancel();
+        });
+      }
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
