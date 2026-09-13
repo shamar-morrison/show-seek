@@ -334,6 +334,31 @@ jest.mock('@/src/components/WatchHistoryActionsModal', () => {
   };
 });
 
+jest.mock('@/src/components/ListActionsModal', () => {
+  const React = require('react');
+  const ListActionsModal = React.forwardRef((_props: any, _ref: any) => null);
+  ListActionsModal.displayName = 'ListActionsModal';
+  return {
+    __esModule: true,
+    default: ListActionsModal,
+  };
+});
+
+jest.mock('@/src/hooks/usePersonFavoriteSheet', () => ({
+  usePersonFavoriteSheet: () => ({
+    sheetRef: { current: null },
+    actions: [],
+    selectedPerson: null,
+    handlePersonLongPress: jest.fn(),
+  }),
+  toPersonFavoriteTarget: (person: any) => ({
+    id: person.id,
+    name: person.name,
+    profile_path: person.profile_path ?? null,
+    known_for_department: person.known_for_department ?? '',
+  }),
+}));
+
 describe('MovieDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();

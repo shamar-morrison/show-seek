@@ -6,6 +6,8 @@ import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import ListActionsModal from '@/src/components/ListActionsModal';
+import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
@@ -108,6 +110,11 @@ export default function EpisodeDetailScreen() {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const noteSheetRef = useRef<NoteModalRef>(null);
   const toastRef = React.useRef<ToastRef>(null);
+  const {
+    sheetRef: personFavoriteSheetRef,
+    actions: personFavoriteActions,
+    handlePersonLongPress,
+  } = usePersonFavoriteSheet();
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const currentTab = useCurrentTab();
@@ -710,6 +717,7 @@ export default function EpisodeDetailScreen() {
               <CastSection
                 cast={credits.guest_stars}
                 onCastPress={handlePersonPress}
+                onCastLongPress={handlePersonLongPress}
                 title={t('media.guestStars')}
               />
               <SectionSeparator />
@@ -722,6 +730,7 @@ export default function EpisodeDetailScreen() {
               <CrewSection
                 crew={credits.crew}
                 onCrewPress={handlePersonPress}
+                onCrewLongPress={handlePersonLongPress}
                 style={{ marginTop: SPACING.l }}
               />
               <SectionSeparator />
@@ -803,6 +812,7 @@ export default function EpisodeDetailScreen() {
         />
       )}
       <NoteModal ref={noteSheetRef} />
+      <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
       <Toast ref={toastRef} />
     </SafeAreaView>
   );

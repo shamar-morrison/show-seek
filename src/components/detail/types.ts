@@ -1,4 +1,5 @@
 import { CastMember, CrewMember, Episode, TVShowDetails, Video } from '@/src/api/tmdb';
+import type { PersonFavoriteTarget } from '@/src/hooks/usePersonFavoriteSheet';
 import { ViewStyle } from 'react-native';
 
 export interface WatchProvider {
@@ -53,6 +54,7 @@ export interface WatchProvidersSectionProps {
 export interface CastSectionProps {
   cast: CastMember[];
   onCastPress: (personId: number) => void;
+  onCastLongPress?: (person: PersonFavoriteTarget) => void;
   onViewAll?: () => void;
   title?: string;
   style?: ViewStyle;
@@ -121,6 +123,7 @@ export interface CollectionSectionProps {
 export interface CrewSectionProps {
   crew: CrewMember[];
   onCrewPress: (personId: number) => void;
+  onCrewLongPress?: (person: PersonFavoriteTarget) => void;
   style?: ViewStyle;
 }
 

@@ -13,6 +13,11 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
+import {
+  toPersonFavoriteTarget,
+  usePersonFavoriteSheet,
+} from '@/src/hooks/usePersonFavoriteSheet';
+import ListActionsModal from '@/src/components/ListActionsModal';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { mergeCrewMembersByPerson } from '@/src/utils/credits';
@@ -57,15 +62,20 @@ const GridCreditCard = memo<{
   itemWidth: number;
   itemHorizontalMargin: number;
   onPress: (personId: number) => void;
-}>(({ item, itemWidth, itemHorizontalMargin, onPress }) => {
+  onLongPress?: (item: DisplayCreditItem) => void;
+}>(({ item, itemWidth, itemHorizontalMargin, onPress, onLongPress }) => {
   const handlePress = useCallback(() => {
     onPress(item.id);
   }, [item.id, onPress]);
+  const handleLongPress = useCallback(() => {
+    onLongPress?.(item);
+  }, [item, onLongPress]);
 
   return (
     <TouchableOpacity
       style={[styles.gridCard, { width: itemWidth, marginHorizontal: itemHorizontalMargin }]}
       onPress={handlePress}
+      onLongPress={onLongPress ? handleLongPress : undefined}
       activeOpacity={ACTIVE_OPACITY}
     >
       <MediaImage
@@ -91,10 +101,14 @@ GridCreditCard.displayName = 'GridCreditCard';
 const ListCreditCard = memo<{
   item: DisplayCreditItem;
   onPress: (personId: number) => void;
-}>(({ item, onPress }) => {
+  onLongPress?: (item: DisplayCreditItem) => void;
+}>(({ item, onPress, onLongPress }) => {
   const handlePress = useCallback(() => {
     onPress(item.id);
   }, [item.id, onPress]);
+  const handleLongPress = useCallback(() => {
+    onLongPress?.(item);
+  }, [item, onLongPress]);
 
   return (
     <Pressable
@@ -104,6 +118,7 @@ const ListCreditCard = memo<{
         pressed && listCardStyles.containerPressed,
       ]}
       onPress={handlePress}
+      onLongPress={onLongPress ? handleLongPress : undefined}
     >
       <MediaImage
         source={{ uri: getImageUrl(item.profilePath, TMDB_IMAGE_SIZES.profile.medium) }}
@@ -159,6 +174,26 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
       }
     },
     [router, segments]
+  );
+
+  const {
+    sheetRef: personSheetRef,
+    actions: personSheetActions,
+    handlePersonLongPress,
+  } = usePersonFavoriteSheet();
+
+  const handleCreditLongPress = useCallback(
+    (item: DisplayCreditItem) => {
+      handlePersonLongPress(
+        toPersonFavoriteTarget({
+          id: item.id,
+          name: item.name,
+          profile_path: item.profilePath,
+          known_for_department: activeTab === 'cast' ? 'Acting' : '',
+        })
+      );
+    },
+    [activeTab, handlePersonLongPress]
   );
 
   const castItems = useMemo<DisplayCreditItem[]>(() => {
@@ -228,17 +263,22 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           itemWidth={itemWidth}
           itemHorizontalMargin={itemHorizontalMargin}
           onPress={handlePersonPress}
+          onLongPress={handleCreditLongPress}
         />
       );
     },
-    [handlePersonPress, itemHorizontalMargin, itemWidth]
+    [handlePersonPress, handleCreditLongPress, itemHorizontalMargin, itemWidth]
   );
 
   const renderListItem = useCallback(
     ({ item }: ListRenderItemInfo<DisplayCreditItem>) => (
-      <ListCreditCard item={item} onPress={handlePersonPress} />
+      <ListCreditCard
+        item={item}
+        onPress={handlePersonPress}
+        onLongPress={handleCreditLongPress}
+      />
     ),
-    [handlePersonPress]
+    [handlePersonPress, handleCreditLongPress]
   );
 
   const keyExtractor = useCallback((item: DisplayCreditItem) => item.key, []);
@@ -338,6 +378,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
         onScroll={handleScroll}
         scrollEventThrottle={16}
       />
+      <ListActionsModal ref={personSheetRef} actions={personSheetActions} />
     </SafeAreaView>
   );
 }

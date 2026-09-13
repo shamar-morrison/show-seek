@@ -7,6 +7,8 @@ import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
+import ListActionsModal from '@/src/components/ListActionsModal';
+import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
@@ -91,6 +93,11 @@ export default function TVDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const addToListModalRef = useRef<AddToListModalRef>(null);
   const noteSheetRef = useRef<NoteModalRef>(null);
+  const {
+    sheetRef: personFavoriteSheetRef,
+    actions: personFavoriteActions,
+    handlePersonLongPress,
+  } = usePersonFavoriteSheet();
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
@@ -551,6 +558,7 @@ export default function TVDetailScreen() {
           <CreatorsSection
             creators={creators}
             onCreatorPress={(id) => navigateTo(`/person/${id}`)}
+            onCreatorLongPress={handlePersonLongPress}
           />
 
           {creators.length > 0 && <SectionSeparator />}
@@ -561,7 +569,7 @@ export default function TVDetailScreen() {
           {hasWatchProviders(watchProviders) && <SectionSeparator />}
 
           {/* Cast */}
-          <CastSection cast={cast} onCastPress={handleCastPress} onViewAll={handleCastViewAll} />
+          <CastSection cast={cast} onCastPress={handleCastPress} onCastLongPress={handlePersonLongPress} onViewAll={handleCastViewAll} />
 
           {cast.length > 0 && <SectionSeparator />}
 
@@ -743,6 +751,7 @@ export default function TVDetailScreen() {
             onShowToast={(message) => toastRef.current?.show(message)}
           />
           <NoteModal ref={noteSheetRef} />
+          <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
           {/* Lazy load ShareCardModal - only mount when needed */}
           {shareCardModalVisible && (
             <ShareCardModal
