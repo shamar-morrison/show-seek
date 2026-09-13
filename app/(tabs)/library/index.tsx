@@ -328,6 +328,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: SPACING.s,
   },
   content: {
     paddingHorizontal: SPACING.l,
