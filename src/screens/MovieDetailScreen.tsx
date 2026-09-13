@@ -7,8 +7,9 @@ import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton';
-import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
-import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
+import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
+import ListActionsModal from '@/src/components/ListActionsModal';
+import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
@@ -223,6 +224,11 @@ export default function MovieDetailScreen() {
   const addToListModalRef = useRef<AddToListModalRef>(null);
   const noteSheetRef = useRef<NoteModalRef>(null);
   const watchHistoryModalRef = useRef<WatchHistoryActionsModalRef>(null);
+  const {
+    sheetRef: personFavoriteSheetRef,
+    actions: personFavoriteActions,
+    handlePersonLongPress,
+  } = usePersonFavoriteSheet();
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
@@ -892,6 +898,7 @@ export default function MovieDetailScreen() {
           <DirectorsSection
             directors={directors}
             onDirectorPress={(id) => navigateTo(`/person/${id}`)}
+            onDirectorLongPress={handlePersonLongPress}
           />
 
           {directors.length > 0 && <SectionSeparator />}
@@ -902,7 +909,7 @@ export default function MovieDetailScreen() {
           {hasWatchProviders(watchProviders) && <SectionSeparator />}
 
           {/* Cast */}
-          <CastSection cast={cast} onCastPress={handleCastPress} onViewAll={handleCastViewAll} />
+          <CastSection cast={cast} onCastPress={handleCastPress} onCastLongPress={handlePersonLongPress} onViewAll={handleCastViewAll} />
 
           {cast.length > 0 && <SectionSeparator />}
 
@@ -1102,6 +1109,7 @@ export default function MovieDetailScreen() {
             onShowToast={(message) => toastRef.current?.show(message)}
           />
           <NoteModal ref={noteSheetRef} />
+          <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
           <MarkAsWatchedModal
             visible={watchedModalVisible}
             onClose={() => setWatchedModalVisible(false)}

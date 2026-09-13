@@ -10,6 +10,8 @@ import { COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
+import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
+import ListActionsModal from '@/src/components/ListActionsModal';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FavoritePerson } from '@/src/types/favoritePerson';
@@ -41,6 +43,11 @@ export default function FavoritePeopleScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
   const [activeDepartment, setActiveDepartment] = useState(ALL_TAB_KEY);
+  const {
+    sheetRef: personFavoriteSheetRef,
+    actions: personFavoriteActions,
+    handlePersonLongPress,
+  } = usePersonFavoriteSheet();
 
   useEffect(() => {
     const loadPreference = async () => {
@@ -174,16 +181,26 @@ export default function FavoritePeopleScreen() {
 
   const renderGridItem = useCallback(
     ({ item }: { item: FavoritePerson }) => (
-      <PersonCard person={item} onPress={handlePersonPress} hideFavoriteBadge />
+      <PersonCard
+        person={item}
+        onPress={handlePersonPress}
+        onLongPress={handlePersonLongPress}
+        hideFavoriteBadge
+      />
     ),
-    [handlePersonPress]
+    [handlePersonPress, handlePersonLongPress]
   );
 
   const renderListItem = useCallback(
     ({ item }: { item: FavoritePerson }) => (
-      <PersonListCard person={item} onPress={handlePersonPress} hideFavoriteBadge />
+      <PersonListCard
+        person={item}
+        onPress={handlePersonPress}
+        onLongPress={handlePersonLongPress}
+        hideFavoriteBadge
+      />
     ),
-    [handlePersonPress]
+    [handlePersonPress, handlePersonLongPress]
   );
 
   const keyExtractor = useCallback((item: FavoritePerson) => item.id.toString(), []);
@@ -262,6 +279,7 @@ export default function FavoritePeopleScreen() {
           />
         </View>
       )}
+      <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
     </SafeAreaView>
   );
 }

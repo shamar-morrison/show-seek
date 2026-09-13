@@ -2,6 +2,10 @@ import { getImageUrl, TMDB_IMAGE_SIZES, type CrewMember } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { HORIZONTAL_LIST_CONTENT_STYLE, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
+import {
+  toPersonFavoriteTarget,
+  type PersonFavoriteTarget,
+} from '@/src/hooks/usePersonFavoriteSheet';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -15,16 +19,21 @@ const PRIORITY_ROLES = ['Director', 'Writer', 'Screenplay', 'Story', 'Editor', '
 const CrewCard = memo<{
   member: CrewMember;
   onPress: (id: number) => void;
-}>(({ member, onPress }) => {
+  onLongPress?: (person: PersonFavoriteTarget) => void;
+}>(({ member, onPress, onLongPress }) => {
   const styles = useDetailStyles();
   const handlePress = useCallback(() => {
     onPress(member.id);
   }, [member.id, onPress]);
+  const handleLongPress = useCallback(() => {
+    onLongPress?.(toPersonFavoriteTarget(member));
+  }, [member, onLongPress]);
 
   return (
     <TouchableOpacity
       style={styles.castCard}
       onPress={handlePress}
+      onLongPress={onLongPress ? handleLongPress : undefined}
       activeOpacity={ACTIVE_OPACITY}
     >
       <MediaImage
@@ -48,7 +57,7 @@ const CrewCard = memo<{
 CrewCard.displayName = 'CrewCard';
 
 export const CrewSection = memo<CrewSectionProps>(
-  ({ crew, onCrewPress, style }) => {
+  ({ crew, onCrewPress, onCrewLongPress, style }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
 
@@ -75,7 +84,7 @@ export const CrewSection = memo<CrewSectionProps>(
         </View>
         <ScrollView {...HORIZONTAL_SCROLL_PROPS} showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACING.l }} contentContainerStyle={HORIZONTAL_LIST_CONTENT_STYLE}>
           {priorityCrew.map((member) => (
-            <CrewCard key={`${member.id}-${member.job}`} member={member} onPress={onCrewPress} />
+            <CrewCard key={`${member.id}-${member.job}`} member={member} onPress={onCrewPress} onLongPress={onCrewLongPress} />
           ))}
         </ScrollView>
       </View>
@@ -86,6 +95,7 @@ export const CrewSection = memo<CrewSectionProps>(
       prevProps.crew.length === nextProps.crew.length &&
       (prevProps.crew.length === 0 || prevProps.crew[0]?.id === nextProps.crew[0]?.id) &&
       prevProps.onCrewPress === nextProps.onCrewPress &&
+      prevProps.onCrewLongPress === nextProps.onCrewLongPress &&
       prevProps.style === nextProps.style
     );
   }

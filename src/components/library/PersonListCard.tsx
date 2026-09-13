@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { COLORS, FONT_FAMILY, FONT_SIZE } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
+import type { PersonFavoriteTarget } from '@/src/hooks/usePersonFavoriteSheet';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import React, { memo, useCallback } from 'react';
@@ -11,17 +12,27 @@ import { MediaImage } from '../ui/MediaImage';
 interface PersonListCardProps {
   person: FavoritePerson;
   onPress: (personId: number) => void;
+  onLongPress?: (person: PersonFavoriteTarget) => void;
   /** If true, skip the favorites check (e.g., when showing favorite people list) */
   hideFavoriteBadge?: boolean;
 }
 
 export const PersonListCard = memo<PersonListCardProps>(
-  ({ person, onPress, hideFavoriteBadge = false }) => {
+  ({ person, onPress, onLongPress, hideFavoriteBadge = false }) => {
     const { isFavorited } = useIsPersonFavorited(person.id);
 
     const handlePress = useCallback(() => {
       onPress(person.id);
     }, [onPress, person.id]);
+
+    const handleLongPress = useCallback(() => {
+      onLongPress?.({
+        id: person.id,
+        name: person.name,
+        profile_path: person.profile_path,
+        known_for_department: person.known_for_department,
+      });
+    }, [onLongPress, person]);
 
     const showBadge = !hideFavoriteBadge && isFavorited;
 
@@ -32,6 +43,7 @@ export const PersonListCard = memo<PersonListCardProps>(
           pressed && listCardStyles.containerPressed,
         ]}
         onPress={handlePress}
+        onLongPress={onLongPress ? handleLongPress : undefined}
       >
         <View style={styles.imageContainer}>
           <MediaImage

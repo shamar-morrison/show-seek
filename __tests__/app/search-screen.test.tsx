@@ -6,6 +6,8 @@ import { Pressable } from 'react-native';
 const mockPush = jest.fn();
 const mockPresent = jest.fn();
 const mockRequireAccount = jest.fn();
+const mockPersonSheetPresent = jest.fn();
+const mockPersonSheetState: { actions: Array<{ id: string }> } = { actions: [] };
 
 const mockAuthState = {
   user: { uid: 'user-1', isAnonymous: false } as null | { uid: string; isAnonymous?: boolean },
@@ -90,6 +92,8 @@ jest.mock('@/src/hooks/useListMembership', () => ({
 
 jest.mock('@/src/hooks/useFavoritePersons', () => ({
   useFavoritePersons: () => ({ data: [] }),
+  useAddFavoritePerson: () => ({ mutateAsync: jest.fn() }),
+  useRemoveFavoritePerson: () => ({ mutateAsync: jest.fn() }),
 }));
 
 jest.mock('@/src/hooks/useContentFilter', () => ({
@@ -128,6 +132,20 @@ jest.mock('@/src/components/AddToListModal', () => {
   });
   AddToListModal.displayName = 'AddToListModal';
   return { __esModule: true, default: AddToListModal };
+});
+
+jest.mock('@/src/components/ListActionsModal', () => {
+  const React = require('react');
+  const ListActionsModal = React.forwardRef(({ actions }: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      present: mockPersonSheetPresent,
+      dismiss: jest.fn(),
+    }));
+    mockPersonSheetState.actions = actions ?? [];
+    return null;
+  });
+  ListActionsModal.displayName = 'ListActionsModal';
+  return { __esModule: true, default: ListActionsModal };
 });
 
 import SearchScreen from '@/app/(tabs)/search/index';
@@ -249,7 +267,7 @@ describe('SearchScreen routing and auth guard', () => {
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 
-  it('does not trigger account guard for guest long press on person results', async () => {
+  it('blocks guest long press on person results with the account guard', async () => {
     mockAuthState.user = { uid: 'guest-user', isAnonymous: true };
     mockAuthState.isGuest = true;
     mockQueryResults = [
@@ -271,8 +289,8 @@ describe('SearchScreen routing and auth guard', () => {
 
     fireEvent(getByText('Guest Person'), 'longPress');
 
-    expect(mockRequireAccount).not.toHaveBeenCalled();
-    expect(mockPresent).not.toHaveBeenCalled();
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(mockPersonSheetPresent).not.toHaveBeenCalled();
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 
@@ -306,6 +324,37 @@ describe('SearchScreen routing and auth guard', () => {
     });
 
     expect(mockPresent).toHaveBeenCalled();
+  });
+
+  it('opens the favorite sheet on authenticated person long press', async () => {
+    mockAuthState.user = { uid: 'user-1', isAnonymous: false };
+    mockQueryResults = [
+      {
+        id: 55,
+        media_type: 'person',
+        name: 'Favorite Actor',
+        profile_path: '/actor.jpg',
+        known_for_department: 'Acting',
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, queryByTestId } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Favorite Actor')).toBeTruthy();
+    });
+
+    fireEvent(getByText('Favorite Actor'), 'longPress');
+
+    await waitFor(() => {
+      expect(mockPersonSheetPresent).toHaveBeenCalledTimes(1);
+    });
+    expect(mockPersonSheetState.actions.map((action) => action.id)).toEqual([
+      'toggle-favorite-person',
+    ]);
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 
   it('toggles to grid mode and persists preference', async () => {
@@ -400,7 +449,7 @@ describe('SearchScreen routing and auth guard', () => {
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 
-  it('does not trigger account guard for person long press in grid mode', async () => {
+  it('blocks guest person long press in grid mode with the account guard', async () => {
     mockAuthState.user = { uid: 'guest-user', isAnonymous: true };
     mockAuthState.isGuest = true;
     mockQueryResults = [
@@ -425,7 +474,8 @@ describe('SearchScreen routing and auth guard', () => {
     toggleViewMode(UNSAFE_getAllByType);
     fireEvent(getByText('Grid Person Guard'), 'longPress');
 
-    expect(mockRequireAccount).not.toHaveBeenCalled();
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(mockPersonSheetPresent).not.toHaveBeenCalled();
     expect(mockPresent).not.toHaveBeenCalled();
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });

@@ -4,6 +4,10 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { HORIZONTAL_LIST_CONTENT_STYLE, HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
+import {
+  toPersonFavoriteTarget,
+  type PersonFavoriteTarget,
+} from '@/src/hooks/usePersonFavoriteSheet';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
@@ -13,17 +17,22 @@ const DirectorCard = memo<{
   director: CrewMember;
   onPress: (id: number) => void;
   label: string;
-}>(({ director, onPress, label }) => {
+  onLongPress?: (person: PersonFavoriteTarget) => void;
+}>(({ director, onPress, label, onLongPress }) => {
   const styles = useDetailStyles();
   const { isFavorited } = useIsPersonFavorited(director.id);
   const handlePress = useCallback(() => {
     onPress(director.id);
   }, [director.id, onPress]);
+  const handleLongPress = useCallback(() => {
+    onLongPress?.(toPersonFavoriteTarget({ ...director, known_for_department: 'Directing' }));
+  }, [director, onLongPress]);
 
   return (
     <TouchableOpacity
       style={styles.castCard}
       onPress={handlePress}
+      onLongPress={onLongPress ? handleLongPress : undefined}
       activeOpacity={ACTIVE_OPACITY}
     >
       <View style={styles.castImageContainer}>
@@ -52,11 +61,12 @@ DirectorCard.displayName = 'DirectorCard';
 interface DirectorsSectionProps {
   directors: CrewMember[];
   onDirectorPress: (id: number) => void;
+  onDirectorLongPress?: (person: PersonFavoriteTarget) => void;
   style?: ViewStyle;
 }
 
 export const DirectorsSection = memo<DirectorsSectionProps>(
-  ({ directors, onDirectorPress, style }) => {
+  ({ directors, onDirectorPress, onDirectorLongPress, style }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
 
@@ -78,6 +88,7 @@ export const DirectorsSection = memo<DirectorsSectionProps>(
               key={`${director.id}-${index}`}
               director={director}
               onPress={onDirectorPress}
+              onLongPress={onDirectorLongPress}
               label={directorLabel}
             />
           ))}
@@ -91,6 +102,7 @@ export const DirectorsSection = memo<DirectorsSectionProps>(
       (prevProps.directors.length === 0 ||
         prevProps.directors[0]?.id === nextProps.directors[0]?.id) &&
       prevProps.onDirectorPress === nextProps.onDirectorPress &&
+      prevProps.onDirectorLongPress === nextProps.onDirectorLongPress &&
       prevProps.style === nextProps.style
     );
   }

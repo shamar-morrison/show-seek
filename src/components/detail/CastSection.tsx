@@ -3,6 +3,10 @@ import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
+import {
+  toPersonFavoriteTarget,
+  type PersonFavoriteTarget,
+} from '@/src/hooks/usePersonFavoriteSheet';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +17,8 @@ import type { CastSectionProps } from './types';
 const CastCard = memo<{
   actor: CastMember;
   onPress: (id: number) => void;
-}>(({ actor, onPress }) => {
+  onLongPress?: (person: PersonFavoriteTarget) => void;
+}>(({ actor, onPress, onLongPress }) => {
   const styles = useDetailStyles();
   const { isFavorited } = useIsPersonFavorited(actor.id);
 
@@ -21,10 +26,15 @@ const CastCard = memo<{
     onPress(actor.id);
   }, [actor.id, onPress]);
 
+  const handleLongPress = useCallback(() => {
+    onLongPress?.(toPersonFavoriteTarget({ ...actor, known_for_department: 'Acting' }));
+  }, [actor, onLongPress]);
+
   return (
     <TouchableOpacity
       style={styles.castCard}
       onPress={handlePress}
+      onLongPress={onLongPress ? handleLongPress : undefined}
       activeOpacity={ACTIVE_OPACITY}
     >
       <View style={styles.castImageContainer}>
@@ -51,13 +61,15 @@ const CastCard = memo<{
 CastCard.displayName = 'CastCard';
 
 export const CastSection = memo<CastSectionProps>(
-  ({ cast, onCastPress, onViewAll, title, style }) => {
+  ({ cast, onCastPress, onCastLongPress, onViewAll, title, style }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
-      ({ item }: { item: CastMember }) => <CastCard actor={item} onPress={onCastPress} />,
-      [onCastPress]
+      ({ item }: { item: CastMember }) => (
+        <CastCard actor={item} onPress={onCastPress} onLongPress={onCastLongPress} />
+      ),
+      [onCastPress, onCastLongPress]
     );
 
     if (cast.length === 0) {
@@ -101,6 +113,7 @@ export const CastSection = memo<CastSectionProps>(
       prevProps.cast.length === nextProps.cast.length &&
       (prevProps.cast.length === 0 || prevProps.cast[0]?.id === nextProps.cast[0]?.id) &&
       prevProps.onCastPress === nextProps.onCastPress &&
+      prevProps.onCastLongPress === nextProps.onCastLongPress &&
       prevProps.onViewAll === nextProps.onViewAll &&
       prevProps.style === nextProps.style
     );

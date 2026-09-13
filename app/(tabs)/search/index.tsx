@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
+import ListActionsModal from '@/src/components/ListActionsModal';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineListIndicators, ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
@@ -21,6 +22,10 @@ import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import {
+  toPersonFavoriteTarget,
+  usePersonFavoriteSheet,
+} from '@/src/hooks/usePersonFavoriteSheet';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -98,6 +103,11 @@ export default function SearchScreen() {
   // Long-press to add to list
   const addToListModalRef = useRef<AddToListModalRef>(null);
   const toastRef = useRef<ToastRef>(null);
+  const {
+    sheetRef: personFavoriteSheetRef,
+    actions: personFavoriteActions,
+    handlePersonLongPress,
+  } = usePersonFavoriteSheet();
   const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
     null
   );
@@ -178,8 +188,18 @@ export default function SearchScreen() {
   };
 
   const handleLongPress = (item: any) => {
-    // Skip for person results
-    if (item.media_type === 'person') return;
+    // Person results get the favorite toggle sheet
+    if (item.media_type === 'person' || resolveSearchResultMediaType(item, mediaType) === 'person') {
+      handlePersonLongPress(
+        toPersonFavoriteTarget({
+          id: item.id,
+          name: item.name ?? '',
+          profile_path: item.profile_path,
+          known_for_department: item.known_for_department,
+        })
+      );
+      return;
+    }
     if (isAccountRequired()) return;
 
     const itemMediaType = resolveSearchResultMediaType(item, mediaType);
@@ -474,6 +494,7 @@ export default function SearchScreen() {
           onShowToast={handleShowToast}
         />
       )}
+      <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
       <Toast ref={toastRef} />
     </>
   );
