@@ -7,6 +7,8 @@ interface MediaImageProps extends Omit<ImageProps, 'source'> {
   source: { uri: string | null | undefined } | string | number | null | undefined;
   placeholderStyle?: ViewStyle;
   placeholderType?: PlaceholderType;
+  /** Override for the placeholder background (defaults to COLORS.surface) */
+  placeholderBackgroundColor?: string;
 }
 
 /**
@@ -15,7 +17,14 @@ interface MediaImageProps extends Omit<ImageProps, 'source'> {
  * Memoized to prevent unnecessary re-renders.
  */
 export const MediaImage = memo(
-  ({ source, style, placeholderStyle, placeholderType = 'movie', ...props }: MediaImageProps) => {
+  ({
+    source,
+    style,
+    placeholderStyle,
+    placeholderType = 'movie',
+    placeholderBackgroundColor,
+    ...props
+  }: MediaImageProps) => {
     const [hasError, setHasError] = useState(false);
 
     const uri =
@@ -31,7 +40,10 @@ export const MediaImage = memo(
     if (shouldShowPlaceholder) {
       return (
         <View style={[style, placeholderStyle, { overflow: 'hidden' }]}>
-          <ImagePlaceholder type={placeholderType} />
+          <ImagePlaceholder
+            type={placeholderType}
+            backgroundColor={placeholderBackgroundColor}
+          />
         </View>
       );
     }
@@ -68,6 +80,7 @@ export const MediaImage = memo(
       prevUri === nextUri &&
       prevProps.style === nextProps.style &&
       prevProps.placeholderType === nextProps.placeholderType &&
+      prevProps.placeholderBackgroundColor === nextProps.placeholderBackgroundColor &&
       prevProps.contentFit === nextProps.contentFit
     );
   }

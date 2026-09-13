@@ -8,6 +8,8 @@ export type PlaceholderType = 'person' | 'tv' | 'movie';
 
 interface ImagePlaceholderProps {
   type?: PlaceholderType;
+  /** Override for the container background (defaults to COLORS.surface) */
+  backgroundColor?: string;
 }
 
 /**
@@ -15,11 +17,11 @@ interface ImagePlaceholderProps {
  * Displays an appropriate HugeIcons icon based on the type.
  * Fills its container with a background color and centers the icon.
  */
-export const ImagePlaceholder = ({ type = 'movie' }: ImagePlaceholderProps) => {
+export const ImagePlaceholder = ({ type = 'movie', backgroundColor }: ImagePlaceholderProps) => {
   const IconComponent = type === 'person' ? UserIcon : type === 'tv' ? Tv01Icon : Film01Icon;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, backgroundColor && { backgroundColor }]}>
       <AppIcon
         icon={IconComponent}
         size={48}

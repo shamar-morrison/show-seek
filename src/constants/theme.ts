@@ -4,6 +4,8 @@ export const COLORS = {
   background: '#000000',
   surface: '#121212',
   surfaceLight: '#232323',
+  /** Placeholder background, matches web app gray-800 */
+  placeholderBackground: '#1F2937',
   text: '#FFFFFF',
   textSecondary: '#B3B3B3',
   success: '#46D369',
