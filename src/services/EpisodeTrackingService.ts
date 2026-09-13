@@ -3,7 +3,7 @@ import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit
 import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
 import { hasEpisodeAired } from '@/src/utils/dateUtils';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
-import { collection, deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteField, doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
 import { auth, db } from '../firebase/config';
 import type {
@@ -490,6 +490,55 @@ class EpisodeTrackingService {
         .filter((show): show is TVShowEpisodeTracking => show !== null);
     } catch (error) {
       console.error('[EpisodeTrackingService] Error fetching all watched shows:', error);
+      throw new Error(getFirestoreErrorMessage(error));
+    }
+  }
+
+  /**
+   * Set whether a show is hidden from Watch Progress without modifying watched episodes.
+   * Mirrors the web app's setHiddenFromProgress.
+   */
+  async setHiddenFromProgress(tvShowId: number, hidden: boolean): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+
+      const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+      const timeout = createTimeoutWithCleanup(10000);
+      await Promise.race([
+        updateDoc(trackingRef, {
+          'metadata.hiddenFromProgress': hidden,
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
+    } catch (error) {
+      throw new Error(getFirestoreErrorMessage(error));
+    }
+  }
+
+  /**
+   * Set the hidden state for multiple shows in a single batched write.
+   */
+  async setHiddenFromProgressBatch(tvShowIds: number[], hidden: boolean): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      if (tvShowIds.length === 0) return;
+
+      const batch = writeBatch(db);
+      tvShowIds.forEach((tvShowId) => {
+        batch.update(this.getShowTrackingRef(user.uid, tvShowId), {
+          'metadata.hiddenFromProgress': hidden,
+        });
+      });
+
+      const timeout = createTimeoutWithCleanup(10000);
+      await Promise.race([batch.commit(), timeout.promise]).finally(() => {
+        timeout.cancel();
+      });
+    } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
   }

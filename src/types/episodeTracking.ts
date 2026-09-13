@@ -37,6 +37,8 @@ export interface EpisodeTrackingMetadata {
   posterPath: string | null;
   /** Timestamp of last update to tracking data */
   lastUpdated: number;
+  /** Whether the show is hidden from the Watch Progress page (absent = visible) */
+  hiddenFromProgress?: boolean;
 }
 
 /**
@@ -97,6 +99,8 @@ export interface InProgressShow {
   lastUpdated: number;
   percentage: number;
   timeRemaining: number; // in minutes
+  /** Whether the show is hidden from Watch Progress (mirrors metadata.hiddenFromProgress) */
+  isHidden: boolean;
   lastWatchedEpisode: {
     season: number;
     episode: number;

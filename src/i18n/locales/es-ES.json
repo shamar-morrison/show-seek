@@ -422,6 +422,10 @@
     "emptySeasonRatingsHint": "Puntúa temporadas para seguir tus opiniones aquí.",
     "emptyWatchProgress": "No hay series en progreso",
     "emptyWatchProgressHint": "Empieza a ver una serie para seguir tu progreso aquí.",
+    "watchingTab": "Viendo",
+    "hiddenTab": "Ocultas",
+    "emptyHiddenWatchProgress": "Sin series ocultas",
+    "emptyHiddenWatchProgressHint": "Las series que ocultes del progreso aparecerán aquí.",
     "episodeRatings": "Puntuaciones de episodios",
     "seasonRatings": "Puntuaciones de temporadas",
     "failedToCreateList": "No se pudo crear la lista",
@@ -1717,7 +1721,16 @@
     "nextEpisode": "{{seasonEpisode}} · {{title}}",
     "timeRemainingHours": "{{count}} h restantes",
     "timeRemainingHoursMinutes": "{{hours}} h {{minutes}} min restantes",
-    "timeRemainingMinutes": "{{count}} min restantes"
+    "timeRemainingMinutes": "{{count}} min restantes",
+    "hideSelected": "Ocultar",
+    "restoreSelected": "Restaurar",
+    "hiddenToast": "{{count}} series ocultas",
+    "hiddenToast_one": "{{count}} serie oculta",
+    "hiddenToast_other": "{{count}} series ocultas",
+    "restoredToast": "{{count}} series restauradas",
+    "restoredToast_one": "{{count}} serie restaurada",
+    "restoredToast_other": "{{count}} series restauradas",
+    "hideFailed": "No se pudieron actualizar las series ocultas"
   },
   "widgets": {
     "widgetType": "Tipo de widget",

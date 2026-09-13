@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -10,21 +11,37 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useLongPressPressGuard } from '@/src/hooks/useLongPressPressGuard';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { InProgressShow } from '@/src/types/episodeTracking';
 import { useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { PlayIcon } from '@hugeicons/core-free-icons';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface WatchingShowCardProps {
   show: InProgressShow;
   t: TFunction;
+  /** Controlled press handler (selection toggle when in selection mode) */
+  onPress?: (show: InProgressShow) => void;
+  /** Long-press handler to enter multi-select mode */
+  onLongPress?: (show: InProgressShow) => void;
+  /** Whether the parent list is in multi-select mode */
+  selectionMode?: boolean;
+  /** Whether this card is selected */
+  isSelected?: boolean;
 }
 
-export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
+export function WatchingShowCard({
+  show,
+  t,
+  onPress,
+  onLongPress,
+  selectionMode = false,
+  isSelected = false,
+}: WatchingShowCardProps) {
   const router = useRouter();
   const { accentColor } = useAccentColor();
   const { resolvePosterPath } = usePosterOverrides();
@@ -35,7 +52,7 @@ export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
     [resolvePosterPath, show.posterPath, show.tvShowId]
   );
 
-  const handlePress = () => {
+  const handleDefaultPress = () => {
     const tab = currentTab || 'library';
     // Navigate to seasons screen, passing the next episode's season to auto-expand
     if (show.nextEpisode) {
@@ -48,6 +65,28 @@ export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
     }
   };
 
+  const handlePress = useCallback(() => {
+    if (onPress) {
+      onPress(show);
+    } else {
+      handleDefaultPress();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onPress, show]);
+
+  const handleLongPress = useCallback(() => {
+    onLongPress?.(show);
+  }, [onLongPress, show]);
+
+  const {
+    handlePress: handleCardPress,
+    handleLongPress: handleCardLongPress,
+    handlePressOut,
+  } = useLongPressPressGuard({
+    onPress: handlePress,
+    onLongPress: onLongPress ? handleLongPress : undefined,
+  });
+
   const getFormatTimeRemaining = (minutes: number) => {
     if (minutes < 60) return t('watching.timeRemainingMinutes', { count: minutes });
     const hours = Math.floor(minutes / 60);
@@ -57,7 +96,32 @@ export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={ACTIVE_OPACITY}>
+    <TouchableOpacity
+      style={[
+        styles.container,
+        selectionMode && styles.selectionEnabledContainer,
+        isSelected && { borderColor: accentColor, backgroundColor: COLORS.surfaceLight },
+      ]}
+      onPress={handleCardPress}
+      onPressOut={handlePressOut}
+      onLongPress={onLongPress ? handleCardLongPress : undefined}
+      delayLongPress={250}
+      activeOpacity={ACTIVE_OPACITY}
+      accessibilityLabel={show.tvShowName}
+      accessibilityState={{ selected: isSelected }}
+      testID={`watch-progress-card-${show.tvShowId}`}
+    >
+      {selectionMode && (
+        <View
+          style={[
+            styles.selectionBadge,
+            isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+          ]}
+          testID="watch-progress-card-selection-badge"
+        >
+          <AnimatedCheck visible={isSelected} />
+        </View>
+      )}
       <MediaImage
         source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
         style={styles.poster}
@@ -118,6 +182,20 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.m,
     padding: SPACING.s,
     alignItems: 'center',
+  },
+  selectionBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.textSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.s,
+  },
+  selectionEnabledContainer: {
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   poster: {
     width: 60,

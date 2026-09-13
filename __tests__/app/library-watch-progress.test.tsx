@@ -17,13 +17,75 @@ const mockShows = [
     lastUpdated: 100,
     percentage: 45,
     timeRemaining: 220,
+    isHidden: false,
     lastWatchedEpisode: { season: 1, episode: 3, title: 'Episode 3' },
     nextEpisode: { season: 1, episode: 4, title: 'Episode 4', airDate: null },
   },
 ];
 
+const mockHiddenShow = {
+  tvShowId: 202,
+  tvShowName: 'Hidden Show',
+  posterPath: null,
+  backdropPath: null,
+  lastUpdated: 50,
+  percentage: 30,
+  timeRemaining: 100,
+  isHidden: true,
+  lastWatchedEpisode: { season: 1, episode: 2, title: 'Episode 2' },
+  nextEpisode: { season: 1, episode: 3, title: 'Episode 3', airDate: null },
+};
+
+const mockRouterPush = jest.fn();
+const mockBulkMutateAsync = jest.fn();
+
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ setOptions: mockSetOptions }),
+  useRouter: () => ({ push: mockRouterPush }),
+}));
+
+jest.mock('@/src/context/TabContext', () => ({
+  useCurrentTab: () => 'library',
+}));
+
+jest.mock('@/src/context/AccentColorProvider', () => ({
+  useAccentColor: () => ({ accentColor: '#FF0000' }),
+}));
+
+jest.mock('@/src/hooks/useEpisodeTracking', () => ({
+  useBulkSetHiddenFromProgress: () => ({
+    mutateAsync: mockBulkMutateAsync,
+    isPending: false,
+  }),
+}));
+
+jest.mock('@/src/components/ui/SegmentedControl', () => ({
+  SegmentedControl: ({ options, activeKey: _activeKey, onChange, testID }: any) => {
+    const { Text, TouchableOpacity, View } = require('react-native');
+    return (
+      <View testID={testID}>
+        {options.map((option: any) => (
+          <TouchableOpacity
+            key={option.key}
+            testID={`${testID}-tab-${option.key}`}
+            onPress={() => onChange(option.key)}
+          >
+            <Text>{option.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  },
+}));
+
+jest.mock('@/src/components/ui/Toast', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
 }));
 
 jest.mock('@/src/hooks/useCurrentlyWatching', () => ({
@@ -134,14 +196,14 @@ describe('WatchProgressScreen', () => {
       error: null,
       refresh: mockRefresh,
     });
-    mockUseHeaderSearch.mockReturnValue({
+    mockUseHeaderSearch.mockImplementation((args: any) => ({
       searchQuery: '',
       isSearchActive: false,
-      filteredItems: mockShows,
+      filteredItems: args.items,
       deactivateSearch: jest.fn(),
       setSearchQuery: jest.fn(),
       searchButton: { onPress: jest.fn(), showBadge: false },
-    });
+    }));
   });
 
   afterEach(() => {
@@ -245,5 +307,58 @@ describe('WatchProgressScreen', () => {
     });
 
     expect(mockScrollToOffset).toHaveBeenCalledWith({ offset: 0, animated: true });
+  });
+
+  it('shows Watching and Hidden tabs with counts', async () => {
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [...mockShows, mockHiddenShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+
+    const { getByTestId, getByText } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-tabs')).toBeTruthy();
+    });
+
+    expect(getByText('Watching (1)')).toBeTruthy();
+    expect(getByText('Hidden (1)')).toBeTruthy();
+  });
+
+  it('keeps hidden shows out of the Watching tab and shows them in the Hidden tab', async () => {
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [...mockShows, mockHiddenShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+
+    const { getByTestId, getByText, queryByText } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByText('Mock Show')).toBeTruthy();
+    });
+    expect(queryByText('Hidden Show')).toBeNull();
+
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-hidden'));
+
+    await waitFor(() => {
+      expect(getByText('Hidden Show')).toBeTruthy();
+    });
+    expect(queryByText('Mock Show')).toBeNull();
+  });
+
+  it('does not show the bulk action bar without a selection', async () => {
+    const { getByText, queryByTestId } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByText('Mock Show')).toBeTruthy();
+    });
+
+    expect(queryByTestId('watch-progress-bulk-bar')).toBeNull();
   });
 });

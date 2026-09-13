@@ -464,6 +464,10 @@
     "emptyCollectionProgressHint": "Commencez à suivre une collection depuis la page de collection d'un film pour voir votre progression ici.",
     "emptyWatchProgress": "Aucune série en cours",
     "emptyWatchProgressHint": "Commencez à regarder une série pour suivre votre progression ici.",
+    "watchingTab": "En cours",
+    "hiddenTab": "Masquées",
+    "emptyHiddenWatchProgress": "Aucune série masquée",
+    "emptyHiddenWatchProgressHint": "Les séries que vous masquez apparaîtront ici.",
     "emptyFavoritePeople": "Aucune personne favorite",
     "emptyFavoritePeopleHint": "Ajoutez des acteurs et réalisateurs en favoris pour les voir ici.",
     "emptySeasonRatings": "Aucune note de saison",
@@ -1786,6 +1790,15 @@
     "nextEpisode": "{{seasonEpisode}} · {{title}}",
     "timeRemainingHours": "{{count}} h restantes",
     "timeRemainingHoursMinutes": "{{hours}} h {{minutes}} min restantes",
-    "timeRemainingMinutes": "{{count}} min restantes"
+    "timeRemainingMinutes": "{{count}} min restantes",
+    "hideSelected": "Masquer",
+    "restoreSelected": "Restaurer",
+    "hiddenToast": "{{count}} séries masquées",
+    "hiddenToast_one": "{{count}} série masquée",
+    "hiddenToast_other": "{{count}} séries masquées",
+    "restoredToast": "{{count}} séries restaurées",
+    "restoredToast_one": "{{count}} série restaurée",
+    "restoredToast_other": "{{count}} séries restaurées",
+    "hideFailed": "Échec de la mise à jour des séries masquées"
   }
 }

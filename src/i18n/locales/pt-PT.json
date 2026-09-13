@@ -437,6 +437,10 @@
     "emptyCollectionProgressHint": "Comece a acompanhar uma coleção na página de coleção de um filme para ver o seu progresso aqui.",
     "emptyWatchProgress": "Nenhuma série em progresso",
     "emptyWatchProgressHint": "Comece a ver uma série para acompanhar o seu progresso aqui.",
+    "watchingTab": "A ver",
+    "hiddenTab": "Ocultas",
+    "emptyHiddenWatchProgress": "Nenhuma série oculta",
+    "emptyHiddenWatchProgressHint": "As séries que ocultar aparecerão aqui.",
     "emptyFavoritePeople": "Nenhuma pessoa favorita",
     "emptyFavoritePeopleHint": "Favorite atores e realizadores para os ver aqui.",
     "emptySeasonRatings": "Ainda não há avaliações de temporadas",
@@ -1750,7 +1754,16 @@
     "nextEpisode": "{{seasonEpisode}} · {{title}}",
     "timeRemainingHours": "{{count}}h restantes",
     "timeRemainingHoursMinutes": "{{hours}}h {{minutes}}min restantes",
-    "timeRemainingMinutes": "{{count}}min restantes"
+    "timeRemainingMinutes": "{{count}}min restantes",
+    "hideSelected": "Ocultar",
+    "restoreSelected": "Restaurar",
+    "hiddenToast": "{{count}} séries ocultas",
+    "hiddenToast_one": "{{count}} série oculta",
+    "hiddenToast_other": "{{count}} séries ocultas",
+    "restoredToast": "{{count}} séries restauradas",
+    "restoredToast_one": "{{count}} série restaurada",
+    "restoredToast_other": "{{count}} séries restauradas",
+    "hideFailed": "Falha ao atualizar séries ocultas"
   },
   "widgets": {
     "widgetType": "Tipo de widget",
