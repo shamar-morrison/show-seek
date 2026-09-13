@@ -34,6 +34,7 @@ jest.mock('@/src/context/AccentColorProvider', () => ({
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
 jest.mock('react-native', () => {
@@ -42,6 +43,9 @@ jest.mock('react-native', () => {
 
   return {
     ...actual,
+    Keyboard: {
+      dismiss: jest.fn(),
+    },
     SectionList: ({ sections = [], renderItem, renderSectionHeader, keyExtractor, ...rest }: any) =>
       React.createElement(
         actual.View,
@@ -120,5 +124,61 @@ describe('LibraryScreen premium access', () => {
     fireEvent.press(getByTestId('library-nav-widgets'));
 
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/widgets');
+  });
+});
+
+describe('LibraryScreen search', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPremiumState.isPremium = false;
+    mockRequireAccount.mockReturnValue(false);
+  });
+
+  it('shows the search button before the settings action and filters items by title', () => {
+    const { getByTestId, getByPlaceholderText, queryByTestId } = render(<LibraryScreen />);
+
+    expect(getByTestId('library-search-button')).toBeTruthy();
+    expect(getByTestId('library-nav-notes')).toBeTruthy();
+
+    fireEvent.press(getByTestId('library-search-button'));
+
+    const input = getByPlaceholderText('library.searchLibraryPlaceholder');
+    fireEvent.changeText(input, 'ratings');
+
+    expect(getByTestId('library-nav-season-ratings')).toBeTruthy();
+    expect(queryByTestId('library-nav-notes')).toBeNull();
+  });
+
+  it('matches section titles and shows an empty state when nothing matches', () => {
+    const { getByTestId, getByPlaceholderText, getByText, queryByTestId } = render(
+      <LibraryScreen />
+    );
+
+    fireEvent.press(getByTestId('library-search-button'));
+
+    const input = getByPlaceholderText('library.searchLibraryPlaceholder');
+    fireEvent.changeText(input, 'favorites');
+
+    expect(getByTestId('library-nav-favorite-people')).toBeTruthy();
+
+    fireEvent.changeText(input, 'zzz-no-match');
+
+    expect(queryByTestId('library-nav-notes')).toBeNull();
+    expect(getByText('common.noResults')).toBeTruthy();
+  });
+
+  it('restores the full list when search is closed', () => {
+    const { getByTestId, getByPlaceholderText, queryByTestId } = render(<LibraryScreen />);
+
+    fireEvent.press(getByTestId('library-search-button'));
+
+    const input = getByPlaceholderText('library.searchLibraryPlaceholder');
+    fireEvent.changeText(input, 'ratings');
+    expect(queryByTestId('library-nav-notes')).toBeNull();
+
+    fireEvent.press(getByTestId('searchable-header-clear'));
+
+    expect(getByTestId('library-nav-notes')).toBeTruthy();
+    expect(getByTestId('library-search-button')).toBeTruthy();
   });
 });

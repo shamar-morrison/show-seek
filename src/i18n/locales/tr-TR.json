@@ -434,6 +434,7 @@
     "searchPeoplePlaceholder": "Kişilerde ara...",
     "searchCollectionsPlaceholder": "Koleksiyonlarda ara...",
     "searchShowsPlaceholder": "Dizilerde ara...",
+    "searchLibraryPlaceholder": "Kütüphanede ara...",
     "loadingCollections": "Koleksiyonların yükleniyor...",
     "loadingWatchHistory": "İzleme geçmişin yükleniyor...",
     "watchProgressError": "İzleme ilerlemesi yüklenemedi",

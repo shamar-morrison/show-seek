@@ -16,6 +16,8 @@ interface SearchableHeaderProps {
   onClose: () => void;
   /** Placeholder text for the search input */
   placeholder?: string;
+  /** Whether to include the top safe-area inset in padding. Defaults to true (nav-header use). */
+  includeTopInset?: boolean;
 }
 
 /**
@@ -27,6 +29,7 @@ export function SearchableHeader({
   onSearchChange,
   onClose,
   placeholder = 'Search01Icon...',
+  includeTopInset = true,
 }: SearchableHeaderProps) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
@@ -52,7 +55,7 @@ export function SearchableHeader({
       style={[
         styles.container,
         {
-          paddingTop: insets.top + SPACING.s,
+          paddingTop: (includeTopInset ? insets.top : 0) + SPACING.s,
         },
       ]}
     >
@@ -75,7 +78,12 @@ export function SearchableHeader({
           returnKeyType="search"
           selectionColor={accentColor}
         />
-        <Pressable onPress={handleClear} hitSlop={HIT_SLOP.l} style={styles.clearButton}>
+        <Pressable
+          onPress={handleClear}
+          hitSlop={HIT_SLOP.l}
+          style={styles.clearButton}
+          testID="searchable-header-clear"
+        >
           <AppIcon icon={Cancel01Icon} size={20} color={COLORS.textSecondary} />
         </Pressable>
       </View>
