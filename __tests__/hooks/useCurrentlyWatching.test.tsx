@@ -102,7 +102,7 @@ describe('useCurrentlyWatching', () => {
     jest.useRealTimers();
   });
 
-  it('treats older gaps as caught up when the furthest watched episode matches the latest aired frontier', async () => {
+  it('selects the first unwatched aired episode when there are gaps before the furthest watched episode', async () => {
     mockGetAllWatchedShows.mockResolvedValue([
       {
         metadata: {
@@ -195,9 +195,9 @@ describe('useCurrentlyWatching', () => {
         showEnded: false,
         nextEpisode: {
           kind: 'unwatched',
-          season: 2,
-          episode: 4,
-          title: i18n.t('media.episodeNumber', { number: 4 }),
+          season: 1,
+          episode: 2,
+          title: i18n.t('media.episodeNumber', { number: 2 }),
         },
         lastWatchedEpisode: {
           season: 2,
@@ -361,6 +361,15 @@ describe('useCurrentlyWatching', () => {
           lastUpdated: 9100,
         },
         episodes: {
+          '1_1': { episodeId: 101, tvShowId: 704, seasonNumber: 1, episodeNumber: 1, watchedAt: 1000, episodeName: 'Episode 1', episodeAirDate: '2026-01-01' },
+          '1_2': { episodeId: 102, tvShowId: 704, seasonNumber: 1, episodeNumber: 2, watchedAt: 1500, episodeName: 'Episode 2', episodeAirDate: '2026-01-08' },
+          '1_3': { episodeId: 103, tvShowId: 704, seasonNumber: 1, episodeNumber: 3, watchedAt: 2000, episodeName: 'Episode 3', episodeAirDate: '2026-01-15' },
+          '1_4': { episodeId: 104, tvShowId: 704, seasonNumber: 1, episodeNumber: 4, watchedAt: 2500, episodeName: 'Episode 4', episodeAirDate: '2026-01-22' },
+          '1_5': { episodeId: 105, tvShowId: 704, seasonNumber: 1, episodeNumber: 5, watchedAt: 3000, episodeName: 'Episode 5', episodeAirDate: '2026-01-29' },
+          '1_6': { episodeId: 106, tvShowId: 704, seasonNumber: 1, episodeNumber: 6, watchedAt: 3500, episodeName: 'Episode 6', episodeAirDate: '2026-02-05' },
+          '1_7': { episodeId: 107, tvShowId: 704, seasonNumber: 1, episodeNumber: 7, watchedAt: 4000, episodeName: 'Episode 7', episodeAirDate: '2026-02-12' },
+          '1_8': { episodeId: 108, tvShowId: 704, seasonNumber: 1, episodeNumber: 8, watchedAt: 4500, episodeName: 'Episode 8', episodeAirDate: '2026-02-19' },
+          '1_9': { episodeId: 109, tvShowId: 704, seasonNumber: 1, episodeNumber: 9, watchedAt: 5000, episodeName: 'Episode 9', episodeAirDate: '2026-02-26' },
           '1_10': {
             episodeId: 110,
             tvShowId: 704,
@@ -405,8 +414,8 @@ describe('useCurrentlyWatching', () => {
       expect.objectContaining({
         tvShowId: 704,
         posterPath: '/tmdb-partial.jpg',
-        percentage: 5,
-        timeRemaining: 330,
+        percentage: 50,
+        timeRemaining: 60,
         nextEpisode: {
           kind: 'unwatched',
           season: 2,

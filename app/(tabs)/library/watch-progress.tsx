@@ -248,7 +248,7 @@ export default function WatchProgressScreen() {
     const tvShowIds = Object.keys(selectedIds).map(Number);
     if (tvShowIds.length === 0 || bulkSetHidden.isPending) return;
     if (isAccountRequired()) return;
-    const hidden = activeTab === 'watching';
+    const hidden = activeTab !== 'hidden';
     try {
       await bulkSetHidden.mutateAsync({ tvShowIds, hidden });
       toastRef.current?.show(

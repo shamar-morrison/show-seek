@@ -182,6 +182,39 @@ const getNextEpisodeAfter = (
     : null;
 };
 
+interface UnwatchedAiredScanResult {
+  firstUnwatched: { season: number; episode: number } | null;
+  unwatchedCount: number;
+}
+
+const scanUnwatchedAiredEpisodes = (
+  seasonCounts: Array<[number, number]>,
+  lastAiredEpisode: { seasonNumber: number; episodeNumber: number },
+  episodesMap: Record<string, WatchedEpisode>
+): UnwatchedAiredScanResult => {
+  let firstUnwatched: { season: number; episode: number } | null = null;
+  let unwatchedCount = 0;
+
+  for (const [seasonNumber, count] of seasonCounts) {
+    if (seasonNumber > lastAiredEpisode.seasonNumber) break;
+    const maxEpisode =
+      seasonNumber === lastAiredEpisode.seasonNumber
+        ? Math.min(count, lastAiredEpisode.episodeNumber)
+        : count;
+
+    for (let episodeNumber = 1; episodeNumber <= maxEpisode; episodeNumber += 1) {
+      if (!episodesMap[`${seasonNumber}_${episodeNumber}`]) {
+        if (!firstUnwatched) {
+          firstUnwatched = { season: seasonNumber, episode: episodeNumber };
+        }
+        unwatchedCount += 1;
+      }
+    }
+  }
+
+  return { firstUnwatched, unwatchedCount };
+};
+
 const isShowStillActive = (showDetails: TVShowDetails): boolean =>
   showDetails.status === 'Returning Series' ||
   showDetails.status === 'In Production' ||
@@ -268,22 +301,15 @@ export function useCurrentlyWatching() {
       const showLevelLastAiredEpisode = resolveShowLevelLastAiredEpisode(showDetails, today);
 
       if (showLevelLastAiredEpisode) {
-        const totalAiredEpisodes = getEpisodePosition(
+        const { firstUnwatched } = scanUnwatchedAiredEpisodes(
           seasonCounts,
-          showLevelLastAiredEpisode.seasonNumber,
-          showLevelLastAiredEpisode.episodeNumber
+          showLevelLastAiredEpisode,
+          showInfo.trackingDoc.episodes
         );
-        const furthestWatchedPosition = getEpisodePosition(
-          seasonCounts,
-          furthestWatched.seasonNumber,
-          furthestWatched.episodeNumber
-        );
-        const hasWatchedAhead = furthestWatchedPosition > totalAiredEpisodes;
 
-        if (
-          nextEpisodeNumbers &&
-          (hasWatchedAhead || totalAiredEpisodes > furthestWatchedPosition)
-        ) {
+        if (firstUnwatched) {
+          requestSeasonNumbers.add(firstUnwatched.season);
+        } else if (nextEpisodeNumbers) {
           requestSeasonNumbers.add(nextEpisodeNumbers.season);
         }
       } else {
@@ -415,30 +441,32 @@ export function useCurrentlyWatching() {
         const showStillActive = isShowStillActive(showDetails);
         const showEnded = !showStillActive;
 
+        const {
+          firstUnwatched: firstUnwatchedAiredEpisode,
+          unwatchedCount: remainingAiredEpisodes,
+        } = lastAiredEpisode
+          ? scanUnwatchedAiredEpisodes(
+              seasonCounts,
+              lastAiredEpisode,
+              trackingDoc.episodes
+            )
+          : { firstUnwatched: null, unwatchedCount: 0 };
+
         const hasWatchedAhead = episodesList.some((ep) => {
           if (!ep.episodeAirDate) return false;
           return !isAiredOnOrBefore(ep.episodeAirDate, today);
         });
 
-        // Numerator: count of watched episodes (all watched if watched ahead, otherwise watched aired)
-        const watchedAiredCount = episodesList.filter((ep) => {
-          if (showEnded || hasWatchedAhead) return true;
-          if (ep.episodeAirDate) {
-            return isAiredOnOrBefore(ep.episodeAirDate, today);
-          }
-          const epPos = getEpisodePosition(seasonCounts, ep.seasonNumber, ep.episodeNumber);
-          return epPos <= totalAiredEpisodes;
-        }).length;
+        // Numerator: count of watched episodes (all watched if watched ahead, otherwise actual watched aired episodes)
+        const watchedCount = hasWatchedAhead
+          ? episodesList.length
+          : Math.max(0, totalAiredEpisodes - remainingAiredEpisodes);
 
         // Denominator: always total known episodes (aired + announced unaired)
         const percentage =
           totalKnownEpisodes > 0
-            ? Math.round((watchedAiredCount / totalKnownEpisodes) * 100)
+            ? Math.round((watchedCount / totalKnownEpisodes) * 100)
             : 0;
-
-        const remainingAiredEpisodes = hasWatchedAhead
-          ? 0
-          : Math.max(0, totalAiredEpisodes - watchedAiredCount);
 
         // Time remaining: only for unwatched aired episodes, not unaired ones
         const timeRemaining = remainingAiredEpisodes > 0 ? remainingAiredEpisodes * avgRuntime : 0;
@@ -446,31 +474,25 @@ export function useCurrentlyWatching() {
         // Build nextEpisode using discriminated union
         let nextEpisode: NextEpisodeState = null;
 
-        if (remainingAiredEpisodes > 0) {
+        if (firstUnwatchedAiredEpisode) {
           // State: has unwatched aired episodes → kind: 'unwatched'
-          const nextEpisodeNumbers = getNextEpisodeAfter(
-            seasonCounts,
-            furthestWatched.seasonNumber,
-            furthestWatched.episodeNumber
-          );
+          const fetchedEpisode =
+            seasonsData
+              .get(firstUnwatchedAiredEpisode.season)
+              ?.episodes.find(
+                (episode) =>
+                  episode.season_number === firstUnwatchedAiredEpisode.season &&
+                  episode.episode_number === firstUnwatchedAiredEpisode.episode
+              ) ?? null;
 
-          if (nextEpisodeNumbers) {
-            const fetchedEpisode =
-              seasonsData
-                .get(nextEpisodeNumbers.season)
-                ?.episodes.find(
-                  (episode) =>
-                    episode.season_number === nextEpisodeNumbers.season &&
-                    episode.episode_number === nextEpisodeNumbers.episode
-                ) ?? null;
-
-            nextEpisode = {
-              kind: 'unwatched',
-              season: nextEpisodeNumbers.season,
-              episode: nextEpisodeNumbers.episode,
-              title: fetchedEpisode?.name || buildEpisodeNameFallback(nextEpisodeNumbers.episode),
-            };
-          }
+          nextEpisode = {
+            kind: 'unwatched',
+            season: firstUnwatchedAiredEpisode.season,
+            episode: firstUnwatchedAiredEpisode.episode,
+            title:
+              fetchedEpisode?.name ||
+              buildEpisodeNameFallback(firstUnwatchedAiredEpisode.episode),
+          };
         } else if (showStillActive) {
           // State: caught up on all aired episodes, show still airing → kind: 'upcoming'
           const nextEpisodeNumbers = getNextEpisodeAfter(

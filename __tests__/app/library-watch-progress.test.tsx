@@ -487,4 +487,55 @@ describe('WatchProgressScreen', () => {
     expect(queryByText('Upcoming Show')).toBeNull();
     expect(queryByText('Completed Show')).toBeNull();
   });
+
+  it('selects and hides a show from the Caught Up tab via the bulk bar', async () => {
+    const upcomingShow = {
+      tvShowId: 303,
+      tvShowName: 'Caught Up Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 80,
+      percentage: 90,
+      timeRemaining: 0,
+      isHidden: false,
+      showEnded: false,
+      lastWatchedEpisode: { season: 3, episode: 8, title: 'Episode 8' },
+      nextEpisode: { kind: 'upcoming' as const, season: 3, episode: 9, title: 'Episode 9' },
+    };
+
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [upcomingShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+
+    const { getByTestId, getByText } = render(<WatchProgressScreen />);
+
+    // Switch to Caught Up tab
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-tabs-tab-caughtUp')).toBeTruthy();
+    });
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-caughtUp'));
+
+    await waitFor(() => {
+      expect(getByText('Caught Up Show')).toBeTruthy();
+    });
+
+    // Long press to select
+    fireEvent(getByText('Caught Up Show'), 'onLongPress');
+
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-bulk-bar')).toBeTruthy();
+    });
+
+    // Press bulk hide button
+    fireEvent.press(getByTestId('watch-progress-bulk-hide-button'));
+
+    // Critical assertion: hidden must be TRUE when hiding from Caught Up tab
+    await waitFor(() => {
+      expect(mockBulkMutateAsync).toHaveBeenCalledWith({ tvShowIds: [303], hidden: true });
+    });
+  });
 });
