@@ -2,7 +2,7 @@ import { tmdbApi, type Episode, type Season, type TVShowDetails } from '@/src/ap
 import { useAuth } from '@/src/context/auth';
 import i18n from '@/src/i18n';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
-import { InProgressShow, WatchedEpisode } from '@/src/types/episodeTracking';
+import { InProgressShow, NextEpisodeState, WatchedEpisode } from '@/src/types/episodeTracking';
 import { isTmdbDateOnOrBefore } from '@/src/utils/dateUtils';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
@@ -182,6 +182,39 @@ const getNextEpisodeAfter = (
     : null;
 };
 
+interface UnwatchedAiredScanResult {
+  firstUnwatched: { season: number; episode: number } | null;
+  unwatchedCount: number;
+}
+
+const scanUnwatchedAiredEpisodes = (
+  seasonCounts: Array<[number, number]>,
+  lastAiredEpisode: { seasonNumber: number; episodeNumber: number },
+  episodesMap: Record<string, WatchedEpisode>
+): UnwatchedAiredScanResult => {
+  let firstUnwatched: { season: number; episode: number } | null = null;
+  let unwatchedCount = 0;
+
+  for (const [seasonNumber, count] of seasonCounts) {
+    if (seasonNumber > lastAiredEpisode.seasonNumber) break;
+    const maxEpisode =
+      seasonNumber === lastAiredEpisode.seasonNumber
+        ? Math.min(count, lastAiredEpisode.episodeNumber)
+        : count;
+
+    for (let episodeNumber = 1; episodeNumber <= maxEpisode; episodeNumber += 1) {
+      if (!episodesMap[`${seasonNumber}_${episodeNumber}`]) {
+        if (!firstUnwatched) {
+          firstUnwatched = { season: seasonNumber, episode: episodeNumber };
+        }
+        unwatchedCount += 1;
+      }
+    }
+  }
+
+  return { firstUnwatched, unwatchedCount };
+};
+
 const isShowStillActive = (showDetails: TVShowDetails): boolean =>
   showDetails.status === 'Returning Series' ||
   showDetails.status === 'In Production' ||
@@ -268,22 +301,15 @@ export function useCurrentlyWatching() {
       const showLevelLastAiredEpisode = resolveShowLevelLastAiredEpisode(showDetails, today);
 
       if (showLevelLastAiredEpisode) {
-        const totalAiredEpisodes = getEpisodePosition(
+        const { firstUnwatched } = scanUnwatchedAiredEpisodes(
           seasonCounts,
-          showLevelLastAiredEpisode.seasonNumber,
-          showLevelLastAiredEpisode.episodeNumber
+          showLevelLastAiredEpisode,
+          showInfo.trackingDoc.episodes
         );
-        const furthestWatchedPosition = getEpisodePosition(
-          seasonCounts,
-          furthestWatched.seasonNumber,
-          furthestWatched.episodeNumber
-        );
-        const hasWatchedAhead = furthestWatchedPosition > totalAiredEpisodes;
 
-        if (
-          nextEpisodeNumbers &&
-          (hasWatchedAhead || totalAiredEpisodes > furthestWatchedPosition)
-        ) {
+        if (firstUnwatched) {
+          requestSeasonNumbers.add(firstUnwatched.season);
+        } else if (nextEpisodeNumbers) {
           requestSeasonNumbers.add(nextEpisodeNumbers.season);
         }
       } else {
@@ -399,51 +425,100 @@ export function useCurrentlyWatching() {
         const lastAiredEpisode = resolveLastAiredEpisode(showDetails, today, seasonsData);
         const totalKnownEpisodes = seasonCounts.reduce((sum, [, count]) => sum + count, 0);
 
-        if (!lastAiredEpisode || seasonCounts.length === 0 || totalKnownEpisodes <= 0) {
+        if (seasonCounts.length === 0 || totalKnownEpisodes <= 0) {
           return;
         }
 
-        const totalAiredEpisodes = getEpisodePosition(
-          seasonCounts,
-          lastAiredEpisode.seasonNumber,
-          lastAiredEpisode.episodeNumber
-        );
+        // Determine aired episode count for "remaining unwatched aired" calculation
+        const totalAiredEpisodes = lastAiredEpisode
+          ? getEpisodePosition(
+              seasonCounts,
+              lastAiredEpisode.seasonNumber,
+              lastAiredEpisode.episodeNumber
+            )
+          : 0;
 
-        if (totalAiredEpisodes <= 0) {
-          return;
-        }
+        const showStillActive = isShowStillActive(showDetails);
+        const showEnded = !showStillActive;
 
-        const furthestWatchedPosition = getEpisodePosition(
-          seasonCounts,
-          furthestWatched.seasonNumber,
-          furthestWatched.episodeNumber
-        );
-        const hasWatchedAhead = furthestWatchedPosition > totalAiredEpisodes;
-        const progressTotalEpisodes = hasWatchedAhead ? totalKnownEpisodes : totalAiredEpisodes;
-        const progressPosition = Math.min(furthestWatchedPosition, progressTotalEpisodes);
-        const remainingEpisodes = Math.max(0, progressTotalEpisodes - progressPosition);
-        const percentage = Math.round((progressPosition / progressTotalEpisodes) * 100);
-        const timeRemaining = remainingEpisodes > 0 ? remainingEpisodes * avgRuntime : 0;
+        const {
+          firstUnwatched: firstUnwatchedAiredEpisode,
+          unwatchedCount: remainingAiredEpisodes,
+        } = lastAiredEpisode
+          ? scanUnwatchedAiredEpisodes(
+              seasonCounts,
+              lastAiredEpisode,
+              trackingDoc.episodes
+            )
+          : { firstUnwatched: null, unwatchedCount: 0 };
 
-        if (remainingEpisodes === 0 && !isShowStillActive(showDetails)) {
-          return;
-        }
+        const hasWatchedAhead = episodesList.some((ep) => {
+          if (!ep.episodeAirDate) return false;
+          return !isAiredOnOrBefore(ep.episodeAirDate, today);
+        });
 
-        let nextEpisodeCandidate: {
-          season: number;
-          episode: number;
-          title: string;
-          airDate: string | null;
-        } | null = null;
+        // Numerator: count of watched episodes (all watched if watched ahead, otherwise actual watched aired episodes)
+        const watchedCount = hasWatchedAhead
+          ? episodesList.length
+          : Math.max(0, totalAiredEpisodes - remainingAiredEpisodes);
 
-        if (remainingEpisodes > 0) {
+        // Denominator: always total known episodes (aired + announced unaired)
+        const percentage =
+          totalKnownEpisodes > 0
+            ? Math.round((watchedCount / totalKnownEpisodes) * 100)
+            : 0;
+
+        // Time remaining: only for unwatched aired episodes, not unaired ones
+        const timeRemaining = remainingAiredEpisodes > 0 ? remainingAiredEpisodes * avgRuntime : 0;
+
+        // Build nextEpisode using discriminated union
+        let nextEpisode: NextEpisodeState = null;
+
+        if (firstUnwatchedAiredEpisode) {
+          // State: has unwatched aired episodes → kind: 'unwatched'
+          const fetchedEpisode =
+            seasonsData
+              .get(firstUnwatchedAiredEpisode.season)
+              ?.episodes.find(
+                (episode) =>
+                  episode.season_number === firstUnwatchedAiredEpisode.season &&
+                  episode.episode_number === firstUnwatchedAiredEpisode.episode
+              ) ?? null;
+
+          nextEpisode = {
+            kind: 'unwatched',
+            season: firstUnwatchedAiredEpisode.season,
+            episode: firstUnwatchedAiredEpisode.episode,
+            title:
+              fetchedEpisode?.name ||
+              buildEpisodeNameFallback(firstUnwatchedAiredEpisode.episode),
+          };
+        } else if (showStillActive) {
+          // State: caught up on all aired episodes, show still airing → kind: 'upcoming'
           const nextEpisodeNumbers = getNextEpisodeAfter(
             seasonCounts,
             furthestWatched.seasonNumber,
             furthestWatched.episodeNumber
           );
 
-          if (nextEpisodeNumbers) {
+          const nextToAir = showDetails.next_episode_to_air;
+          const isNextToAirBeyondFurthest =
+            nextToAir &&
+            nextToAir.season_number > 0 &&
+            nextToAir.episode_number > 0 &&
+            (!nextEpisodeNumbers ||
+              nextToAir.season_number > furthestWatched.seasonNumber ||
+              (nextToAir.season_number === furthestWatched.seasonNumber &&
+                nextToAir.episode_number > furthestWatched.episodeNumber));
+
+          if (isNextToAirBeyondFurthest && nextToAir) {
+            nextEpisode = {
+              kind: 'upcoming',
+              season: nextToAir.season_number,
+              episode: nextToAir.episode_number,
+              title: nextToAir.name || buildEpisodeNameFallback(nextToAir.episode_number),
+            };
+          } else if (nextEpisodeNumbers) {
             const fetchedEpisode =
               seasonsData
                 .get(nextEpisodeNumbers.season)
@@ -453,13 +528,24 @@ export function useCurrentlyWatching() {
                     episode.episode_number === nextEpisodeNumbers.episode
                 ) ?? null;
 
-            nextEpisodeCandidate = {
+            nextEpisode = {
+              kind: 'upcoming',
               season: nextEpisodeNumbers.season,
               episode: nextEpisodeNumbers.episode,
               title: fetchedEpisode?.name || buildEpisodeNameFallback(nextEpisodeNumbers.episode),
-              airDate: fetchedEpisode?.air_date ?? null,
+            };
+          } else {
+            // Still active but no future episodes announced yet
+            nextEpisode = {
+              kind: 'upcoming',
+              season: 0,
+              episode: 0,
+              title: i18n.t('watching.caughtUp'),
             };
           }
+        } else {
+          // State: show has ended and user has watched everything → kind: 'complete'
+          nextEpisode = { kind: 'complete' };
         }
 
         processedShows.push({
@@ -471,12 +557,13 @@ export function useCurrentlyWatching() {
           percentage,
           timeRemaining,
           isHidden: metadata.hiddenFromProgress === true,
+          showEnded,
           lastWatchedEpisode: {
             season: furthestWatched.seasonNumber,
             episode: furthestWatched.episodeNumber,
             title: furthestWatched.episodeName,
           },
-          nextEpisode: nextEpisodeCandidate,
+          nextEpisode,
         });
       } catch (e) {
         console.error(`Error processing show:`, e);

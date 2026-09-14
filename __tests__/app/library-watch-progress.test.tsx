@@ -18,8 +18,9 @@ const mockShows = [
     percentage: 45,
     timeRemaining: 220,
     isHidden: false,
+    showEnded: false,
     lastWatchedEpisode: { season: 1, episode: 3, title: 'Episode 3' },
-    nextEpisode: { season: 1, episode: 4, title: 'Episode 4', airDate: null },
+    nextEpisode: { kind: 'unwatched', season: 1, episode: 4, title: 'Episode 4' },
   },
 ];
 
@@ -32,8 +33,9 @@ const mockHiddenShow = {
   percentage: 30,
   timeRemaining: 100,
   isHidden: true,
+  showEnded: false,
   lastWatchedEpisode: { season: 1, episode: 2, title: 'Episode 2' },
-  nextEpisode: { season: 1, episode: 3, title: 'Episode 3', airDate: null },
+  nextEpisode: { kind: 'unwatched', season: 1, episode: 3, title: 'Episode 3' },
 };
 
 const mockRouterPush = jest.fn();
@@ -331,8 +333,9 @@ describe('WatchProgressScreen', () => {
       expect(getByTestId('watch-progress-tabs')).toBeTruthy();
     });
 
-    expect(getByText('Watching (1)')).toBeTruthy();
-    expect(getByText('Hidden (1)')).toBeTruthy();
+    expect(getByText('Watching')).toBeTruthy();
+    expect(getByText('Caught Up')).toBeTruthy();
+    expect(getByText('Hidden')).toBeTruthy();
   });
 
   it('keeps hidden shows out of the Watching tab and shows them in the Hidden tab', async () => {
@@ -411,5 +414,128 @@ describe('WatchProgressScreen', () => {
       expect(mockIsAccountRequired).toHaveBeenCalled();
     });
     expect(mockBulkMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('correctly buckets shows into Watching, Caught Up, and Hidden tabs', async () => {
+    const upcomingShow = {
+      tvShowId: 303,
+      tvShowName: 'Upcoming Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 80,
+      percentage: 90,
+      timeRemaining: 0,
+      isHidden: false,
+      showEnded: false,
+      lastWatchedEpisode: { season: 3, episode: 8, title: 'Episode 8' },
+      nextEpisode: { kind: 'upcoming' as const, season: 3, episode: 9, title: 'Episode 9' },
+    };
+
+    const completeShow = {
+      tvShowId: 404,
+      tvShowName: 'Completed Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 70,
+      percentage: 100,
+      timeRemaining: 0,
+      isHidden: false,
+      showEnded: true,
+      lastWatchedEpisode: { season: 5, episode: 10, title: 'Series Finale' },
+      nextEpisode: { kind: 'complete' as const },
+    };
+
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [...mockShows, upcomingShow, completeShow, mockHiddenShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+
+    const { getByTestId, getByText, queryByText } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByText('Watching')).toBeTruthy();
+      expect(getByText('Caught Up')).toBeTruthy();
+      expect(getByText('Hidden')).toBeTruthy();
+    });
+
+    // In Watching tab by default
+    expect(getByText('Mock Show')).toBeTruthy();
+    expect(queryByText('Upcoming Show')).toBeNull();
+    expect(queryByText('Completed Show')).toBeNull();
+    expect(queryByText('Hidden Show')).toBeNull();
+
+    // Switch to Caught Up tab
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-caughtUp'));
+
+    await waitFor(() => {
+      expect(getByText('Upcoming Show')).toBeTruthy();
+      expect(getByText('Completed Show')).toBeTruthy();
+    });
+    expect(queryByText('Mock Show')).toBeNull();
+    expect(queryByText('Hidden Show')).toBeNull();
+
+    // Switch to Hidden tab
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-hidden'));
+
+    await waitFor(() => {
+      expect(getByText('Hidden Show')).toBeTruthy();
+    });
+    expect(queryByText('Mock Show')).toBeNull();
+    expect(queryByText('Upcoming Show')).toBeNull();
+    expect(queryByText('Completed Show')).toBeNull();
+  });
+
+  it('selects and hides a show from the Caught Up tab via the bulk bar', async () => {
+    const upcomingShow = {
+      tvShowId: 303,
+      tvShowName: 'Caught Up Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 80,
+      percentage: 90,
+      timeRemaining: 0,
+      isHidden: false,
+      showEnded: false,
+      lastWatchedEpisode: { season: 3, episode: 8, title: 'Episode 8' },
+      nextEpisode: { kind: 'upcoming' as const, season: 3, episode: 9, title: 'Episode 9' },
+    };
+
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [upcomingShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+
+    const { getByTestId, getByText } = render(<WatchProgressScreen />);
+
+    // Switch to Caught Up tab
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-tabs-tab-caughtUp')).toBeTruthy();
+    });
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-caughtUp'));
+
+    await waitFor(() => {
+      expect(getByText('Caught Up Show')).toBeTruthy();
+    });
+
+    // Long press to select
+    fireEvent(getByText('Caught Up Show'), 'onLongPress');
+
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-bulk-bar')).toBeTruthy();
+    });
+
+    // Press bulk hide button
+    fireEvent.press(getByTestId('watch-progress-bulk-hide-button'));
+
+    // Critical assertion: hidden must be TRUE when hiding from Caught Up tab
+    await waitFor(() => {
+      expect(mockBulkMutateAsync).toHaveBeenCalledWith({ tvShowIds: [303], hidden: true });
+    });
   });
 });

@@ -89,6 +89,20 @@ export interface ShowProgress {
 }
 
 /**
+ * Discriminated union representing the "next episode" state on the Watch Progress dashboard.
+ *
+ * - `unwatched` – There is at least one aired episode the user hasn't watched yet.
+ * - `upcoming`  – The user is caught up on all aired episodes; the next episode hasn't aired yet.
+ * - `complete`  – The show has ended and the user has watched everything.
+ * - `null`      – Data is unavailable / still loading.
+ */
+export type NextEpisodeState =
+  | { kind: 'unwatched'; season: number; episode: number; title: string }
+  | { kind: 'upcoming'; season: number; episode: number; title: string }
+  | { kind: 'complete' }
+  | null;
+
+/**
  * Data structure for the "Currently Watching" dashboard
  */
 export interface InProgressShow {
@@ -101,15 +115,12 @@ export interface InProgressShow {
   timeRemaining: number; // in minutes
   /** Whether the show is hidden from Watch Progress (mirrors metadata.hiddenFromProgress) */
   isHidden: boolean;
+  /** Whether the show has ended (status is 'Ended' or 'Canceled' with no future episodes) */
+  showEnded: boolean;
   lastWatchedEpisode: {
     season: number;
     episode: number;
     title: string;
   };
-  nextEpisode: {
-    season: number;
-    episode: number;
-    title: string;
-    airDate: string | null;
-  } | null; // null if caught up
+  nextEpisode: NextEpisodeState;
 }
