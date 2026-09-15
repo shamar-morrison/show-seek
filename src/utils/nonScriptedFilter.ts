@@ -21,9 +21,10 @@ interface TalkShowCandidate {
  * `hideTalkShowsAndAwards` preference should remove from browse surfaces.
  *
  * Precision rules (scripted shows must never match):
- * - Movies are never matched: explicit `media_type === 'movie'` short-circuits,
- *   and untyped items without a TV `name` resolve to movie (same convention as
- *   `useContentFilter`) so a movie `title` alone can never match.
+ * - Only TV items are candidates: any other explicit `media_type`
+ *   ('movie', 'person', ...) short-circuits, and untyped items without a TV
+ *   `name` resolve to movie (same convention as `useContentFilter`) so a
+ *   movie `title` alone can never match.
  * - Genre layer matches only Talk (10767) / News (10763). Reality and
  *   War & Politics are intentionally excluded.
  * - Title layer uses exact normalized full-title matches plus ceremony
@@ -36,10 +37,14 @@ interface TalkShowCandidate {
  */
 export const isTalkOrAwardsShow = (item: TalkShowCandidate | null | undefined): boolean => {
   if (!item) return false;
-  // Movies (Oscar winners included) are never talk shows. List items without
-  // an explicit `media_type` resolve the same way `useContentFilter` does:
-  // only items carrying a TV `name` are candidates.
+  // Movies (Oscar winners included) are never talk shows, and neither is any
+  // other explicit non-tv type (e.g. 'person' results carry `name` too).
+  // List items without an explicit `media_type` resolve the same way
+  // `useContentFilter` does: only items carrying a TV `name` are candidates.
   if (item.media_type === 'movie') return false;
+  if (item.media_type !== undefined && item.media_type !== null && item.media_type !== 'tv') {
+    return false;
+  }
   if (item.media_type !== 'tv' && typeof item.name !== 'string') return false;
 
   const genreIds = item.genre_ids;

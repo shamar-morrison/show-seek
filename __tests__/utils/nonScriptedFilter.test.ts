@@ -78,6 +78,8 @@ describe('isTalkOrAwardsShow', () => {
       ['30 Rock', [35]],
       ['House of Cards', [18, 10768]],
       ['The Sample Show', [18]],
+      // Regression: the generic after-party pattern used to hide this scripted comedy.
+      ['The Afterparty', [35]],
     ])('keeps %s', (name, genre_ids) => {
       expect(isTalkOrAwardsShow({ id: 999004, name, genre_ids })).toBe(false);
     });
@@ -94,6 +96,16 @@ describe('isTalkOrAwardsShow', () => {
       expect(isTalkOrAwardsShow({ id: 999007, title: 'Oscar' })).toBe(false);
       expect(
         isTalkOrAwardsShow({ id: 999008, media_type: 'movie', title: 'The Oscars' })
+      ).toBe(false);
+    });
+
+    it('never matches non-tv explicit media types, even with award-like names', () => {
+      // Person results carry `name` too (e.g. "Tony Bennett" trips the Tonys pattern).
+      expect(
+        isTalkOrAwardsShow({ id: 999011, media_type: 'person', name: 'Tony Bennett' })
+      ).toBe(false);
+      expect(
+        isTalkOrAwardsShow({ id: 999012, media_type: 'person', name: 'The Tonight Show' })
       ).toBe(false);
     });
 

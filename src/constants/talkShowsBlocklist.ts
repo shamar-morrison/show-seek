@@ -199,5 +199,4 @@ export const AWARD_NAME_PATTERNS: readonly RegExp[] = [
   /\beurovision/i,
   /\bmiss\s*(universe|america|world)\b/i,
   /\bred\s*carpet/i,
-  /\bafter\s*party/i,
 ];

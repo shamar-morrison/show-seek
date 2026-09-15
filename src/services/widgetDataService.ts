@@ -56,7 +56,11 @@ export async function getUpcomingTVShows(
   hideTalkShowsAndAwards: boolean = DEFAULT_PREFERENCES.hideTalkShowsAndAwards
 ): Promise<WidgetMediaItem[]> {
   return fetchAndCacheWidgetData<TVShow>(
-    'upcoming_tv',
+    // Partition the AsyncStorage cache by filter state so toggling the
+    // preference can never reuse results generated under the opposite
+    // setting. The SharedPreferences key stays 'upcoming_tv' — native
+    // widgets always receive freshly resolved data either way.
+    hideTalkShowsAndAwards ? 'upcoming_tv_notalk' : 'upcoming_tv_all',
     'upcoming_tv',
     () => tmdbApi.getUpcomingTVShows(1),
     'TMDB getUpcomingTVShows timed out',
