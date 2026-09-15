@@ -302,7 +302,8 @@ export const polarWebhook = onRequest(
       return;
     }
 
-    const webhookSecret = POLAR_WEBHOOK_SECRET.value() || process.env.POLAR_WEBHOOK_SECRET;
+    const rawSecret = POLAR_WEBHOOK_SECRET.value() || process.env.POLAR_WEBHOOK_SECRET || '';
+    const webhookSecret = rawSecret.trim();
 
     if (!webhookSecret) {
       console.error('Missing POLAR_WEBHOOK_SECRET');
@@ -311,11 +312,12 @@ export const polarWebhook = onRequest(
     }
 
     const rawBody = (req as any).rawBody;
-    const bodyString = Buffer.isBuffer(rawBody)
-      ? rawBody.toString('utf8')
+    const isRawBuffer = Buffer.isBuffer(rawBody);
+    const bodyForValidation: string | Buffer = isRawBuffer
+      ? rawBody
       : typeof rawBody === 'string'
       ? rawBody
-      : JSON.stringify(req.body);
+      : JSON.stringify(req.body ?? {});
 
     const headersRecord: Record<string, string> = {};
     for (const [key, value] of Object.entries(req.headers)) {
@@ -326,10 +328,33 @@ export const polarWebhook = onRequest(
       }
     }
 
+    console.log('[Polar Webhook Debug]', {
+      hasRawBody: !!rawBody,
+      isRawBuffer,
+      rawBodyLength: isRawBuffer
+        ? rawBody.length
+        : typeof rawBody === 'string'
+        ? rawBody.length
+        : null,
+      secretLength: rawSecret.length,
+      secretTrimmedLength: webhookSecret.length,
+      secretHasWhitespace: rawSecret !== webhookSecret,
+      secretStartsWithPrefix: webhookSecret.startsWith('whsec_'),
+      webhookId: headersRecord['webhook-id'] || null,
+      webhookTimestamp: headersRecord['webhook-timestamp'] || null,
+      hasSignature: !!headersRecord['webhook-signature'],
+    });
+
+    if (!rawBody) {
+      console.warn(
+        '[Polar Webhook] req.rawBody is missing! Falling back to JSON.stringify(req.body); signature verification may fail.',
+      );
+    }
+
     let parsedEvent: GenericPolarEvent;
     try {
       try {
-        parsedEvent = validateEvent(bodyString, headersRecord, webhookSecret) as GenericPolarEvent;
+        parsedEvent = validateEvent(bodyForValidation, headersRecord, webhookSecret) as GenericPolarEvent;
       } catch (validationErr) {
         if (validationErr instanceof SDKValidationError) {
           parsedEvent = (validationErr as any).rawValue as GenericPolarEvent;
