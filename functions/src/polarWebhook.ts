@@ -1,8 +1,8 @@
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
-import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/dist/commonjs/webhooks';
-import { SDKValidationError } from '@polar-sh/sdk/dist/commonjs/models/errors/sdkvalidationerror';
+import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks';
+import { SDKValidationError } from '@polar-sh/sdk/models/errors/sdkvalidationerror';
 import {
   MONTHLY_SUBSCRIPTION_PRODUCT_ID,
   YEARLY_SUBSCRIPTION_PRODUCT_ID,

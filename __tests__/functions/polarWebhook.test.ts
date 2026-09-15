@@ -65,7 +65,7 @@ class MockSDKValidationError extends Error {
 }
 
 jest.mock(
-  '@polar-sh/sdk/dist/commonjs/webhooks',
+  '@polar-sh/sdk/webhooks',
   () => ({
     validateEvent: (...args: any[]) => mockValidateEvent(...args),
     WebhookVerificationError: MockWebhookVerificationError,
@@ -74,7 +74,7 @@ jest.mock(
 );
 
 jest.mock(
-  '@polar-sh/sdk/dist/commonjs/models/errors/sdkvalidationerror',
+  '@polar-sh/sdk/models/errors/sdkvalidationerror',
   () => ({
     SDKValidationError: MockSDKValidationError,
   }),
