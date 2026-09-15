@@ -47,40 +47,7 @@ jest.mock(
   }),
   { virtual: true }
 );
-
-const mockValidateEvent = jest.fn();
-class MockWebhookVerificationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'WebhookVerificationError';
-  }
-}
-class MockSDKValidationError extends Error {
-  rawValue: any;
-  constructor(message: string, rawValue: any) {
-    super(message);
-    this.name = 'SDKValidationError';
-    this.rawValue = rawValue;
-  }
-}
-
-jest.mock(
-  '@polar-sh/sdk/webhooks',
-  () => ({
-    validateEvent: (...args: any[]) => mockValidateEvent(...args),
-    WebhookVerificationError: MockWebhookVerificationError,
-  }),
-  { virtual: true }
-);
-
-jest.mock(
-  '@polar-sh/sdk/models/errors/sdkvalidationerror',
-  () => ({
-    SDKValidationError: MockSDKValidationError,
-  }),
-  { virtual: true }
-);
-
+import * as crypto from 'crypto';
 import {
   extractFirebaseUid,
   mapPolarEventToPremiumPayload,
@@ -88,6 +55,8 @@ import {
   resolvePolarEventTimestampMs,
   resolvePolarProductId,
   resolveSubscriptionType,
+  verifyPolarWebhookSignature,
+  WEBHOOK_TOLERANCE_IN_SECONDS,
   type ExistingPremiumData,
   type GenericPolarEvent,
   type PolarWebhookConfig,
@@ -348,16 +317,41 @@ describe('polarWebhook handler', () => {
     expect(response.json).toHaveBeenCalledWith({ error: 'Method Not Allowed' });
   });
 
+  const createSignedRequest = (
+    payload: any,
+    webhookId = 'wh_test',
+    timestampSec = Math.floor(Date.now() / 1000),
+    secret = 'whsec_test_secret',
+  ) => {
+    const rawBody = JSON.stringify(payload);
+    const toSign = `${webhookId}.${timestampSec}.${rawBody}`;
+    const stripped = secret.startsWith('whsec_') ? secret.slice(6) : secret;
+    const keyBytes = Buffer.from(stripped, 'base64');
+    const sig = crypto.createHmac('sha256', keyBytes).update(toSign).digest('base64');
+
+    return {
+      method: 'POST',
+      rawBody: Buffer.from(rawBody, 'utf8'),
+      body: payload,
+      headers: {
+        'webhook-id': webhookId,
+        'webhook-timestamp': timestampSec.toString(),
+        'webhook-signature': `v1,${sig}`,
+      },
+    };
+  };
+
   it('rejects invalid signatures with 401', async () => {
     const response = createResponse();
-    mockValidateEvent.mockImplementationOnce(() => {
-      throw new MockWebhookVerificationError('Bad signature');
-    });
 
     await polarWebhook(
       {
         body: {},
-        headers: { 'webhook-signature': 'bad_sig' },
+        headers: {
+          'webhook-id': 'wh_bad',
+          'webhook-timestamp': Math.floor(Date.now() / 1000).toString(),
+          'webhook-signature': 'v1,bad_signature',
+        },
         method: 'POST',
       } as any,
       response as any
@@ -369,21 +363,50 @@ describe('polarWebhook handler', () => {
     });
   });
 
-  it('skips processing if event is missing external_id', async () => {
+  it('rejects missing required headers with 401', async () => {
     const response = createResponse();
-    mockValidateEvent.mockReturnValueOnce({
-      type: 'subscription.active',
-      data: { id: 'sub_no_ext' },
-    });
 
     await polarWebhook(
       {
         body: {},
-        headers: { 'webhook-id': 'wh_no_uid' },
+        headers: {
+          'webhook-signature': 'v1,something',
+        },
         method: 'POST',
       } as any,
       response as any
     );
+
+    expect(response.status).toHaveBeenCalledWith(401);
+    expect(response.json).toHaveBeenCalledWith({
+      error: 'Unauthorized: Invalid webhook signature',
+    });
+  });
+
+  it('rejects timestamp outside tolerance with 401', async () => {
+    const response = createResponse();
+    const oldTimestamp = Math.floor(Date.now() / 1000) - 301;
+    const req = createSignedRequest({ type: 'order.paid' }, 'wh_old', oldTimestamp);
+
+    await polarWebhook(req as any, response as any);
+
+    expect(response.status).toHaveBeenCalledWith(401);
+    expect(response.json).toHaveBeenCalledWith({
+      error: 'Unauthorized: Webhook timestamp outside tolerance',
+    });
+  });
+
+  it('skips processing if event is missing external_id', async () => {
+    const response = createResponse();
+    const req = createSignedRequest(
+      {
+        type: 'subscription.active',
+        data: { id: 'sub_no_ext' },
+      },
+      'wh_no_uid'
+    );
+
+    await polarWebhook(req as any, response as any);
 
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith({
@@ -393,14 +416,6 @@ describe('polarWebhook handler', () => {
   });
 
   it('treats duplicate webhook deliveries as idempotent', async () => {
-    mockValidateEvent.mockReturnValueOnce({
-      type: 'subscription.active',
-      data: {
-        id: 'sub_dup',
-        customer: { external_id: 'user_dup' },
-      },
-    });
-
     mockRunTransaction.mockImplementationOnce(async (callback: any) => {
       const transaction = {
         get: jest.fn(async (ref: { path: string }) => {
@@ -415,15 +430,18 @@ describe('polarWebhook handler', () => {
     });
 
     const response = createResponse();
-
-    await polarWebhook(
+    const req = createSignedRequest(
       {
-        body: {},
-        headers: { 'webhook-id': 'wh_dup' },
-        method: 'POST',
-      } as any,
-      response as any
+        type: 'subscription.active',
+        data: {
+          id: 'sub_dup',
+          customer: { external_id: 'user_dup' },
+        },
+      },
+      'wh_dup'
     );
+
+    await polarWebhook(req as any, response as any);
 
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'duplicate' });
@@ -431,15 +449,6 @@ describe('polarWebhook handler', () => {
 
   it('marks stale events and skips premium write', async () => {
     const transactionSet = jest.fn();
-
-    mockValidateEvent.mockReturnValueOnce({
-      type: 'subscription.updated',
-      timestamp: 500,
-      data: {
-        id: 'sub_stale',
-        customer: { external_id: 'user_stale' },
-      },
-    });
 
     mockRunTransaction.mockImplementationOnce(async (callback: any) => {
       const transaction = {
@@ -462,15 +471,19 @@ describe('polarWebhook handler', () => {
     });
 
     const response = createResponse();
-
-    await polarWebhook(
+    const req = createSignedRequest(
       {
-        body: {},
-        headers: { 'webhook-id': 'wh_stale' },
-        method: 'POST',
-      } as any,
-      response as any
+        type: 'subscription.updated',
+        timestamp: 500,
+        data: {
+          id: 'sub_stale',
+          customer: { external_id: 'user_stale' },
+        },
+      },
+      'wh_stale'
     );
+
+    await polarWebhook(req as any, response as any);
 
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'stale' });
@@ -483,20 +496,6 @@ describe('polarWebhook handler', () => {
   it('processes valid event and writes merged premium state', async () => {
     const transactionSet = jest.fn();
 
-    mockValidateEvent.mockReturnValueOnce({
-      type: 'subscription.active',
-      timestamp: 2000,
-      data: {
-        id: 'sub_valid',
-        customer_id: 'cust_valid',
-        customer: { external_id: 'user_valid' },
-        product_id: 'polar_prod_yearly',
-        status: 'active',
-        current_period_start: 2000,
-        current_period_end: 2000 + 365 * 86400_000,
-      },
-    });
-
     mockRunTransaction.mockImplementationOnce(async (callback: any) => {
       const transaction = {
         get: jest.fn(async (ref: { path: string }) => {
@@ -518,15 +517,24 @@ describe('polarWebhook handler', () => {
     });
 
     const response = createResponse();
-
-    await polarWebhook(
+    const req = createSignedRequest(
       {
-        body: {},
-        headers: { 'webhook-id': 'wh_valid' },
-        method: 'POST',
-      } as any,
-      response as any
+        type: 'subscription.active',
+        timestamp: 2000,
+        data: {
+          id: 'sub_valid',
+          customer_id: 'cust_valid',
+          customer: { external_id: 'user_valid' },
+          product_id: 'polar_prod_yearly',
+          status: 'active',
+          current_period_start: 2000,
+          current_period_end: 2000 + 365 * 86400_000,
+        },
+      },
+      'wh_valid'
     );
+
+    await polarWebhook(req as any, response as any);
 
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
@@ -547,3 +555,110 @@ describe('polarWebhook handler', () => {
     expect(eventCall[1].status).toBe('processed');
   });
 });
+
+describe('verifyPolarWebhookSignature', () => {
+  const secret = 'whsec_test_secret';
+  const rawBody = JSON.stringify({ type: 'order.paid' });
+  const webhookId = 'msg_123';
+  const now = 1700000000;
+
+  it('validates a correctly signed payload within tolerance', () => {
+    const stripped = secret.slice(6);
+    const keyBytes = Buffer.from(stripped, 'base64');
+    const sig = crypto
+      .createHmac('sha256', keyBytes)
+      .update(`${webhookId}.${now}.${rawBody}`)
+      .digest('base64');
+
+    const result = verifyPolarWebhookSignature(
+      rawBody,
+      {
+        'webhook-id': webhookId,
+        'webhook-timestamp': now.toString(),
+        'webhook-signature': `v1,${sig}`,
+      },
+      secret,
+      { nowSec: now }
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.webhookId).toBe(webhookId);
+  });
+
+  it('rejects timestamp older than tolerance', () => {
+    const oldTimestamp = now - 301;
+    const stripped = secret.slice(6);
+    const keyBytes = Buffer.from(stripped, 'base64');
+    const sig = crypto
+      .createHmac('sha256', keyBytes)
+      .update(`${webhookId}.${oldTimestamp}.${rawBody}`)
+      .digest('base64');
+
+    const result = verifyPolarWebhookSignature(
+      rawBody,
+      {
+        'webhook-id': webhookId,
+        'webhook-timestamp': oldTimestamp.toString(),
+        'webhook-signature': `v1,${sig}`,
+      },
+      secret,
+      { nowSec: now, toleranceSeconds: 300 }
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe('timestamp_out_of_tolerance');
+  });
+
+  it('rejects timestamp newer than tolerance', () => {
+    const futureTimestamp = now + 301;
+    const stripped = secret.slice(6);
+    const keyBytes = Buffer.from(stripped, 'base64');
+    const sig = crypto
+      .createHmac('sha256', keyBytes)
+      .update(`${webhookId}.${futureTimestamp}.${rawBody}`)
+      .digest('base64');
+
+    const result = verifyPolarWebhookSignature(
+      rawBody,
+      {
+        'webhook-id': webhookId,
+        'webhook-timestamp': futureTimestamp.toString(),
+        'webhook-signature': `v1,${sig}`,
+      },
+      secret,
+      { nowSec: now, toleranceSeconds: 300 }
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe('timestamp_out_of_tolerance');
+  });
+
+  it('rejects an invalid signature', () => {
+    const result = verifyPolarWebhookSignature(
+      rawBody,
+      {
+        'webhook-id': webhookId,
+        'webhook-timestamp': now.toString(),
+        'webhook-signature': 'v1,invalidbase64signature==',
+      },
+      secret,
+      { nowSec: now }
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe('invalid_signature');
+  });
+
+  it('rejects missing required headers', () => {
+    const result = verifyPolarWebhookSignature(
+      rawBody,
+      {
+        'webhook-id': webhookId,
+      },
+      secret,
+      { nowSec: now }
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe('missing_headers');
+  });

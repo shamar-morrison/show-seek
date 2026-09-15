@@ -1,8 +1,7 @@
 import * as admin from 'firebase-admin';
+import * as crypto from 'crypto';
 import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
-import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks';
-import { SDKValidationError } from '@polar-sh/sdk/models/errors/sdkvalidationerror';
 import {
   MONTHLY_SUBSCRIPTION_PRODUCT_ID,
   YEARLY_SUBSCRIPTION_PRODUCT_ID,
@@ -294,6 +293,96 @@ export const mapPolarEventToPremiumPayload = (
   };
 };
 
+export const WEBHOOK_TOLERANCE_IN_SECONDS = 5 * 60; // 5 minutes
+
+export interface VerifySignatureResult {
+  valid: boolean;
+  reason?: 'missing_headers' | 'timestamp_out_of_tolerance' | 'invalid_signature';
+  webhookId?: string;
+  webhookTimestamp?: string;
+}
+
+export function verifyPolarWebhookSignature(
+  rawBodyString: string,
+  headersRecord: Record<string, string>,
+  webhookSecret: string,
+  options?: {
+    toleranceSeconds?: number;
+    nowSec?: number;
+  },
+): VerifySignatureResult {
+  const webhookId = headersRecord['webhook-id'] || '';
+  const webhookTimestamp = headersRecord['webhook-timestamp'] || '';
+  const webhookSignatureHeader = headersRecord['webhook-signature'] || '';
+
+  if (!webhookId || !webhookTimestamp || !webhookSignatureHeader) {
+    return {
+      valid: false,
+      reason: 'missing_headers',
+      webhookId: webhookId || undefined,
+      webhookTimestamp: webhookTimestamp || undefined,
+    };
+  }
+
+  // Verify timestamp is within tolerance window (Standard Webhooks spec recommends 5 minutes)
+  const timestampSec = parseInt(webhookTimestamp, 10);
+  const nowSec = options?.nowSec ?? Math.floor(Date.now() / 1000);
+  const toleranceSeconds = options?.toleranceSeconds ?? WEBHOOK_TOLERANCE_IN_SECONDS;
+
+  if (Number.isNaN(timestampSec) || Math.abs(nowSec - timestampSec) > toleranceSeconds) {
+    return {
+      valid: false,
+      reason: 'timestamp_out_of_tolerance',
+      webhookId,
+      webhookTimestamp,
+    };
+  }
+
+  // Compute HMAC-SHA256 signature (Form b: strip whsec_ prefix, base64-decode raw bytes key)
+  const toSign = `${webhookId}.${webhookTimestamp}.${rawBodyString}`;
+  const strippedSecret = webhookSecret.startsWith('whsec_')
+    ? webhookSecret.slice(6)
+    : webhookSecret;
+  const keyBytes = Buffer.from(strippedSecret, 'base64');
+  const expectedSignature = crypto
+    .createHmac('sha256', keyBytes)
+    .update(toSign)
+    .digest('base64');
+
+  // Parse and compare against each v1,<sig> value
+  const actualSignatures: string[] = [];
+  for (const item of webhookSignatureHeader.split(' ')) {
+    const trimmed = item.trim();
+    if (trimmed) {
+      const [version, ...rest] = trimmed.split(',');
+      if (version === 'v1' && rest.length > 0) {
+        actualSignatures.push(rest.join(','));
+      }
+    }
+  }
+
+  const isSignatureValid = actualSignatures.some((sig) => {
+    const bufA = Buffer.from(sig, 'utf8');
+    const bufB = Buffer.from(expectedSignature, 'utf8');
+    return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+  });
+
+  if (!isSignatureValid) {
+    return {
+      valid: false,
+      reason: 'invalid_signature',
+      webhookId,
+      webhookTimestamp,
+    };
+  }
+
+  return {
+    valid: true,
+    webhookId,
+    webhookTimestamp,
+  };
+}
+
 export const polarWebhook = onRequest(
   { secrets: [POLAR_WEBHOOK_SECRET, POLAR_PRODUCT_ID_MONTHLY, POLAR_PRODUCT_ID_YEARLY] },
   async (req, res): Promise<void> => {
@@ -313,8 +402,8 @@ export const polarWebhook = onRequest(
 
     const rawBody = (req as any).rawBody;
     const isRawBuffer = Buffer.isBuffer(rawBody);
-    const bodyForValidation: string | Buffer = isRawBuffer
-      ? rawBody
+    const rawBodyString = isRawBuffer
+      ? rawBody.toString('utf8')
       : typeof rawBody === 'string'
       ? rawBody
       : JSON.stringify(req.body ?? {});
@@ -328,49 +417,33 @@ export const polarWebhook = onRequest(
       }
     }
 
-    console.log('[Polar Webhook Debug]', {
-      hasRawBody: !!rawBody,
-      isRawBuffer,
-      rawBodyLength: isRawBuffer
-        ? rawBody.length
-        : typeof rawBody === 'string'
-        ? rawBody.length
-        : null,
-      secretLength: rawSecret.length,
-      secretTrimmedLength: webhookSecret.length,
-      secretHasWhitespace: rawSecret !== webhookSecret,
-      secretStartsWithPrefix: webhookSecret.startsWith('whsec_'),
-      webhookId: headersRecord['webhook-id'] || null,
-      webhookTimestamp: headersRecord['webhook-timestamp'] || null,
-      hasSignature: !!headersRecord['webhook-signature'],
-    });
+    const verification = verifyPolarWebhookSignature(
+      rawBodyString,
+      headersRecord,
+      webhookSecret,
+    );
 
-    if (!rawBody) {
-      console.warn(
-        '[Polar Webhook] req.rawBody is missing! Falling back to JSON.stringify(req.body); signature verification may fail.',
-      );
+    if (!verification.valid) {
+      console.warn('[Polar Webhook]', {
+        webhookId: verification.webhookId || headersRecord['webhook-id'] || null,
+        verified: false,
+        reason: verification.reason,
+      });
+
+      if (verification.reason === 'timestamp_out_of_tolerance') {
+        res.status(401).json({ error: 'Unauthorized: Webhook timestamp outside tolerance' });
+      } else {
+        res.status(401).json({ error: 'Unauthorized: Invalid webhook signature' });
+      }
+      return;
     }
 
     let parsedEvent: GenericPolarEvent;
     try {
-      try {
-        parsedEvent = validateEvent(bodyForValidation, headersRecord, webhookSecret) as GenericPolarEvent;
-      } catch (validationErr) {
-        if (validationErr instanceof SDKValidationError) {
-          parsedEvent = (validationErr as any).rawValue as GenericPolarEvent;
-        } else {
-          throw validationErr;
-        }
-      }
-    } catch (error: any) {
-      if (error instanceof WebhookVerificationError) {
-        console.warn('Polar webhook signature verification failed:', error.message);
-        res.status(401).json({ error: 'Unauthorized: Invalid webhook signature' });
-        return;
-      }
-
-      console.error('Error verifying Polar webhook signature:', error);
-      res.status(400).json({ error: 'Bad Request: Unable to verify webhook signature' });
+      parsedEvent = JSON.parse(rawBodyString) as GenericPolarEvent;
+    } catch (parseError) {
+      console.error('[Polar Webhook] Failed to parse payload as JSON:', parseError);
+      res.status(400).json({ error: 'Bad Request: Invalid JSON payload' });
       return;
     }
 
@@ -378,6 +451,12 @@ export const polarWebhook = onRequest(
       res.status(400).json({ error: 'Invalid event payload' });
       return;
     }
+
+    console.log('[Polar Webhook]', {
+      webhookId: verification.webhookId,
+      eventType: parsedEvent.type,
+      verified: true,
+    });
 
     const SUPPORTED_EVENTS = new Set([
       'order.paid',
