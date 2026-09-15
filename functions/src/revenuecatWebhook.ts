@@ -48,6 +48,7 @@ export interface ExistingPremiumData {
   isInTrial?: boolean;
   orderId?: string | null;
   productId?: string | null;
+  provider?: 'polar' | 'revenuecat' | null;
   purchaseDate?: admin.firestore.Timestamp | null;
   purchaseToken?: string | null;
   rcLastEventTimestampMs?: number;
@@ -203,6 +204,7 @@ export const mapRevenueCatEventToPremiumPayload = (
     return {
       isPremium: true,
       entitlementType: 'lifetime',
+      provider: 'revenuecat',
       purchaseToken: existingPremium.purchaseToken ?? null,
       productId:
         (isLegacyLifetimeProductId(productId) ? productId : existingPremium.productId) ??
@@ -239,6 +241,7 @@ export const mapRevenueCatEventToPremiumPayload = (
   return {
     isPremium,
     entitlementType: isPremium ? 'subscription' : 'none',
+    provider: 'revenuecat',
     purchaseToken: existingPremium.purchaseToken ?? null,
     productId,
     orderId: event.transaction_id ?? event.store_transaction_id ?? existingPremium.orderId ?? null,
