@@ -75,6 +75,20 @@ jest.mock('@/src/hooks/useAccountRequired', () => ({
   useAccountRequired: () => mockUseAccountRequired(),
 }));
 
+jest.mock('@/src/hooks/useContentFilter', () => ({
+  useContentFilter: (items: any[]) => items ?? [],
+  useContentFilterWithDiagnostics: (items: any[]) => ({
+    filteredItems: items ?? [],
+    diagnostics: {
+      allItemsRemovedByPreferences: false,
+      removedByPreferences: false,
+      removedByUnreleasedContent: false,
+      removedByWatchedContent: false,
+      removedByTalkShowsAndAwards: false,
+    },
+  }),
+}));
+
 jest.mock('@/src/components/cards/MovieCard', () => ({
   MovieCard: (props: any) => {
     mockMovieCard(props);

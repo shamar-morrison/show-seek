@@ -10,6 +10,7 @@ import { getMoodById } from '@/src/constants/moods';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
+import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { MoodMediaType, useMoodDiscovery } from '@/src/hooks/useMoodDiscovery';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -125,6 +126,10 @@ export default function MoodResultsScreen() {
     mediaType,
     enabled: !!moodId,
   });
+
+  // Browse surface: honor hideTalkShowsAndAwards (and watched/unreleased).
+  // Runs in the existing filter memo — no extra queries or renders.
+  const filteredData = useContentFilter(data);
 
   // Get mood name for the header title so users know which mood they're viewing
   const moodKey = mood?.translationKey?.replace('mood.', '') || '';
@@ -321,7 +326,7 @@ export default function MoodResultsScreen() {
   }
 
   // Empty state
-  if (!isLoading && data.length === 0) {
+  if (!isLoading && filteredData.length === 0) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         {ListHeader}
@@ -333,7 +338,7 @@ export default function MoodResultsScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
       <FlashList
-        data={data}
+        data={filteredData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         extraData={listExtraData}

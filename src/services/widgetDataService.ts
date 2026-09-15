@@ -1,6 +1,8 @@
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
+import { filterNonScriptedTV } from '@/src/utils/nonScriptedFilter';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
@@ -49,7 +51,10 @@ export async function getUpcomingMovies(limitCount: number = 5): Promise<WidgetM
   );
 }
 
-export async function getUpcomingTVShows(limitCount: number = 5): Promise<WidgetMediaItem[]> {
+export async function getUpcomingTVShows(
+  limitCount: number = 5,
+  hideTalkShowsAndAwards: boolean = DEFAULT_PREFERENCES.hideTalkShowsAndAwards
+): Promise<WidgetMediaItem[]> {
   return fetchAndCacheWidgetData<TVShow>(
     'upcoming_tv',
     'upcoming_tv',
@@ -62,7 +67,8 @@ export async function getUpcomingTVShows(limitCount: number = 5): Promise<Widget
       releaseDate: s.first_air_date,
       mediaType: 'tv' as const,
     }),
-    limitCount
+    limitCount,
+    (results) => filterNonScriptedTV(results, hideTalkShowsAndAwards)
   );
 }
 
@@ -140,7 +146,8 @@ export async function getUserWatchlist(
 export async function syncAllWidgetData(
   userId?: string,
   listId?: string,
-  widgetConfigs?: Array<{ type: string; size: string; listId?: string }>
+  widgetConfigs?: Array<{ type: string; size: string; listId?: string }>,
+  hideTalkShowsAndAwards: boolean = DEFAULT_PREFERENCES.hideTalkShowsAndAwards
 ): Promise<void> {
   try {
     // Build widget config for native side
@@ -163,7 +170,7 @@ export async function syncAllWidgetData(
     await getUpcomingMovies(5);
 
     // Fetch and sync upcoming TV shows
-    await getUpcomingTVShows(5);
+    await getUpcomingTVShows(5, hideTalkShowsAndAwards);
 
     // Sync watchlist if user is logged in
     if (userId && listId) {
@@ -211,7 +218,8 @@ async function fetchAndCacheWidgetData<T extends Movie | TVShow>(
   apiCall: () => Promise<PaginatedResponse<T>>,
   timeoutMsg: string,
   mapper: (item: T) => WidgetMediaItem,
-  limitCount: number
+  limitCount: number,
+  preFilter?: (results: T[]) => T[]
 ): Promise<WidgetMediaItem[]> {
   const cacheKey = `${WIDGET_CACHE_PREFIX}${keySuffix}`;
   await setWidgetLoadingState(prefsKey, true);
@@ -229,7 +237,8 @@ async function fetchAndCacheWidgetData<T extends Movie | TVShow>(
     const { promise: timeoutPromise, cancel } = createTimeoutWithCleanup(10_000, timeoutMsg);
 
     const data = await Promise.race([apiCall(), timeoutPromise]).finally(() => cancel());
-    const items = data.results.slice(0, limitCount).map(mapper);
+    const results = preFilter ? preFilter(data.results) : data.results;
+    const items = results.slice(0, limitCount).map(mapper);
 
     await cacheData(cacheKey, items);
 

@@ -4,6 +4,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { isTalkOrAwardsShow } from '@/src/utils/nonScriptedFilter';
 import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -76,25 +77,14 @@ export default function TVShowsStep({ selectedShows, onSelect, genreIds }: TVSho
       seen.add(s.id);
       return true;
     });
-    // Exclude non-scripted content (talk shows, news, reality/awards shows)
-    const noExcludedGenres = unique.filter(
-      (s) => !s.genre_ids.some((gid) => EXCLUDED_TV_GENRE_IDS.includes(gid))
-    );
-    // Exclude award shows by name that may slip through genre filters
-    const EXCLUDED_NAME_PATTERNS = [
-      /\boscar/i,
-      /\bacademy\s*award/i,
-      /\bemmy/i,
-      /\bgrammy/i,
-      /\bgolden\s*globe/i,
-      /\bbafta/i,
-      /\bsag\s*award/i,
-      /\bscreen\s*actors?\s*guild/i,
-      /\btonys?\b/i,
-      /\btony\s*award/i,
-    ];
-    return noExcludedGenres.filter(
-      (s) => !EXCLUDED_NAME_PATTERNS.some((pattern) => pattern.test(s.name))
+    // Exclude non-scripted content. Onboarding has no preference yet, so this
+    // always applies. Keeps the pre-existing reality-genre exclusion and adds
+    // the shared talk/awards predicate (ID + exact-title + ceremony patterns)
+    // so both stay consistent with the browse filter.
+    return unique.filter(
+      (s) =>
+        !isTalkOrAwardsShow(s) &&
+        !s.genre_ids.some((gid) => EXCLUDED_TV_GENRE_IDS.includes(gid))
     );
   }, [page1Data, page2Data]);
 

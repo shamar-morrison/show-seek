@@ -1,6 +1,7 @@
 import { listService } from '@/src/services/ListService';
 import { syncAllWidgetData } from '@/src/services/widgetDataService';
 import { WidgetConfig } from '@/src/types';
+import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef } from 'react';
 import { AppState, NativeModules, Platform } from 'react-native';
@@ -88,10 +89,17 @@ async function resolveWatchlistListId(
  * fetches are cache-guarded (2h TTL) inside widgetDataService, so steady-state
  * cost is a few AsyncStorage reads plus idempotent preference writes.
  */
-export function useWidgetAutoSync(userId?: string | null) {
+export function useWidgetAutoSync(
+  userId?: string | null,
+  hideTalkShowsAndAwards: boolean = DEFAULT_PREFERENCES.hideTalkShowsAndAwards
+) {
   const userIdRef = useRef<string | null>(userId ?? null);
   userIdRef.current = userId ?? null;
   const syncInFlightRef = useRef(false);
+  // Mirrored in a ref so background foreground-syncs always read the latest
+  // toggle value without re-subscribing (zero extra queries or renders).
+  const hideTalkShowsRef = useRef(hideTalkShowsAndAwards);
+  hideTalkShowsRef.current = hideTalkShowsAndAwards;
   // Resolved list id per user, so foreground syncs don't re-read the lists
   // collection every time. Reset whenever the signed-in user changes.
   const resolvedListIdRef = useRef<{ uid: string | null; listId: string | undefined }>({
@@ -109,7 +117,6 @@ export function useWidgetAutoSync(userId?: string | null) {
       const currentUserId = userIdRef.current;
       const configs = await loadStoredWidgetConfigs(currentUserId);
       const watchlistWidget = configs.find((w) => w.type === 'watchlist');
-
       let listId: string | undefined;
       const cached = resolvedListIdRef.current;
       if (watchlistWidget?.listId) {
@@ -121,7 +128,12 @@ export function useWidgetAutoSync(userId?: string | null) {
         resolvedListIdRef.current = { uid: currentUserId, listId };
       }
 
-      await syncAllWidgetData(currentUserId ?? undefined, listId, configs);
+      await syncAllWidgetData(
+        currentUserId ?? undefined,
+        listId,
+        configs,
+        hideTalkShowsRef.current
+      );
       await triggerNativeWidgetUpdate();
     } catch (error) {
       console.warn('[WidgetAutoSync] Failed to sync widget data:', error);

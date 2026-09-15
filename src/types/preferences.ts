@@ -40,6 +40,7 @@ export interface UserPreferences {
   defaultLaunchScreen?: LaunchScreenRoute; // Which tab to open on app launch
   hideWatchedContent: boolean; // Premium: hide watched content from search/discover
   hideUnreleasedContent: boolean; // Hide unreleased movies/TV shows from search/discover
+  hideTalkShowsAndAwards: boolean; // Hide talk shows, late-night, news talk and award ceremonies from browse surfaces
   markPreviousEpisodesWatched: boolean; // Auto-mark previous episodes when marking an episode as watched
   allowUnreleasedEpisodeWatches: boolean; // Allow marking future-dated episodes as watched
   hideTabLabels: boolean; // Hide labels on bottom tab bar, show only icons
@@ -61,6 +62,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   defaultLaunchScreen: '/(tabs)/home',
   hideWatchedContent: false, // Off by default - show all content
   hideUnreleasedContent: false, // Off by default - show unreleased content
+  hideTalkShowsAndAwards: true, // On by default - most users don't want talk/awards in browse surfaces
   markPreviousEpisodesWatched: false, // Off by default - only mark selected episode
   allowUnreleasedEpisodeWatches: false, // Off by default - future episodes remain locked
   hideTabLabels: false, // Off by default - show labels

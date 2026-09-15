@@ -55,6 +55,8 @@ class PreferencesService {
         data?.preferences?.hideWatchedContent ?? DEFAULT_PREFERENCES.hideWatchedContent,
       hideUnreleasedContent:
         data?.preferences?.hideUnreleasedContent ?? DEFAULT_PREFERENCES.hideUnreleasedContent,
+      hideTalkShowsAndAwards:
+        data?.preferences?.hideTalkShowsAndAwards ?? DEFAULT_PREFERENCES.hideTalkShowsAndAwards,
       markPreviousEpisodesWatched:
         data?.preferences?.markPreviousEpisodesWatched ??
         DEFAULT_PREFERENCES.markPreviousEpisodesWatched,

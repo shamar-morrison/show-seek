@@ -215,6 +215,15 @@ export function PreferencesSection({
       />
 
       <PreferenceItem
+        label={t('profile.hideTalkShowsAndAwards')}
+        subtitle={t('profile.hideTalkShowsAndAwardsDescription')}
+        value={!!preferences?.hideTalkShowsAndAwards}
+        onValueChange={(value) => handleUpdate('hideTalkShowsAndAwards', value)}
+        loading={isLoading || isItemUpdating('hideTalkShowsAndAwards')}
+        disabled={isUpdating}
+      />
+
+      <PreferenceItem
         label={t('profile.hideTabLabels')}
         subtitle={t('profile.hideTabLabelsDescription')}
         value={!!preferences?.hideTabLabels}
