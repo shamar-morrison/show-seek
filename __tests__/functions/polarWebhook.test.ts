@@ -363,7 +363,9 @@ describe('polarWebhook helpers', () => {
     expect(payload.entitlementType).toBe('pro');
     expect(payload.productId).toBe('rc_annual');
     expect(payload.subscriptionState).toBe('ACTIVE');
-    expect(payload.orderId).toBe('order_unrelated_1');
+    expect(payload.orderId).toBeUndefined();
+    expect(payload.polarLastEventTimestampMs).toBeUndefined();
+    expect(payload.polarCustomerId).toBeUndefined();
   });
 
   it('leaves existing state untouched for order.paid with missing product ID', () => {
@@ -662,6 +664,60 @@ describe('polarWebhook handler', () => {
     );
     expect(eventCall).toBeDefined();
     expect(eventCall[1].status).toBe('processed');
+  });
+
+  it('does not bump polarLastEventTimestampMs on unconfigured order.paid, preventing staleness drops for subsequent subscription events', async () => {
+    const transactionSet = jest.fn();
+
+    const initialPremium = {
+      isPremium: true,
+      provider: 'polar' as const,
+      subscriptionState: 'ACTIVE',
+      subscriptionType: 'monthly' as const,
+      productId: 'monthly_showseek_sub',
+      polarLastEventTimestampMs: 1000,
+    };
+
+    mockRunTransaction.mockImplementationOnce(async (callback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('polarWebhookEvents/')) {
+            return { exists: false };
+          }
+          return {
+            data: () => ({ premium: initialPremium }),
+            exists: true,
+          };
+        }),
+        set: transactionSet,
+      };
+      return await callback(transaction);
+    });
+
+    const response = createResponse();
+    const req = createSignedRequest(
+      {
+        type: 'order.paid',
+        timestamp: 2000,
+        data: {
+          id: 'order_donation',
+          customer: { external_id: 'user_ordered' },
+          product_id: 'polar_unrelated_prod',
+        },
+      },
+      'wh_order_unrelated'
+    );
+
+    await polarWebhook(req as any, response as any);
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+
+    const userCall = transactionSet.mock.calls.find((c) => c[0].path === 'users/user_ordered');
+    expect(userCall).toBeDefined();
+    expect(userCall[1].premium.polarLastEventTimestampMs).toBe(1000);
+    expect(userCall[1].premium.isPremium).toBe(true);
+    expect(userCall[1].premium.productId).toBe('monthly_showseek_sub');
   });
 });
 

@@ -254,9 +254,6 @@ export const mapPolarEventToPremiumPayload = (
       } else {
         return {
           ...existingPremium,
-          polarLastEventTimestampMs: eventTimestampMs,
-          polarCustomerId: customerId,
-          orderId,
         };
       }
       break;
