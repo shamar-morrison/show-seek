@@ -6,7 +6,9 @@ import { PreferencesSection, PREFERENCE_ITEMS } from '@/src/components/profile/P
 import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
+import { Search01Icon } from '@hugeicons/core-free-icons';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -36,7 +38,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -123,6 +124,7 @@ export default function ProfileScreen() {
   selectedTabRef.current = selectedTab;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
   const highlightTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -282,6 +284,11 @@ export default function ProfileScreen() {
     action();
   };
 
+  const handleDeactivateSearch = useCallback(() => {
+    setIsSearchActive(false);
+    setSearchQuery('');
+  }, []);
+
   const renderTabContent = () => {
     switch (selectedTab) {
       case 'preferences':
@@ -360,13 +367,31 @@ export default function ProfileScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Header */}
-        <TouchableOpacity
-          style={styles.header}
-          onLongPress={__DEV__ ? handleReadDiagnosticsPress : undefined}
-          activeOpacity={1}
-        >
-          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-        </TouchableOpacity>
+        {isSearchActive ? (
+          <SearchableHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClose={handleDeactivateSearch}
+            placeholder={t('common.search')}
+            includeTopInset={false}
+          />
+        ) : (
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.headerTitleContainer}
+              onLongPress={__DEV__ ? handleReadDiagnosticsPress : undefined}
+              activeOpacity={1}
+            >
+              <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+            </TouchableOpacity>
+            <HeaderIconButton
+              onPress={() => setIsSearchActive(true)}
+              testID="profile-search-button"
+            >
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
+            </HeaderIconButton>
+          </View>
+        )}
 
         {/* User Info Section - Fixed at top */}
         <UserInfoSection
@@ -376,26 +401,6 @@ export default function ProfileScreen() {
           onUpgradePress={handleUpgradePress}
           onSignOut={handleSignOut}
         />
-
-        {/* Search */}
-        <View style={styles.searchContainer}>
-          <AppIcon icon={Search01Icon} size={18} color={COLORS.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t('common.search')}
-            placeholderTextColor={COLORS.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={ACTIVE_OPACITY}>
-              <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
 
         {/* Tabs */}
         <View style={styles.tabsContainer}>
@@ -450,42 +455,29 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xxl,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.s,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
+  },
+  headerTitleContainer: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    marginHorizontal: SPACING.l,
-    marginTop: SPACING.m,
-    gap: SPACING.s,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: FONT_SIZE.m,
-    fontFamily: FONT_FAMILY.regular,
-    color: COLORS.text,
-    paddingVertical: 0,
-  },
   tabsContainer: {
     paddingTop: SPACING.m,
     marginBottom: SPACING.m,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
-  },  tabsContent: {
+  },
+  tabsContent: {
     paddingHorizontal: SPACING.l,
     gap: SPACING.m,
     paddingBottom: SPACING.m,
