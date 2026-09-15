@@ -3,6 +3,7 @@ import { WidgetConfig } from '@/src/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, NativeModules, Platform } from 'react-native';
+import { usePreferences } from './usePreferences';
 
 const WIDGETS_KEY = 'user_widgets';
 
@@ -25,6 +26,12 @@ export function useWidgets(userId?: string) {
   useEffect(() => {
     userIdRef.current = userId;
   }, [userId]);
+
+  // Cached preferences (no extra network in steady state). Mirrored in a ref
+  // so background AppState syncs always read the latest toggle value.
+  const { preferences } = usePreferences();
+  const hideTalkShowsRef = useRef(true);
+  hideTalkShowsRef.current = !!preferences?.hideTalkShowsAndAwards;
 
   const loadWidgets = useCallback(async () => {
     const currentUserId = userIdRef.current;
@@ -71,7 +78,7 @@ export function useWidgets(userId?: string) {
     const watchlistWidget = widgetsToSync.find((w) => w.type === 'watchlist');
     const listId = watchlistWidget?.listId;
 
-    await syncAllWidgetData(userId, listId, widgetsToSync);
+    await syncAllWidgetData(userId, listId, widgetsToSync, hideTalkShowsRef.current);
 
     // Trigger native widget update
     if (Platform.OS === 'android' && WidgetUpdateModule) {

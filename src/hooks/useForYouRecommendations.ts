@@ -2,9 +2,11 @@ import { Movie, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { useAuth } from '@/src/context/auth';
 import { RatingItem } from '@/src/services/RatingService';
 import { hasListItemInMap } from '@/src/utils/listItemKeys';
+import { filterNonScriptedTV } from '@/src/utils/nonScriptedFilter';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useLists } from './useLists';
+import { usePreferences } from './usePreferences';
 import { useRatings } from './useRatings';
 
 const MIN_RATING_THRESHOLD = 8;
@@ -100,6 +102,9 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
   const { user } = useAuth();
   const { data: ratings, isLoading: isLoadingRatings } = useRatings();
   const { data: lists, isLoading: isLoadingLists } = useLists({ enabled: !!user });
+  // Cached preferences query (30m stale) — no extra network in steady state.
+  const { preferences } = usePreferences();
+  const hideTalkShowsAndAwards = !!preferences?.hideTalkShowsAndAwards;
 
   const isAuthenticated = !!user;
 
@@ -205,14 +210,19 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
       const query = recommendationQueries[index];
       const isMovieSection = seed.mediaType === 'movie';
       const deduped = dedupeById((query?.data?.results || []) as (Movie | TVShow)[]);
+      // Movies are never talk/awards content; TV sections honor the preference.
+      // Explicitly saved seeds are untouched — only their recommendations filter.
+      const recommendations = isMovieSection
+        ? excludeWatchedMovies(deduped)
+        : filterNonScriptedTV(deduped, hideTalkShowsAndAwards);
       return {
         seed,
-        recommendations: isMovieSection ? excludeWatchedMovies(deduped) : deduped,
+        recommendations,
         isLoading: (query?.isLoading ?? true) || (isMovieSection && isLoadingLists),
         error: query?.error as Error | null,
       };
     });
-  }, [seeds, recommendationQueries, excludeWatchedMovies, isLoadingLists]);
+  }, [seeds, recommendationQueries, excludeWatchedMovies, isLoadingLists, hideTalkShowsAndAwards]);
 
   // Fetch Hidden Gems - high quality but low popularity movies
   const { data: hiddenGemsData, isLoading: isLoadingHiddenGemsQuery } = useQuery({
@@ -258,7 +268,10 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
     () => excludeWatchedMovies(dedupeById(trendingMoviesData?.results || [])),
     [excludeWatchedMovies, trendingMoviesData]
   );
-  const trendingTV = useMemo(() => dedupeById(trendingTVData?.results || []), [trendingTVData]);
+  const trendingTV = useMemo(
+    () => filterNonScriptedTV(dedupeById(trendingTVData?.results || []), hideTalkShowsAndAwards),
+    [trendingTVData, hideTalkShowsAndAwards]
+  );
 
   return {
     seeds,

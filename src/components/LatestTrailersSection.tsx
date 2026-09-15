@@ -11,6 +11,7 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { isTalkOrAwardsShow } from '@/src/utils/nonScriptedFilter';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { useQuery } from '@tanstack/react-query';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -42,6 +43,22 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     () => (preferences?.dataSaver ? 'mqdefault' : 'hqdefault'),
     [preferences?.dataSaver]
   );
+
+  // Browse surface: drop trailers for talk/awards shows without extra fetches
+  // (title + ID check only — no per-item detail calls, so no perf cost).
+  const visibleTrailers = useMemo(() => {
+    if (!trailers || !preferences?.hideTalkShowsAndAwards) return trailers;
+    const filtered = trailers.filter(
+      (trailer) =>
+        !isTalkOrAwardsShow({
+          id: trailer.mediaId,
+          media_type: trailer.mediaType,
+          name: trailer.mediaType === 'tv' ? trailer.mediaTitle : undefined,
+          title: trailer.mediaType === 'movie' ? trailer.mediaTitle : undefined,
+        })
+    );
+    return filtered.length === trailers.length ? trailers : filtered;
+  }, [trailers, preferences?.hideTalkShowsAndAwards]);
 
   const handleTrailerPress = useCallback((trailer: TrailerItem) => {
     setSelectedTrailer(trailer);
@@ -103,9 +120,9 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
           removeClippedSubviews={true}
           drawDistance={400}
         />
-      ) : trailers && trailers.length > 0 ? (
+      ) : visibleTrailers && visibleTrailers.length > 0 ? (
         <HorizontalFlashList
-          data={trailers}
+          data={visibleTrailers}
           renderItem={renderTrailerCard}
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}

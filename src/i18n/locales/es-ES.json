@@ -812,6 +812,8 @@
     "exportFailedTitle": "Error de exportación",
     "hideUnreleased": "Ocultar no estrenados",
     "hideUnreleasedDescription": "Oculta películas y series que aún no se han estrenado",
+    "hideTalkShowsAndAwards": "Ocultar talk shows y premios",
+    "hideTalkShowsAndAwardsDescription": "Oculta late night, programas de entrevistas, noticias y ceremonias de premios al explorar",
     "hideWatchedContent": "Ocultar vistos",
     "hideWatchedContentDescription": "Eliminar películas y series vistas de la búsqueda y el descubrimiento",
     "noEmail": "Sin correo",

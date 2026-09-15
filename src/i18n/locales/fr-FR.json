@@ -819,6 +819,8 @@
     "checkConnection": "Veuillez vérifier votre connexion et réessayer",
     "hideUnreleased": "Masquer le contenu non sorti",
     "hideUnreleasedDescription": "Masquer les films et séries qui ne sont pas encore sortis",
+    "hideTalkShowsAndAwards": "Masquer talk-shows et cérémonies",
+    "hideTalkShowsAndAwardsDescription": "Masquer les late-night, talk-shows, émissions d'info et cérémonies de remise de prix",
     "updatePreferenceError": "Échec de la mise à jour de la préférence. Veuillez réessayer.",
     "content": "Contenu",
     "exportAsCsv": "Exporter en CSV",

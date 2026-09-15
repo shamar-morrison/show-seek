@@ -135,6 +135,7 @@ describe('useContentFilter', () => {
         removedByPreferences: true,
         removedByUnreleasedContent: true,
         removedByWatchedContent: false,
+        removedByTalkShowsAndAwards: false,
       });
     });
   });
@@ -229,6 +230,7 @@ describe('useContentFilter', () => {
         removedByPreferences: true,
         removedByUnreleasedContent: false,
         removedByWatchedContent: true,
+        removedByTalkShowsAndAwards: false,
       });
     });
   });
@@ -246,6 +248,82 @@ describe('useContentFilter', () => {
       // After hideUnreleased: 3 (2 is upcoming, 3 has no date so kept)
       expect(result.current).toHaveLength(1);
       expect(result.current[0].id).toBe(3);
+    });
+  });
+
+  describe('hideTalkShowsAndAwards', () => {
+    const talkShow = { id: 100, name: 'The Tonight Show Starring Jimmy Fallon', genre_ids: [10767] };
+    const awardsShow = { id: 101, name: 'The 96th Academy Awards', genre_ids: [10764] };
+    const scriptedShow = { id: 102, name: 'Breaking Bad', genre_ids: [18] };
+
+    beforeEach(() => {
+      mockUsePreferences.mockReturnValue({
+        preferences: {
+          hideUnreleasedContent: false,
+          hideWatchedContent: false,
+          hideTalkShowsAndAwards: true,
+        },
+      });
+    });
+
+    it('removes talk and awards shows while keeping scripted shows', () => {
+      const { result } = renderHook(() =>
+        useContentFilter([talkShow, awardsShow, scriptedShow])
+      );
+
+      expect(result.current).toEqual([scriptedShow]);
+    });
+
+    it('keeps everything when the preference is off', () => {
+      mockUsePreferences.mockReturnValue({
+        preferences: {
+          hideUnreleasedContent: false,
+          hideWatchedContent: false,
+          hideTalkShowsAndAwards: false,
+        },
+      });
+
+      const items = [talkShow, awardsShow, scriptedShow];
+      const { result } = renderHook(() => useContentFilter(items));
+
+      expect(result.current).toBe(items);
+    });
+
+    it('still filters for logged-out users (no auth, no lists needed)', () => {
+      mockUseAuth.mockReturnValue({ user: null });
+
+      const { result } = renderHook(() =>
+        useContentFilterWithDiagnostics([talkShow, scriptedShow])
+      );
+
+      expect(result.current.filteredItems).toEqual([scriptedShow]);
+      expect(result.current.diagnostics.removedByTalkShowsAndAwards).toBe(true);
+      expect(result.current.diagnostics.removedByPreferences).toBe(true);
+      expect(mockUseLists).toHaveBeenCalledWith({ enabled: false });
+    });
+
+    it('reports diagnostics when talk filtering removes all items', () => {
+      const { result } = renderHook(() => useContentFilterWithDiagnostics([talkShow]));
+
+      expect(result.current.filteredItems).toEqual([]);
+      expect(result.current.diagnostics).toEqual({
+        allItemsRemovedByPreferences: true,
+        removedByPreferences: true,
+        removedByUnreleasedContent: false,
+        removedByWatchedContent: false,
+        removedByTalkShowsAndAwards: true,
+      });
+    });
+
+    it('never removes movies, even award-titled ones', () => {
+      const movies = [
+        { id: 200, title: 'Oscar', release_date: '1991-04-26' },
+        { id: 201, title: 'Released Movie', release_date: '2025-01-15' },
+      ];
+
+      const { result } = renderHook(() => useContentFilter(movies));
+
+      expect(result.current).toEqual(movies);
     });
   });
 
@@ -283,6 +361,7 @@ describe('useContentFilter', () => {
         removedByPreferences: false,
         removedByUnreleasedContent: false,
         removedByWatchedContent: false,
+        removedByTalkShowsAndAwards: false,
       });
     });
   });

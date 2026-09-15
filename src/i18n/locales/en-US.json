@@ -811,6 +811,8 @@
     "clearCacheFailed": "Failed to clear image cache. Please try again.",
     "hideUnreleased": "Hide unreleased content",
     "hideUnreleasedDescription": "Hide movies and TV shows that haven't been released yet",
+    "hideTalkShowsAndAwards": "Hide talk shows & award shows",
+    "hideTalkShowsAndAwardsDescription": "Hide late-night, daytime talk, news talk and award ceremonies from browsing",
     "hideTabLabels": "Hide tab bar labels",
     "hideTabLabelsDescription": "Show only icons in the bottom navigation bar",
     "dataSaver": "Data Saver Mode",

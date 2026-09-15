@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAuth } from '../context/auth';
 import { isReleased } from '../utils/dateUtils';
 import { hasListItemInMap, type ListItemMediaType } from '../utils/listItemKeys';
+import { filterNonScriptedTV } from '../utils/nonScriptedFilter';
 import { useLists } from './useLists';
 import { usePreferences } from './usePreferences';
 
@@ -20,6 +21,7 @@ export interface ContentFilterDiagnostics {
   removedByPreferences: boolean;
   removedByUnreleasedContent: boolean;
   removedByWatchedContent: boolean;
+  removedByTalkShowsAndAwards: boolean;
 }
 
 export interface ContentFilterResult<T> {
@@ -32,6 +34,7 @@ const EMPTY_FILTER_DIAGNOSTICS: ContentFilterDiagnostics = {
   removedByPreferences: false,
   removedByUnreleasedContent: false,
   removedByWatchedContent: false,
+  removedByTalkShowsAndAwards: false,
 };
 
 const resolveMediaType = (item: MediaItem): ListItemMediaType | null => {
@@ -55,7 +58,8 @@ const applyContentFilters = <T extends MediaItem>(
   isAuthenticated: boolean,
   hideWatchedContent: boolean,
   hideUnreleasedContent: boolean,
-  lists: Array<{ id: string; items?: Record<string, unknown> }> | undefined
+  lists: Array<{ id: string; items?: Record<string, unknown> }> | undefined,
+  hideTalkShowsAndAwards: boolean
 ): ContentFilterResult<T> => {
   if (!items?.length) {
     return {
@@ -64,14 +68,32 @@ const applyContentFilters = <T extends MediaItem>(
     };
   }
 
+  // Talk/awards filtering needs no auth and no lists — it applies to
+  // logged-out users too (the preference defaults to ON) and runs before the
+  // auth gate so browse surfaces stay clean for everyone.
+  let preFilteredItems = items;
+  let removedByTalkShowsAndAwards = false;
+  if (hideTalkShowsAndAwards) {
+    const nextItems = filterNonScriptedTV(preFilteredItems, true);
+    removedByTalkShowsAndAwards = nextItems.length < preFilteredItems.length;
+    preFilteredItems = nextItems;
+  }
+
   if (!isAuthenticated) {
+    const removedByPreferences = removedByTalkShowsAndAwards;
     return {
-      diagnostics: EMPTY_FILTER_DIAGNOSTICS,
-      filteredItems: items,
+      diagnostics: {
+        allItemsRemovedByPreferences: removedByPreferences && preFilteredItems.length === 0,
+        removedByPreferences,
+        removedByUnreleasedContent: false,
+        removedByWatchedContent: false,
+        removedByTalkShowsAndAwards,
+      },
+      filteredItems: preFilteredItems,
     };
   }
 
-  let filteredItems = items;
+  let filteredItems = preFilteredItems;
   let removedByWatchedContent = false;
   let removedByUnreleasedContent = false;
 
@@ -100,7 +122,8 @@ const applyContentFilters = <T extends MediaItem>(
     filteredItems = nextItems;
   }
 
-  const removedByPreferences = removedByWatchedContent || removedByUnreleasedContent;
+  const removedByPreferences =
+    removedByWatchedContent || removedByUnreleasedContent || removedByTalkShowsAndAwards;
 
   return {
     diagnostics: {
@@ -108,6 +131,7 @@ const applyContentFilters = <T extends MediaItem>(
       removedByPreferences,
       removedByUnreleasedContent,
       removedByWatchedContent,
+      removedByTalkShowsAndAwards,
     },
     filteredItems,
   };
@@ -121,6 +145,7 @@ export const useContentFilterWithDiagnostics = <T extends MediaItem>(
   const isAuthenticated = !!user;
   const hideWatchedContent = !!preferences?.hideWatchedContent;
   const hideUnreleasedContent = !!preferences?.hideUnreleasedContent;
+  const hideTalkShowsAndAwards = !!preferences?.hideTalkShowsAndAwards;
   const shouldSubscribeToLists = isAuthenticated && hideWatchedContent;
   const { data: lists } = useLists({ enabled: shouldSubscribeToLists });
 
@@ -131,19 +156,32 @@ export const useContentFilterWithDiagnostics = <T extends MediaItem>(
         isAuthenticated,
         hideWatchedContent,
         hideUnreleasedContent,
-        lists
+        lists,
+        hideTalkShowsAndAwards
       ),
-    [hideUnreleasedContent, hideWatchedContent, isAuthenticated, items, lists]
+    [
+      hideTalkShowsAndAwards,
+      hideUnreleasedContent,
+      hideWatchedContent,
+      isAuthenticated,
+      items,
+      lists,
+    ]
   );
 };
 
 /**
  * Hook to filter media items based on user preferences.
- * Supports filtering watched content (hideWatchedContent) and
- * unreleased content (hideUnreleasedContent).
+ * Supports filtering watched content (hideWatchedContent),
+ * unreleased content (hideUnreleasedContent) and talk shows, late-night,
+ * news talk and award ceremonies (hideTalkShowsAndAwards).
+ *
+ * Talk/awards filtering applies to browse surfaces only — callers rendering
+ * explicitly saved user content (library lists, calendar, reminders) must
+ * not pass their items through this hook.
  *
  * @param items - Array of media items to filter
- * @returns Filtered array with watched/unreleased items removed based on preferences
+ * @returns Filtered array with watched/unreleased/talk items removed based on preferences
  */
 export const useContentFilter = <T extends MediaItem>(items: T[] | undefined): T[] => {
   return useContentFilterWithDiagnostics(items).filteredItems;

@@ -805,6 +805,8 @@
     "clearCacheFailed": "Görsel önbelleği temizlenemedi. Lütfen tekrar deneyin.",
     "hideUnreleased": "Yayınlanmamış içerikleri gizle",
     "hideUnreleasedDescription": "Henüz yayınlanmamış film ve dizileri gizler",
+    "hideTalkShowsAndAwards": "Talk show ve ödül törenlerini gizle",
+    "hideTalkShowsAndAwardsDescription": "Gezinirken gece şovlarını, gündüz kuşağı, haber programlarını ve ödül törenlerini gizler",
     "hideTabLabels": "Sekme çubuğu etiketlerini gizle",
     "hideTabLabelsDescription": "Alt gezinti çubuğunda yalnızca simgeleri gösterir",
     "dataSaver": "Veri tasarrufu modu",

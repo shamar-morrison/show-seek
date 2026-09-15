@@ -610,6 +610,10 @@ function ResolvedRootLayoutNav({
 
 function RootLayoutNav() {
   const { loading, user, hasCompletedOnboarding, hasCompletedPersonalOnboarding } = useAuth();
+  // Same cached preferences query the rest of the app uses (30m stale,
+  // deduped by query key) — only read here to thread the talk-shows toggle
+  // into background widget syncs. No extra network in steady state.
+  const { preferences: rootPreferences } = usePreferences();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
   const { accentColor, isAccentReady } = useAccentColor();
@@ -653,7 +657,7 @@ function RootLayoutNav() {
   }, [loading, hasCompletedOnboarding, isLanguageReady, isRegionReady, isAccentReady]);
 
   useQuickActions();
-  useWidgetAutoSync(user?.uid ?? null);
+  useWidgetAutoSync(user?.uid ?? null, !!rootPreferences?.hideTalkShowsAndAwards);
 
   // Handle notification taps
   useEffect(() => {

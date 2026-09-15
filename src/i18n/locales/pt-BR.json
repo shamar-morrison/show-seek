@@ -814,6 +814,8 @@
     "exportFailedTitle": "Falha na exportação",
     "hideUnreleased": "Ocultar conteúdo não lançado",
     "hideUnreleasedDescription": "Ocultar filmes e séries que ainda não foram lançados",
+    "hideTalkShowsAndAwards": "Ocultar talk shows e premiações",
+    "hideTalkShowsAndAwardsDescription": "Ocultar late-night, talk shows, telejornais e cerimônias de premiação da navegação",
     "noEmail": "Sem e-mail",
     "showListIndicators": "Mostrar indicadores de lista",
     "showListIndicatorsDescription": "Mostrar um selo nos cards quando um item estiver em alguma das suas listas",
