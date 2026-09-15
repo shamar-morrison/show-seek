@@ -291,6 +291,103 @@ describe('polarWebhook helpers', () => {
     expect(payload.isPremium).toBe(true);
     expect(payload.subscriptionState).toBe('BILLING_ISSUE');
   });
+
+  it('maps order.paid with configured monthly product ID to active premium payload', () => {
+    const nowMs = 1_000;
+    const event: GenericPolarEvent = {
+      type: 'order.paid',
+      timestamp: nowMs,
+      data: {
+        id: 'order_monthly_1',
+        customer_id: 'cust_order_1',
+        product_id: 'polar_prod_monthly',
+      },
+    };
+
+    const payload = mapPolarEventToPremiumPayload(event, baseExisting, config, nowMs);
+
+    expect(payload.isPremium).toBe(true);
+    expect(payload.provider).toBe('polar');
+    expect(payload.subscriptionState).toBe('ACTIVE');
+    expect(payload.productId).toBe('monthly_showseek_sub');
+    expect(payload.subscriptionType).toBe('monthly');
+    expect(payload.orderId).toBe('order_monthly_1');
+  });
+
+  it('maps order.paid with configured yearly product ID to active premium payload', () => {
+    const nowMs = 1_000;
+    const event: GenericPolarEvent = {
+      type: 'order.paid',
+      timestamp: nowMs,
+      data: {
+        id: 'order_yearly_1',
+        customer_id: 'cust_order_2',
+        product_id: 'polar_prod_yearly',
+      },
+    };
+
+    const payload = mapPolarEventToPremiumPayload(event, baseExisting, config, nowMs);
+
+    expect(payload.isPremium).toBe(true);
+    expect(payload.provider).toBe('polar');
+    expect(payload.subscriptionState).toBe('ACTIVE');
+    expect(payload.productId).toBe('showseek_yearly_sub');
+    expect(payload.subscriptionType).toBe('yearly');
+    expect(payload.orderId).toBe('order_yearly_1');
+  });
+
+  it('leaves existing state untouched for order.paid with unconfigured product ID', () => {
+    const nowMs = 1_000;
+    const event: GenericPolarEvent = {
+      type: 'order.paid',
+      timestamp: nowMs,
+      data: {
+        id: 'order_unrelated_1',
+        customer_id: 'cust_order_3',
+        product_id: 'polar_prod_donation',
+      },
+    };
+
+    const existing: ExistingPremiumData = {
+      isPremium: true,
+      provider: 'revenuecat',
+      entitlementType: 'pro',
+      productId: 'rc_annual',
+      subscriptionState: 'ACTIVE',
+    };
+
+    const payload = mapPolarEventToPremiumPayload(event, existing, config, nowMs);
+
+    expect(payload.isPremium).toBe(true);
+    expect(payload.provider).toBe('revenuecat');
+    expect(payload.entitlementType).toBe('pro');
+    expect(payload.productId).toBe('rc_annual');
+    expect(payload.subscriptionState).toBe('ACTIVE');
+    expect(payload.orderId).toBe('order_unrelated_1');
+  });
+
+  it('leaves existing state untouched for order.paid with missing product ID', () => {
+    const nowMs = 1_000;
+    const event: GenericPolarEvent = {
+      type: 'order.paid',
+      timestamp: nowMs,
+      data: {
+        id: 'order_no_prod',
+        customer_id: 'cust_order_4',
+      },
+    };
+
+    const existing: ExistingPremiumData = {
+      isPremium: false,
+    };
+
+    const payload = mapPolarEventToPremiumPayload(event, existing, config, nowMs);
+
+    expect(payload.isPremium).toBe(false);
+    expect(payload.provider).toBeUndefined();
+    expect(payload.entitlementType).toBeUndefined();
+    expect(payload.subscriptionState).toBeUndefined();
+  });
 });
 
 describe('polarWebhook handler', () => {
@@ -393,6 +490,18 @@ describe('polarWebhook handler', () => {
     expect(response.status).toHaveBeenCalledWith(401);
     expect(response.json).toHaveBeenCalledWith({
       error: 'Unauthorized: Webhook timestamp outside tolerance',
+    });
+  });
+
+  it('rejects payload missing data field with 400', async () => {
+    const response = createResponse();
+    const req = createSignedRequest({ type: 'order.paid' }, 'wh_no_data');
+
+    await polarWebhook(req as any, response as any);
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith({
+      error: 'Invalid event payload',
     });
   });
 

@@ -237,10 +237,30 @@ export const mapPolarEventToPremiumPayload = (
       }
       break;
 
-    case 'order.paid':
-      isPremium = true;
-      subscriptionState = 'ACTIVE';
+    case 'order.paid': {
+      const orderRawProductId =
+        data.product_id ??
+        data.productId ??
+        data.product?.id ??
+        null;
+      const resolvedOrderProductId = resolvePolarProductId(orderRawProductId, config);
+      const isConfiguredProduct =
+        resolvedOrderProductId === MONTHLY_SUBSCRIPTION_PRODUCT_ID ||
+        resolvedOrderProductId === YEARLY_SUBSCRIPTION_PRODUCT_ID;
+
+      if (isConfiguredProduct) {
+        isPremium = true;
+        subscriptionState = 'ACTIVE';
+      } else {
+        return {
+          ...existingPremium,
+          polarLastEventTimestampMs: eventTimestampMs,
+          polarCustomerId: customerId,
+          orderId,
+        };
+      }
       break;
+    }
 
     default:
       break;
@@ -447,7 +467,7 @@ export const polarWebhook = onRequest(
       return;
     }
 
-    if (!parsedEvent || !parsedEvent.type) {
+    if (!parsedEvent || !parsedEvent.type || !parsedEvent.data) {
       res.status(400).json({ error: 'Invalid event payload' });
       return;
     }

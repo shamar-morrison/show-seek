@@ -300,4 +300,245 @@ describe('revenuecatWebhook handler', () => {
     expect(setTargets).toContain('users/user-1');
     expect(setTargets).toContain('revenuecatWebhookEvents/evt_same_ts');
   });
+
+  it('leaves premium fields unchanged and only updates metadata when provider is polar and isPremium is true (EXPIRATION)', async () => {
+    const transactionSet = jest.fn();
+    const polarExisting = {
+      isPremium: true,
+      provider: 'polar',
+      subscriptionState: 'ACTIVE',
+      subscriptionType: 'yearly',
+      productId: 'showseek_yearly_sub',
+      expiresAt: mockTimestampFromMillis(5000),
+      orderId: 'polar_order_123',
+      purchaseDate: mockTimestampFromMillis(1000),
+      rcLastEventTimestampMs: 500,
+    };
+
+    mockRunTransaction.mockImplementationOnce(async (transactionCallback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('revenuecatWebhookEvents/')) {
+            return { exists: false };
+          }
+          return {
+            data: () => ({ premium: polarExisting }),
+            exists: true,
+          };
+        }),
+        set: transactionSet,
+      };
+      return await transactionCallback(transaction);
+    });
+
+    const response = createResponse();
+
+    await revenuecatWebhook(
+      {
+        body: {
+          event: {
+            app_user_id: 'user-1',
+            event_timestamp_ms: 2000,
+            id: 'evt_rc_exp',
+            type: 'EXPIRATION',
+          },
+        },
+        header: jest.fn(() => 'hook-secret'),
+        method: 'POST',
+      } as any,
+      response as any
+    );
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+
+    const userSetCall = transactionSet.mock.calls.find((call) => call[0].path === 'users/user-1');
+    expect(userSetCall).toBeDefined();
+    expect(userSetCall[1].premium).toEqual({
+      ...polarExisting,
+      rcLastEventType: 'EXPIRATION',
+      rcLastEventTimestampMs: 2000,
+      rcLastEventId: 'evt_rc_exp',
+    });
+    expect(userSetCall[1].premium.isPremium).toBe(true);
+    expect(userSetCall[1].premium.provider).toBe('polar');
+    expect(userSetCall[1].premium.subscriptionState).toBe('ACTIVE');
+
+    const eventSetCall = transactionSet.mock.calls.find((call) => call[0].path === 'revenuecatWebhookEvents/evt_rc_exp');
+    expect(eventSetCall).toBeDefined();
+    expect(eventSetCall[1].status).toBe('processed');
+  });
+
+  it('leaves premium fields unchanged when provider is polar and isPremium is true (INITIAL_PURCHASE)', async () => {
+    const transactionSet = jest.fn();
+    const polarExisting = {
+      isPremium: true,
+      provider: 'polar',
+      subscriptionState: 'ACTIVE',
+      subscriptionType: 'monthly',
+      productId: 'monthly_showseek_sub',
+      expiresAt: mockTimestampFromMillis(5000),
+      orderId: 'polar_order_456',
+      purchaseDate: mockTimestampFromMillis(1000),
+      rcLastEventTimestampMs: 500,
+    };
+
+    mockRunTransaction.mockImplementationOnce(async (transactionCallback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('revenuecatWebhookEvents/')) {
+            return { exists: false };
+          }
+          return {
+            data: () => ({ premium: polarExisting }),
+            exists: true,
+          };
+        }),
+        set: transactionSet,
+      };
+      return await transactionCallback(transaction);
+    });
+
+    const response = createResponse();
+
+    await revenuecatWebhook(
+      {
+        body: {
+          event: {
+            app_user_id: 'user-1',
+            event_timestamp_ms: 2000,
+            expiration_at_ms: 6000,
+            id: 'evt_rc_init',
+            product_id: 'monthly_showseek_sub',
+            type: 'INITIAL_PURCHASE',
+          },
+        },
+        header: jest.fn(() => 'hook-secret'),
+        method: 'POST',
+      } as any,
+      response as any
+    );
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+
+    const userSetCall = transactionSet.mock.calls.find((call) => call[0].path === 'users/user-1');
+    expect(userSetCall).toBeDefined();
+    expect(userSetCall[1].premium.isPremium).toBe(true);
+    expect(userSetCall[1].premium.provider).toBe('polar');
+    expect(userSetCall[1].premium.orderId).toBe('polar_order_456');
+    expect(userSetCall[1].premium.rcLastEventType).toBe('INITIAL_PURCHASE');
+    expect(userSetCall[1].premium.rcLastEventTimestampMs).toBe(2000);
+    expect(userSetCall[1].premium.rcLastEventId).toBe('evt_rc_init');
+  });
+
+  it('processes normally and switches provider to revenuecat when polar is expired (isPremium is false)', async () => {
+    const transactionSet = jest.fn();
+    const expiredPolar = {
+      isPremium: false,
+      provider: 'polar',
+      subscriptionState: 'EXPIRED',
+      rcLastEventTimestampMs: 500,
+    };
+
+    mockRunTransaction.mockImplementationOnce(async (transactionCallback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('revenuecatWebhookEvents/')) {
+            return { exists: false };
+          }
+          return {
+            data: () => ({ premium: expiredPolar }),
+            exists: true,
+          };
+        }),
+        set: transactionSet,
+      };
+      return await transactionCallback(transaction);
+    });
+
+    const response = createResponse();
+
+    await revenuecatWebhook(
+      {
+        body: {
+          event: {
+            app_user_id: 'user-1',
+            event_timestamp_ms: 2000,
+            expiration_at_ms: Date.now() + 86400_000,
+            id: 'evt_rc_renewal',
+            product_id: 'monthly_showseek_sub',
+            type: 'RENEWAL',
+          },
+        },
+        header: jest.fn(() => 'hook-secret'),
+        method: 'POST',
+      } as any,
+      response as any
+    );
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+
+    const userSetCall = transactionSet.mock.calls.find((call) => call[0].path === 'users/user-1');
+    expect(userSetCall).toBeDefined();
+    expect(userSetCall[1].premium.isPremium).toBe(true);
+    expect(userSetCall[1].premium.provider).toBe('revenuecat');
+    expect(userSetCall[1].premium.subscriptionState).toBe('ACTIVE');
+    expect(userSetCall[1].premium.rcLastEventType).toBe('RENEWAL');
+  });
+
+  it('processes normally when provider is undefined or already revenuecat', async () => {
+    const transactionSet = jest.fn();
+    const existingRc = {
+      isPremium: true,
+      provider: 'revenuecat',
+      subscriptionState: 'ACTIVE',
+      rcLastEventTimestampMs: 500,
+    };
+
+    mockRunTransaction.mockImplementationOnce(async (transactionCallback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('revenuecatWebhookEvents/')) {
+            return { exists: false };
+          }
+          return {
+            data: () => ({ premium: existingRc }),
+            exists: true,
+          };
+        }),
+        set: transactionSet,
+      };
+      return await transactionCallback(transaction);
+    });
+
+    const response = createResponse();
+
+    await revenuecatWebhook(
+      {
+        body: {
+          event: {
+            app_user_id: 'user-1',
+            event_timestamp_ms: 2000,
+            expiration_at_ms: Date.now() + 86400_000,
+            id: 'evt_rc_existing',
+            product_id: 'monthly_showseek_sub',
+            type: 'RENEWAL',
+          },
+        },
+        header: jest.fn(() => 'hook-secret'),
+        method: 'POST',
+      } as any,
+      response as any
+    );
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+
+    const userSetCall = transactionSet.mock.calls.find((call) => call[0].path === 'users/user-1');
+    expect(userSetCall).toBeDefined();
+    expect(userSetCall[1].premium.provider).toBe('revenuecat');
+    expect(userSetCall[1].premium.isPremium).toBe(true);
+  });
 });
