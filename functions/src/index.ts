@@ -97,6 +97,7 @@ interface ExistingPremiumData {
   isInTrial?: boolean;
   orderId?: string | null;
   productId?: string | null;
+  provider?: 'polar' | 'revenuecat' | null;
   purchaseDate?: admin.firestore.Timestamp;
   purchaseToken?: string | null;
   subscriptionType?: SubscriptionType | null;
@@ -416,6 +417,14 @@ export const reconcilePremiumStatus = onCall(
       };
     }
 
+    if (existingPremium.provider === 'polar') {
+      return {
+        isPremium: existingIsPremium,
+        source: existingIsPremium ? 'firestore' : 'none',
+        reconciledAt: null,
+      };
+    }
+
     const apiKey = REVENUECAT_API_KEY.value();
     if (!apiKey) {
       throw new HttpsError(
@@ -510,6 +519,7 @@ export const reconcilePremiumStatus = onCall(
 export const deleteAccount = onCall({}, deleteAccountHandler);
 
 export { importImdbChunk } from './imdbImport';
+export { polarWebhook } from './polarWebhook';
 export { revenuecatWebhook } from './revenuecatWebhook';
 export {
   runTraktEnrichment,

@@ -48,9 +48,12 @@ export interface ExistingPremiumData {
   isInTrial?: boolean;
   orderId?: string | null;
   productId?: string | null;
+  provider?: 'polar' | 'revenuecat' | null;
   purchaseDate?: admin.firestore.Timestamp | null;
   purchaseToken?: string | null;
   rcLastEventTimestampMs?: number;
+  rcLastEventType?: string | null;
+  rcLastEventId?: string | null;
   subscriptionState?: string | null;
   subscriptionType?: 'monthly' | 'yearly' | null;
   trialConsumedAt?: admin.firestore.Timestamp | null;
@@ -203,6 +206,7 @@ export const mapRevenueCatEventToPremiumPayload = (
     return {
       isPremium: true,
       entitlementType: 'lifetime',
+      provider: 'revenuecat',
       purchaseToken: existingPremium.purchaseToken ?? null,
       productId:
         (isLegacyLifetimeProductId(productId) ? productId : existingPremium.productId) ??
@@ -239,6 +243,7 @@ export const mapRevenueCatEventToPremiumPayload = (
   return {
     isPremium,
     entitlementType: isPremium ? 'subscription' : 'none',
+    provider: 'revenuecat',
     purchaseToken: existingPremium.purchaseToken ?? null,
     productId,
     orderId: event.transaction_id ?? event.store_transaction_id ?? existingPremium.orderId ?? null,
@@ -334,6 +339,33 @@ export const revenuecatWebhook = onRequest(
           return { status: 'stale' as const };
         }
 
+        const normalizedEventType = normalizeEventType(event.type);
+
+        if (existingPremium.provider === 'polar' && existingPremium.isPremium === true) {
+          transaction.set(
+            userRef,
+            {
+              premium: {
+                ...existingPremium,
+                rcLastEventType: normalizedEventType,
+                rcLastEventTimestampMs: eventTimestampMs,
+                rcLastEventId: event.id ?? null,
+              },
+            },
+            { merge: true }
+          );
+
+          transaction.set(eventRef, {
+            appUserId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            eventTimestampMs,
+            status: 'processed',
+            type: normalizedEventType,
+          });
+
+          return { status: 'processed' as const };
+        }
+
         const premiumPayload = mapRevenueCatEventToPremiumPayload(event, existingPremium, nowMs);
 
         transaction.set(
@@ -349,7 +381,7 @@ export const revenuecatWebhook = onRequest(
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           eventTimestampMs,
           status: 'processed',
-          type: normalizeEventType(event.type),
+          type: normalizedEventType,
         });
 
         return { status: 'processed' as const };
