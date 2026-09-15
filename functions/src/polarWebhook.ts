@@ -464,7 +464,8 @@ export const polarWebhook = onRequest(
       return;
     }
 
-    if (!parsedEvent || !parsedEvent.type || !parsedEvent.data) {
+    const eventTimestampMs = parseMillis(parsedEvent?.timestamp);
+    if (!parsedEvent || !parsedEvent.type || !parsedEvent.data || eventTimestampMs === null) {
       res.status(400).json({ error: 'Invalid event payload' });
       return;
     }

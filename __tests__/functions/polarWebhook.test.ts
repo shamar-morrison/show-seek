@@ -497,7 +497,7 @@ describe('polarWebhook handler', () => {
 
   it('rejects payload missing data field with 400', async () => {
     const response = createResponse();
-    const req = createSignedRequest({ type: 'order.paid' }, 'wh_no_data');
+    const req = createSignedRequest({ type: 'order.paid', timestamp: 1000 }, 'wh_no_data');
 
     await polarWebhook(req as any, response as any);
 
@@ -505,6 +505,52 @@ describe('polarWebhook handler', () => {
     expect(response.json).toHaveBeenCalledWith({
       error: 'Invalid event payload',
     });
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects payload missing timestamp with 400 without writing to Firestore', async () => {
+    const response = createResponse();
+    const req = createSignedRequest(
+      {
+        type: 'subscription.active',
+        data: {
+          id: 'sub_no_ts',
+          customer: { external_id: 'user_no_ts' },
+        },
+      },
+      'wh_no_ts'
+    );
+
+    await polarWebhook(req as any, response as any);
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith({
+      error: 'Invalid event payload',
+    });
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects payload with unparsable timestamp with 400 without advancing polarLastEventTimestampMs', async () => {
+    const response = createResponse();
+    const req = createSignedRequest(
+      {
+        type: 'subscription.active',
+        timestamp: 'invalid-date-format',
+        data: {
+          id: 'sub_bad_ts',
+          customer: { external_id: 'user_bad_ts' },
+        },
+      },
+      'wh_bad_ts'
+    );
+
+    await polarWebhook(req as any, response as any);
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith({
+      error: 'Invalid event payload',
+    });
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 
   it('skips processing if event is missing external_id', async () => {
@@ -512,6 +558,7 @@ describe('polarWebhook handler', () => {
     const req = createSignedRequest(
       {
         type: 'subscription.active',
+        timestamp: 1000,
         data: { id: 'sub_no_ext' },
       },
       'wh_no_uid'
@@ -544,6 +591,7 @@ describe('polarWebhook handler', () => {
     const req = createSignedRequest(
       {
         type: 'subscription.active',
+        timestamp: 1000,
         data: {
           id: 'sub_dup',
           customer: { external_id: 'user_dup' },
