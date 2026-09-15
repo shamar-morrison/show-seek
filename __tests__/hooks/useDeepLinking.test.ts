@@ -1,62 +1,162 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { DeepLinkHandler } from '@/src/components/DeepLinkHandler';
+import {
+  resolveDeepLinkTarget,
+  resolveWidgetTarget,
+} from '@/src/hooks/useDeepLinking';
+import { render, waitFor } from '@testing-library/react-native';
+import React from 'react';
 
 const mockPush = jest.fn();
+let mockNavigationKey: string | undefined = 'mock-root-key';
 const mockGetInitialURL = jest.fn();
-const mockParse = jest.fn();
-const mockRemove = jest.fn();
+const mockRemoveListener = jest.fn();
 let capturedUrlListener: ((event: { url: string }) => void) | null = null;
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  useRootNavigationState: () => ({
+    key: mockNavigationKey,
+  }),
 }));
 
 jest.mock('expo-linking', () => ({
   getInitialURL: (...args: unknown[]) => mockGetInitialURL(...args),
-  addEventListener: jest.fn((_event: string, listener: (event: { url: string }) => void) => {
-    capturedUrlListener = listener;
-    return { remove: mockRemove };
+  addEventListener: jest.fn(
+    (_event: string, listener: (event: { url: string }) => void) => {
+      capturedUrlListener = listener;
+      return { remove: mockRemoveListener };
+    }
+  ),
+  parse: jest.fn((url: string) => {
+    const match = url.match(/^([a-zA-Z0-9_-]+):\/\/([^/?#]+)?(?:\/(.*))?$/);
+    if (!match) {
+      return { scheme: null, hostname: null, path: url };
+    }
+    return {
+      scheme: match[1],
+      hostname: match[2] || '',
+      path: match[3] || '',
+    };
   }),
-  parse: (...args: unknown[]) => mockParse(...args),
 }));
 
-describe('useDeepLinking', () => {
+describe('resolveDeepLinkTarget', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    capturedUrlListener = null;
-    mockGetInitialURL.mockResolvedValue(null);
-    mockParse.mockImplementation((url: string) => {
-      const { host, pathname } = new URL(url);
-      return {
-        path: `${host}${pathname}`.replace(/^\//, ''),
-      };
-    });
     jest.spyOn(console, 'warn').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  // Verifies a cold-launch deep link is consumed on mount and routed into the internal home tab path.
-  it('handles an initial URL on cold launch', async () => {
-    const { useDeepLinking } = require('@/src/hooks/useDeepLinking');
+  it('constructs the correct internal route for valid movie links', () => {
+    expect(resolveDeepLinkTarget('showseek://movie/550')).toBe(
+      '/(tabs)/home/movie/550'
+    );
+  });
+
+  it('constructs the correct internal route for valid tv links', () => {
+    expect(resolveDeepLinkTarget('showseek://tv/1396')).toBe(
+      '/(tabs)/home/tv/1396'
+    );
+  });
+
+  it('resolves home widget shortcut route', () => {
+    expect(resolveDeepLinkTarget('showseek://home')).toBe('/(tabs)/home');
+  });
+
+  it('resolves library route', () => {
+    expect(resolveDeepLinkTarget('showseek://library')).toBe('/(tabs)/library');
+  });
+
+  it('resolves custom list route with list id', () => {
+    expect(
+      resolveDeepLinkTarget('showseek://library/custom-list/list-42')
+    ).toBe('/(tabs)/library/custom-list/list-42');
+  });
+
+  it('rejects invalid deep-link shapes and warns', () => {
+    const target = resolveDeepLinkTarget('showseek://movie');
+    expect(target).toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      '[DeepLink] Invalid deep link format:',
+      'showseek://movie'
+    );
+  });
+
+  it('rejects invalid media types and warns', () => {
+    const target = resolveDeepLinkTarget('showseek://person/42');
+    expect(target).toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      '[DeepLink] Invalid media type in deep link:',
+      'person'
+    );
+  });
+});
+
+describe('resolveWidgetTarget', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('maps upcoming movies and tv targets to home tab', () => {
+    expect(resolveWidgetTarget('upcoming_movies')).toBe('/(tabs)/home');
+    expect(resolveWidgetTarget('upcoming_tv')).toBe('/(tabs)/home');
+  });
+
+  it('maps watchlist target with id to custom list route', () => {
+    expect(resolveWidgetTarget('watchlist:list_abc')).toBe(
+      '/(tabs)/library/custom-list/list_abc'
+    );
+  });
+
+  it('maps watchlist target without id to library tab', () => {
+    expect(resolveWidgetTarget('watchlist')).toBe('/(tabs)/library');
+  });
+
+  it('rejects unknown widget target and warns', () => {
+    const route = resolveWidgetTarget('unknown_kind');
+    expect(route).toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      '[DeepLink] Unknown widget target:',
+      'unknown_kind'
+    );
+  });
+});
+
+describe('DeepLinkHandler component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNavigationKey = 'mock-root-key';
+    capturedUrlListener = null;
+    mockGetInitialURL.mockResolvedValue(null);
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('handles an initial URL on cold launch when navigator is ready', async () => {
     mockGetInitialURL.mockResolvedValueOnce('showseek://movie/550');
 
-    renderHook(() => useDeepLinking());
+    render(React.createElement(DeepLinkHandler));
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/(tabs)/home/movie/550');
     });
   });
 
-  // Verifies runtime URL events are processed while the app is already open.
   it('handles runtime URL events after mount', async () => {
-    const { useDeepLinking } = require('@/src/hooks/useDeepLinking');
-
-    renderHook(() => useDeepLinking());
+    render(React.createElement(DeepLinkHandler));
 
     capturedUrlListener?.({ url: 'showseek://tv/1396' });
 
@@ -65,47 +165,97 @@ describe('useDeepLinking', () => {
     });
   });
 
-  // Verifies malformed paths are rejected so the app does not navigate on invalid URLs.
-  it('rejects invalid deep-link shapes', async () => {
-    const { useDeepLinking } = require('@/src/hooks/useDeepLinking');
+  it('rejects invalid deep-link shapes without navigating', async () => {
     mockGetInitialURL.mockResolvedValueOnce('showseek://movie');
 
-    renderHook(() => useDeepLinking());
+    render(React.createElement(DeepLinkHandler));
 
     await waitFor(() => {
       expect(console.warn).toHaveBeenCalledWith(
-        'Invalid deep link format:',
+        '[DeepLink] Invalid deep link format:',
         'showseek://movie'
       );
     });
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  // Verifies unsupported media types are rejected so only movie and TV routes can be entered from deep links.
-  it('rejects invalid media types', async () => {
-    const { useDeepLinking } = require('@/src/hooks/useDeepLinking');
+  it('rejects invalid media types without navigating', async () => {
     mockGetInitialURL.mockResolvedValueOnce('showseek://person/42');
 
-    renderHook(() => useDeepLinking());
+    render(React.createElement(DeepLinkHandler));
 
     await waitFor(() => {
       expect(console.warn).toHaveBeenCalledWith(
-        'Invalid media type in deep link:',
+        '[DeepLink] Invalid media type in deep link:',
         'person'
       );
     });
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  // Verifies valid links build the exact internal route shape expected by expo-router.
-  it('constructs the correct internal route for valid links', async () => {
-    const { useDeepLinking } = require('@/src/hooks/useDeepLinking');
-    mockGetInitialURL.mockResolvedValueOnce('showseek://tv/456');
+  it('deduplicates duplicate URLs received within the dedupe window (2000ms)', async () => {
+    const now = 100000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-    renderHook(() => useDeepLinking());
+    render(React.createElement(DeepLinkHandler));
+
+    capturedUrlListener?.({ url: 'showseek://movie/550' });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/(tabs)/home/tv/456');
+      expect(mockPush).toHaveBeenCalledTimes(1);
+      expect(mockPush).toHaveBeenCalledWith('/(tabs)/home/movie/550');
+    });
+
+    // Fire duplicate within 2000ms (1000ms later)
+    nowSpy.mockReturnValue(now + 1000);
+    capturedUrlListener?.({ url: 'showseek://movie/550' });
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // Fire duplicate after 2000ms window has passed (3000ms later)
+    nowSpy.mockReturnValue(now + 3001);
+    capturedUrlListener?.({ url: 'showseek://movie/550' });
+
+    expect(mockPush).toHaveBeenCalledTimes(2);
+  });
+
+  it('queues URL when navigator is not ready, then navigates once ready', async () => {
+    mockNavigationKey = undefined; // Navigator is not ready
+
+    const { rerender } = render(React.createElement(DeepLinkHandler));
+
+    capturedUrlListener?.({ url: 'showseek://tv/1396' });
+
+    // Push should NOT be called while navigator is unready
+    expect(mockPush).not.toHaveBeenCalled();
+
+    // Navigator finishes mounting and receives a key
+    mockNavigationKey = 'ready-root-key';
+    rerender(React.createElement(DeepLinkHandler));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/(tabs)/home/tv/1396');
+    });
+  });
+
+  it('catches push errors gracefully without throwing', async () => {
+    mockPush.mockImplementationOnce(() => {
+      throw new Error('Push failed');
+    });
+
+    render(React.createElement(DeepLinkHandler));
+
+    capturedUrlListener?.({ url: 'showseek://movie/550' });
+
+    await waitFor(() => {
+      expect(console.warn).toHaveBeenCalledWith(
+        '[DeepLink] Push failed:',
+        expect.objectContaining({
+          url: 'showseek://movie/550',
+          target: '/(tabs)/home/movie/550',
+        })
+      );
     });
   });
 });
+

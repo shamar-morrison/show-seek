@@ -10,7 +10,6 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
-  ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
   FONT_FAMILY,

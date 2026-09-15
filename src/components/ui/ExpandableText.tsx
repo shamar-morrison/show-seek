@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, COLORS, FONT_FAMILY, FONT_SIZE, HIT_SLOP } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, FONT_FAMILY, FONT_SIZE, HIT_SLOP } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';

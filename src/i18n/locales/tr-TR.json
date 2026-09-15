@@ -1687,8 +1687,11 @@
       "night": "Gece"
     },
     "topGenres": "En popüler türler",
+    "totalHours": "Toplam İzlenen Saat",
+    "updatingTotals": "Toplamlar güncelleniyor…",
     "vsLastMonth": "geçen aya kıyasla",
-    "watched": "İzlendi"
+    "watched": "İzlendi",
+    "watchTime": "İzleme Süresi"
   },
   "tvDetail": { "failedToLoad": "Dizi ayrıntıları yüklenemedi" },
   "tvSeasons": { "failedToLoadSeasons": "Sezonlar yüklenemedi", "rateSeason": "Puanla" },

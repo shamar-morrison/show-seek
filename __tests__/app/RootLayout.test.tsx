@@ -248,6 +248,10 @@ jest.mock('@/src/utils/readAuditCollector', () => ({
   startReadAuditSession: (...args: unknown[]) => mockStartReadAuditSession(...args),
 }));
 
+jest.mock('@/src/components/DeepLinkHandler', () => ({
+  DeepLinkHandler: () => null,
+}));
+
 import RootLayout from '@/app/_layout';
 
 beforeAll(() => {

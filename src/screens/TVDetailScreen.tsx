@@ -36,7 +36,7 @@ import AppErrorState from '@/src/components/ui/AppErrorState';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';

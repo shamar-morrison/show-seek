@@ -1742,8 +1742,11 @@
       "night": "Nuit"
     },
     "topGenres": "Genres favoris",
+    "totalHours": "Total d'heures regardées",
+    "updatingTotals": "Mise à jour des totaux…",
     "vsLastMonth": "vs le mois dernier",
-    "watched": "Regardés"
+    "watched": "Regardés",
+    "watchTime": "Temps de visionnage"
   },
   "tvDetail": {
     "failedToLoad": "Échec du chargement des détails de la série"

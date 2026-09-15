@@ -3,11 +3,9 @@ import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/
 import { usePremium } from '@/src/context/PremiumContext';
 import {
   assertFreemiumAllowed,
-  FreemiumLimitError,
   isFreemiumLimitError,
   isPremiumStatusPendingError,
   MAX_FREE_REMINDERS,
-  PremiumStatusPendingError,
 } from '@/src/utils/freemiumLimits';
 import { parseTmdbDate } from '@/src/utils/dateUtils';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';

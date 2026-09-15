@@ -1673,8 +1673,11 @@
       "night": "Madrugada"
     },
     "topGenres": "Principais gêneros",
+    "totalHours": "Total de horas assistidas",
+    "updatingTotals": "Atualizando totais…",
     "vsLastMonth": "vs mês passado",
-    "watched": "Assistidos"
+    "watched": "Assistidos",
+    "watchTime": "Tempo assistido"
   },
   "tvDetail": {
     "failedToLoad": "Falha ao carregar detalhes da série"

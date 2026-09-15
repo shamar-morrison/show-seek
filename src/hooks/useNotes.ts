@@ -4,11 +4,9 @@ import { useAuth } from '../context/auth';
 import { Note, NoteInput } from '@/src/types/note';
 import {
   assertFreemiumAllowed,
-  FreemiumLimitError,
   isFreemiumLimitError,
   isPremiumStatusPendingError,
   MAX_FREE_NOTES,
-  PremiumStatusPendingError,
 } from '@/src/utils/freemiumLimits';
 import { getMediaNoteQueryKey, getNotesQueryKey } from '@/src/utils/noteQueries';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
