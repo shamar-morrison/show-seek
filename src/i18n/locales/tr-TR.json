@@ -733,14 +733,14 @@
       "settings": "Ayarlar"
     },
     "categories": {
-      "listAndWatchBehavior": "List & Watch Behavior",
-      "contentVisibility": "Content Visibility",
-      "display": "Display",
-      "performance": "Performance",
-      "localization": "Localization",
-      "appearance": "Appearance",
-      "import": "Import",
-      "sync": "Sync"
+      "listAndWatchBehavior": "Liste ve İzleme Davranışı",
+      "contentVisibility": "İçerik Görünürlüğü",
+      "display": "Ekran",
+      "performance": "Performans",
+      "localization": "Dil ve Bölge",
+      "appearance": "Görünüm",
+      "import": "İçe Aktarma",
+      "sync": "Senkronizasyon"
     },
     "readDiagnostics": {
       "title": "Okuma tanılamaları",

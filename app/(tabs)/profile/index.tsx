@@ -121,7 +121,11 @@ export default function ProfileScreen() {
 
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('preferences');
   const selectedTabRef = useRef(selectedTab);
-  selectedTabRef.current = selectedTab;
+  // Written post-commit only: a render-phase write could leak a discarded
+  // render's value into the ref. Read by the debounced search timer.
+  useEffect(() => {
+    selectedTabRef.current = selectedTab;
+  }, [selectedTab]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);

@@ -739,14 +739,14 @@
       "settings": "Paramètres"
     },
     "categories": {
-      "listAndWatchBehavior": "List & Watch Behavior",
-      "contentVisibility": "Content Visibility",
-      "display": "Display",
-      "performance": "Performance",
-      "localization": "Localization",
-      "appearance": "Appearance",
-      "import": "Import",
-      "sync": "Sync"
+      "listAndWatchBehavior": "Listes et suivi",
+      "contentVisibility": "Visibilité du contenu",
+      "display": "Affichage",
+      "performance": "Performances",
+      "localization": "Langue et région",
+      "appearance": "Apparence",
+      "import": "Importation",
+      "sync": "Synchronisation"
     },
     "readDiagnostics": {
       "title": "Diagnostic des lectures",
