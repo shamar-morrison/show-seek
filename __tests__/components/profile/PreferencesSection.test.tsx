@@ -161,4 +161,32 @@ describe('PreferencesSection', () => {
 
     expect(onUpdate).toHaveBeenCalledWith('allowUnreleasedEpisodeWatches', true);
   });
+
+  it('reports content-relative offsets as root + row (mount order: rows first)', () => {
+    const registerItemLayout = jest.fn();
+    const { getByTestId } = renderWithProviders(
+      <PreferencesSection
+        preferences={DEFAULT_PREFERENCES}
+        isLoading={false}
+        error={null}
+        onRetry={jest.fn()}
+        onUpdate={jest.fn()}
+        isUpdating={false}
+        isPremium={true}
+        onPremiumPress={jest.fn()}
+        registerItemLayout={registerItemLayout}
+      />
+    );
+
+    // Children lay out before parents on mount: row reports with root 0 first…
+    fireEvent(getByTestId('search-item-dataSaver'), 'layout', {
+      nativeEvent: { layout: { y: 800 } },
+    });
+    // …then the root layout corrects all known rows to absolute offsets.
+    fireEvent(getByTestId('profile-preferences-root'), 'layout', {
+      nativeEvent: { layout: { y: 40 } },
+    });
+
+    expect(registerItemLayout).toHaveBeenLastCalledWith('dataSaver', 840);
+  });
 });

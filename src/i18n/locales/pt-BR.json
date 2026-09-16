@@ -738,6 +738,16 @@
       "integrations": "Integrações",
       "settings": "Configurações"
     },
+    "categories": {
+      "listAndWatchBehavior": "Listas e comportamento",
+      "contentVisibility": "Visibilidade do conteúdo",
+      "display": "Exibição",
+      "performance": "Desempenho",
+      "localization": "Idioma e região",
+      "appearance": "Aparência",
+      "import": "Importação",
+      "sync": "Sincronização"
+    },
     "readDiagnostics": {
       "title": "Diagnóstico de leituras",
       "totalReads": "Leituras totais: {{count}}",

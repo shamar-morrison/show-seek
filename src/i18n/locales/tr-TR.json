@@ -732,6 +732,16 @@
       "integrations": "Entegrasyonlar",
       "settings": "Ayarlar"
     },
+    "categories": {
+      "listAndWatchBehavior": "Liste ve İzleme Davranışı",
+      "contentVisibility": "İçerik Görünürlüğü",
+      "display": "Ekran",
+      "performance": "Performans",
+      "localization": "Dil ve Bölge",
+      "appearance": "Görünüm",
+      "import": "İçe Aktarma",
+      "sync": "Senkronizasyon"
+    },
     "readDiagnostics": {
       "title": "Okuma tanılamaları",
       "totalReads": "Toplam okuma: {{count}}",
