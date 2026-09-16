@@ -43,6 +43,7 @@ export interface ExternalRatings {
   rottenTomatoes: string | null;
   metacritic: string | null;
   awards: string | null;
+  imdbId: string | null;
 }
 
 /**
@@ -62,6 +63,7 @@ function parseRatings(response: OMDbResponse): ExternalRatings {
     rottenTomatoes: null,
     metacritic: null,
     awards: response.Awards !== 'N/A' ? response.Awards : null,
+    imdbId: response.imdbID && response.imdbID !== 'N/A' ? response.imdbID : null,
   };
 
   // IMDb rating from main fields

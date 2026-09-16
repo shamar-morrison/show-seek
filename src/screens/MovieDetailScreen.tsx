@@ -252,10 +252,11 @@ export default function MovieDetailScreen() {
   } = useDetailLongPress('movie');
 
   // External ratings (IMDb, RT, Metacritic)
-  const { ratings: externalRatings, isLoading: isLoadingExternalRatings } = useExternalRatings(
-    'movie',
-    movieId
-  );
+  const {
+    ratings: externalRatings,
+    imdbId: externalImdbId,
+    isLoading: isLoadingExternalRatings,
+  } = useExternalRatings('movie', movieId);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId, 'movie');
   const { data: lists } = useLists();
@@ -874,7 +875,16 @@ export default function MovieDetailScreen() {
           {userRating > 0 && <UserRating rating={userRating} />}
 
           {/* External Ratings (IMDb, Rotten Tomatoes, Metacritic) */}
-          <ExternalRatingsSection ratings={externalRatings} isLoading={isLoadingExternalRatings} />
+          <ExternalRatingsSection
+            ratings={externalRatings}
+            isLoading={isLoadingExternalRatings}
+            mediaType="movie"
+            mediaId={movieId}
+            title={movie?.title ?? ''}
+            year={(displayReleaseDate || movie?.release_date)?.split('-')[0] || null}
+            imdbId={externalImdbId}
+            onOpenLinkError={() => toastRef.current?.show(t('media.unableToOpenExternalLink'))}
+          />
 
           <Text style={[styles.sectionTitle]}>{t('media.overview')}</Text>
           {preferences?.blurPlotSpoilers ? (

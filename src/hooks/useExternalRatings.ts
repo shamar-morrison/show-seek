@@ -10,6 +10,7 @@ import { ExternalRatings, fetchExternalRatings, hasValidRatings } from '../api/o
 
 interface UseExternalRatingsResult {
   ratings: ExternalRatings | null;
+  imdbId: string | null;
   isLoading: boolean;
   isError: boolean;
 }
@@ -26,7 +27,7 @@ export function useExternalRatings(
   mediaId: number
 ): UseExternalRatingsResult {
   const {
-    data: ratings,
+    data,
     isLoading,
     isError,
   } = useQuery({
@@ -40,7 +41,7 @@ export function useExternalRatings(
 
       const imdbId = externalIds.imdb_id;
       if (!imdbId) {
-        return null;
+        return { ratings: null, imdbId: null };
       }
 
       // Step 2: Fetch ratings from OMDb (with internal caching)
@@ -48,10 +49,14 @@ export function useExternalRatings(
 
       // Return null if no valid ratings to trigger section hide
       if (!hasValidRatings(result)) {
-        return null;
+        return { ratings: null, imdbId };
       }
 
-      return result;
+      // Ensure imdbId is present even for stale cache entries written before it was stored
+      return {
+        ratings: result && !result.imdbId ? { ...result, imdbId } : result,
+        imdbId,
+      };
     },
     enabled: !!mediaId,
     staleTime: 24 * 60 * 60 * 1000, // 24 hours - match AsyncStorage cache
@@ -60,7 +65,8 @@ export function useExternalRatings(
   });
 
   return {
-    ratings: ratings ?? null,
+    ratings: data?.ratings ?? null,
+    imdbId: data?.imdbId ?? data?.ratings?.imdbId ?? null,
     isLoading,
     isError,
   };

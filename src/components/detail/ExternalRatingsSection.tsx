@@ -2,13 +2,15 @@
  * External Ratings Section
  *
  * Displays IMDb, Rotten Tomatoes, and Metacritic ratings with source logos.
+ * Each rating is tappable and opens the respective website for the media.
  * Hides completely if no ratings are available.
  */
 import { ExternalRatings } from '@/src/api/omdb';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import React, { memo } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { buildOpenWithUrl, OpenWithServiceId } from '@/src/utils/openWithLinks';
+import React, { memo, useCallback } from 'react';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 // Logo imports
 const imdbLogo = require('@/assets/images/imdb.png');
@@ -18,6 +20,12 @@ const mcLogo = require('@/assets/images/mc.png');
 interface ExternalRatingsSectionProps {
   ratings: ExternalRatings | null;
   isLoading?: boolean;
+  mediaType?: 'movie' | 'tv';
+  mediaId?: number;
+  title?: string;
+  year?: string | null;
+  imdbId?: string | null;
+  onOpenLinkError?: (message: string) => void;
 }
 
 // Skeleton loader for ratings
@@ -38,19 +46,30 @@ const RatingSkeleton = memo(() => (
 RatingSkeleton.displayName = 'RatingSkeleton';
 
 /**
- * Individual rating display with logo and value
+ * Individual rating display with logo and value.
+ * Tappable — opens the source website for the media.
  */
 const RatingItem = memo<{
   logo: any;
   logoStyle?: object;
   value: string;
   label: string;
-}>(({ logo, logoStyle, value, label }) => (
-  <View style={styles.ratingItem}>
+  testID?: string;
+  accessibilityLabel?: string;
+  onPress?: () => void;
+}>(({ logo, logoStyle, value, label, testID, accessibilityLabel, onPress }) => (
+  <Pressable
+    style={({ pressed }) => [styles.ratingItem, { opacity: pressed ? 0.7 : 1 }]}
+    onPress={onPress}
+    testID={testID}
+    accessibilityRole="button"
+    accessibilityLabel={accessibilityLabel ?? label}
+    hitSlop={SPACING.s}
+  >
     <Image source={logo} style={[styles.logo, logoStyle]} resizeMode="contain" />
     <Text style={styles.ratingValue}>{value}</Text>
     <Text style={styles.ratingLabel}>{label}</Text>
-  </View>
+  </Pressable>
 ));
 RatingItem.displayName = 'RatingItem';
 
@@ -58,10 +77,47 @@ RatingItem.displayName = 'RatingItem';
  * External Ratings Section Component
  *
  * Displays ratings from IMDb, Rotten Tomatoes, and Metacritic.
+ * Each rating opens the respective website (IMDb title page when the IMDb ID
+ * is known, otherwise site search — same URL logic as the Open With drawer).
  * Returns a single SectionSeparator if no ratings are available to maintain uniform section separation.
  */
 export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
-  ({ ratings, isLoading }) => {
+  ({ ratings, isLoading, mediaType = 'movie', mediaId = 0, title = '', year, imdbId, onOpenLinkError }) => {
+    const openServiceUrl = useCallback(
+      async (serviceId: OpenWithServiceId) => {
+        const effectiveImdbId = imdbId ?? ratings?.imdbId ?? null;
+        const url = buildOpenWithUrl({
+          serviceId,
+          mediaType,
+          mediaId,
+          title,
+          year,
+          imdbId: effectiveImdbId,
+        });
+
+        try {
+          await Linking.openURL(url);
+        } catch (error) {
+          console.error('[ExternalRatingsSection] Failed to open URL:', error);
+          onOpenLinkError?.(url);
+        }
+      },
+      [imdbId, ratings, mediaType, mediaId, title, year, onOpenLinkError]
+    );
+
+    const handleImdbPress = useCallback(
+      () => void openServiceUrl('imdb'),
+      [openServiceUrl]
+    );
+    const handleRottenTomatoesPress = useCallback(
+      () => void openServiceUrl('rottenTomatoes'),
+      [openServiceUrl]
+    );
+    const handleMetacriticPress = useCallback(
+      () => void openServiceUrl('metacritic'),
+      [openServiceUrl]
+    );
+
     // Show skeleton while loading
     if (isLoading) {
       return <RatingSkeleton />;
@@ -87,13 +143,34 @@ export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
               logoStyle={styles.imdbLogo}
               value={`${ratings.imdb.rating}/10`}
               label="IMDb"
+              testID="external-rating-imdb"
+              accessibilityLabel={title ? `Open IMDb page for ${title}` : 'Open IMDb page'}
+              onPress={handleImdbPress}
             />
           )}
           {ratings.rottenTomatoes && (
-            <RatingItem logo={rtLogo} value={ratings.rottenTomatoes} label="Rotten Tomatoes" />
+            <RatingItem
+              logo={rtLogo}
+              value={ratings.rottenTomatoes}
+              label="Rotten Tomatoes"
+              testID="external-rating-rotten-tomatoes"
+              accessibilityLabel={
+                title ? `Open Rotten Tomatoes page for ${title}` : 'Open Rotten Tomatoes page'
+              }
+              onPress={handleRottenTomatoesPress}
+            />
           )}
           {ratings.metacritic && (
-            <RatingItem logo={mcLogo} value={ratings.metacritic} label="Metacritic" />
+            <RatingItem
+              logo={mcLogo}
+              value={ratings.metacritic}
+              label="Metacritic"
+              testID="external-rating-metacritic"
+              accessibilityLabel={
+                title ? `Open Metacritic page for ${title}` : 'Open Metacritic page'
+              }
+              onPress={handleMetacriticPress}
+            />
           )}
         </View>
         <SectionSeparator />
