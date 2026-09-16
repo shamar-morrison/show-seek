@@ -520,7 +520,6 @@ export default function TraktSettingsScreen() {
             <View style={styles.zipImportCardContent}>
               <View style={styles.zipImportTitleRow}>
                 <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
-                {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </View>
               <Text style={styles.zipImportCardSubtitle}>
                 {getZipImportCardSubtitle('trakt.zipImportCard.subtitleDisconnected')}
@@ -652,7 +651,6 @@ export default function TraktSettingsScreen() {
             <View style={styles.zipImportCardContent}>
               <View style={styles.zipImportTitleRow}>
                 <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
-                {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </View>
               <Text style={styles.zipImportCardSubtitle}>
                 {getZipImportCardSubtitle('trakt.zipImportCard.subtitleConnected')}
@@ -861,7 +859,6 @@ export default function TraktSettingsScreen() {
           <View style={styles.zipImportCardContent}>
             <View style={styles.zipImportTitleRow}>
               <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
-              {!isPremium && !isPremiumLoading && <PremiumBadge />}
             </View>
             <Text style={styles.zipImportCardSubtitle}>
               {getZipImportCardSubtitle('trakt.zipImportCard.subtitleSynced')}
