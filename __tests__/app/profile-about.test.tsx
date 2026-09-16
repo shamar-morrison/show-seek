@@ -38,10 +38,10 @@ describe('AboutScreen', () => {
 
     await waitFor(() => {
       expect(Linking.openURL).toHaveBeenCalledWith(
-        'https://privacy-policies-psi.vercel.app/show-seek/privacy'
+        'https://show-seek.app/privacy'
       );
       expect(Linking.openURL).toHaveBeenCalledWith(
-        'https://privacy-policies-psi.vercel.app/show-seek/terms'
+        'https://show-seek.app/terms'
       );
     });
   });
