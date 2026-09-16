@@ -70,6 +70,32 @@ describe('isTalkOrAwardsShow', () => {
     });
   });
 
+  describe('personal-name false positives', () => {
+    // Oscar/Emmy/Tony are common personal names: bare singulars must not match.
+    it.each(["Oscar's Oasis", 'Emmy', 'Tony', "Tony's Diner"])('keeps %s', (name) => {
+      expect(
+        isTalkOrAwardsShow({ id: 999020, media_type: 'tv', name, genre_ids: [35] })
+      ).toBe(false);
+    });
+  });
+
+  describe('ceremony-name true positives', () => {
+    it.each(['Oscars', 'Emmys', 'Tonys'])('matches bare plural %s', (name) => {
+      expect(
+        isTalkOrAwardsShow({ id: 999021, media_type: 'tv', name, genre_ids: [10764] })
+      ).toBe(true);
+    });
+
+    it.each(['Oscar Night', 'Oscar Nominations', '68th Academy Awards'])(
+      'matches context-qualified %s',
+      (name) => {
+        expect(
+          isTalkOrAwardsShow({ id: 999022, media_type: 'tv', name, genre_ids: [10764] })
+        ).toBe(true);
+      }
+    );
+  });
+
   describe('scripted shows are never matched', () => {
     it.each([
       ['Breaking Bad', [18]],

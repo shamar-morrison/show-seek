@@ -177,18 +177,29 @@ export const TALK_AWARDS_TITLE_SET: ReadonlySet<string> = new Set(
  * ("The 96th Academy Awards", "Oscars 2024") that exact titles miss.
  * Tested against `name`/`title` only — never overviews — so phrases like
  * "award-winning drama" in a description can never match.
+ *
+ * Precision note: Oscar, Emmy and Tony are also personal names, so the
+ * singular forms only match with ceremony context (award, ceremony,
+ * nomination, night, gala, winners, red carpet). The bare plurals
+ * ("Oscars", "Emmys", "Tonys") are ceremony-specific and match alone.
+ * This keeps scripted titles like "Oscar's Oasis" visible. Grammy, BAFTA
+ * and Eurovision are ceremony-unique tokens with no personal-name
+ * collision, so they stay bare.
  */
 export const AWARD_NAME_PATTERNS: readonly RegExp[] = [
-  /\boscar/i,
+  /\boscars\b/i,
+  /\boscar\s+(?:award|ceremony|nomination|night|gala|winners?|red\s*carpet)/i,
   /\bacademy\s*award/i,
-  /\bemmy/i,
+  /\bemmys\b/i,
+  /\bemmy\s+(?:award|ceremony|nomination|night|gala|winners?|red\s*carpet)/i,
   /\bgrammy/i,
   /\bgolden\s*globe/i,
   /\bbafta/i,
   /\bsag\s*award/i,
   /\bscreen\s*actors?\s*guild/i,
   /\btony\s*award/i,
-  /\btonys?\b/i,
+  /\btonys\b/i,
+  /\btony\s+(?:ceremony|nomination|night|gala|winners?|red\s*carpet)/i,
   /\bmtv\s*(video\s*music|movie\s*(?:&|and)\s*tv)\s*award/i,
   /\bpeople'?s\s*choice\s*award/i,
   /\bcritics'?\s*choice\s*award/i,
