@@ -394,6 +394,100 @@ class EpisodeTrackingService {
   }
 
   /**
+   * Mark multiple episodes across seasons as unwatched in chunks with delays and cancellation support.
+   * Mirrors markMultipleEpisodesWatched: chunks cross season boundaries freely so progress
+   * reporting and cancellation stay at episode granularity even for a single very large season.
+   */
+  async markMultipleEpisodesUnwatched(
+    tvShowId: number,
+    episodesToUnmark: Array<{ seasonNumber: number; episode: Episode }>,
+    options?: {
+      batchSize?: number;
+      delayMs?: number;
+      isCancelled?: () => boolean;
+      onProgress?: (unmarkedCount: number, totalCount: number) => void;
+    }
+  ): Promise<{ unmarkedCount: number; wasCancelled: boolean }> {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+    if (episodesToUnmark.length === 0) return { unmarkedCount: 0, wasCancelled: false };
+
+    const batchSize =
+      typeof options?.batchSize === 'number' &&
+      Number.isInteger(options.batchSize) &&
+      options.batchSize > 0
+        ? options.batchSize
+        : 10;
+    const delayMs =
+      typeof options?.delayMs === 'number' &&
+      Number.isFinite(options.delayMs) &&
+      options.delayMs >= 0
+        ? options.delayMs
+        : 300;
+    const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+
+    // Single existence check up front: updateDoc on a missing document throws not-found.
+    const existsTimeout = createTimeoutWithCleanup(10000);
+    const snapshot = await Promise.race([
+      auditedGetDoc(trackingRef, {
+        path: `users/${user.uid}/episode_tracking/${tvShowId}`,
+        queryKey: 'episodeTrackingByShow',
+        callsite: 'EpisodeTrackingService.markMultipleEpisodesUnwatched',
+      }),
+      existsTimeout.promise,
+    ]).finally(() => {
+      existsTimeout.cancel();
+    });
+
+    if (!snapshot.exists()) {
+      return { unmarkedCount: 0, wasCancelled: false };
+    }
+
+    let unmarkedCount = 0;
+    let wasCancelled = false;
+
+    for (let i = 0; i < episodesToUnmark.length; i += batchSize) {
+      if (options?.isCancelled?.()) {
+        wasCancelled = true;
+        break;
+      }
+
+      const chunk = episodesToUnmark.slice(i, i + batchSize);
+      const now = Date.now();
+      const updatePayload: Record<string, unknown> = {
+        'metadata.lastUpdated': now,
+      };
+
+      chunk.forEach(({ seasonNumber, episode }) => {
+        const episodeKey = this.getEpisodeKey(seasonNumber, episode.episode_number);
+        updatePayload[`episodes.${episodeKey}`] = deleteField();
+      });
+
+      const updateTimeout = createTimeoutWithCleanup(10000);
+      try {
+        await Promise.race([updateDoc(trackingRef, updatePayload), updateTimeout.promise]);
+      } catch (error) {
+        throw new Error(getFirestoreErrorMessage(error));
+      } finally {
+        updateTimeout.cancel();
+      }
+
+      unmarkedCount += chunk.length;
+      options?.onProgress?.(unmarkedCount, episodesToUnmark.length);
+
+      if (i + batchSize < episodesToUnmark.length) {
+        if (options?.isCancelled?.()) {
+          wasCancelled = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    return { unmarkedCount, wasCancelled };
+  }
+
+  /**
    * Calculate progress for a specific season.
    * Excludes unaired episodes from the denominator unless `allowUnreleased` is true,
    * in which case the full known episode total is used for both numerator and denominator.

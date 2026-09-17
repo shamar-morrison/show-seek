@@ -12,9 +12,10 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { usePremium } from '@/src/context/PremiumContext';
 import { getMarkableEpisodes } from '@/src/utils/episodeEligibility';
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import LoadingModal from '@/src/components/ui/LoadingModal';
 import { Tick02Icon } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 
@@ -118,6 +119,44 @@ export function TVShowWatchButton({
     regularSeasons.length > 0 && unwatchedMarkableShowEpisodes.length === 0;
   const isPending = markShowAllWatched.isPending || markShowAllUnwatched.isPending;
 
+  const cancelTokenRef = useRef<{ isCancelled: boolean }>({ isCancelled: false });
+  const [bulkProgress, setBulkProgress] = useState<{
+    flow: 'mark' | 'unmark';
+    isPending: boolean;
+    isCancelling: boolean;
+    current: number;
+    total: number;
+  } | null>(null);
+
+  const handleCancelBulk = useCallback(() => {
+    cancelTokenRef.current.isCancelled = true;
+    setBulkProgress((current) => (current ? { ...current, isCancelling: true } : null));
+  }, []);
+
+  const buildBulkOptions = useCallback(
+    (flow: 'mark' | 'unmark', total: number) => ({
+      batchSize: 10,
+      delayMs: 300,
+      isCancelled: () => cancelTokenRef.current.isCancelled,
+      onProgress: (doneCount: number, totalCount: number) => {
+        setBulkProgress((current) =>
+          current && current.flow === flow
+            ? { ...current, current: doneCount, total: totalCount }
+            : current
+        );
+      },
+    }),
+    []
+  );
+
+  const startBulkProgress = useCallback(
+    (flow: 'mark' | 'unmark', total: number) => {
+      cancelTokenRef.current = { isCancelled: false };
+      setBulkProgress({ flow, isPending: true, isCancelling: false, current: 0, total });
+    },
+    []
+  );
+
   const currentlyWatchingList = lists?.find((l) => l.id === 'currently-watching');
   const currentListCount = currentlyWatchingList
     ? Object.keys(currentlyWatchingList.items || {}).length
@@ -125,6 +164,7 @@ export function TVShowWatchButton({
 
   const runMarkWatched = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    startBulkProgress('mark', unwatchedMarkableShowEpisodes.length);
     markShowAllWatched.mutate(
       {
         tvShowId: tvId,
@@ -140,12 +180,16 @@ export function TVShowWatchButton({
           isPremium,
           currentListCount,
         },
+        options: buildBulkOptions('mark', unwatchedMarkableShowEpisodes.length),
       },
       {
         onError: (error) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           console.error('[TVShowWatchButton] Mark all as watched failed:', error);
           onShowToast(t('common.tryAgain'));
+        },
+        onSettled: () => {
+          setBulkProgress(null);
         },
       }
     );
@@ -163,31 +207,41 @@ export function TVShowWatchButton({
     genreIds,
     isPremium,
     currentListCount,
+    buildBulkOptions,
+    startBulkProgress,
     onShowToast,
     t,
   ]);
 
   const runMarkUnwatched = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const episodesToUnmark = markableBySeason
-      .map(({ seasonNumber, episodes }) => ({
-        seasonNumber,
-        episodes: episodes.filter(
-          (episode) => !!trackedEpisodes[`${seasonNumber}_${episode.episode_number}`]
-        ),
-      }))
-      .filter((group) => group.episodes.length > 0);
+    startBulkProgress('unmark', watchedMarkableShowEpisodes.length);
     markShowAllUnwatched.mutate(
-      { tvShowId: tvId, episodesToUnmark },
+      {
+        tvShowId: tvId,
+        episodesToUnmark: watchedMarkableShowEpisodes,
+        options: buildBulkOptions('unmark', watchedMarkableShowEpisodes.length),
+      },
       {
         onError: (error) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           console.error('[TVShowWatchButton] Mark all as unwatched failed:', error);
           onShowToast(t('common.tryAgain'));
         },
+        onSettled: () => {
+          setBulkProgress(null);
+        },
       }
     );
-  }, [markShowAllUnwatched, markableBySeason, trackedEpisodes, tvId, onShowToast, t]);
+  }, [
+    markShowAllUnwatched,
+    watchedMarkableShowEpisodes,
+    tvId,
+    buildBulkOptions,
+    startBulkProgress,
+    onShowToast,
+    t,
+  ]);
 
   const handleMarkWatchedPress = useCallback(() => {
     if (isAccountRequired()) return;
@@ -244,35 +298,63 @@ export function TVShowWatchButton({
   const showProgressCount = !isShowFullyWatched && watchedCount > 0;
 
   return (
-    <View style={styles.trailerButtonRow}>
-      <TouchableOpacity
-        style={[styles.playButton, isPending && styles.disabledButton]}
-        onPress={isShowFullyWatched ? handleMarkUnwatchedPress : handleMarkWatchedPress}
-        disabled={isPending}
-        activeOpacity={ACTIVE_OPACITY}
-        testID="tv-show-watch-button"
-      >
-        {isPending ? (
-          <ActivityIndicator size="small" color={COLORS.white} />
-        ) : (
-          <>
-            {isShowFullyWatched ? (
-              <AppIcon icon={Tick02Icon} size={18} color={COLORS.white} />
-            ) : null}
-            <Text style={styles.playButtonText}>
-              {isShowFullyWatched ? t('media.markAsUnwatched') : t('media.markAsWatched')}
-            </Text>
-            {showProgressCount ? (
-              <Text style={styles.playButtonText} testID="tv-show-watch-progress">
-                {t('watched.showEpisodesProgress', {
-                  watched: watchedCount,
-                  total: totalMarkableCount,
-                })}
+    <>
+      <View style={styles.trailerButtonRow}>
+        <TouchableOpacity
+          style={[styles.playButton, isPending && styles.disabledButton]}
+          onPress={isShowFullyWatched ? handleMarkUnwatchedPress : handleMarkWatchedPress}
+          disabled={isPending}
+          activeOpacity={ACTIVE_OPACITY}
+          testID="tv-show-watch-button"
+        >
+          {isPending ? (
+            <ActivityIndicator size="small" color={COLORS.white} />
+          ) : (
+            <>
+              {isShowFullyWatched ? (
+                <AppIcon icon={Tick02Icon} size={18} color={COLORS.white} />
+              ) : null}
+              <Text style={styles.playButtonText}>
+                {isShowFullyWatched ? t('media.markAsUnwatched') : t('media.markAsWatched')}
               </Text>
-            ) : null}
-          </>
-        )}
-      </TouchableOpacity>
-    </View>
+              {showProgressCount ? (
+                <Text style={styles.playButtonText} testID="tv-show-watch-progress">
+                  {t('watched.showEpisodesProgress', {
+                    watched: watchedCount,
+                    total: totalMarkableCount,
+                  })}
+                </Text>
+              ) : null}
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+      <LoadingModal
+        visible={!!bulkProgress?.isPending}
+        message={
+          bulkProgress?.isCancelling
+            ? t('watched.cancelling')
+            : bulkProgress?.flow === 'unmark'
+              ? `${t('watched.unmarkAll')}...`
+              : `${t('watched.markAll')}...`
+        }
+        progressText={
+          bulkProgress?.isPending
+            ? t(
+                bulkProgress.flow === 'unmark'
+                  ? 'watched.unmarkAllShowEpisodesProgress'
+                  : 'watched.markAllShowEpisodesProgress',
+                {
+                  current: bulkProgress.current,
+                  total: bulkProgress.total,
+                }
+              )
+            : undefined
+        }
+        onCancel={bulkProgress?.isPending ? handleCancelBulk : undefined}
+        cancelText={t('common.cancel')}
+        isCancelling={bulkProgress?.isCancelling}
+      />
+    </>
   );
 }

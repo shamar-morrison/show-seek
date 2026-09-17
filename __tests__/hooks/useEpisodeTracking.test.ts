@@ -13,6 +13,9 @@ jest.mock('@/src/services/EpisodeTrackingService', () => ({
     markEpisodeUnwatched: jest.fn().mockResolvedValue(undefined),
     markAllEpisodesWatched: jest.fn().mockResolvedValue(undefined),
     markAllEpisodesUnwatched: jest.fn().mockResolvedValue(undefined),
+    markMultipleEpisodesUnwatched: jest
+      .fn()
+      .mockResolvedValue({ unmarkedCount: 5, wasCancelled: false }),
     markMultipleEpisodesWatched: jest
       .fn()
       .mockResolvedValue({ markedCount: 5, wasCancelled: false }),
@@ -667,31 +670,28 @@ describe('useMarkShowAllEpisodesUnwatched', () => {
     mockInvalidateQueries.mockClear();
   });
 
-  it('unmarks each season sequentially with its own episodes', async () => {
+  it('forwards a flat cross-season list and options to the chunked service call', async () => {
     const { result } = renderHook(() => useMarkShowAllEpisodesUnwatched());
+    const episodesToUnmark = [
+      ...seasonOneEpisodes.map((ep) => ({ seasonNumber: 1, episode: ep })),
+      ...seasonTwoEpisodes.map((ep) => ({ seasonNumber: 2, episode: ep })),
+    ];
+    const options = {
+      batchSize: 10,
+      delayMs: 300,
+      isCancelled: () => false,
+      onProgress: jest.fn(),
+    };
 
     await act(async () => {
-      await result.current.mutateAsync({
-        tvShowId: 123,
-        episodesToUnmark: [
-          { seasonNumber: 1, episodes: seasonOneEpisodes },
-          { seasonNumber: 2, episodes: seasonTwoEpisodes },
-        ],
-      });
+      await result.current.mutateAsync({ tvShowId: 123, episodesToUnmark, options });
     });
 
-    expect(episodeTrackingService.markAllEpisodesUnwatched).toHaveBeenCalledTimes(2);
-    expect(episodeTrackingService.markAllEpisodesUnwatched).toHaveBeenNthCalledWith(
-      1,
+    expect(episodeTrackingService.markMultipleEpisodesUnwatched).toHaveBeenCalledTimes(1);
+    expect(episodeTrackingService.markMultipleEpisodesUnwatched).toHaveBeenCalledWith(
       123,
-      1,
-      seasonOneEpisodes
-    );
-    expect(episodeTrackingService.markAllEpisodesUnwatched).toHaveBeenNthCalledWith(
-      2,
-      123,
-      2,
-      seasonTwoEpisodes
+      episodesToUnmark,
+      options
     );
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['episodeTracking', 'test-user-123', 123],
@@ -701,30 +701,9 @@ describe('useMarkShowAllEpisodesUnwatched', () => {
     });
   });
 
-  it('skips empty season groups without calling the service', async () => {
-    const { result } = renderHook(() => useMarkShowAllEpisodesUnwatched());
-
-    await act(async () => {
-      await result.current.mutateAsync({
-        tvShowId: 123,
-        episodesToUnmark: [
-          { seasonNumber: 1, episodes: [] },
-          { seasonNumber: 2, episodes: seasonTwoEpisodes },
-        ],
-      });
-    });
-
-    expect(episodeTrackingService.markAllEpisodesUnwatched).toHaveBeenCalledTimes(1);
-    expect(episodeTrackingService.markAllEpisodesUnwatched).toHaveBeenCalledWith(
-      123,
-      2,
-      seasonTwoEpisodes
-    );
-  });
-
-  it('stops at the first failing season and does not attempt the rest', async () => {
-    (episodeTrackingService.markAllEpisodesUnwatched as jest.Mock).mockRejectedValueOnce(
-      new Error('season 1 failed')
+  it('propagates service failures without additional service calls', async () => {
+    (episodeTrackingService.markMultipleEpisodesUnwatched as jest.Mock).mockRejectedValueOnce(
+      new Error('unwatch failed')
     );
     const { result } = renderHook(() => useMarkShowAllEpisodesUnwatched());
 
@@ -732,15 +711,13 @@ describe('useMarkShowAllEpisodesUnwatched', () => {
       await expect(
         result.current.mutateAsync({
           tvShowId: 123,
-          episodesToUnmark: [
-            { seasonNumber: 1, episodes: seasonOneEpisodes },
-            { seasonNumber: 2, episodes: seasonTwoEpisodes },
-          ],
+          episodesToUnmark: seasonOneEpisodes.map((ep) => ({ seasonNumber: 1, episode: ep })),
         })
-      ).rejects.toThrow('season 1 failed');
+      ).rejects.toThrow('unwatch failed');
     });
 
-    expect(episodeTrackingService.markAllEpisodesUnwatched).toHaveBeenCalledTimes(1);
+    expect(episodeTrackingService.markMultipleEpisodesUnwatched).toHaveBeenCalledTimes(1);
+    expect(episodeTrackingService.markAllEpisodesUnwatched).not.toHaveBeenCalled();
   });
 });
 

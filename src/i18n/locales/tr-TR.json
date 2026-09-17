@@ -670,6 +670,7 @@
     "unmarkAllEpisodesConfirm": "{{seasonName}} sezonundaki {{count}} bölümün izleme işareti kaldırılsın mı?",
     "unmarkAllEpisodesTitle": "Tüm işaretler kaldırılsın mı?",
     "unmarkAllShowEpisodesConfirm": "Tüm sezonlardaki {{count}} bölümün izleme işareti kaldırılsın mı?",
+    "unmarkAllShowEpisodesProgress": "{{current}}/{{total}} işareti kaldırıldı",
     "useCurrentDateTime": "Geçerli tarih ve saati kullan",
     "watchHistoryCleared": "İzleme geçmişi temizlendi",
     "watchedTimes": "{{count}} kez izlendi",

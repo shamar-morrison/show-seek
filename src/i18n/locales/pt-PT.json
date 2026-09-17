@@ -676,6 +676,7 @@
     "unmarkAllEpisodesConfirm": "Desmarcar {{count}} episódios de {{seasonName}}?",
     "unmarkAllEpisodesTitle": "Desmarcar tudo?",
     "unmarkAllShowEpisodesConfirm": "Desmarcar todos os {{count}} episódios de todas as temporadas?",
+    "unmarkAllShowEpisodesProgress": "{{current}}/{{total}} desmarcados",
     "useCurrentDateTime": "Usar a data e hora atuais",
     "watchHistoryCleared": "Histórico de visualização limpo",
     "watchedTimes": "Visto {{count}} vezes",

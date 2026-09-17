@@ -623,29 +623,30 @@ export const useMarkShowAllEpisodesWatched = () => {
  */
 export interface MarkShowAllEpisodesUnwatchedParams {
   tvShowId: number;
-  episodesToUnmark: Array<{ seasonNumber: number; episodes: Episode[] }>;
+  episodesToUnmark: Array<{ seasonNumber: number; episode: Episode }>;
+  options?: {
+    batchSize?: number;
+    delayMs?: number;
+    isCancelled?: () => boolean;
+    onProgress?: (unmarkedCount: number, totalCount: number) => void;
+  };
 }
 
 /**
  * Mutation hook for marking all episodes across all seasons in a TV show as unwatched.
- * Composes the existing per-season bulk-unwatch service call; no new write logic.
- * Runs sequentially and stops at the first failure (mirrors the fail-fast behavior
- * of markMultipleEpisodesWatched); onError invalidation surfaces partial progress.
+ * Thin pass-through to the chunked cross-season service call; progress and cancellation
+ * flow through params.options the same way useMarkShowAllEpisodesWatched does.
  */
 export const useMarkShowAllEpisodesUnwatched = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: MarkShowAllEpisodesUnwatchedParams) => {
-      for (const { seasonNumber, episodes } of params.episodesToUnmark) {
-        if (episodes.length === 0) continue;
-        await episodeTrackingService.markAllEpisodesUnwatched(
-          params.tvShowId,
-          seasonNumber,
-          episodes
-        );
-      }
-    },
+    mutationFn: (params: MarkShowAllEpisodesUnwatchedParams) =>
+      episodeTrackingService.markMultipleEpisodesUnwatched(
+        params.tvShowId,
+        params.episodesToUnmark,
+        params.options
+      ),
     onSuccess: async (_result, params) => {
       const userId = getUserId();
       if (userId) {

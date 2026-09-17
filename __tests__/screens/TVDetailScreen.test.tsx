@@ -1,5 +1,5 @@
 import TVDetailScreen from '@/src/screens/TVDetailScreen';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
 
@@ -722,8 +722,9 @@ describe('TVDetailScreen', () => {
       const params = mockMarkShowAllUnwatchedMutate.mock.calls[0][0];
       expect(params.tvShowId).toBe(10);
       expect(params.episodesToUnmark).toEqual([
-        { seasonNumber: 1, episodes: seasonOne.episodes },
-        { seasonNumber: 2, episodes: [seasonTwo.episodes[0]] },
+        { seasonNumber: 1, episode: seasonOne.episodes[0] },
+        { seasonNumber: 1, episode: seasonOne.episodes[1] },
+        { seasonNumber: 2, episode: seasonTwo.episodes[0] },
       ]);
 
       alertSpy.mockRestore();
@@ -752,6 +753,61 @@ describe('TVDetailScreen', () => {
       expect(alertSpy).not.toHaveBeenCalled();
       expect(mockMarkShowAllWatchedMutate).not.toHaveBeenCalled();
       expect(mockMarkShowAllUnwatchedMutate).not.toHaveBeenCalled();
+
+      alertSpy.mockRestore();
+    });
+
+    it('advances modal progress text during the mark flow', () => {
+      mockMarkShowAllWatchedMutate.mockImplementationOnce((params: any) => {
+        params.options.onProgress(2, 3);
+      });
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId } = render(<TVDetailScreen />);
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+      act(() => {
+        pressConfirmButton(alertSpy);
+      });
+
+      expect(getByTestId('loading-modal-progress').props.children).toContain('2/3 marked');
+
+      alertSpy.mockRestore();
+    });
+
+    it('advances modal progress text during the unmark flow', () => {
+      mockTrackingEpisodes = {
+        '1_1': { episodeId: 101 },
+        '1_2': { episodeId: 102 },
+        '2_1': { episodeId: 201 },
+      };
+      mockMarkShowAllUnwatchedMutate.mockImplementationOnce((params: any) => {
+        params.options.onProgress(1, 3);
+      });
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId } = render(<TVDetailScreen />);
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+      act(() => {
+        pressConfirmButton(alertSpy);
+      });
+
+      expect(getByTestId('loading-modal-progress').props.children).toContain('1/3 unmarked');
+
+      alertSpy.mockRestore();
+    });
+
+    it('switches the modal to cancelling when cancel is pressed mid-flow', () => {
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId } = render(<TVDetailScreen />);
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+      act(() => {
+        pressConfirmButton(alertSpy);
+      });
+
+      fireEvent.press(getByTestId('loading-modal-cancel-button'));
+
+      expect(getByTestId('loading-modal-message').props.children).toBe('Cancelling');
 
       alertSpy.mockRestore();
     });

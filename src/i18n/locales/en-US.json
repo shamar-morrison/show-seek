@@ -676,6 +676,7 @@
     "unmarkAllEpisodesConfirm": "Unmark {{count}} episodes in {{seasonName}}?",
     "unmarkAllEpisodesTitle": "Unmark all?",
     "unmarkAllShowEpisodesConfirm": "Unmark all {{count}} episodes across all seasons as unwatched?",
+    "unmarkAllShowEpisodesProgress": "{{current}}/{{total}} unmarked",
     "useCurrentDateTime": "Use the current date & time",
     "watchHistoryCleared": "Watch history cleared",
     "watchedTimes": "Watched {{count}} times",
