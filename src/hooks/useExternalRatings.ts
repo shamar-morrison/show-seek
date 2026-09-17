@@ -64,9 +64,16 @@ export function useExternalRatings(
     retry: 1, // Only retry once to avoid burning API quota
   });
 
+  // NB: read these in separate statements. Chaining them as
+  // `data?.imdbId ?? data?.ratings?.imdbId` makes TS narrow `data` by the
+  // `imdbId` discriminant in the right operand, collapsing the fallback
+  // access to `never` (TS2339). Separate reads keep identical runtime behavior.
+  const topLevelImdbId = data?.imdbId ?? null;
+  const nestedImdbId = data?.ratings?.imdbId ?? null;
+
   return {
     ratings: data?.ratings ?? null,
-    imdbId: data?.imdbId ?? data?.ratings?.imdbId ?? null,
+    imdbId: topLevelImdbId ?? nestedImdbId,
     isLoading,
     isError,
   };
