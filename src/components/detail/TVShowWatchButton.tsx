@@ -408,8 +408,12 @@ export function TVShowWatchButton({
     }).start();
   }, [buttonWidth, fillRatio, fillWidth]);
 
-  if (regularSeasons.length === 0 || totalMarkableCount === 0) {
-    // Genuine empty state (loaded, but nothing markable) — distinct from loading.
+  if (totalMarkableCount === 0 && watchedShowEpisodesToUnmark.length === 0) {
+    // Genuine empty state (loaded, but nothing markable AND nothing tracked) —
+    // distinct from loading. A show whose tracked episodes are all currently
+    // non-markable (e.g. marked while `allowUnreleasedEpisodeWatches` was on,
+    // then toggled off) still renders below so Clear Watch History stays
+    // reachable, even though there is nothing markable to show a ratio against.
     if (!isLoadingSeasons) {
       return null;
     }

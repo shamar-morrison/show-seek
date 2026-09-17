@@ -805,6 +805,53 @@ describe('TVDetailScreen', () => {
         alertSpy.mockRestore();
       });
 
+      it('renders and stays clearable when every tracked episode is non-markable (null air dates)', () => {
+        // Regression: with nothing markable, the button used to return null and
+        // the whole control (including Clear Watch History) disappeared, even
+        // though tracked watched episodes existed.
+        const undatedSeason = {
+          season_number: 1,
+          episodes: [
+            { id: 111, name: 'S1 E1', episode_number: 1, season_number: 1, air_date: null },
+            { id: 112, name: 'S1 E2', episode_number: 2, season_number: 1, air_date: null },
+          ],
+        };
+        mockAllSeasons = [undatedSeason];
+        mockTrackingEpisodes = { '1_1': { episodeId: 111 }, '1_2': { episodeId: 112 } };
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const { getByTestId, getByText } = render(<TVDetailScreen />);
+
+        // Nothing is markable, but the tracked episodes keep the button (and
+        // long-press clear history) reachable; no numeric progress is shown.
+        expect(getByTestId('tv-show-watch-button')).toBeTruthy();
+        expect(getByText('Mark as Unwatched')).toBeTruthy();
+
+        fireEvent(getByTestId('tv-show-watch-button'), 'onLongPress');
+        expect(mockSheetPresent).toHaveBeenCalledTimes(1);
+
+        act(() => {
+          mockSheetProps.onClearHistory();
+        });
+
+        expect(alertSpy).toHaveBeenCalledWith(
+          'Clear all watched episodes?',
+          'This will unmark all 2 watched episodes across all seasons. This action cannot be undone.',
+          expect.anything()
+        );
+        const buttons = alertSpy.mock.calls[0][2] as any;
+        act(() => {
+          buttons[1].onPress();
+        });
+
+        expect(mockMarkShowAllUnwatchedMutate).toHaveBeenCalledTimes(1);
+        expect(mockMarkShowAllUnwatchedMutate.mock.calls[0][0].episodesToUnmark).toEqual([
+          { seasonNumber: 1, episode: undatedSeason.episodes[0] },
+          { seasonNumber: 1, episode: undatedSeason.episodes[1] },
+        ]);
+
+        alertSpy.mockRestore();
+      });
+
       it('clears currently-watched episodes from a partial state via destructive confirm', () => {
         mockTrackingEpisodes = { '1_1': { episodeId: 101 } };
         const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
