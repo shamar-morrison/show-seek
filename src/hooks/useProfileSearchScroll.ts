@@ -1,6 +1,7 @@
 import { SPACING } from '@/src/constants/theme';
 import { useCallback, useRef } from 'react';
-import type { RefObject, ScrollView } from 'react-native';
+import type { RefObject } from 'react';
+import type { ScrollView } from 'react-native';
 
 export interface PendingProfileScroll {
   id: string;
