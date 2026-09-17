@@ -618,3 +618,52 @@ export const useMarkShowAllEpisodesWatched = () => {
   });
 };
 
+/**
+ * Parameters for marking all episodes across all seasons in a TV show as unwatched
+ */
+export interface MarkShowAllEpisodesUnwatchedParams {
+  tvShowId: number;
+  episodesToUnmark: Array<{ seasonNumber: number; episodes: Episode[] }>;
+}
+
+/**
+ * Mutation hook for marking all episodes across all seasons in a TV show as unwatched.
+ * Composes the existing per-season bulk-unwatch service call; no new write logic.
+ * Runs sequentially and stops at the first failure (mirrors the fail-fast behavior
+ * of markMultipleEpisodesWatched); onError invalidation surfaces partial progress.
+ */
+export const useMarkShowAllEpisodesUnwatched = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: MarkShowAllEpisodesUnwatchedParams) => {
+      for (const { seasonNumber, episodes } of params.episodesToUnmark) {
+        if (episodes.length === 0) continue;
+        await episodeTrackingService.markAllEpisodesUnwatched(
+          params.tvShowId,
+          seasonNumber,
+          episodes
+        );
+      }
+    },
+    onSuccess: async (_result, params) => {
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
+      }
+    },
+    onError: async (_error, params) => {
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
+      }
+    },
+  });
+};
+

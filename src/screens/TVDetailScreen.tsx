@@ -17,6 +17,7 @@ import { SeasonsSection } from '@/src/components/detail/SeasonsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
 import { TraktReviewsSection } from '@/src/components/detail/TraktReviewsSection';
 import { TVHeroSection } from '@/src/components/detail/TVHeroSection';
+import { TVShowWatchButton } from '@/src/components/detail/TVShowWatchButton';
 import { TVMetaSection } from '@/src/components/detail/TVMetaSection';
 import { UpNextEpisodeSection } from '@/src/components/detail/UpNextEpisodeSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
@@ -211,6 +212,19 @@ export default function TVDetailScreen() {
     queryKey: ['tv', tvId, 'recommendations'],
     queryFn: () => tmdbApi.getRecommendedTV(tvId),
     enabled: !!tvId && shouldLoadRecommendations,
+  });
+
+  // Per-season episode details for the show-wide Mark as Watched entry point.
+  // Reuses the already-fetched show details; shares the query cache key with TVSeasonsScreen.
+  const seasonQueries = useQuery({
+    queryKey: ['tv', tvId, 'all-seasons'],
+    queryFn: () =>
+      Promise.all(
+        (tvQuery.data?.seasons || [])
+          .filter((s) => s.season_number > 0)
+          .map((s) => tmdbApi.getSeasonDetails(tvId, s.season_number))
+      ),
+    enabled: !!tvId && !!tvQuery.data,
   });
   const showData = tvQuery.data;
   const resolvedShowPosterPath = showData
@@ -510,6 +524,19 @@ export default function TVDetailScreen() {
             hasNote={hasNote}
             isLoadingNote={isLoadingNote || isOpeningNote}
             hasTrailer={!!trailer}
+          />
+
+          {/* Show-wide Mark as Watched / Unwatched entry point */}
+          <TVShowWatchButton
+            tvId={tvId}
+            showName={show.name}
+            showPosterPath={resolvedShowPosterPath ?? show.poster_path}
+            showStatus={show.status}
+            firstAirDate={show.first_air_date}
+            voteAverage={show.vote_average}
+            genreIds={show.genres?.map((g) => g.id) || []}
+            seasonsWithEpisodes={seasonQueries.data ?? []}
+            onShowToast={(msg) => toastRef.current?.show(msg)}
           />
 
           {userRating > 0 && <UserRating rating={userRating} />}

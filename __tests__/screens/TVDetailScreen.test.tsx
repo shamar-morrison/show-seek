@@ -16,6 +16,17 @@ let mockUseMediaNoteValue: any = {
   ensureNoteLoadedForEdit: mockEnsureNoteLoadedForEdit,
 };
 let mockTvLoading = false;
+let mockPreferencesValue: any = {
+  showOriginalTitles: false,
+  blurPlotSpoilers: false,
+  allowUnreleasedEpisodeWatches: false,
+  autoAddToWatching: false,
+};
+let mockAllSeasons: any[] | undefined;
+let mockTrackingEpisodes: Record<string, any> = {};
+let mockMarkPending = false;
+const mockMarkShowAllWatchedMutate = jest.fn();
+const mockMarkShowAllUnwatchedMutate = jest.fn();
 
 const mockShow = {
   id: 10,
@@ -63,6 +74,7 @@ jest.mock('@/src/api/tmdb', () => ({
   },
   tmdbApi: {
     getTVShowDetails: jest.fn(),
+    getSeasonDetails: jest.fn(),
     getTVCredits: jest.fn(),
     getTVVideos: jest.fn(),
     getSimilarTV: jest.fn(),
@@ -125,6 +137,19 @@ jest.mock('@/src/hooks/useExternalRatings', () => ({
 
 jest.mock('@/src/hooks/useLists', () => ({
   useMediaLists: () => ({ membership: {}, isLoading: false }),
+  useLists: () => ({ data: [], isLoading: false }),
+}));
+
+jest.mock('@/src/hooks/useEpisodeTracking', () => ({
+  useShowEpisodeTracking: () => ({ data: { episodes: mockTrackingEpisodes }, isLoading: false }),
+  useMarkShowAllEpisodesWatched: () => ({
+    mutate: mockMarkShowAllWatchedMutate,
+    isPending: mockMarkPending,
+  }),
+  useMarkShowAllEpisodesUnwatched: () => ({
+    mutate: mockMarkShowAllUnwatchedMutate,
+    isPending: mockMarkPending,
+  }),
 }));
 
 jest.mock('@/src/hooks/useNotes', () => ({
@@ -145,10 +170,7 @@ jest.mock('@/src/hooks/usePosterOverrides', () => ({
 
 jest.mock('@/src/hooks/usePreferences', () => ({
   usePreferences: () => ({
-    preferences: {
-      showOriginalTitles: false,
-      blurPlotSpoilers: false,
-    },
+    preferences: mockPreferencesValue,
   }),
 }));
 
@@ -358,6 +380,15 @@ describe('TVDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTvLoading = false;
+    mockPreferencesValue = {
+      showOriginalTitles: false,
+      blurPlotSpoilers: false,
+      allowUnreleasedEpisodeWatches: false,
+      autoAddToWatching: false,
+    };
+    mockAllSeasons = undefined;
+    mockTrackingEpisodes = {};
+    mockMarkPending = false;
     mockUseMediaNoteValue = {
       note: null,
       hasNote: false,
@@ -416,6 +447,15 @@ describe('TVDetailScreen', () => {
       if (subKey === 'recommendations') {
         return {
           data: { results: [] },
+          isLoading: false,
+          isError: false,
+          refetch: jest.fn(),
+        };
+      }
+
+      if (subKey === 'all-seasons') {
+        return {
+          data: mockAllSeasons,
           isLoading: false,
           isError: false,
           refetch: jest.fn(),
@@ -559,6 +599,161 @@ describe('TVDetailScreen', () => {
       render(<TVDetailScreen />);
 
       expect(mockUpNextSection).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Show-wide Mark as Watched button', () => {
+    const seasonOne = {
+      season_number: 1,
+      episodes: [
+        { id: 101, name: 'S1 E1', episode_number: 1, season_number: 1, air_date: '2024-01-01' },
+        { id: 102, name: 'S1 E2', episode_number: 2, season_number: 1, air_date: '2024-01-08' },
+      ],
+    };
+    const seasonTwo = {
+      season_number: 2,
+      episodes: [
+        { id: 201, name: 'S2 E1', episode_number: 1, season_number: 2, air_date: '2024-02-01' },
+        { id: 202, name: 'S2 E2', episode_number: 2, season_number: 2, air_date: '2099-01-01' },
+      ],
+    };
+
+    const pressConfirmButton = (alertSpy: jest.SpyInstance) => {
+      const buttons = alertSpy.mock.calls[0][2];
+      const confirmButton = buttons[1];
+      confirmButton.onPress();
+    };
+
+    beforeEach(() => {
+      mockAllSeasons = [seasonOne, seasonTwo];
+    });
+
+    it('renders nothing when season details are unavailable', () => {
+      mockAllSeasons = undefined;
+
+      const { queryByTestId } = render(<TVDetailScreen />);
+
+      expect(queryByTestId('tv-show-watch-button')).toBeNull();
+    });
+
+    it('shows Mark as Watched at 0% and marks aired episodes across seasons after confirm', () => {
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId, queryByTestId } = render(<TVDetailScreen />);
+
+      expect(getByTestId('tv-show-watch-button')).toBeTruthy();
+      expect(queryByTestId('tv-show-watch-progress')).toBeNull();
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('3'),
+        expect.anything()
+      );
+      pressConfirmButton(alertSpy);
+
+      expect(mockMarkShowAllWatchedMutate).toHaveBeenCalledTimes(1);
+      const params = mockMarkShowAllWatchedMutate.mock.calls[0][0];
+      expect(params.tvShowId).toBe(10);
+      expect(params.episodesToMark).toHaveLength(3);
+      expect(params.episodesToMark.map((e: any) => e.episode.id).sort()).toEqual([101, 102, 201]);
+
+      alertSpy.mockRestore();
+    });
+
+    it('includes unaired episodes when the unreleased preference is on', () => {
+      mockPreferencesValue = { ...mockPreferencesValue, allowUnreleasedEpisodeWatches: true };
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId } = render(<TVDetailScreen />);
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining("haven't aired yet"),
+        expect.anything()
+      );
+      pressConfirmButton(alertSpy);
+
+      const params = mockMarkShowAllWatchedMutate.mock.calls[0][0];
+      expect(params.episodesToMark).toHaveLength(4);
+
+      alertSpy.mockRestore();
+    });
+
+    it('shows progress count when partially watched and marks only the remainder', () => {
+      mockTrackingEpisodes = { '1_1': { episodeId: 101 } };
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId, getByText } = render(<TVDetailScreen />);
+
+      expect(getByText('1/3 episodes')).toBeTruthy();
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+      pressConfirmButton(alertSpy);
+
+      const params = mockMarkShowAllWatchedMutate.mock.calls[0][0];
+      expect(params.episodesToMark.map((e: any) => e.episode.id).sort()).toEqual([102, 201]);
+
+      alertSpy.mockRestore();
+    });
+
+    it('flips to Mark as Unwatched when fully watched and clears per-season groups', () => {
+      mockTrackingEpisodes = {
+        '1_1': { episodeId: 101 },
+        '1_2': { episodeId: 102 },
+        '2_1': { episodeId: 201 },
+      };
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId, getByText, queryByTestId } = render(<TVDetailScreen />);
+
+      expect(getByText('Mark as Unwatched')).toBeTruthy();
+      expect(queryByTestId('tv-show-watch-progress')).toBeNull();
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('3'),
+        expect.anything()
+      );
+      pressConfirmButton(alertSpy);
+
+      expect(mockMarkShowAllUnwatchedMutate).toHaveBeenCalledTimes(1);
+      const params = mockMarkShowAllUnwatchedMutate.mock.calls[0][0];
+      expect(params.tvShowId).toBe(10);
+      expect(params.episodesToUnmark).toEqual([
+        { seasonNumber: 1, episodes: seasonOne.episodes },
+        { seasonNumber: 2, episodes: [seasonTwo.episodes[0]] },
+      ]);
+
+      alertSpy.mockRestore();
+    });
+
+    it('skips the confirm dialog when only one season is affected', () => {
+      mockAllSeasons = [seasonOne];
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId } = render(<TVDetailScreen />);
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(mockMarkShowAllWatchedMutate).toHaveBeenCalledTimes(1);
+
+      alertSpy.mockRestore();
+    });
+
+    it('does nothing while a bulk write is pending', () => {
+      mockMarkPending = true;
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId } = render(<TVDetailScreen />);
+
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(mockMarkShowAllWatchedMutate).not.toHaveBeenCalled();
+      expect(mockMarkShowAllUnwatchedMutate).not.toHaveBeenCalled();
+
+      alertSpy.mockRestore();
     });
   });
 });
