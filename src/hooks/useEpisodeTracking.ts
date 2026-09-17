@@ -231,7 +231,12 @@ export const useIsEpisodeWatched = (
 /**
  * Calculate progress for a specific season
  */
-export const useSeasonProgress = (tvShowId: number, seasonNumber: number, episodes: Episode[]) => {
+export const useSeasonProgress = (
+  tvShowId: number,
+  seasonNumber: number,
+  episodes: Episode[],
+  allowUnreleased = false
+) => {
   const { data: tracking, isLoading } = useShowEpisodeTracking(tvShowId);
 
   const progress = useMemo(() => {
@@ -239,9 +244,10 @@ export const useSeasonProgress = (tvShowId: number, seasonNumber: number, episod
     return episodeTrackingService.calculateSeasonProgress(
       seasonNumber,
       episodes,
-      tracking.episodes
+      tracking.episodes,
+      allowUnreleased
     );
-  }, [tracking, seasonNumber, episodes]);
+  }, [tracking, seasonNumber, episodes, allowUnreleased]);
 
   return { progress, isLoading };
 };
@@ -249,13 +255,23 @@ export const useSeasonProgress = (tvShowId: number, seasonNumber: number, episod
 /**
  * Calculate overall show progress across all seasons
  */
-export const useShowProgress = (tvShowId: number, seasons: Season[], allEpisodes: Episode[]) => {
+export const useShowProgress = (
+  tvShowId: number,
+  seasons: Season[],
+  allEpisodes: Episode[],
+  allowUnreleased = false
+) => {
   const { data: tracking, isLoading } = useShowEpisodeTracking(tvShowId);
 
   const progress = useMemo(() => {
     if (!tracking?.episodes || !allEpisodes.length) return null;
-    return episodeTrackingService.calculateShowProgress(seasons, allEpisodes, tracking.episodes);
-  }, [tracking, seasons, allEpisodes]);
+    return episodeTrackingService.calculateShowProgress(
+      seasons,
+      allEpisodes,
+      tracking.episodes,
+      allowUnreleased
+    );
+  }, [tracking, seasons, allEpisodes, allowUnreleased]);
 
   return { progress, isLoading };
 };

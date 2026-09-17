@@ -15,6 +15,7 @@ import { useSeasonProgress } from '@/src/hooks/useEpisodeTracking';
 import type { RatingItem } from '@/src/services/RatingService';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import { hasEpisodeAired } from '@/src/utils/dateUtils';
+import { getMarkableEpisodes } from '@/src/utils/episodeEligibility';
 import * as Haptics from 'expo-haptics';
 import type { TFunction } from 'i18next';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -107,17 +108,19 @@ export const SeasonItem = memo<SeasonItemProps>(
     const styles = useSeasonScreenStyles();
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
     const seasonEpisodes = season.episodes || EMPTY_EPISODES;
-    const { progress } = useSeasonProgress(tvId, season.season_number, seasonEpisodes);
+    const { progress } = useSeasonProgress(
+      tvId,
+      season.season_number,
+      seasonEpisodes,
+      allowUnreleasedEpisodeWatches
+    );
     const shouldShowEpisodeList = showEpisodes && isExpanded && seasonEpisodes.length > 0;
 
     // Defer episode rendering to show loading indicator immediately on expand
     const { shouldRenderContent, isLoading } = useDeferredExpansion(shouldShowEpisodeList);
 
     const markableEpisodes = useMemo(
-      () =>
-        seasonEpisodes.filter(
-          (ep) => !!ep.air_date && (allowUnreleasedEpisodeWatches || hasEpisodeAired(ep.air_date))
-        ),
+      () => getMarkableEpisodes(seasonEpisodes, allowUnreleasedEpisodeWatches),
       [allowUnreleasedEpisodeWatches, seasonEpisodes]
     );
 

@@ -395,12 +395,14 @@ class EpisodeTrackingService {
 
   /**
    * Calculate progress for a specific season.
-   * Uses the full episode total when watched-ahead episodes exist; otherwise excludes unaired episodes from the denominator.
+   * Excludes unaired episodes from the denominator unless `allowUnreleased` is true,
+   * in which case the full known episode total is used for both numerator and denominator.
    */
   calculateSeasonProgress(
     seasonNumber: number,
     episodes: Episode[],
-    watchedEpisodes: Record<string, WatchedEpisode>
+    watchedEpisodes: Record<string, WatchedEpisode>,
+    allowUnreleased = false
   ): SeasonProgress {
     const totalCount = episodes.length;
     const airedEpisodes = episodes.filter((ep) => hasEpisodeAired(ep.air_date));
@@ -408,11 +410,10 @@ class EpisodeTrackingService {
       this.isEpisodeWatched(seasonNumber, ep.episode_number, watchedEpisodes)
     );
     const totalAiredCount = airedEpisodes.length;
-    const hasWatchedAhead = watchedSeasonEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
-    const watchedCount = hasWatchedAhead
+    const watchedCount = allowUnreleased
       ? watchedSeasonEpisodes.length
       : watchedSeasonEpisodes.filter((ep) => hasEpisodeAired(ep.air_date)).length;
-    const progressTotalCount = hasWatchedAhead ? totalCount : totalAiredCount;
+    const progressTotalCount = allowUnreleased ? totalCount : totalAiredCount;
     const percentage = progressTotalCount > 0 ? (watchedCount / progressTotalCount) * 100 : 0;
 
     return {
@@ -427,26 +428,27 @@ class EpisodeTrackingService {
 
   /**
    * Calculate overall progress for a TV show.
-   * Excludes Season 0 (specials) and uses full known episode totals only when watched-ahead episodes exist; otherwise excludes unaired episodes from the denominator.
+   * Excludes Season 0 (specials) and unaired episodes from the denominator unless
+   * `allowUnreleased` is true, in which case full known episode totals are used.
    */
   calculateShowProgress(
     seasons: Season[],
     allEpisodes: Episode[],
-    watchedEpisodes: Record<string, WatchedEpisode>
+    watchedEpisodes: Record<string, WatchedEpisode>,
+    allowUnreleased = false
   ): ShowProgress {
     const validEpisodes = allEpisodes.filter((ep) => ep.season_number > 0);
     const airedEpisodes = validEpisodes.filter((ep) => hasEpisodeAired(ep.air_date));
     const watchedValidEpisodes = validEpisodes.filter((ep) =>
       this.isEpisodeWatched(ep.season_number, ep.episode_number, watchedEpisodes)
     );
-    const hasWatchedAhead = watchedValidEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
-    const totalWatched = hasWatchedAhead
+    const totalWatched = allowUnreleased
       ? watchedValidEpisodes.length
       : watchedValidEpisodes.filter((ep) => hasEpisodeAired(ep.air_date)).length;
 
     const totalEpisodes = validEpisodes.length;
     const totalAiredEpisodes = airedEpisodes.length;
-    const progressTotalEpisodes = hasWatchedAhead ? totalEpisodes : totalAiredEpisodes;
+    const progressTotalEpisodes = allowUnreleased ? totalEpisodes : totalAiredEpisodes;
     const percentage = progressTotalEpisodes > 0 ? (totalWatched / progressTotalEpisodes) * 100 : 0;
 
     // Calculate progress per season
@@ -456,7 +458,12 @@ class EpisodeTrackingService {
         const seasonEpisodes = allEpisodes.filter(
           (ep) => ep.season_number === season.season_number
         );
-        return this.calculateSeasonProgress(season.season_number, seasonEpisodes, watchedEpisodes);
+        return this.calculateSeasonProgress(
+          season.season_number,
+          seasonEpisodes,
+          watchedEpisodes,
+          allowUnreleased
+        );
       });
 
     return {
