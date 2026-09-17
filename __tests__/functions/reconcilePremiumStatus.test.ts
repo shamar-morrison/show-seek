@@ -1,4 +1,10 @@
-const mockOnCall = jest.fn((_options, handler) => handler);
+const mockOnCall = jest.fn((_options: any, handler: any) => {
+  // Mirror the real CallableFunction's `.run(request)` unit-testing helper,
+  // since the mock unwraps onCall down to the raw handler.
+  const fn: any = (request: any) => handler(request);
+  fn.run = (request: any) => handler(request);
+  return fn;
+});
 const mockOnRequest = jest.fn((_options, handler) => handler);
 const mockDefineSecret = jest.fn(() => ({ value: () => 'rc-api-key' }));
 
@@ -80,7 +86,7 @@ describe('reconcilePremiumStatus callable', () => {
       exists: true,
     });
 
-    const result = await reconcilePremiumStatus({
+    const result = await reconcilePremiumStatus.run({
       auth: { uid: 'user-polar-123' },
     } as any);
 
@@ -108,7 +114,7 @@ describe('reconcilePremiumStatus callable', () => {
       exists: true,
     });
 
-    const result = await reconcilePremiumStatus({
+    const result = await reconcilePremiumStatus.run({
       auth: { uid: 'user-polar-expired' },
     } as any);
 
