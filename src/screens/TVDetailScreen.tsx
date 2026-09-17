@@ -536,6 +536,7 @@ export default function TVDetailScreen() {
             voteAverage={show.vote_average}
             genreIds={show.genres?.map((g) => g.id) || []}
             seasonsWithEpisodes={seasonQueries.data ?? []}
+            isLoadingSeasons={seasonQueries.isLoading}
             onShowToast={(msg) => toastRef.current?.show(msg)}
           />
 

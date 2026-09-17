@@ -15,9 +15,16 @@ export interface WatchHistoryActionsModalRef {
 
 interface WatchHistoryActionsModalProps {
   /** Callback when user wants to view watch history */
-  onViewHistory: () => void;
+  onViewHistory?: () => void;
   /** Callback when user wants to clear watch history */
   onClearHistory: () => void;
+  /** Show the View Watch History row (default true). Hide it when there is
+      no watch-history screen to navigate to (e.g. TV episodes). */
+  showViewHistoryAction?: boolean;
+  /** Override for the clear row label (defaults to the generic copy). */
+  clearActionLabel?: string;
+  /** Override for the clear row description (defaults to the generic copy). */
+  clearActionDescription?: string;
 }
 
 /**
@@ -27,7 +34,7 @@ interface WatchHistoryActionsModalProps {
 const WatchHistoryActionsModal = forwardRef<
   WatchHistoryActionsModalRef,
   WatchHistoryActionsModalProps
->(({ onViewHistory, onClearHistory }, ref) => {
+>(({ onViewHistory, onClearHistory, showViewHistoryAction = true, clearActionLabel, clearActionDescription }, ref) => {
   const { t } = useTranslation();
   const sheetRef = useRef<TrueSheet>(null);
   const { width } = useWindowDimensions();
@@ -44,7 +51,7 @@ const WatchHistoryActionsModal = forwardRef<
   const handleViewHistory = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await sheetRef.current?.dismiss();
-    onViewHistory();
+    onViewHistory?.();
   }, [onViewHistory]);
 
   const handleClearHistory = useCallback(async () => {
@@ -54,19 +61,23 @@ const WatchHistoryActionsModal = forwardRef<
   }, [onClearHistory]);
 
   const actions = [
-    {
-      id: 'view',
-      icon: WorkHistoryIcon,
-      label: t('watched.viewWatchHistory'),
-      description: t('watched.viewWatchHistoryDescription'),
-      onPress: handleViewHistory,
-      color: COLORS.text,
-    },
+    ...(showViewHistoryAction
+      ? [
+          {
+            id: 'view',
+            icon: WorkHistoryIcon,
+            label: t('watched.viewWatchHistory'),
+            description: t('watched.viewWatchHistoryDescription'),
+            onPress: handleViewHistory,
+            color: COLORS.text,
+          },
+        ]
+      : []),
     {
       id: 'clear',
       icon: Delete02Icon,
-      label: t('watched.clearAllWatchHistory'),
-      description: t('watched.clearWatchHistoryDescription'),
+      label: clearActionLabel ?? t('watched.clearAllWatchHistory'),
+      description: clearActionDescription ?? t('watched.clearWatchHistoryDescription'),
       onPress: handleClearHistory,
       color: COLORS.error,
     },
