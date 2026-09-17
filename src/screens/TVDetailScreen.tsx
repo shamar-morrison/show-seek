@@ -71,7 +71,7 @@ import {
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { setReviewQueue, traktToReview, type QueuedReview } from '@/src/utils/reviewQueue';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -110,6 +110,7 @@ export default function TVDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const isAccountRequired = useAccountRequired();
+  const queryClient = useQueryClient();
 
   // Long-press handler for similar/recommended media
   const {
@@ -426,17 +427,32 @@ export default function TVDetailScreen() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
+      const [refreshedTv] = await Promise.all([
         tvQuery.refetch(),
         creditsQuery.refetch(),
         videosQuery.refetch(),
         similarQuery.refetch(),
         watchProvidersQuery.refetch(),
         imagesQuery.refetch(),
-        seasonQueries.refetch(),
         ...(shouldLoadReviews ? [reviewsQuery.refetch()] : []),
         ...(shouldLoadRecommendations ? [recommendationsQuery.refetch()] : []),
       ]);
+
+      // seasonQueries derives its season list from tvQuery data, so refreshing it
+      // in parallel raced against the stale pre-refresh list. Drive it from the
+      // seasons returned by the refresh instead. staleTime: 0 forces the fetch
+      // through the otherwise-fresh (3h) cache.
+      const refreshedSeasons = refreshedTv.data?.seasons ?? [];
+      await queryClient.fetchQuery({
+        queryKey: ['tv', tvId, 'all-seasons'],
+        queryFn: () =>
+          Promise.all(
+            refreshedSeasons
+              .filter((s) => s.season_number >= 0)
+              .map((s) => tmdbApi.getSeasonDetails(tvId, s.season_number))
+          ),
+        staleTime: 0,
+      });
     } finally {
       setRefreshing(false);
     }

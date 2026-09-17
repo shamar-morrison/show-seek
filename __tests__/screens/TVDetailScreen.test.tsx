@@ -3,11 +3,12 @@ import { computeFillWidthPx } from '@/src/components/detail/TVShowWatchButton';
 import { tmdbApi } from '@/src/api/tmdb';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Animated } from 'react-native';
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockUseQuery = jest.fn();
+const mockFetchQuery = jest.fn();
 const mockIsAccountRequired = jest.fn(() => false);
 const mockEnsureNoteLoadedForEdit = jest.fn();
 const mockNoteModalPresent = jest.fn();
@@ -67,6 +68,7 @@ jest.mock('expo-router', () => {
 
 jest.mock('@tanstack/react-query', () => ({
   useQuery: (args: any) => mockUseQuery(args),
+  useQueryClient: () => ({ fetchQuery: mockFetchQuery }),
 }));
 
 jest.mock('@/src/api/tmdb', () => ({
@@ -403,6 +405,7 @@ jest.mock('@/src/components/detail/WatchProvidersSection', () => ({
 describe('TVDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchQuery.mockReset();
     mockTvLoading = false;
     mockPreferencesValue = {
       showOriginalTitles: false,
@@ -1166,6 +1169,70 @@ describe('TVDetailScreen', () => {
       expect(getByTestId('loading-modal-message').props.children).toBe('Cancelling');
 
       alertSpy.mockRestore();
+    });
+  });
+
+  describe('pull-to-refresh season details', () => {
+    it('fetches season details from the post-refresh season list, not the stale render closure', async () => {
+      // Stale list present at initial render: seasons 1 and 2. The backend list
+      // returned by the refresh drops season 2 and adds season 3.
+      const originalSeasons = mockShow.seasons;
+      mockShow.seasons = [{ season_number: 1 }, { season_number: 2 }] as any;
+      const refreshedShow = {
+        ...mockShow,
+        seasons: [{ season_number: 1 }, { season_number: 3 }],
+      };
+      const refetch = jest.fn().mockResolvedValue({
+        data: refreshedShow,
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
+
+      mockUseQuery.mockImplementation(({ queryKey }: any) => {
+        if (queryKey[0] === 'tv' && queryKey.length === 2) {
+          return {
+            data: mockShow,
+            isLoading: false,
+            isError: false,
+            error: null,
+            refetch,
+          };
+        }
+        if (queryKey[2] === 'all-seasons') {
+          return { data: [], isLoading: false, isError: false, refetch: jest.fn() };
+        }
+        return { data: undefined, isLoading: false, isError: false, refetch: jest.fn() };
+      });
+
+      const getSeasonDetailsMock = tmdbApi.getSeasonDetails as jest.Mock;
+      getSeasonDetailsMock.mockReset();
+      getSeasonDetailsMock.mockResolvedValue({ season_number: 0, episodes: [] });
+      mockFetchQuery.mockImplementation(({ queryFn }: any) => queryFn());
+
+      try {
+        const { UNSAFE_getByType } = render(<TVDetailScreen />);
+
+        const scrollView = UNSAFE_getByType(Animated.ScrollView);
+        await act(async () => {
+          await scrollView.props.refreshControl.props.onRefresh();
+        });
+
+        expect(refetch).toHaveBeenCalledTimes(1);
+        expect(mockFetchQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            queryKey: ['tv', 10, 'all-seasons'],
+            staleTime: 0,
+          })
+        );
+
+        // The added season 3 must be fetched; the removed season 2 must not, or
+        // else the refresh raced against the pre-refresh closure's season list.
+        const fetchedSeasonNumbers = getSeasonDetailsMock.mock.calls.map((call) => call[1]);
+        expect(fetchedSeasonNumbers).toEqual([1, 3]);
+      } finally {
+        mockShow.seasons = originalSeasons;
+      }
     });
   });
 });
