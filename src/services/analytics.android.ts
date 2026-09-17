@@ -23,6 +23,7 @@ import {
   type TrackSaveRatingParams,
   type TrackAuthInteractionParams,
   type TrackOnboardingStepViewParams,
+  type TrackPaywallInteractionParams,
 } from './analytics.shared';
 
 export type {
@@ -54,6 +55,7 @@ export type {
   TraktSyncFailureParams,
   AnalyticsAuthAction,
   AnalyticsAuthOption,
+  PaywallInteractionAction,
   TrackAuthInteractionParams,
   TrackOnboardingStepViewParams,
 } from './analytics.shared';
@@ -461,6 +463,14 @@ export const trackOnboardingStepView = async ({
   await trackNamedEvent('onboarding_step_view', 'onboarding_step_view', {
     step_index: stepIndex,
     step_id: stepId,
+  });
+};
+
+export const trackPaywallInteraction = async ({
+  action,
+}: TrackPaywallInteractionParams): Promise<void> => {
+  await trackNamedEvent('paywall_interaction', 'paywall_interaction', {
+    paywall_action: action,
   });
 };
 

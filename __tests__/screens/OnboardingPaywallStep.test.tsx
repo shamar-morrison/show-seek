@@ -83,9 +83,18 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+jest.mock('@/src/services/analytics', () => ({
+  trackPaywallInteraction: jest.fn(),
+  trackPaywallWinbackShown: jest.fn(),
+  trackPaywallWinbackDecision: jest.fn(),
+}));
+
 import OnboardingPaywallStep, {
   ONBOARDING_PAYWALL_CLOSE_BUTTON_REVEAL_DELAY_MS,
 } from '@/src/screens/onboarding/OnboardingPaywallStep';
+import { trackPaywallInteraction } from '@/src/services/analytics';
+
+const mockTrackPaywallInteraction = trackPaywallInteraction as jest.Mock;
 
 function collectTestIds(node: any, ids: string[] = []): string[] {
   if (!node) return ids;
@@ -295,8 +304,7 @@ describe('OnboardingPaywallStep', () => {
     alertSpy.mockRestore();
   });
 
-  it('prompts for account instead of showing purchase alerts when purchase requires auth', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+  it('prompts for account instead of showing purchase alerts when purchase requires auth', async () => {    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     const authRequiredError = new Error('AUTH_REQUIRED') as Error & { code: string };
     authRequiredError.code = 'AUTH_REQUIRED';
     mockPurchasePremium.mockRejectedValueOnce(authRequiredError);
@@ -315,5 +323,93 @@ describe('OnboardingPaywallStep', () => {
     expect(mockRequireAccount).toHaveBeenCalledTimes(1);
     expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
+  });
+
+  it('tracks purchase_attempt when the subscribe button is tapped', async () => {
+    const { getByTestId } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+    );
+
+    fireEvent.press(getByTestId('onboarding-subscribe-button'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockPurchasePremium).toHaveBeenCalledWith('yearly');
+    expect(mockTrackPaywallInteraction).toHaveBeenCalledWith({
+      action: 'purchase_attempt',
+    });
+  });
+
+  it('tracks purchase_error on genuine purchase failure but stays silent on user cancellation', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+
+    try {
+      const genuineError = new Error('Network failed') as Error & { code: string };
+      genuineError.code = 'NETWORK_ERROR';
+      mockPurchasePremium.mockRejectedValueOnce(genuineError);
+
+      const { getByTestId, rerender } = render(
+        <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+      );
+
+      fireEvent.press(getByTestId('onboarding-subscribe-button'));
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mockTrackPaywallInteraction).toHaveBeenCalledWith({
+        action: 'purchase_attempt',
+      });
+      expect(mockTrackPaywallInteraction).toHaveBeenCalledWith({
+        action: 'purchase_error',
+      });
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+
+      mockTrackPaywallInteraction.mockClear();
+      alertSpy.mockClear();
+
+      const cancelledError = new Error('User canceled') as Error & { code: string };
+      cancelledError.code = 'E_USER_CANCELLED';
+      mockPurchasePremium.mockRejectedValueOnce(cancelledError);
+
+      rerender(<OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />);
+      fireEvent.press(getByTestId('onboarding-subscribe-button'));
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mockTrackPaywallInteraction).toHaveBeenCalledWith({
+        action: 'purchase_attempt',
+      });
+      expect(mockTrackPaywallInteraction).not.toHaveBeenCalledWith({
+        action: 'purchase_error',
+      });
+      expect(alertSpy).not.toHaveBeenCalled();
+    } finally {
+      alertSpy.mockRestore();
+    }
+  });
+
+  it('tracks dismiss when the paywall close button is tapped', () => {
+    jest.useFakeTimers();
+    const onClose = jest.fn();
+    const { getByTestId } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={onClose} />
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(ONBOARDING_PAYWALL_CLOSE_BUTTON_REVEAL_DELAY_MS);
+    });
+
+    fireEvent.press(getByTestId('onboarding-paywall-close-button'));
+
+    expect(mockTrackPaywallInteraction).toHaveBeenCalledWith({ action: 'dismiss' });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -212,4 +212,25 @@ describe('analytics.android wrappers', () => {
 
     expect(mockLogEvent).not.toHaveBeenCalled();
   });
+
+  // Verifies the paywall-step instrumentation emits the paywall_interaction
+  // event with the paywall_action param for each supported action.
+  it('tracks paywall interactions with the paywall_action param', async () => {
+    const analytics = loadModule();
+
+    await analytics.trackPaywallInteraction({ action: 'purchase_attempt' });
+    await analytics.trackPaywallInteraction({ action: 'purchase_error' });
+    await analytics.trackPaywallInteraction({ action: 'dismiss' });
+
+    expect(mockLogEvent).toHaveBeenCalledTimes(3);
+    expect(mockLogEvent).toHaveBeenNthCalledWith(1, 'paywall_interaction', {
+      paywall_action: 'purchase_attempt',
+    });
+    expect(mockLogEvent).toHaveBeenNthCalledWith(2, 'paywall_interaction', {
+      paywall_action: 'purchase_error',
+    });
+    expect(mockLogEvent).toHaveBeenNthCalledWith(3, 'paywall_interaction', {
+      paywall_action: 'dismiss',
+    });
+  });
 });

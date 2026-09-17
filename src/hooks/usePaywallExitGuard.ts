@@ -29,6 +29,15 @@ export interface UsePaywallExitGuardOptions {
    * or when BackHandler.exitApp is unavailable.
    */
   onExit?: () => void;
+
+  /**
+   * Optional instrumentation callback invoked on every exit attempt
+   * (paywall close-button tap or Android hardware back press), before the
+   * guard decides between showing the win-back modal and exiting.
+   * Firing on attempt (rather than completed exit) keeps the call site to a
+   * single touchpoint; callers must not perform navigation or state changes here.
+   */
+  onExitAttempt?: () => void;
 }
 
 export interface UsePaywallExitGuardResult {
@@ -65,6 +74,7 @@ export function usePaywallExitGuard({
   screenName = 'onboarding-paywall',
   enabled = true,
   onExit,
+  onExitAttempt,
 }: UsePaywallExitGuardOptions = {}): UsePaywallExitGuardResult {
   let user: { uid?: string } | null = null;
   try {
@@ -80,12 +90,14 @@ export function usePaywallExitGuard({
 
   const hasShownRef = useRef(false);
   const screenNameRef = useRef(screenName);
+  const onExitAttemptRef = useRef(onExitAttempt);
   const readPromiseRef = useRef<Promise<boolean> | null>(null);
   const isEvaluatingRef = useRef(false);
 
   useEffect(() => {
     screenNameRef.current = screenName;
-  }, [screenName]);
+    onExitAttemptRef.current = onExitAttempt;
+  }, [screenName, onExitAttempt]);
 
   const isEligible =
     Platform.OS === 'android' &&
@@ -174,6 +186,14 @@ export function usePaywallExitGuard({
   );
 
   const triggerWinbackOffer = useCallback((): boolean => {
+    // Instrumentation-only: notify the caller of every exit attempt
+    // (close-button tap or hardware back press) before branching.
+    try {
+      onExitAttemptRef.current?.();
+    } catch (error) {
+      console.warn('[usePaywallExitGuard] onExitAttempt failed', error);
+    }
+
     // If modal is already showing, second back press allows exit
     if (isWinbackModalVisible) {
       setIsWinbackModalVisible(false);

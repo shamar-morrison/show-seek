@@ -139,6 +139,12 @@ export interface TrackOnboardingStepViewParams {
   stepId: string;
 }
 
+export type PaywallInteractionAction = 'purchase_attempt' | 'purchase_error' | 'dismiss';
+
+export interface TrackPaywallInteractionParams {
+  action: PaywallInteractionAction;
+}
+
 export const normalizeListKind = (listId: string): AnalyticsListKind => {
   return DEFAULT_LIST_KINDS.includes(listId as (typeof DEFAULT_LIST_KINDS)[number])
     ? (listId as (typeof DEFAULT_LIST_KINDS)[number])

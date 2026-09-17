@@ -168,8 +168,32 @@ describe('usePaywallExitGuard', () => {
     expect(mockExitApp).toHaveBeenCalledTimes(1);
   });
 
-  it('does not show modal and exits directly if user has already seen the winback offer', async () => {
-    mockReadHasSeenPaywallWinback.mockResolvedValueOnce(true);
+  it('notifies onExitAttempt on every close attempt and back press without changing exit behavior', async () => {
+    const onExitAttempt = jest.fn();
+    const { result } = renderHook(() => usePaywallExitGuard({ onExitAttempt }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      result.current.handleCloseAttempt();
+    });
+
+    expect(onExitAttempt).toHaveBeenCalledTimes(1);
+    expect(result.current.isWinbackModalVisible).toBe(true);
+    expect(mockExitApp).not.toHaveBeenCalled();
+
+    act(() => {
+      backPressHandler!();
+    });
+
+    expect(onExitAttempt).toHaveBeenCalledTimes(2);
+    expect(result.current.isWinbackModalVisible).toBe(false);
+    expect(mockExitApp).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show modal and exits directly if user has already seen the winback offer', async () => {    mockReadHasSeenPaywallWinback.mockResolvedValueOnce(true);
 
     const { result } = renderHook(() => usePaywallExitGuard());
 

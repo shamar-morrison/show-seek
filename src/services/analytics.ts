@@ -20,6 +20,7 @@ import type {
   TraktSyncFailureParams,
   TrackAuthInteractionParams,
   TrackOnboardingStepViewParams,
+  TrackPaywallInteractionParams,
 } from './analytics.shared';
 
 export type {
@@ -51,6 +52,7 @@ export type {
   TraktSyncFailureParams,
   AnalyticsAuthAction,
   AnalyticsAuthOption,
+  PaywallInteractionAction,
   TrackAuthInteractionParams,
   TrackOnboardingStepViewParams,
 } from './analytics.shared';
@@ -133,5 +135,9 @@ export const trackAuthInteraction = async (
 
 export const trackOnboardingStepView = async (
   _params: TrackOnboardingStepViewParams
+): Promise<void> => {};
+
+export const trackPaywallInteraction = async (
+  _params: TrackPaywallInteractionParams
 ): Promise<void> => {};
 

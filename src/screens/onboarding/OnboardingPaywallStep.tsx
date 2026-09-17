@@ -11,6 +11,7 @@ import { isPremiumAuthRequiredError, type PremiumPlan } from '@/src/context/prem
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { usePaywallExitGuard } from '@/src/hooks/usePaywallExitGuard';
+import { trackPaywallInteraction } from '@/src/services/analytics';
 import { WinbackOfferModal } from '@/src/components/WinbackOfferModal';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,6 +52,12 @@ export default function OnboardingPaywallStep({
   } = usePaywallExitGuard({
     screenName: 'onboarding-paywall',
     onExit: onClose,
+    // Instrumentation-only: every close-button tap or hardware back press on
+    // this step funnels through the guard, so this is the single touchpoint
+    // for exit-attempt tracking (complements the win-back shown/decision events).
+    onExitAttempt: () => {
+      void trackPaywallInteraction({ action: 'dismiss' });
+    },
   });
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
@@ -77,6 +84,9 @@ export default function OnboardingPaywallStep({
   }, [isPremium, onClose, t]);
 
   const handlePurchase = async () => {
+    // Fire before the purchase flow resolves so attempts are captured
+    // regardless of outcome (mirrors trackAuthInteraction tap-before-await).
+    void trackPaywallInteraction({ action: 'purchase_attempt' });
     try {
       await purchasePremium(selectedPlan);
     } catch (error: any) {
@@ -94,6 +104,9 @@ export default function OnboardingPaywallStep({
         message.includes('user cancelled');
 
       if (!isUserCanceled) {
+        // Genuine failures only — user-initiated cancellation stays silent,
+        // mirroring how trackAuthInteraction maps cancel to dismiss, not error.
+        void trackPaywallInteraction({ action: 'purchase_error' });
         Alert.alert(t('premium.purchaseFailedTitle'), error.message || t('errors.generic'));
       }
     }
