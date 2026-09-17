@@ -875,3 +875,4 @@ describe('verifyPolarWebhookSignature', () => {
     expect(result.valid).toBe(false);
     expect(result.reason).toBe('missing_headers');
   });
+});
