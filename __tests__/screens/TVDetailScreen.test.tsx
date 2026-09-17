@@ -1,5 +1,6 @@
 import TVDetailScreen from '@/src/screens/TVDetailScreen';
 import { computeFillWidthPx } from '@/src/components/detail/TVShowWatchButton';
+import { tmdbApi } from '@/src/api/tmdb';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
@@ -681,6 +682,69 @@ describe('TVDetailScreen', () => {
       expect(queryByText('Mark as Watched')).toBeTruthy();
     });
 
+    it('includes season 0 (specials) when fetching per-season details, while the button still excludes them from counts', async () => {
+      const originalSeasons = mockShow.seasons;
+      mockShow.seasons = [
+        { season_number: 0 },
+        { season_number: 1 },
+        { season_number: 2 },
+      ] as any;
+      mockAllSeasons = [
+        {
+          season_number: 0,
+          episodes: [
+            { id: 1, name: 'Special', episode_number: 1, season_number: 0, air_date: '2024-01-01' },
+          ],
+        },
+        seasonOne,
+        seasonTwo,
+      ];
+      const getSeasonDetailsMock = tmdbApi.getSeasonDetails as jest.Mock;
+      getSeasonDetailsMock.mockImplementation((_tvId: number, seasonNumber: number) =>
+        Promise.resolve({ season_number: seasonNumber, episodes: [] })
+      );
+
+      let allSeasonsQueryFn: (() => Promise<unknown>) | undefined;
+      mockUseQuery.mockImplementation(({ queryKey, queryFn }: any) => {
+        if (queryKey[0] === 'tv' && queryKey.length === 2) {
+          return {
+            data: mockShow,
+            isLoading: false,
+            isError: false,
+            error: null,
+            refetch: jest.fn(),
+          };
+        }
+        if (queryKey[2] === 'all-seasons') {
+          allSeasonsQueryFn = queryFn;
+          return { data: mockAllSeasons, isLoading: false, isError: false, refetch: jest.fn() };
+        }
+        return { data: undefined, isLoading: false, isError: false, refetch: jest.fn() };
+      });
+
+      try {
+        // Track the season 0 special alongside one aired regular episode.
+        mockTrackingEpisodes = { '0_1': { episodeId: 1 }, '1_1': { episodeId: 101 } };
+        const { getByText } = render(<TVDetailScreen />);
+
+        expect(allSeasonsQueryFn).toBeDefined();
+        await act(async () => {
+          await allSeasonsQueryFn?.();
+        });
+
+        // The shared all-seasons cache key is populated including season 0...
+        expect(getSeasonDetailsMock).toHaveBeenCalledWith(10, 0);
+        expect(getSeasonDetailsMock).toHaveBeenCalledWith(10, 1);
+        expect(getSeasonDetailsMock).toHaveBeenCalledWith(10, 2);
+
+        // ...but the button counts only eligible regular episodes: the tracked
+        // special must not inflate the numerator (2/4) or denominator (1/3).
+        expect(getByText('1/3 Episodes Watched')).toBeTruthy();
+      } finally {
+        mockShow.seasons = originalSeasons;
+      }
+    });
+
     describe('long-press Clear Watch History', () => {
       it('does not present the sheet when nothing is watched', () => {
         const { getByTestId } = render(<TVDetailScreen />);
@@ -698,6 +762,44 @@ describe('TVDetailScreen', () => {
 
         expect(mockSheetPresent).toHaveBeenCalledTimes(1);
         expect(mockSheetProps.showViewHistoryAction).toBe(false);
+      });
+
+      it('clears tracked non-markable episodes while progress counts only markable ones', () => {
+        // A future episode tracked while the unreleased preference was on, then
+        // the preference turned off: it is no longer markable, but Clear Watch
+        // History must still be able to unmark it.
+        mockTrackingEpisodes = { '1_1': { episodeId: 101 }, '2_2': { episodeId: 202 } };
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const { getByTestId, getByText } = render(<TVDetailScreen />);
+
+        // Progress numerator/denominator stay markable-only (the future episode
+        // is tracked but not counted), so the partial label is exactly 1/3.
+        expect(getByText('1/3 Episodes Watched')).toBeTruthy();
+
+        fireEvent(getByTestId('tv-show-watch-button'), 'onLongPress');
+        act(() => {
+          mockSheetProps.onClearHistory();
+        });
+
+        expect(alertSpy).toHaveBeenCalledWith(
+          'Clear all watched episodes?',
+          'This will unmark all 2 watched episodes across all seasons. This action cannot be undone.',
+          expect.anything()
+        );
+        const buttons = alertSpy.mock.calls[0][2] as any;
+        act(() => {
+          buttons[1].onPress();
+        });
+
+        // The unmark set includes the tracked future episode even though it is
+        // excluded from the markable progress sets.
+        expect(mockMarkShowAllUnwatchedMutate).toHaveBeenCalledTimes(1);
+        expect(mockMarkShowAllUnwatchedMutate.mock.calls[0][0].episodesToUnmark).toEqual([
+          { seasonNumber: 1, episode: seasonOne.episodes[0] },
+          { seasonNumber: 2, episode: seasonTwo.episodes[1] },
+        ]);
+
+        alertSpy.mockRestore();
       });
 
       it('clears currently-watched episodes from a partial state via destructive confirm', () => {
@@ -884,7 +986,7 @@ describe('TVDetailScreen', () => {
       alertSpy.mockRestore();
     });
 
-    it('renders exactly 100% fill on a fully-watched show with specials, undated and unaired episodes', () => {
+    it('counts and clears only eligible episodes on a fully-watched show with specials, undated and unaired episodes', () => {
       // Realistic completed-show shape: tracked Season 0 specials (excluded from
       // progress), an episode with no air date (never markable), a future-dated
       // episode with the unreleased preference off (excluded), and a stale
@@ -905,17 +1007,47 @@ describe('TVDetailScreen', () => {
         },
         seasonTwo,
       ];
-      mockTrackingEpisodes = {
+      const fullTracking = {
         '0_1': { episodeId: 1 },
         '1_1': { episodeId: 101 },
         '1_2': { episodeId: 102 },
         '1_99': { episodeId: 199 },
         '2_1': { episodeId: 201 },
       };
-      const { getByTestId, getByText } = render(<TVDetailScreen />);
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId, getByText, queryByText, rerender } = render(<TVDetailScreen />);
 
+      // Eligible watched/total is exactly 3/3. Dropping one tracked eligible
+      // episode must surface "2/3" — not count the tracked special (0_1), the
+      // stale key (1_99), the undated S1 E3 or the future S2 E2.
+      mockTrackingEpisodes = { '1_2': { episodeId: 102 }, '2_1': { episodeId: 201 } };
+      rerender(<TVDetailScreen />);
+      expect(getByText('2/3 Episodes Watched')).toBeTruthy();
+
+      mockTrackingEpisodes = fullTracking;
+      rerender(<TVDetailScreen />);
       expect(getByText('Mark as Unwatched')).toBeTruthy();
+      expect(queryByText(/Episodes Watched/)).toBeNull();
       expect(getByTestId('tv-show-watch-fill')).toBeTruthy();
+
+      // Clear set is exactly the 3 eligible episodes, so specials/stale/undated/
+      // future are never included in the unmark payload.
+      fireEvent.press(getByTestId('tv-show-watch-button'));
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Unmark all?',
+        'Unmark all 3 episodes across all seasons as unwatched?',
+        expect.anything()
+      );
+      pressConfirmButton(alertSpy);
+
+      expect(mockMarkShowAllUnwatchedMutate).toHaveBeenCalledTimes(1);
+      expect(mockMarkShowAllUnwatchedMutate.mock.calls[0][0].episodesToUnmark).toEqual([
+        { seasonNumber: 1, episode: seasonOne.episodes[0] },
+        { seasonNumber: 1, episode: seasonOne.episodes[1] },
+        { seasonNumber: 2, episode: seasonTwo.episodes[0] },
+      ]);
+
+      alertSpy.mockRestore();
     });
 
     it('updates fill width live when tracking transitions from partial to full without remount', () => {

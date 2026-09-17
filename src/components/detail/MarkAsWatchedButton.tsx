@@ -4,7 +4,7 @@ import { Tick02Icon, ViewIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
-import { markAsWatchedButtonStyles as styles } from './markAsWatchedButtonStyles';
+import { markAsWatchedButtonStyles as styles } from '@/src/components/detail/markAsWatchedButtonStyles';
 
 interface MarkAsWatchedButtonProps {
   /** Number of times the movie has been watched */

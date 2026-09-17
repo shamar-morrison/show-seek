@@ -140,6 +140,26 @@ export function TVShowWatchButton({
     return result;
   }, [markableBySeason, trackedEpisodes]);
 
+  // Unmark/clear source: every tracked episode currently present in a regular
+  // season, regardless of markability. This keeps Clear Watch History from
+  // silently skipping episodes that were tracked while the unreleased
+  // preference was on (or that have a null/now-future air date). Marking and
+  // progress still use the markable sets above. Known gap: tracked keys with no
+  // matching Episode object (e.g. episodes removed from the TMDB listing) cannot
+  // be unmarked here because there is no episode to key the delete on.
+  const watchedShowEpisodesToUnmark = useMemo(() => {
+    const result: Array<{ seasonNumber: number; episode: Episode }> = [];
+    regularSeasons.forEach((seasonData) => {
+      (seasonData.episodes || []).forEach((episode) => {
+        const episodeKey = `${seasonData.season_number}_${episode.episode_number}`;
+        if (trackedEpisodes[episodeKey]) {
+          result.push({ seasonNumber: seasonData.season_number, episode });
+        }
+      });
+    });
+    return result;
+  }, [regularSeasons, trackedEpisodes]);
+
   // Single source of truth for both the label state and the fill overlay.
   // The numerator is counted directly from the same markable∩tracked set that
   // isShowFullyWatched is defined over (watched.length + unwatched.length is
@@ -255,12 +275,12 @@ export function TVShowWatchButton({
 
   const runMarkUnwatched = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    startBulkProgress('unmark', watchedMarkableShowEpisodes.length);
+    startBulkProgress('unmark', watchedShowEpisodesToUnmark.length);
     markShowAllUnwatched.mutate(
       {
         tvShowId: tvId,
-        episodesToUnmark: watchedMarkableShowEpisodes,
-        options: buildBulkOptions('unmark', watchedMarkableShowEpisodes.length),
+        episodesToUnmark: watchedShowEpisodesToUnmark,
+        options: buildBulkOptions('unmark', watchedShowEpisodesToUnmark.length),
       },
       {
         onError: (error) => {
@@ -275,7 +295,7 @@ export function TVShowWatchButton({
     );
   }, [
     markShowAllUnwatched,
-    watchedMarkableShowEpisodes,
+    watchedShowEpisodesToUnmark,
     tvId,
     buildBulkOptions,
     startBulkProgress,
@@ -313,9 +333,9 @@ export function TVShowWatchButton({
 
   const handleMarkUnwatchedPress = useCallback(() => {
     if (isAccountRequired()) return;
-    if (watchedMarkableShowEpisodes.length === 0 || isPending) return;
+    if (watchedShowEpisodesToUnmark.length === 0 || isPending) return;
 
-    const affectedSeasons = new Set(watchedMarkableShowEpisodes.map((e) => e.seasonNumber));
+    const affectedSeasons = new Set(watchedShowEpisodesToUnmark.map((e) => e.seasonNumber));
     if (affectedSeasons.size <= 1) {
       runMarkUnwatched();
       return;
@@ -323,13 +343,13 @@ export function TVShowWatchButton({
 
     Alert.alert(
       t('watched.unmarkAllEpisodesTitle'),
-      t('watched.unmarkAllShowEpisodesConfirm', { count: watchedMarkableShowEpisodes.length }),
+      t('watched.unmarkAllShowEpisodesConfirm', { count: watchedShowEpisodesToUnmark.length }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('watched.unmarkAll'), onPress: runMarkUnwatched },
       ]
     );
-  }, [isAccountRequired, watchedMarkableShowEpisodes, isPending, runMarkUnwatched, t]);
+  }, [isAccountRequired, watchedShowEpisodesToUnmark, isPending, runMarkUnwatched, t]);
 
   // Long-press "Clear Watch History": works from any watched state (partial or
   // full), targeting whatever is currently watched. Reuses runMarkUnwatched verbatim,
@@ -338,7 +358,7 @@ export function TVShowWatchButton({
     Alert.alert(
       t('watched.clearShowWatchHistoryTitle'),
       t('watched.clearShowWatchHistoryMessage', {
-        count: watchedMarkableShowEpisodes.length,
+        count: watchedShowEpisodesToUnmark.length,
       }),
       [
         { text: t('common.cancel'), style: 'cancel' },
@@ -351,15 +371,15 @@ export function TVShowWatchButton({
         },
       ]
     );
-  }, [t, watchedMarkableShowEpisodes.length, runMarkUnwatched]);
+  }, [t, watchedShowEpisodesToUnmark.length, runMarkUnwatched]);
 
   const handleButtonLongPress = useCallback(() => {
     if (isAccountRequired()) return;
-    if (watchedMarkableShowEpisodes.length === 0 || isPending) return;
+    if (watchedShowEpisodesToUnmark.length === 0 || isPending) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     void sheetRef.current?.present();
-  }, [isAccountRequired, watchedMarkableShowEpisodes.length, isPending]);
+  }, [isAccountRequired, watchedShowEpisodesToUnmark.length, isPending]);
 
   const showProgressCount =
     !isShowFullyWatched && showWatchProgress.watched > 0;

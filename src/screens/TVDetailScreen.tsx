@@ -216,12 +216,14 @@ export default function TVDetailScreen() {
 
   // Per-season episode details for the show-wide Mark as Watched entry point.
   // Reuses the already-fetched show details; shares the query cache key with TVSeasonsScreen.
+  // Season 0 (specials) is included so this key's cached payload matches
+  // TVSeasonsScreen's; TVShowWatchButton filters specials out itself.
   const seasonQueries = useQuery({
     queryKey: ['tv', tvId, 'all-seasons'],
     queryFn: () =>
       Promise.all(
         (tvQuery.data?.seasons || [])
-          .filter((s) => s.season_number > 0)
+          .filter((s) => s.season_number >= 0)
           .map((s) => tmdbApi.getSeasonDetails(tvId, s.season_number))
       ),
     enabled: !!tvId && !!tvQuery.data,
@@ -431,6 +433,7 @@ export default function TVDetailScreen() {
         similarQuery.refetch(),
         watchProvidersQuery.refetch(),
         imagesQuery.refetch(),
+        seasonQueries.refetch(),
         ...(shouldLoadReviews ? [reviewsQuery.refetch()] : []),
         ...(shouldLoadRecommendations ? [recommendationsQuery.refetch()] : []),
       ]);
