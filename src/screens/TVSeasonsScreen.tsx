@@ -49,6 +49,7 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import type { SeasonProgress, WatchedEpisode } from '@/src/types/episodeTracking';
 import type { Note } from '@/src/types/note';
 import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
+import { getMarkableEpisodes } from '@/src/utils/episodeEligibility';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -622,13 +623,14 @@ export default function TVSeasonsScreen() {
         episodeTrackingService.calculateSeasonProgress(
           seasonData.season_number,
           seasonData.episodes || [],
-          episodeTracking?.episodes || {}
+          episodeTracking?.episodes || {},
+          !!preferences?.allowUnreleasedEpisodeWatches
         )
       );
     });
 
     return progressMap;
-  }, [seasons, episodeTracking?.episodes]);
+  }, [seasons, episodeTracking?.episodes, preferences?.allowUnreleasedEpisodeWatches]);
 
   const getProjectedSeasonProgress = useCallback(
     (seasonData: SeasonWithEpisodes, episode: Episode): SeasonProgress => {
@@ -661,10 +663,16 @@ export default function TVSeasonsScreen() {
       return episodeTrackingService.calculateSeasonProgress(
         seasonData.season_number,
         seasonData.episodes || [],
-        projectedWatchedEpisodes
+        projectedWatchedEpisodes,
+        !!preferences?.allowUnreleasedEpisodeWatches
       );
     },
-    [episodeTracking?.episodes, preferences.markPreviousEpisodesWatched, tvId]
+    [
+      episodeTracking?.episodes,
+      preferences.markPreviousEpisodesWatched,
+      preferences?.allowUnreleasedEpisodeWatches,
+      tvId,
+    ]
   );
 
   useEffect(() => {
@@ -789,10 +797,9 @@ export default function TVSeasonsScreen() {
       if (item.type === 'season-details') {
         const seasonData = item.season;
         const seasonEpisodes = seasonData.episodes || [];
-        const markableEpisodes = seasonEpisodes.filter(
-          (episode) =>
-            !!episode.air_date &&
-            (!!preferences.allowUnreleasedEpisodeWatches || hasEpisodeAired(episode.air_date))
+        const markableEpisodes = getMarkableEpisodes(
+          seasonEpisodes,
+          !!preferences.allowUnreleasedEpisodeWatches
         );
         const watchedSeasonEpisodes = seasonEpisodes.filter((episode) => {
           const episodeKey = `${seasonData.season_number}_${episode.episode_number}`;

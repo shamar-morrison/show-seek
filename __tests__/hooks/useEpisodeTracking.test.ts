@@ -13,6 +13,9 @@ jest.mock('@/src/services/EpisodeTrackingService', () => ({
     markEpisodeUnwatched: jest.fn().mockResolvedValue(undefined),
     markAllEpisodesWatched: jest.fn().mockResolvedValue(undefined),
     markAllEpisodesUnwatched: jest.fn().mockResolvedValue(undefined),
+    markMultipleEpisodesUnwatched: jest
+      .fn()
+      .mockResolvedValue({ unmarkedCount: 5, wasCancelled: false }),
     markMultipleEpisodesWatched: jest
       .fn()
       .mockResolvedValue({ markedCount: 5, wasCancelled: false }),
@@ -89,6 +92,7 @@ import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
   useMarkEpisodeWatched,
+  useMarkShowAllEpisodesUnwatched,
   useMarkShowAllEpisodesWatched,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
@@ -618,6 +622,102 @@ describe('useMarkEpisodeWatched', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['episodeTracking', 'allShows', 'test-user-123'],
     });
+  });
+});
+
+describe('useMarkShowAllEpisodesUnwatched', () => {
+  const seasonOneEpisodes: Episode[] = [
+    {
+      id: 1,
+      name: 'Episode 1',
+      episode_number: 1,
+      season_number: 1,
+      air_date: '2024-01-01',
+      overview: '',
+      still_path: null,
+      runtime: null,
+      vote_average: 8,
+    },
+    {
+      id: 2,
+      name: 'Episode 2',
+      episode_number: 2,
+      season_number: 1,
+      air_date: '2024-01-08',
+      overview: '',
+      still_path: null,
+      runtime: null,
+      vote_average: 8,
+    },
+  ];
+
+  const seasonTwoEpisodes: Episode[] = [
+    {
+      id: 11,
+      name: 'Episode 1',
+      episode_number: 1,
+      season_number: 2,
+      air_date: '2024-02-01',
+      overview: '',
+      still_path: null,
+      runtime: null,
+      vote_average: 8,
+    },
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockInvalidateQueries.mockClear();
+  });
+
+  it('forwards a flat cross-season list and options to the chunked service call', async () => {
+    const { result } = renderHook(() => useMarkShowAllEpisodesUnwatched());
+    const episodesToUnmark = [
+      ...seasonOneEpisodes.map((ep) => ({ seasonNumber: 1, episode: ep })),
+      ...seasonTwoEpisodes.map((ep) => ({ seasonNumber: 2, episode: ep })),
+    ];
+    const options = {
+      batchSize: 10,
+      delayMs: 300,
+      isCancelled: () => false,
+      onProgress: jest.fn(),
+    };
+
+    await act(async () => {
+      await result.current.mutateAsync({ tvShowId: 123, episodesToUnmark, options });
+    });
+
+    expect(episodeTrackingService.markMultipleEpisodesUnwatched).toHaveBeenCalledTimes(1);
+    expect(episodeTrackingService.markMultipleEpisodesUnwatched).toHaveBeenCalledWith(
+      123,
+      episodesToUnmark,
+      options
+    );
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'test-user-123', 123],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'allShows', 'test-user-123'],
+    });
+  });
+
+  it('propagates service failures without additional service calls', async () => {
+    (episodeTrackingService.markMultipleEpisodesUnwatched as jest.Mock).mockRejectedValueOnce(
+      new Error('unwatch failed')
+    );
+    const { result } = renderHook(() => useMarkShowAllEpisodesUnwatched());
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          tvShowId: 123,
+          episodesToUnmark: seasonOneEpisodes.map((ep) => ({ seasonNumber: 1, episode: ep })),
+        })
+      ).rejects.toThrow('unwatch failed');
+    });
+
+    expect(episodeTrackingService.markMultipleEpisodesUnwatched).toHaveBeenCalledTimes(1);
+    expect(episodeTrackingService.markAllEpisodesUnwatched).not.toHaveBeenCalled();
   });
 });
 

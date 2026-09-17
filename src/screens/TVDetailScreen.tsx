@@ -17,6 +17,7 @@ import { SeasonsSection } from '@/src/components/detail/SeasonsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
 import { TraktReviewsSection } from '@/src/components/detail/TraktReviewsSection';
 import { TVHeroSection } from '@/src/components/detail/TVHeroSection';
+import { TVShowWatchButton } from '@/src/components/detail/TVShowWatchButton';
 import { TVMetaSection } from '@/src/components/detail/TVMetaSection';
 import { UpNextEpisodeSection } from '@/src/components/detail/UpNextEpisodeSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
@@ -70,7 +71,7 @@ import {
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { setReviewQueue, traktToReview, type QueuedReview } from '@/src/utils/reviewQueue';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -109,6 +110,7 @@ export default function TVDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const isAccountRequired = useAccountRequired();
+  const queryClient = useQueryClient();
 
   // Long-press handler for similar/recommended media
   const {
@@ -211,6 +213,21 @@ export default function TVDetailScreen() {
     queryKey: ['tv', tvId, 'recommendations'],
     queryFn: () => tmdbApi.getRecommendedTV(tvId),
     enabled: !!tvId && shouldLoadRecommendations,
+  });
+
+  // Per-season episode details for the show-wide Mark as Watched entry point.
+  // Reuses the already-fetched show details; shares the query cache key with TVSeasonsScreen.
+  // Season 0 (specials) is included so this key's cached payload matches
+  // TVSeasonsScreen's; TVShowWatchButton filters specials out itself.
+  const seasonQueries = useQuery({
+    queryKey: ['tv', tvId, 'all-seasons'],
+    queryFn: () =>
+      Promise.all(
+        (tvQuery.data?.seasons || [])
+          .filter((s) => s.season_number >= 0)
+          .map((s) => tmdbApi.getSeasonDetails(tvId, s.season_number))
+      ),
+    enabled: !!tvId && !!tvQuery.data,
   });
   const showData = tvQuery.data;
   const resolvedShowPosterPath = showData
@@ -410,7 +427,7 @@ export default function TVDetailScreen() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
+      const [refreshedTv] = await Promise.all([
         tvQuery.refetch(),
         creditsQuery.refetch(),
         videosQuery.refetch(),
@@ -420,6 +437,22 @@ export default function TVDetailScreen() {
         ...(shouldLoadReviews ? [reviewsQuery.refetch()] : []),
         ...(shouldLoadRecommendations ? [recommendationsQuery.refetch()] : []),
       ]);
+
+      // seasonQueries derives its season list from tvQuery data, so refreshing it
+      // in parallel raced against the stale pre-refresh list. Drive it from the
+      // seasons returned by the refresh instead. staleTime: 0 forces the fetch
+      // through the otherwise-fresh (3h) cache.
+      const refreshedSeasons = refreshedTv.data?.seasons ?? [];
+      await queryClient.fetchQuery({
+        queryKey: ['tv', tvId, 'all-seasons'],
+        queryFn: () =>
+          Promise.all(
+            refreshedSeasons
+              .filter((s) => s.season_number >= 0)
+              .map((s) => tmdbApi.getSeasonDetails(tvId, s.season_number))
+          ),
+        staleTime: 0,
+      });
     } finally {
       setRefreshing(false);
     }
@@ -510,6 +543,20 @@ export default function TVDetailScreen() {
             hasNote={hasNote}
             isLoadingNote={isLoadingNote || isOpeningNote}
             hasTrailer={!!trailer}
+          />
+
+          {/* Show-wide Mark as Watched / Unwatched entry point */}
+          <TVShowWatchButton
+            tvId={tvId}
+            showName={show.name}
+            showPosterPath={resolvedShowPosterPath ?? show.poster_path}
+            showStatus={show.status}
+            firstAirDate={show.first_air_date}
+            voteAverage={show.vote_average}
+            genreIds={show.genres?.map((g) => g.id) || []}
+            seasonsWithEpisodes={seasonQueries.data ?? []}
+            isLoadingSeasons={seasonQueries.isLoading}
+            onShowToast={(msg) => toastRef.current?.show(msg)}
           />
 
           {userRating > 0 && <UserRating rating={userRating} />}

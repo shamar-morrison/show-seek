@@ -394,13 +394,109 @@ class EpisodeTrackingService {
   }
 
   /**
+   * Mark multiple episodes across seasons as unwatched in chunks with delays and cancellation support.
+   * Mirrors markMultipleEpisodesWatched: chunks cross season boundaries freely so progress
+   * reporting and cancellation stay at episode granularity even for a single very large season.
+   */
+  async markMultipleEpisodesUnwatched(
+    tvShowId: number,
+    episodesToUnmark: Array<{ seasonNumber: number; episode: Episode }>,
+    options?: {
+      batchSize?: number;
+      delayMs?: number;
+      isCancelled?: () => boolean;
+      onProgress?: (unmarkedCount: number, totalCount: number) => void;
+    }
+  ): Promise<{ unmarkedCount: number; wasCancelled: boolean }> {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+    if (episodesToUnmark.length === 0) return { unmarkedCount: 0, wasCancelled: false };
+
+    const batchSize =
+      typeof options?.batchSize === 'number' &&
+      Number.isInteger(options.batchSize) &&
+      options.batchSize > 0
+        ? options.batchSize
+        : 10;
+    const delayMs =
+      typeof options?.delayMs === 'number' &&
+      Number.isFinite(options.delayMs) &&
+      options.delayMs >= 0
+        ? options.delayMs
+        : 300;
+    const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+
+    // Single existence check up front: updateDoc on a missing document throws not-found.
+    const existsTimeout = createTimeoutWithCleanup(10000);
+    const snapshot = await Promise.race([
+      auditedGetDoc(trackingRef, {
+        path: `users/${user.uid}/episode_tracking/${tvShowId}`,
+        queryKey: 'episodeTrackingByShow',
+        callsite: 'EpisodeTrackingService.markMultipleEpisodesUnwatched',
+      }),
+      existsTimeout.promise,
+    ]).finally(() => {
+      existsTimeout.cancel();
+    });
+
+    if (!snapshot.exists()) {
+      return { unmarkedCount: 0, wasCancelled: false };
+    }
+
+    let unmarkedCount = 0;
+    let wasCancelled = false;
+
+    for (let i = 0; i < episodesToUnmark.length; i += batchSize) {
+      if (options?.isCancelled?.()) {
+        wasCancelled = true;
+        break;
+      }
+
+      const chunk = episodesToUnmark.slice(i, i + batchSize);
+      const now = Date.now();
+      const updatePayload: Record<string, unknown> = {
+        'metadata.lastUpdated': now,
+      };
+
+      chunk.forEach(({ seasonNumber, episode }) => {
+        const episodeKey = this.getEpisodeKey(seasonNumber, episode.episode_number);
+        updatePayload[`episodes.${episodeKey}`] = deleteField();
+      });
+
+      const updateTimeout = createTimeoutWithCleanup(10000);
+      try {
+        await Promise.race([updateDoc(trackingRef, updatePayload), updateTimeout.promise]);
+      } catch (error) {
+        throw new Error(getFirestoreErrorMessage(error));
+      } finally {
+        updateTimeout.cancel();
+      }
+
+      unmarkedCount += chunk.length;
+      options?.onProgress?.(unmarkedCount, episodesToUnmark.length);
+
+      if (i + batchSize < episodesToUnmark.length) {
+        if (options?.isCancelled?.()) {
+          wasCancelled = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    return { unmarkedCount, wasCancelled };
+  }
+
+  /**
    * Calculate progress for a specific season.
-   * Uses the full episode total when watched-ahead episodes exist; otherwise excludes unaired episodes from the denominator.
+   * Excludes unaired episodes from the denominator unless `allowUnreleased` is true,
+   * in which case the full known episode total is used for both numerator and denominator.
    */
   calculateSeasonProgress(
     seasonNumber: number,
     episodes: Episode[],
-    watchedEpisodes: Record<string, WatchedEpisode>
+    watchedEpisodes: Record<string, WatchedEpisode>,
+    allowUnreleased = false
   ): SeasonProgress {
     const totalCount = episodes.length;
     const airedEpisodes = episodes.filter((ep) => hasEpisodeAired(ep.air_date));
@@ -408,11 +504,10 @@ class EpisodeTrackingService {
       this.isEpisodeWatched(seasonNumber, ep.episode_number, watchedEpisodes)
     );
     const totalAiredCount = airedEpisodes.length;
-    const hasWatchedAhead = watchedSeasonEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
-    const watchedCount = hasWatchedAhead
+    const watchedCount = allowUnreleased
       ? watchedSeasonEpisodes.length
       : watchedSeasonEpisodes.filter((ep) => hasEpisodeAired(ep.air_date)).length;
-    const progressTotalCount = hasWatchedAhead ? totalCount : totalAiredCount;
+    const progressTotalCount = allowUnreleased ? totalCount : totalAiredCount;
     const percentage = progressTotalCount > 0 ? (watchedCount / progressTotalCount) * 100 : 0;
 
     return {
@@ -427,26 +522,27 @@ class EpisodeTrackingService {
 
   /**
    * Calculate overall progress for a TV show.
-   * Excludes Season 0 (specials) and uses full known episode totals only when watched-ahead episodes exist; otherwise excludes unaired episodes from the denominator.
+   * Excludes Season 0 (specials) and unaired episodes from the denominator unless
+   * `allowUnreleased` is true, in which case full known episode totals are used.
    */
   calculateShowProgress(
     seasons: Season[],
     allEpisodes: Episode[],
-    watchedEpisodes: Record<string, WatchedEpisode>
+    watchedEpisodes: Record<string, WatchedEpisode>,
+    allowUnreleased = false
   ): ShowProgress {
     const validEpisodes = allEpisodes.filter((ep) => ep.season_number > 0);
     const airedEpisodes = validEpisodes.filter((ep) => hasEpisodeAired(ep.air_date));
     const watchedValidEpisodes = validEpisodes.filter((ep) =>
       this.isEpisodeWatched(ep.season_number, ep.episode_number, watchedEpisodes)
     );
-    const hasWatchedAhead = watchedValidEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
-    const totalWatched = hasWatchedAhead
+    const totalWatched = allowUnreleased
       ? watchedValidEpisodes.length
       : watchedValidEpisodes.filter((ep) => hasEpisodeAired(ep.air_date)).length;
 
     const totalEpisodes = validEpisodes.length;
     const totalAiredEpisodes = airedEpisodes.length;
-    const progressTotalEpisodes = hasWatchedAhead ? totalEpisodes : totalAiredEpisodes;
+    const progressTotalEpisodes = allowUnreleased ? totalEpisodes : totalAiredEpisodes;
     const percentage = progressTotalEpisodes > 0 ? (totalWatched / progressTotalEpisodes) * 100 : 0;
 
     // Calculate progress per season
@@ -456,7 +552,12 @@ class EpisodeTrackingService {
         const seasonEpisodes = allEpisodes.filter(
           (ep) => ep.season_number === season.season_number
         );
-        return this.calculateSeasonProgress(season.season_number, seasonEpisodes, watchedEpisodes);
+        return this.calculateSeasonProgress(
+          season.season_number,
+          seasonEpisodes,
+          watchedEpisodes,
+          allowUnreleased
+        );
       });
 
     return {

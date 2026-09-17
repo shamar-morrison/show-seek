@@ -164,3 +164,118 @@ describe('EpisodeTrackingService', () => {
     ]);
   });
 });
+
+describe('markMultipleEpisodesUnwatched', () => {
+  const makeEpisode = (seasonNumber: number, episodeNumber: number) =>
+    ({
+      id: seasonNumber * 100 + episodeNumber,
+      name: `S${seasonNumber} E${episodeNumber}`,
+      episode_number: episodeNumber,
+      season_number: seasonNumber,
+      air_date: '2024-01-01',
+    }) as any;
+
+  const makeFlatList = (seasonNumber: number, count: number, startAt = 1) =>
+    Array.from({ length: count }, (_, i) => ({
+      seasonNumber,
+      episode: makeEpisode(seasonNumber, startAt + i),
+    }));
+
+  beforeEach(() => {
+    (getDoc as jest.Mock).mockResolvedValue({ exists: () => true });
+  });
+
+  it('chunks N episodes into ceil(N/batchSize) updateDoc calls with cumulative progress', async () => {
+    const episodesToUnmark = [...makeFlatList(1, 15), ...makeFlatList(2, 10)];
+    const onProgress = jest.fn();
+
+    const result = await episodeTrackingService.markMultipleEpisodesUnwatched(123, episodesToUnmark, {
+      batchSize: 10,
+      delayMs: 0,
+      onProgress,
+    });
+
+    expect(result).toEqual({ unmarkedCount: 25, wasCancelled: false });
+    expect(updateDoc).toHaveBeenCalledTimes(3);
+    expect(onProgress.mock.calls).toEqual([
+      [10, 25],
+      [20, 25],
+      [25, 25],
+    ]);
+  });
+
+  it('writes a season-boundary-straddling chunk in a single updateDoc call', async () => {
+    // Season 1 contributes 7 episodes, season 2 fills the rest of the 10-episode chunk.
+    const episodesToUnmark = [...makeFlatList(1, 7), ...makeFlatList(2, 5)];
+
+    await episodeTrackingService.markMultipleEpisodesUnwatched(123, episodesToUnmark, {
+      batchSize: 10,
+      delayMs: 0,
+    });
+
+    expect(updateDoc).toHaveBeenCalledTimes(2);
+    const firstPayload = (updateDoc as jest.Mock).mock.calls[0][1];
+    const deleteKeys = Object.keys(firstPayload).filter((k) => k !== 'metadata.lastUpdated');
+    expect(deleteKeys.sort()).toEqual(
+      ['1_1', '1_2', '1_3', '1_4', '1_5', '1_6', '1_7', '2_1', '2_2', '2_3']
+        .map((k) => `episodes.${k}`)
+        .sort()
+    );
+    expect(deleteKeys).toHaveLength(10);
+    expect(typeof firstPayload['metadata.lastUpdated']).toBe('number');
+  });
+
+  it('stops before the next chunk when cancelled and keeps prior chunks committed', async () => {
+    const episodesToUnmark = makeFlatList(1, 25);
+    let calls = 0;
+
+    const result = await episodeTrackingService.markMultipleEpisodesUnwatched(123, episodesToUnmark, {
+      batchSize: 10,
+      delayMs: 0,
+      isCancelled: () => calls > 0,
+      onProgress: () => {
+        calls += 1;
+      },
+    });
+
+    expect(result).toEqual({ unmarkedCount: 10, wasCancelled: true });
+    expect(updateDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws fail-fast on a chunk error without attempting later chunks', async () => {
+    const episodesToUnmark = makeFlatList(1, 25);
+    (updateDoc as jest.Mock).mockRejectedValueOnce(new Error('chunk failed'));
+
+    await expect(
+      episodeTrackingService.markMultipleEpisodesUnwatched(123, episodesToUnmark, {
+        batchSize: 10,
+        delayMs: 0,
+      })
+    ).rejects.toThrow('chunk failed');
+    expect(updateDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not write when the tracking document does not exist', async () => {
+    (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
+
+    const result = await episodeTrackingService.markMultipleEpisodesUnwatched(
+      123,
+      makeFlatList(1, 5),
+      { batchSize: 10, delayMs: 0 }
+    );
+
+    expect(result).toEqual({ unmarkedCount: 0, wasCancelled: false });
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it('returns zero counts without reading Firestore for an empty list', async () => {
+    const result = await episodeTrackingService.markMultipleEpisodesUnwatched(123, [], {
+      batchSize: 10,
+      delayMs: 0,
+    });
+
+    expect(result).toEqual({ unmarkedCount: 0, wasCancelled: false });
+    expect(getDoc).not.toHaveBeenCalled();
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+});

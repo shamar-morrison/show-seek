@@ -1,16 +1,10 @@
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_FAMILY,
-  FONT_SIZE,
-  SPACING,
-} from '@/src/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Tick02Icon, ViewIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { markAsWatchedButtonStyles as styles } from '@/src/components/detail/markAsWatchedButtonStyles';
 
 interface MarkAsWatchedButtonProps {
   /** Number of times the movie has been watched */
@@ -72,51 +66,3 @@ export function MarkAsWatchedButton({
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.l,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    backgroundColor: COLORS.transparent,
-    gap: SPACING.s,
-    marginTop: SPACING.s,
-    marginBottom: 0,
-  },
-  watchedButton: {
-    borderColor: COLORS.success,
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  pressedButton: {
-    opacity: ACTIVE_OPACITY,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontFamily: FONT_FAMILY.semiBold,
-  },
-  watchedButtonText: {
-    color: COLORS.success,
-  },
-  countBadge: {
-    backgroundColor: COLORS.success,
-    borderRadius: BORDER_RADIUS.round,
-    minWidth: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: SPACING.xs,
-  },
-  countText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.xs,
-    fontFamily: FONT_FAMILY.bold,
-  },
-});

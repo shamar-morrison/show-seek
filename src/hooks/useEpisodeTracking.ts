@@ -231,7 +231,12 @@ export const useIsEpisodeWatched = (
 /**
  * Calculate progress for a specific season
  */
-export const useSeasonProgress = (tvShowId: number, seasonNumber: number, episodes: Episode[]) => {
+export const useSeasonProgress = (
+  tvShowId: number,
+  seasonNumber: number,
+  episodes: Episode[],
+  allowUnreleased = false
+) => {
   const { data: tracking, isLoading } = useShowEpisodeTracking(tvShowId);
 
   const progress = useMemo(() => {
@@ -239,9 +244,10 @@ export const useSeasonProgress = (tvShowId: number, seasonNumber: number, episod
     return episodeTrackingService.calculateSeasonProgress(
       seasonNumber,
       episodes,
-      tracking.episodes
+      tracking.episodes,
+      allowUnreleased
     );
-  }, [tracking, seasonNumber, episodes]);
+  }, [tracking, seasonNumber, episodes, allowUnreleased]);
 
   return { progress, isLoading };
 };
@@ -249,13 +255,23 @@ export const useSeasonProgress = (tvShowId: number, seasonNumber: number, episod
 /**
  * Calculate overall show progress across all seasons
  */
-export const useShowProgress = (tvShowId: number, seasons: Season[], allEpisodes: Episode[]) => {
+export const useShowProgress = (
+  tvShowId: number,
+  seasons: Season[],
+  allEpisodes: Episode[],
+  allowUnreleased = false
+) => {
   const { data: tracking, isLoading } = useShowEpisodeTracking(tvShowId);
 
   const progress = useMemo(() => {
     if (!tracking?.episodes || !allEpisodes.length) return null;
-    return episodeTrackingService.calculateShowProgress(seasons, allEpisodes, tracking.episodes);
-  }, [tracking, seasons, allEpisodes]);
+    return episodeTrackingService.calculateShowProgress(
+      seasons,
+      allEpisodes,
+      tracking.episodes,
+      allowUnreleased
+    );
+  }, [tracking, seasons, allEpisodes, allowUnreleased]);
 
   return { progress, isLoading };
 };
@@ -582,6 +598,56 @@ export const useMarkShowAllEpisodesWatched = () => {
     onSuccess: async (_result, params) => {
       void recordEngagement();
 
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
+      }
+    },
+    onError: async (_error, params) => {
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
+      }
+    },
+  });
+};
+
+/**
+ * Parameters for marking all episodes across all seasons in a TV show as unwatched
+ */
+export interface MarkShowAllEpisodesUnwatchedParams {
+  tvShowId: number;
+  episodesToUnmark: Array<{ seasonNumber: number; episode: Episode }>;
+  options?: {
+    batchSize?: number;
+    delayMs?: number;
+    isCancelled?: () => boolean;
+    onProgress?: (unmarkedCount: number, totalCount: number) => void;
+  };
+}
+
+/**
+ * Mutation hook for marking all episodes across all seasons in a TV show as unwatched.
+ * Thin pass-through to the chunked cross-season service call; progress and cancellation
+ * flow through params.options the same way useMarkShowAllEpisodesWatched does.
+ */
+export const useMarkShowAllEpisodesUnwatched = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: MarkShowAllEpisodesUnwatchedParams) =>
+      episodeTrackingService.markMultipleEpisodesUnwatched(
+        params.tvShowId,
+        params.episodesToUnmark,
+        params.options
+      ),
+    onSuccess: async (_result, params) => {
       const userId = getUserId();
       if (userId) {
         await Promise.all([
