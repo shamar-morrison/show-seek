@@ -10,15 +10,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
 interface PersonListCardProps {
-  person: FavoritePerson;
+  person: Omit<FavoritePerson, 'addedAt'>;
   onPress: (personId: number) => void;
   onLongPress?: (person: PersonFavoriteTarget) => void;
   /** If true, skip the favorites check (e.g., when showing favorite people list) */
   hideFavoriteBadge?: boolean;
+  /** Optional secondary line shown below the name instead of known_for_department */
+  subtitle?: string;
 }
 
 export const PersonListCard = memo<PersonListCardProps>(
-  ({ person, onPress, onLongPress, hideFavoriteBadge = false }) => {
+  ({ person, onPress, onLongPress, hideFavoriteBadge = false, subtitle }) => {
     const { isFavorited } = useIsPersonFavorited(person.id);
 
     const handlePress = useCallback(() => {
@@ -35,6 +37,7 @@ export const PersonListCard = memo<PersonListCardProps>(
     }, [onLongPress, person]);
 
     const showBadge = !hideFavoriteBadge && isFavorited;
+    const secondaryText = subtitle ?? person.known_for_department;
 
     return (
       <Pressable
@@ -58,9 +61,9 @@ export const PersonListCard = memo<PersonListCardProps>(
           <Text style={styles.name} numberOfLines={1}>
             {person.name}
           </Text>
-          {person.known_for_department && (
+          {!!secondaryText && (
             <Text style={styles.department} numberOfLines={1}>
-              {person.known_for_department}
+              {secondaryText}
             </Text>
           )}
         </View>

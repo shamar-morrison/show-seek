@@ -56,6 +56,10 @@ jest.mock('@/src/hooks/usePersonFavoriteSheet', () => ({
   }),
 }));
 
+jest.mock('@/src/hooks/useFavoritePersons', () => ({
+  useIsPersonFavorited: () => ({ isFavorited: false, isLoading: false }),
+}));
+
 jest.mock('@/src/components/ui/MediaImage', () => ({
   MediaImage: () => null,
 }));

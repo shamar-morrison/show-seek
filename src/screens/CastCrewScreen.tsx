@@ -1,8 +1,9 @@
-import { CastMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { CastMember, tmdbApi } from '@/src/api/tmdb';
+import { PersonCard } from '@/src/components/library/PersonCard';
+import { PersonListCard } from '@/src/components/library/PersonListCard';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -14,11 +15,10 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import {
-  toPersonFavoriteTarget,
+  type PersonFavoriteTarget,
   usePersonFavoriteSheet,
 } from '@/src/hooks/usePersonFavoriteSheet';
 import ListActionsModal from '@/src/components/ListActionsModal';
-import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { mergeCrewMembersByPerson } from '@/src/utils/credits';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
@@ -27,12 +27,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { ArrowLeft01Icon, GridIcon, Menu01Icon } from '@hugeicons/core-free-icons';
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -57,88 +56,12 @@ interface DisplayCreditItem {
   profilePath: string | null;
 }
 
-const GridCreditCard = memo<{
-  item: DisplayCreditItem;
-  itemWidth: number;
-  itemHorizontalMargin: number;
-  onPress: (personId: number) => void;
-  onLongPress?: (item: DisplayCreditItem) => void;
-}>(({ item, itemWidth, itemHorizontalMargin, onPress, onLongPress }) => {
-  const handlePress = useCallback(() => {
-    onPress(item.id);
-  }, [item.id, onPress]);
-  const handleLongPress = useCallback(() => {
-    onLongPress?.(item);
-  }, [item, onLongPress]);
-
-  return (
-    <TouchableOpacity
-      style={[styles.gridCard, { width: itemWidth, marginHorizontal: itemHorizontalMargin }]}
-      onPress={handlePress}
-      onLongPress={onLongPress ? handleLongPress : undefined}
-      activeOpacity={ACTIVE_OPACITY}
-    >
-      <MediaImage
-        source={{ uri: getImageUrl(item.profilePath, TMDB_IMAGE_SIZES.profile.medium) }}
-        style={[styles.profileImage, { width: itemWidth, height: itemWidth * 1.5 }]}
-        contentFit="cover"
-        placeholderType="person"
-      />
-      <View style={styles.cardInfo}>
-        <Text style={styles.name} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.role} numberOfLines={1}>
-          {item.role}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+const displayItemToPerson = (item: DisplayCreditItem) => ({
+  id: item.id,
+  name: item.name,
+  profile_path: item.profilePath,
+  known_for_department: '',
 });
-
-GridCreditCard.displayName = 'GridCreditCard';
-
-const ListCreditCard = memo<{
-  item: DisplayCreditItem;
-  onPress: (personId: number) => void;
-  onLongPress?: (item: DisplayCreditItem) => void;
-}>(({ item, onPress, onLongPress }) => {
-  const handlePress = useCallback(() => {
-    onPress(item.id);
-  }, [item.id, onPress]);
-  const handleLongPress = useCallback(() => {
-    onLongPress?.(item);
-  }, [item, onLongPress]);
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        listCardStyles.container,
-        styles.listCard,
-        pressed && listCardStyles.containerPressed,
-      ]}
-      onPress={handlePress}
-      onLongPress={onLongPress ? handleLongPress : undefined}
-    >
-      <MediaImage
-        source={{ uri: getImageUrl(item.profilePath, TMDB_IMAGE_SIZES.profile.medium) }}
-        style={listCardStyles.poster}
-        contentFit="cover"
-        placeholderType="person"
-      />
-      <View style={listCardStyles.info}>
-        <Text style={styles.listName} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.listRole} numberOfLines={1}>
-          {item.role}
-        </Text>
-      </View>
-    </Pressable>
-  );
-});
-
-ListCreditCard.displayName = 'ListCreditCard';
 
 export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenProps) {
   const router = useRouter();
@@ -183,17 +106,10 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   } = usePersonFavoriteSheet();
 
   const handleCreditLongPress = useCallback(
-    (item: DisplayCreditItem) => {
-      handlePersonLongPress(
-        toPersonFavoriteTarget({
-          id: item.id,
-          name: item.name,
-          profile_path: item.profilePath,
-          known_for_department: activeTab === 'cast' ? 'Acting' : '',
-        })
-      );
+    (person: PersonFavoriteTarget) => {
+      handlePersonLongPress(person);
     },
-    [activeTab, handlePersonLongPress]
+    [handlePersonLongPress]
   );
 
   const castItems = useMemo<DisplayCreditItem[]>(() => {
@@ -258,13 +174,16 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   const renderGridItem = useCallback(
     ({ item }: ListRenderItemInfo<DisplayCreditItem>) => {
       return (
-        <GridCreditCard
-          item={item}
-          itemWidth={itemWidth}
-          itemHorizontalMargin={itemHorizontalMargin}
-          onPress={handlePersonPress}
-          onLongPress={handleCreditLongPress}
-        />
+        <View style={[styles.gridCard, { marginHorizontal: itemHorizontalMargin }]}>
+          <PersonCard
+            person={displayItemToPerson(item)}
+            width={itemWidth}
+            subtitle={item.role}
+            transparent
+            onPress={handlePersonPress}
+            onLongPress={handleCreditLongPress}
+          />
+        </View>
       );
     },
     [handlePersonPress, handleCreditLongPress, itemHorizontalMargin, itemWidth]
@@ -272,11 +191,14 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
 
   const renderListItem = useCallback(
     ({ item }: ListRenderItemInfo<DisplayCreditItem>) => (
-      <ListCreditCard
-        item={item}
-        onPress={handlePersonPress}
-        onLongPress={handleCreditLongPress}
-      />
+      <View style={styles.listCard}>
+        <PersonListCard
+          person={displayItemToPerson(item)}
+          subtitle={item.role}
+          onPress={handlePersonPress}
+          onLongPress={handleCreditLongPress}
+        />
+      </View>
     ),
     [handlePersonPress, handleCreditLongPress]
   );
@@ -446,33 +368,7 @@ const styles = StyleSheet.create({
   gridCard: {
     marginBottom: SPACING.m,
   },
-  profileImage: {
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  cardInfo: {
-    marginTop: SPACING.s,
-  },
-  name: {
-    fontSize: FONT_SIZE.s,
-    fontFamily: FONT_FAMILY.semiBold,
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  role: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
   listCard: {
     marginBottom: SPACING.m,
-  },
-  listName: {
-    fontSize: FONT_SIZE.m,
-    fontFamily: FONT_FAMILY.semiBold,
-    color: COLORS.text,
-  },
-  listRole: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
   },
 });

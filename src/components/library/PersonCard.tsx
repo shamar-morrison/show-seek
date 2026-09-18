@@ -9,16 +9,21 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
 interface PersonCardProps {
-  person: FavoritePerson;
+  person: Omit<FavoritePerson, 'addedAt'>;
   onPress: (personId: number) => void;
   onLongPress?: (person: PersonFavoriteTarget) => void;
+  /** Fixed width for the card (e.g., when used in a fixed-column grid) */
   width?: number;
   /** If true, skip the favorites check (e.g., when showing favorite people list) */
   hideFavoriteBadge?: boolean;
+  /** Optional secondary line shown below the name instead of known_for_department */
+  subtitle?: string;
+  /** If true, render without the surface background and inner text padding */
+  transparent?: boolean;
 }
 
 export const PersonCard = memo<PersonCardProps>(
-  ({ person, onPress, onLongPress, hideFavoriteBadge = false }) => {
+  ({ person, onPress, onLongPress, width, hideFavoriteBadge = false, subtitle, transparent = false }) => {
     const { isFavorited } = useIsPersonFavorited(person.id);
 
     const handlePress = useCallback(() => {
@@ -35,29 +40,34 @@ export const PersonCard = memo<PersonCardProps>(
     }, [onLongPress, person]);
 
     const showBadge = !hideFavoriteBadge && isFavorited;
+    const secondaryText = subtitle ?? person.known_for_department;
 
     return (
       <Pressable
-        style={styles.card}
+        style={[
+          styles.card,
+          width != null && { width, maxWidth: width },
+          transparent && styles.cardTransparent,
+        ]}
         onPress={handlePress}
         onLongPress={onLongPress ? handleLongPress : undefined}
       >
         <View style={styles.imageContainer}>
           <MediaImage
             source={{ uri: getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.medium) }}
-            style={styles.profileImage}
+            style={[styles.profileImage, transparent && styles.profileImageTransparent]}
             contentFit="cover"
             placeholderType="person"
           />
           {showBadge && <FavoritePersonBadge />}
         </View>
-        <View style={styles.cardInfo}>
+        <View style={[styles.cardInfo, transparent && styles.cardInfoTransparent]}>
           <Text style={styles.name} numberOfLines={1}>
             {person.name}
           </Text>
-          {person.known_for_department && (
+          {!!secondaryText && (
             <Text style={styles.department} numberOfLines={1}>
-              {person.known_for_department}
+              {secondaryText}
             </Text>
           )}
         </View>
@@ -76,6 +86,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     maxWidth: '31%', // Ensure 3 columns fit with gap
   },
+  cardTransparent: {
+    backgroundColor: 'transparent',
+  },
   imageContainer: {
     position: 'relative',
   },
@@ -84,8 +97,15 @@ const styles = StyleSheet.create({
     aspectRatio: 2 / 3,
     backgroundColor: COLORS.surfaceLight,
   },
+  profileImageTransparent: {
+    borderRadius: BORDER_RADIUS.m,
+  },
   cardInfo: {
     padding: SPACING.s,
+  },
+  cardInfoTransparent: {
+    padding: 0,
+    marginTop: SPACING.s,
   },
   name: {
     fontSize: FONT_SIZE.s,
