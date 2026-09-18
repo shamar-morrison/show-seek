@@ -56,7 +56,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { ArrowLeft01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, StarIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
@@ -951,15 +951,20 @@ export default function TVSeasonsScreen() {
                 activeOpacity={ACTIVE_OPACITY}
                 testID={`season-rate-button-${seasonData.season_number}`}
               >
-                <Text
-                  style={[
-                    styles.seasonActionButtonText,
-                    styles.seasonActionButtonTextSmall,
-                    seasonUserRating > 0 && styles.seasonActionButtonTextActive,
-                  ]}
-                >
-                  {seasonUserRating > 0 ? displaySeasonUserRating : t('tvSeasons.rateSeason')}
-                </Text>
+                <View style={styles.seasonActionButtonContent}>
+                  {seasonUserRating > 0 && (
+                    <AppIcon icon={StarIcon} size={12} color={COLORS.warning} fill={COLORS.warning} />
+                  )}
+                  <Text
+                    style={[
+                      styles.seasonActionButtonText,
+                      styles.seasonActionButtonTextSmall,
+                      seasonUserRating > 0 && styles.seasonActionButtonTextActive,
+                    ]}
+                  >
+                    {seasonUserRating > 0 ? displaySeasonUserRating : t('tvSeasons.rateSeason')}
+                  </Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[

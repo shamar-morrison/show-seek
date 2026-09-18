@@ -163,6 +163,11 @@ export const useSeasonScreenStyles = () =>
     seasonActionButtonTextActive: {
       color: accentColor,
     },
+    seasonActionButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
     episodesContainer: {
       paddingTop: SPACING.s,
       backgroundColor: COLORS.surface,
