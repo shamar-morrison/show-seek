@@ -29,6 +29,14 @@ export interface ContentFilterResult<T> {
   filteredItems: T[];
 }
 
+export interface ContentFilterOptions {
+  /**
+   * Force-hide watched content even when the user's hideWatchedContent
+   * preference is off (e.g., recommendation surfaces like mood results).
+   */
+  alwaysHideWatched?: boolean;
+}
+
 const EMPTY_FILTER_DIAGNOSTICS: ContentFilterDiagnostics = {
   allItemsRemovedByPreferences: false,
   removedByPreferences: false,
@@ -138,12 +146,14 @@ const applyContentFilters = <T extends MediaItem>(
 };
 
 export const useContentFilterWithDiagnostics = <T extends MediaItem>(
-  items: T[] | undefined
+  items: T[] | undefined,
+  options?: ContentFilterOptions
 ): ContentFilterResult<T> => {
   const { user } = useAuth();
   const { preferences } = usePreferences();
   const isAuthenticated = !!user;
-  const hideWatchedContent = !!preferences?.hideWatchedContent;
+  const alwaysHideWatched = !!options?.alwaysHideWatched;
+  const hideWatchedContent = !!preferences?.hideWatchedContent || alwaysHideWatched;
   const hideUnreleasedContent = !!preferences?.hideUnreleasedContent;
   const hideTalkShowsAndAwards = !!preferences?.hideTalkShowsAndAwards;
   const shouldSubscribeToLists = isAuthenticated && hideWatchedContent;
@@ -183,6 +193,9 @@ export const useContentFilterWithDiagnostics = <T extends MediaItem>(
  * @param items - Array of media items to filter
  * @returns Filtered array with watched/unreleased/talk items removed based on preferences
  */
-export const useContentFilter = <T extends MediaItem>(items: T[] | undefined): T[] => {
-  return useContentFilterWithDiagnostics(items).filteredItems;
+export const useContentFilter = <T extends MediaItem>(
+  items: T[] | undefined,
+  options?: ContentFilterOptions
+): T[] => {
+  return useContentFilterWithDiagnostics(items, options).filteredItems;
 };

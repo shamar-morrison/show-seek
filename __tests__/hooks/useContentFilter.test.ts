@@ -235,6 +235,49 @@ describe('useContentFilter', () => {
     });
   });
 
+  describe('alwaysHideWatched option', () => {
+    beforeEach(() => {
+      mockUsePreferences.mockReturnValue({
+        preferences: { hideUnreleasedContent: false, hideWatchedContent: false },
+      });
+    });
+
+    it('filters watched movies even when the hideWatchedContent preference is off', () => {
+      const { result } = renderHook(() =>
+        useContentFilter(mockMovies, { alwaysHideWatched: true })
+      );
+
+      expect(result.current).toHaveLength(2);
+      expect(result.current.map((m) => m.id)).toEqual([2, 3]);
+    });
+
+    it('filters watched TV shows even when the hideWatchedContent preference is off', () => {
+      mockUseLists.mockReturnValue({
+        data: [{ id: 'already-watched', items: { 'tv-10': { addedAt: 123 } } }],
+      });
+
+      const { result } = renderHook(() =>
+        useContentFilter(mockTVShows, { alwaysHideWatched: true })
+      );
+
+      expect(result.current).toHaveLength(2);
+      expect(result.current.map((show) => show.id)).toEqual([11, 12]);
+    });
+
+    it('enables the list subscription even when the preference is off', () => {
+      renderHook(() => useContentFilter(mockMovies, { alwaysHideWatched: true }));
+
+      expect(mockUseLists).toHaveBeenCalledWith({ enabled: true });
+    });
+
+    it('does not filter watched items when the option is omitted', () => {
+      const { result } = renderHook(() => useContentFilter(mockMovies));
+
+      expect(result.current).toEqual(mockMovies);
+      expect(mockUseLists).toHaveBeenCalledWith({ enabled: false });
+    });
+  });
+
   describe('both preferences enabled', () => {
     it('applies both filters (watched AND unreleased)', () => {
       mockUsePreferences.mockReturnValue({

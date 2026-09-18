@@ -127,9 +127,10 @@ export default function MoodResultsScreen() {
     enabled: !!moodId,
   });
 
-  // Browse surface: honor hideTalkShowsAndAwards (and watched/unreleased).
-  // Runs in the existing filter memo — no extra queries or renders.
-  const filteredData = useContentFilter(data);
+  // Recommendation surface: never recommend content the user has already seen,
+  // regardless of the hideWatchedContent preference (that pref only gates
+  // search/discover). Also honors hideTalkShowsAndAwards/hideUnreleasedContent.
+  const filteredData = useContentFilter(data, { alwaysHideWatched: true });
 
   // Get mood name for the header title so users know which mood they're viewing
   const moodKey = mood?.translationKey?.replace('mood.', '') || '';

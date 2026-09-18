@@ -9,6 +9,7 @@ const mockMovieCardSkeleton = jest.fn();
 const mockUseMoodDiscovery = jest.fn();
 const mockUsePosterOverrides = jest.fn();
 const mockUseAccountRequired = jest.fn();
+const mockUseContentFilter = jest.fn((items: any[], _options?: any) => items ?? []);
 const mockResolvePosterPath = jest.fn();
 const mockSetOptions = jest.fn();
 const mockBack = jest.fn();
@@ -76,7 +77,7 @@ jest.mock('@/src/hooks/useAccountRequired', () => ({
 }));
 
 jest.mock('@/src/hooks/useContentFilter', () => ({
-  useContentFilter: (items: any[]) => items ?? [],
+  useContentFilter: (...args: [any[], any?]) => mockUseContentFilter(...args),
   useContentFilterWithDiagnostics: (items: any[]) => ({
     filteredItems: items ?? [],
     diagnostics: {
@@ -229,5 +230,14 @@ describe('MoodResultsScreen grid layout', () => {
     expect(capturedFlashListProps.numColumns).toBe(2);
     const contentStyle = flattenStyle(capturedFlashListProps.contentContainerStyle);
     expect(contentStyle.paddingHorizontal).toBe(expected.listPaddingHorizontal);
+  });
+
+  it('excludes already-watched items from recommendations', () => {
+    render(<MoodResultsScreen />);
+
+    expect(mockUseContentFilter).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ alwaysHideWatched: true })
+    );
   });
 });
