@@ -815,6 +815,8 @@
     "deleteAccountFinalTitle": "Hesap kalıcı olarak silinsin mi?",
     "deleteAccountFinalMessage": "Listeleriniz, puanlarınız, hatırlatıcılarınız, notlarınız, Trakt bağlantı verileriniz ve eşitlenmiş hesap verileriniz kalıcı olarak kaldırılacak.",
     "deleteAccountFailed": "Hesabınız silinemedi. Lütfen tekrar deneyin.",
+    "deleteAccountPolarActiveTitle": "Önce aboneliğinizi iptal edin",
+    "deleteAccountPolarActiveMessage": "Premium aboneliğiniz hâlâ aktif. show-seek.app adresinde oturum açın, hesap menüsünü (avatarınız) açıp Aboneliği yönet'e dokunarak iptal edin, ardından hesabınızı silmek için buraya dönün.",
     "clearCacheTitle": "Görsel önbelleği temizlensin mi?",
     "clearCacheMessage": "Bu yalnızca indirilen afişleri, arka planları ve diğer önbelleğe alınmış görselleri temizler. Listeleriniz, hesabınız ve ayarlarınız etkilenmez.",
     "cacheCleared": "Görsel önbelleği başarıyla temizlendi.",

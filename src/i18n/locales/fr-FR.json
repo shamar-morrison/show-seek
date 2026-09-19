@@ -812,6 +812,8 @@
     "deleteAccountFinalTitle": "Supprimer définitivement le compte ?",
     "deleteAccountFinalMessage": "Vos listes, notes, rappels, évaluations, données de connexion Trakt et données synchronisées seront supprimés définitivement.",
     "deleteAccountFailed": "Impossible de supprimer votre compte. Veuillez réessayer.",
+    "deleteAccountPolarActiveTitle": "Annulez d'abord votre abonnement",
+    "deleteAccountPolarActiveMessage": "Votre abonnement Premium est toujours actif. Connectez-vous sur show-seek.app, ouvrez le menu du compte (votre avatar) et touchez Gérer l'abonnement pour l'annuler, puis revenez ici pour supprimer votre compte.",
     "hideTabLabels": "Masquer les libellés des onglets",
     "hideTabLabelsDescription": "Afficher uniquement les icônes dans la barre de navigation",
     "dataSaver": "Mode économie de données",

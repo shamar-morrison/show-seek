@@ -16,6 +16,7 @@ const mockTimestampFromMillis = (ms: number) => ({
 
 const mockRunTransaction = jest.fn();
 const mockCollection = jest.fn();
+const mockGetUser = jest.fn();
 
 const firestoreFn: any = jest.fn(() => ({
   collection: mockCollection,
@@ -43,6 +44,9 @@ jest.mock(
 jest.mock(
   'firebase-admin',
   () => ({
+    auth: jest.fn(() => ({
+      getUser: mockGetUser,
+    })),
     firestore: firestoreFn,
   }),
   { virtual: true }
@@ -766,6 +770,98 @@ describe('polarWebhook handler', () => {
     expect(userCall[1].premium.polarLastEventTimestampMs).toBe(1000);
     expect(userCall[1].premium.isPremium).toBe(true);
     expect(userCall[1].premium.productId).toBe('monthly_showseek_sub');
+  });
+
+  it('skips the user write when neither the user doc nor the Auth user exists', async () => {
+    const transactionSet = jest.fn();
+    mockGetUser.mockRejectedValueOnce({ code: 'auth/user-not-found' });
+
+    mockRunTransaction.mockImplementationOnce(async (callback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('polarWebhookEvents/')) {
+            return { exists: false };
+          }
+          return {
+            data: () => undefined,
+            exists: false,
+          };
+        }),
+        set: transactionSet,
+      };
+      return await callback(transaction);
+    });
+
+    const response = createResponse();
+    const req = createSignedRequest(
+      {
+        type: 'subscription.revoked',
+        timestamp: 3000,
+        data: {
+          id: 'sub_deleted',
+          customer: { external_id: 'user_deleted' },
+        },
+      },
+      'wh_deleted_user'
+    );
+
+    await polarWebhook(req as any, response as any);
+
+    expect(mockGetUser).toHaveBeenCalledWith('user_deleted');
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'skipped_no_user' });
+
+    const setPaths = transactionSet.mock.calls.map((c) => c[0].path);
+    expect(setPaths).toContain('polarWebhookEvents/wh_deleted_user');
+    expect(setPaths).not.toContain('users/user_deleted');
+  });
+
+  it('still writes premium when the user doc is missing but the Auth user exists', async () => {
+    const transactionSet = jest.fn();
+    mockGetUser.mockResolvedValueOnce({ uid: 'user_nodoc' });
+
+    mockRunTransaction.mockImplementationOnce(async (callback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('polarWebhookEvents/')) {
+            return { exists: false };
+          }
+          return {
+            data: () => undefined,
+            exists: false,
+          };
+        }),
+        set: transactionSet,
+      };
+      return await callback(transaction);
+    });
+
+    const response = createResponse();
+    const req = createSignedRequest(
+      {
+        type: 'subscription.active',
+        timestamp: 4000,
+        data: {
+          id: 'sub_nodoc',
+          customer_id: 'cust_nodoc',
+          customer: { external_id: 'user_nodoc' },
+          product_id: 'polar_prod_monthly',
+          status: 'active',
+          current_period_start: 4000,
+          current_period_end: 4000 + 30 * 86400_000,
+        },
+      },
+      'wh_nodoc'
+    );
+
+    await polarWebhook(req as any, response as any);
+
+    expect(mockGetUser).toHaveBeenCalledWith('user_nodoc');
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+
+    const setPaths = transactionSet.mock.calls.map((c) => c[0].path);
+    expect(setPaths).toContain('users/user_nodoc');
   });
 });
 

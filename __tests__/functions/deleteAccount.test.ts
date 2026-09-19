@@ -13,14 +13,19 @@ jest.mock(
   { virtual: true }
 );
 
-import { deleteAccountHandler } from '@/functions/src/accountDeletion';
+import {
+  deleteAccountHandler,
+  isPolarDeleteBlocked,
+  POLAR_SUBSCRIPTION_ACTIVE_REASON,
+} from '@/functions/src/accountDeletion';
 
 const mockRecursiveDelete = jest.fn();
 const mockBulkWriterDelete = jest.fn();
 const mockBulkWriterClose = jest.fn();
 const mockRevenueCatWhereGet = jest.fn();
 const mockTraktOAuthStatesGet = jest.fn();
-const mockUsersDoc = jest.fn((id: string) => ({ path: `users/${id}` }));
+const mockUserDocGet = jest.fn();
+const mockUsersDoc = jest.fn((id: string) => ({ get: mockUserDocGet, path: `users/${id}` }));
 const mockTraktOAuthStatesLimit = jest.fn(() => ({
   get: mockTraktOAuthStatesGet,
 }));
@@ -38,6 +43,10 @@ beforeEach(() => {
   mockTraktOAuthStatesGet.mockResolvedValue({
     docs: [],
     empty: true,
+  });
+  mockUserDocGet.mockResolvedValue({
+    data: () => undefined,
+    exists: false,
   });
 
   const mockBulkWriter = {
@@ -210,5 +219,126 @@ describe('deleteAccountHandler', () => {
     expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(2, secondStateRef);
     expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(3, thirdStateRef);
     expect(mockBulkWriterClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('blocks deletion for an active Polar subscription with a matchable reason', async () => {
+    mockUserDocGet.mockResolvedValue({
+      data: () => ({
+        premium: { isPremium: true, provider: 'polar', subscriptionState: 'ACTIVE' },
+      }),
+      exists: true,
+    });
+
+    const error = await deleteAccountHandler({ auth: { uid: 'user-1' } }).catch(
+      (err) => err
+    );
+
+    expect(error).toMatchObject({
+      code: 'failed-precondition',
+      details: { reason: POLAR_SUBSCRIPTION_ACTIVE_REASON },
+    });
+    expect(mockRecursiveDelete).not.toHaveBeenCalled();
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+  });
+
+  it('blocks deletion for a Polar subscription with missing state (fail-closed)', async () => {
+    mockUserDocGet.mockResolvedValue({
+      data: () => ({ premium: { isPremium: true, provider: 'polar' } }),
+      exists: true,
+    });
+
+    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).rejects.toMatchObject(
+      {
+        code: 'failed-precondition',
+        details: { reason: POLAR_SUBSCRIPTION_ACTIVE_REASON },
+      }
+    );
+
+    expect(mockRecursiveDelete).not.toHaveBeenCalled();
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+  });
+
+  it('allows deletion for a cancelled Polar subscription in the grace period', async () => {
+    mockUserDocGet.mockResolvedValue({
+      data: () => ({
+        premium: { isPremium: true, provider: 'polar', subscriptionState: 'CANCELLED' },
+      }),
+      exists: true,
+    });
+
+    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).resolves.toEqual({
+      success: true,
+    });
+
+    expect(mockRecursiveDelete).toHaveBeenCalledTimes(1);
+    expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
+  });
+
+  it('allows deletion for an active RevenueCat subscription', async () => {
+    mockUserDocGet.mockResolvedValue({
+      data: () => ({
+        premium: { isPremium: true, provider: 'revenuecat', subscriptionState: 'ACTIVE' },
+      }),
+      exists: true,
+    });
+
+    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).resolves.toEqual({
+      success: true,
+    });
+
+    expect(mockRecursiveDelete).toHaveBeenCalledTimes(1);
+    expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
+  });
+
+  it('allows deletion when the user document is missing', async () => {
+    mockUserDocGet.mockResolvedValue({
+      data: () => undefined,
+      exists: false,
+    });
+
+    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).resolves.toEqual({
+      success: true,
+    });
+
+    expect(mockRecursiveDelete).toHaveBeenCalledTimes(1);
+    expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
+  });
+});
+
+describe('isPolarDeleteBlocked', () => {
+  it('blocks active and billing-issue Polar subscriptions', () => {
+    expect(
+      isPolarDeleteBlocked({ isPremium: true, provider: 'polar', subscriptionState: 'ACTIVE' })
+    ).toBe(true);
+    expect(
+      isPolarDeleteBlocked({
+        isPremium: true,
+        provider: 'polar',
+        subscriptionState: 'BILLING_ISSUE',
+      })
+    ).toBe(true);
+    expect(isPolarDeleteBlocked({ isPremium: true, provider: 'polar' })).toBe(true);
+  });
+
+  it('allows cancelled, expired, non-polar, and missing premium', () => {
+    expect(
+      isPolarDeleteBlocked({
+        isPremium: true,
+        provider: 'polar',
+        subscriptionState: 'CANCELLED',
+      })
+    ).toBe(false);
+    expect(
+      isPolarDeleteBlocked({ isPremium: false, provider: 'polar', subscriptionState: 'ACTIVE' })
+    ).toBe(false);
+    expect(
+      isPolarDeleteBlocked({
+        isPremium: true,
+        provider: 'revenuecat',
+        subscriptionState: 'ACTIVE',
+      })
+    ).toBe(false);
+    expect(isPolarDeleteBlocked(null)).toBe(false);
+    expect(isPolarDeleteBlocked(undefined)).toBe(false);
   });
 });
