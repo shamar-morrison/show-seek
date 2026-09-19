@@ -45,9 +45,9 @@ jobs:
         working-directory: functions
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm test --maxWorkers=2
         if: github.event_name == 'push'
 
       - name: Run tests with coverage
-        run: pnpm test:coverage
+        run: pnpm test:coverage --maxWorkers=2
         if: github.event_name == 'pull_request'
