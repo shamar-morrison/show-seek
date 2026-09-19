@@ -39,7 +39,7 @@ export default function PremiumScreen() {
   const { loading: isAuthLoading, user } = useAuth();
   const requireAccount = useAccountRequired();
   const [isRestoring, setIsRestoring] = React.useState(false);
-  const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
+  const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('monthly');
   const wasPremiumRef = React.useRef(isPremium);
   const isGuestBlocked = !user || user.isAnonymous;
 

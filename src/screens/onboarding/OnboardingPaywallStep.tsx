@@ -40,7 +40,7 @@ export default function OnboardingPaywallStep({
     restorePurchases,
     prices,
   } = usePremium();
-  const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
+  const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('monthly');
   const [isRestoring, setIsRestoring] = React.useState(false);
   const wasPremiumRef = React.useRef(isPremium);
 

@@ -174,7 +174,7 @@ describe('PremiumScreen', () => {
     expect(mockTrackPremiumPaywallView).not.toHaveBeenCalled();
   });
 
-  it('defaults to yearly selection when subscribing', () => {
+  it('defaults to monthly selection when subscribing', () => {
     const { getByTestId, getByText, queryByTestId } = render(<PremiumScreen />);
 
     expect(getByText("Taylor, you're all set.")).toBeTruthy();
@@ -185,7 +185,7 @@ describe('PremiumScreen', () => {
 
     fireEvent.press(getByTestId('subscribe-button'));
 
-    expect(mockPurchasePremium).toHaveBeenCalledWith('yearly');
+    expect(mockPurchasePremium).toHaveBeenCalledWith('monthly');
   });
 
   it('renders the pricing controls inside the sticky footer', () => {
@@ -238,6 +238,8 @@ describe('PremiumScreen', () => {
 
   it('does not show trial helper text when yearly is selected', () => {
     const { getByTestId } = render(<PremiumScreen />);
+
+    fireEvent.press(getByTestId('plan-yearly'));
 
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
       '$12.00/year. Cancel anytime.'
@@ -331,7 +333,7 @@ describe('PremiumScreen', () => {
     );
   });
 
-  it('shows monthly trial badge before the user selects the monthly plan', () => {
+  it('shows the monthly trial badge by default when eligible', () => {
     mockPremiumState.billingDetails = {
       ...createBillingDetails(),
       monthly: {
@@ -363,7 +365,7 @@ describe('PremiumScreen', () => {
     // Only one badge at a time: the trial badge replaces the yearly save badge.
     expect(queryByTestId('plan-yearly-badge')).toBeNull();
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
-      '$12.00/year. Cancel anytime.'
+      '7 days free, then $3.00/month. Cancel anytime.'
     );
   });
 
@@ -395,12 +397,7 @@ describe('PremiumScreen', () => {
 
     const { getByTestId, getByText, queryByText } = render(<PremiumScreen />);
 
-    // Default selection is yearly, so the CTA stays generic.
-    expect(getByText('Continue')).toBeTruthy();
-    expect(queryByText('Try free for 7 days')).toBeNull();
-
-    fireEvent.press(getByTestId('plan-monthly'));
-
+    // Monthly is the default selection, so the trial CTA shows immediately.
     expect(getByText('Try free for 7 days')).toBeTruthy();
     expect(queryByText('Continue')).toBeNull();
 
@@ -408,6 +405,11 @@ describe('PremiumScreen', () => {
 
     expect(getByText('Continue')).toBeTruthy();
     expect(queryByText('Try free for 7 days')).toBeNull();
+
+    fireEvent.press(getByTestId('plan-monthly'));
+
+    expect(getByText('Try free for 7 days')).toBeTruthy();
+    expect(queryByText('Continue')).toBeNull();
   });
 
   it('keeps the generic CTA when monthly is selected but trial is ineligible', () => {

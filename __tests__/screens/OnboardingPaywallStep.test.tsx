@@ -152,7 +152,7 @@ describe('OnboardingPaywallStep', () => {
     expect(within(footer).getByTestId('onboarding-subscribe-button')).toBeTruthy();
     expect(within(footer).getByText('Continue')).toBeTruthy();
     expect(within(footer).getByTestId('billing-helper-text')).toHaveTextContent(
-      '$12.00/year. Cancel anytime.'
+      '$3.00/month. Cancel anytime.'
     );
   });
 
@@ -314,13 +314,14 @@ describe('OnboardingPaywallStep', () => {
       <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
     );
 
-    expect(getByText('Continue')).toBeTruthy();
-    expect(queryByText('Try free for 7 days')).toBeNull();
-
-    fireEvent.press(getByTestId('onboarding-plan-monthly'));
-
+    // Monthly is the default selection, so the trial CTA shows immediately.
     expect(getByText('Try free for 7 days')).toBeTruthy();
     expect(queryByText('Continue')).toBeNull();
+
+    fireEvent.press(getByTestId('onboarding-plan-yearly'));
+
+    expect(getByText('Continue')).toBeTruthy();
+    expect(queryByText('Try free for 7 days')).toBeNull();
   });
 
   it('prompts for account instead of showing restore alerts when restore requires auth', async () => {
@@ -377,7 +378,7 @@ describe('OnboardingPaywallStep', () => {
       await Promise.resolve();
     });
 
-    expect(mockPurchasePremium).toHaveBeenCalledWith('yearly');
+    expect(mockPurchasePremium).toHaveBeenCalledWith('monthly');
     expect(mockTrackPaywallInteraction).toHaveBeenCalledWith({
       action: 'purchase_attempt',
     });
