@@ -120,9 +120,10 @@ export async function deleteAccountHandler(
     );
   }
 
-  // Known tiny race (accepted, no extra handling): the Firestore tree is
-  // deleted before the Auth user, so a late Polar webhook arriving in that
-  // window would still see the Auth user and could write a stub users doc.
+  // Accepted race (tree delete -> Auth delete): short and bounded by the callable timeout; a late
+  // Polar event can re-create an orphan users/{uid} stub. A pre-written durable marker (can outlive a
+  // failed deletion and block premium writes for a live user) and Auth-first ordering (breaks retry on
+  // tree-delete failure) were both rejected.
   await deleteFirestoreUserTree(userId);
   await deleteAuthUserIfPresent(userId);
 
