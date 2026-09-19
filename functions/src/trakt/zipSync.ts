@@ -15,7 +15,7 @@ import {
 } from './sync';
 import {
   normalizeChangedListIds,
-  toFirestoreTimestamp,
+  toMillisOrNow,
 } from './transforms';
 import type {
   TraktIncrementalCustomListState,
@@ -82,13 +82,13 @@ export const reconcileCustomListsFromZip = async (
         listId,
         buildCustomListItemsMap(items || []),
         {
-          createdAt: toFirestoreTimestamp(list.created_at),
+          createdAt: Timestamp.fromDate(new Date(toMillisOrNow(list.created_at))),
           description: list.description || '',
           isCustom: true,
           name: list.name,
           privacy: list.privacy === 'public' ? 'public' : 'private',
           traktId: list.ids.trakt,
-          updatedAt: toFirestoreTimestamp(list.updated_at),
+          updatedAt: Timestamp.fromDate(new Date(toMillisOrNow(list.updated_at))),
         },
         localTraktLists.get(listId),
         {
