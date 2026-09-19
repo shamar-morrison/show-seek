@@ -1116,6 +1116,8 @@ describe('PremiumContext', () => {
       });
       expect(result.current.billingDetails.monthly).toEqual({
         hasTrialAvailable: true,
+        priceAmount: null,
+        pricePerMonthDisplay: null,
         recurringPeriod: {
           iso8601: 'P1M',
           unit: 'month',

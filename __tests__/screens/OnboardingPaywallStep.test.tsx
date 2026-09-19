@@ -9,6 +9,7 @@ const mockRequireAccount = jest.fn(() => false);
 const createBillingDetails = (): any => ({
   monthly: {
     hasTrialAvailable: false,
+    priceAmount: 3,
     recurringPeriod: {
       iso8601: 'P1M',
       unit: 'month' as const,
@@ -20,6 +21,7 @@ const createBillingDetails = (): any => ({
   },
   yearly: {
     hasTrialAvailable: false,
+    priceAmount: 12,
     recurringPeriod: {
       iso8601: 'P1Y',
       unit: 'year' as const,
@@ -150,7 +152,7 @@ describe('OnboardingPaywallStep', () => {
     expect(within(footer).getByTestId('onboarding-subscribe-button')).toBeTruthy();
     expect(within(footer).getByText('Continue')).toBeTruthy();
     expect(within(footer).getByTestId('billing-helper-text')).toHaveTextContent(
-      '$12.00 per year, auto-renews unless canceled. Cancel anytime in Google Play subscriptions.'
+      '$12.00/year. Cancel anytime.'
     );
   });
 
@@ -278,7 +280,7 @@ describe('OnboardingPaywallStep', () => {
     fireEvent.press(getByTestId('onboarding-plan-monthly'));
 
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
-      'Free trial for 7 days. Then $3.00 per month, auto-renews unless canceled. Cancel before the trial ends in Google Play subscriptions to avoid being charged.'
+      '7 days free, then $3.00/month. Cancel anytime.'
     );
   });
 

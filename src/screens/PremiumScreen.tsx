@@ -9,7 +9,7 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, FONT_FAMILY, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
-import { isPremiumAuthRequiredError, type PremiumPlan } from '@/src/context/premiumBilling';
+import { isPremiumAuthRequiredError, resolvePremiumSavingsPercent, type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { trackPremiumPaywallView } from '@/src/services/analytics';
@@ -159,6 +159,19 @@ export default function PremiumScreen() {
     );
   }
 
+  // Only one badge at a time: the trial badge when the user is eligible,
+  // otherwise the yearly savings replacing the generic best-value badge.
+  const yearlySavingsPercent = resolvePremiumSavingsPercent({
+    monthlyPriceAmount: billingDetails.monthly.priceAmount,
+    yearlyPriceAmount: billingDetails.yearly.priceAmount,
+  });
+  const yearlyBadgeText = monthlyTrial.isEligible
+    ? undefined
+    : yearlySavingsPercent != null
+      ? t('premium.saveBadge', { percent: yearlySavingsPercent })
+      : t('premium.bestValueBadge');
+  const yearlyMonthlyEquivalent = billingDetails.yearly.pricePerMonthDisplay;
+
   const plans: PremiumPaywallPlanOption[] = [
     {
       testID: 'plan-monthly',
@@ -173,12 +186,18 @@ export default function PremiumScreen() {
     {
       testID: 'plan-yearly',
       badgeTestID: 'plan-yearly-badge',
-      badgeText: t('premium.bestValueBadge'),
+      badgeText: yearlyBadgeText,
       isSelected: selectedPlan === 'yearly',
       onPress: () => setSelectedPlan('yearly'),
       planName: t('premium.yearlyPlanName'),
-      planPeriod: t('premium.perYear'),
-      planPrice: yearlyPrice,
+      planPeriod: yearlyMonthlyEquivalent ? t('premium.perMonth') : t('premium.perYear'),
+      planPrice: yearlyMonthlyEquivalent ?? yearlyPrice,
+      secondaryPriceText: yearlyMonthlyEquivalent
+        ? t('premium.billedAs', {
+            period: t('premium.periodYearLabel'),
+            price: yearlyPrice,
+          })
+        : undefined,
     },
   ];
 

@@ -21,6 +21,8 @@ type BillingProduct = {
   displayPrice?: string | null;
   introPrice?: BillingIntroPrice | null;
   platform?: string | null;
+  price?: number | null;
+  pricePerMonthString?: string | null;
   priceString?: string | null;
   subscriptionPeriod?: string | null;
   subscriptionOfferDetailsAndroid?: ProductSubscriptionAndroidOfferDetails[] | null;
@@ -70,6 +72,8 @@ export interface PremiumBillingPeriod {
 
 export interface PremiumPlanBillingDetails {
   hasTrialAvailable: boolean;
+  priceAmount: number | null;
+  pricePerMonthDisplay: string | null;
   recurringPeriod: PremiumBillingPeriod;
   recurringPrice: string | null;
   storeLabelKey: PremiumStoreSubscriptionLabelKey;
@@ -502,14 +506,55 @@ export const resolvePremiumPlanBillingDetails = ({
       resolveIntroPricePeriod(product?.introPrice) ??
       getFallbackTrialPeriod(plan))
     : null;
+  const priceAmount =
+    typeof product?.price === 'number' && Number.isFinite(product.price) && product.price > 0
+      ? product.price
+      : null;
+  const pricePerMonthDisplay =
+    typeof product?.pricePerMonthString === 'string' && product.pricePerMonthString.trim()
+      ? product.pricePerMonthString
+      : null;
 
   return {
     hasTrialAvailable,
+    priceAmount,
+    pricePerMonthDisplay,
     recurringPeriod,
     recurringPrice,
     storeLabelKey: resolveStoreSubscriptionLabelKey(platform),
     trialPeriod,
   };
+};
+
+/**
+ * Savings of the yearly plan versus paying monthly for 12 months, as a whole
+ * percent. Returns null when either numeric price is missing or yearly is not
+ * actually cheaper.
+ */
+export const resolvePremiumSavingsPercent = ({
+  monthlyPriceAmount,
+  yearlyPriceAmount,
+}: {
+  monthlyPriceAmount: number | null | undefined;
+  yearlyPriceAmount: number | null | undefined;
+}): number | null => {
+  if (
+    typeof monthlyPriceAmount !== 'number' ||
+    typeof yearlyPriceAmount !== 'number' ||
+    !Number.isFinite(monthlyPriceAmount) ||
+    !Number.isFinite(yearlyPriceAmount) ||
+    monthlyPriceAmount <= 0 ||
+    yearlyPriceAmount <= 0
+  ) {
+    return null;
+  }
+
+  const monthlyEquivalent = yearlyPriceAmount / 12;
+  if (monthlyEquivalent >= monthlyPriceAmount) {
+    return null;
+  }
+
+  return Math.round((1 - monthlyEquivalent / monthlyPriceAmount) * 100);
 };
 
 export const sortPurchasesByPremiumPriority = <T extends { productId?: string | null }>(

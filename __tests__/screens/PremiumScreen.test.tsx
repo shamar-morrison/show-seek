@@ -20,6 +20,7 @@ const mockAuthState = {
 const createBillingDetails = (): any => ({
   monthly: {
     hasTrialAvailable: false,
+    priceAmount: 3,
     recurringPeriod: {
       iso8601: 'P1M',
       unit: 'month' as const,
@@ -31,6 +32,7 @@ const createBillingDetails = (): any => ({
   },
   yearly: {
     hasTrialAvailable: false,
+    priceAmount: 12,
     recurringPeriod: {
       iso8601: 'P1Y',
       unit: 'year' as const,
@@ -177,7 +179,8 @@ describe('PremiumScreen', () => {
 
     expect(getByText("Taylor, you're all set.")).toBeTruthy();
     expect(getByText('Unlock a smoother way to use ShowSeek.')).toBeTruthy();
-    expect(getByTestId('plan-yearly-badge')).toBeTruthy();
+    // Not trial-eligible: the yearly plan shows the savings badge instead.
+    expect(getByTestId('plan-yearly-badge')).toHaveTextContent('Save 67%');
     expect(queryByTestId('plan-monthly-badge')).toBeNull();
 
     fireEvent.press(getByTestId('subscribe-button'));
@@ -237,7 +240,7 @@ describe('PremiumScreen', () => {
     const { getByTestId } = render(<PremiumScreen />);
 
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
-      '$12.00 per year, auto-renews unless canceled. Cancel anytime in Google Play subscriptions.'
+      '$12.00/year. Cancel anytime.'
     );
   });
 
@@ -306,7 +309,7 @@ describe('PremiumScreen', () => {
     fireEvent.press(getByTestId('plan-monthly'));
 
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
-      'Free trial for 7 days. Then $3.00 per month, auto-renews unless canceled. Cancel before the trial ends in Google Play subscriptions to avoid being charged.'
+      '7 days free, then $3.00/month. Cancel anytime.'
     );
   });
 
@@ -324,7 +327,7 @@ describe('PremiumScreen', () => {
     fireEvent.press(getByTestId('plan-monthly'));
 
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
-      '$3.00 per month, auto-renews unless canceled. Cancel anytime in Google Play subscriptions.'
+      '$3.00/month. Cancel anytime.'
     );
   });
 
@@ -357,9 +360,10 @@ describe('PremiumScreen', () => {
     const { getByTestId, queryByTestId } = render(<PremiumScreen />);
 
     expect(getByTestId('plan-monthly-badge')).toHaveTextContent('7-day trial');
-    expect(getByTestId('plan-yearly-badge')).toBeTruthy();
+    // Only one badge at a time: the trial badge replaces the yearly save badge.
+    expect(queryByTestId('plan-yearly-badge')).toBeNull();
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
-      '$12.00 per year, auto-renews unless canceled. Cancel anytime in Google Play subscriptions.'
+      '$12.00/year. Cancel anytime.'
     );
   });
 
@@ -413,6 +417,23 @@ describe('PremiumScreen', () => {
 
     expect(getByText('Continue')).toBeTruthy();
     expect(queryByText('Try free for 7 days')).toBeNull();
+  });
+
+  it('shows the annual monthly-equivalent price with a billed-as second line', () => {
+    mockPremiumState.billingDetails = createBillingDetails();
+    mockPremiumState.billingDetails.yearly.pricePerMonthDisplay = '$1.00';
+
+    const { getByText } = render(<PremiumScreen />);
+
+    expect(getByText('$1.00 / Month')).toBeTruthy();
+    expect(getByText('Billed as $12.00/year')).toBeTruthy();
+  });
+
+  it('falls back to the yearly price without a second line when no monthly equivalent is available', () => {
+    const { getByText, queryByText } = render(<PremiumScreen />);
+
+    expect(getByText('$12.00 / Year')).toBeTruthy();
+    expect(queryByText(/Billed as/)).toBeNull();
   });
 
   it('shows generic restore error message when restore fails without an error message', async () => {

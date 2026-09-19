@@ -195,12 +195,6 @@ export function PremiumPaywallFooter({
 
   return (
     <>
-      {billingDisclosure ? (
-        <Text style={styles.trialNote} testID="billing-helper-text">
-          {billingDisclosure}
-        </Text>
-      ) : null}
-
       <View style={styles.planList} testID="premium-plan-list">
         {plans.map((plan) => (
           <PremiumPlanOptionCard key={plan.testID} accentColor={accentColor} {...plan} />
@@ -215,6 +209,12 @@ export function PremiumPaywallFooter({
       >
         <Text style={styles.buttonText}>{subscribeButtonLabel}</Text>
       </TouchableOpacity>
+
+      {billingDisclosure ? (
+        <Text style={styles.trialNote} testID="billing-helper-text">
+          {billingDisclosure}
+        </Text>
+      ) : null}
 
       <View style={styles.legalLinks}>
         <TouchableOpacity onPress={() => Linking.openURL(legal.tos)}>
@@ -329,16 +329,14 @@ function PremiumPlanOptionCard({
           )}
           <Text style={styles.planName}>{planName}</Text>
         </View>
-        {secondaryPriceText ? (
-          <View style={styles.planPriceContainer}>
-            <Text style={[styles.planPriceInline, { color: accentColor }]}>{planPrice}</Text>
-            <Text style={styles.planPriceSecondary}>{secondaryPriceText}</Text>
-          </View>
-        ) : (
+        <View style={styles.planPriceContainer}>
           <Text style={[styles.planPriceInline, { color: accentColor }]}>
             {planPrice} {planPeriod}
           </Text>
-        )}
+          {secondaryPriceText ? (
+            <Text style={styles.planPriceSecondary}>{secondaryPriceText}</Text>
+          ) : null}
+        </View>
       </View>
       {badgeText ? (
         <View style={[styles.badge, { backgroundColor: accentColor }]}>
@@ -448,9 +446,10 @@ const styles = StyleSheet.create({
   },
   trialNote: {
     color: COLORS.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: SPACING.s,
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: SPACING.m,
+    textAlign: 'center',
   },
   planList: {
     width: '100%',
@@ -531,12 +530,12 @@ const styles = StyleSheet.create({
   },
   legalLinkText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: 12,
   },
   legalDot: {
     color: COLORS.textSecondary,
     marginHorizontal: SPACING.s,
-    fontSize: 14,
+    fontSize: 12,
   },
   footerExtras: {
     marginTop: SPACING.s,

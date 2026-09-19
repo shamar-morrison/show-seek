@@ -9,6 +9,7 @@ import {
   isMonthlyTrialOffer,
   MONTHLY_TRIAL_OFFER_ID,
   resolvePremiumPlanBillingDetails,
+  resolvePremiumSavingsPercent,
   resolveStoreSubscriptionLabelKey,
   resolveMonthlyStandardOffer,
   resolveMonthlyTrialOffer,
@@ -335,6 +336,8 @@ describe('premiumBilling helpers', () => {
 
     expect(billingDetails).toEqual({
       hasTrialAvailable: true,
+      priceAmount: null,
+      pricePerMonthDisplay: null,
       recurringPeriod: {
         iso8601: 'P1M',
         unit: 'month',
@@ -410,6 +413,52 @@ describe('premiumBilling helpers', () => {
     expect(resolveStoreSubscriptionLabelKey('web')).toBe('premium.storeNameGeneric');
     expect(getPremiumBillingPeriodTranslationKey('day')).toBe('premium.periodDay');
     expect(getPremiumBillingPeriodTranslationKey('year')).toBe('premium.periodYear');
+  });
+
+  it('computes yearly savings versus paying monthly for 12 months', () => {
+    expect(
+      resolvePremiumSavingsPercent({ monthlyPriceAmount: 15.99, yearlyPriceAmount: 99.99 })
+    ).toBe(48);
+    expect(resolvePremiumSavingsPercent({ monthlyPriceAmount: 3, yearlyPriceAmount: 12 })).toBe(67);
+  });
+
+  it('returns null savings when prices are missing or yearly is not cheaper', () => {
+    expect(
+      resolvePremiumSavingsPercent({ monthlyPriceAmount: null, yearlyPriceAmount: 12 })
+    ).toBeNull();
+    expect(
+      resolvePremiumSavingsPercent({ monthlyPriceAmount: 3, yearlyPriceAmount: null })
+    ).toBeNull();
+    expect(
+      resolvePremiumSavingsPercent({ monthlyPriceAmount: 3, yearlyPriceAmount: 36 })
+    ).toBeNull();
+    expect(resolvePremiumSavingsPercent({ monthlyPriceAmount: 0, yearlyPriceAmount: 12 })).toBeNull();
+  });
+
+  it('exposes the numeric price and formatted monthly-equivalent from the store product', () => {
+    const details = resolvePremiumPlanBillingDetails({
+      plan: 'yearly',
+      platform: 'android',
+      product: {
+        price: 99.99,
+        pricePerMonthString: '$8.33',
+        priceString: '$99.99',
+        subscriptionPeriod: 'P1Y',
+      } as any,
+    });
+
+    expect(details.priceAmount).toBe(99.99);
+    expect(details.pricePerMonthDisplay).toBe('$8.33');
+  });
+
+  it('leaves monthly-equivalent price null when the store omits it', () => {
+    const details = resolvePremiumPlanBillingDetails({
+      plan: 'yearly',
+      platform: 'android',
+      product: { price: 12, priceString: '$12.00', subscriptionPeriod: 'P1Y' } as any,
+    });
+
+    expect(details.pricePerMonthDisplay).toBeNull();
   });
 
   it('keeps restore scan running for non-entitled validation results', () => {
