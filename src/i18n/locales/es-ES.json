@@ -810,6 +810,8 @@
     "deleteAccountFinalTitle": "¿Eliminar la cuenta de forma permanente?",
     "deleteAccountFinalMessage": "Tus listas, valoraciones, recordatorios, notas, datos de conexión de Trakt y datos sincronizados se eliminarán permanentemente.",
     "deleteAccountFailed": "No se pudo eliminar tu cuenta. Inténtalo de nuevo.",
+    "deleteAccountPolarActiveTitle": "Cancela primero tu suscripción",
+    "deleteAccountPolarActiveMessage": "Tu suscripción Premium sigue activa. Inicia sesión en show-seek.app, abre el menú de cuenta (tu avatar) y toca Gestionar suscripción para cancelarla, y luego vuelve aquí para eliminar tu cuenta.",
     "hideTabLabels": "Ocultar etiquetas de pestañas",
     "hideTabLabelsDescription": "Mostrar solo los iconos en la barra de navegación inferior",
     "dataSaver": "Modo de ahorro de datos",

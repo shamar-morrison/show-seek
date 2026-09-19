@@ -68,6 +68,9 @@ interface PremiumState {
   billingDetails: Record<PremiumPlan, PremiumPlanBillingDetails>;
   isPremium: boolean;
   isLoading: boolean;
+  premiumProvider: 'polar' | 'revenuecat' | null;
+  premiumSubscriptionState: string | null;
+  premiumSource: 'live' | 'cached';
   purchasePremium: (plan: PremiumPlan, options?: { useTrial?: boolean }) => Promise<boolean>;
   restorePurchases: () => Promise<boolean>;
   prices: PremiumPrices;
@@ -89,6 +92,20 @@ const resolveFirestoreTrialHistory = (premiumData?: Record<string, unknown>): bo
   premiumData?.hasUsedTrial === true ||
   premiumData?.trialConsumedAt != null ||
   premiumData?.trialStartAt != null;
+
+const resolvePremiumProvider = (
+  premiumData?: Record<string, unknown>
+): 'polar' | 'revenuecat' | null => {
+  const provider = premiumData?.provider;
+  return provider === 'polar' || provider === 'revenuecat' ? provider : null;
+};
+
+const resolvePremiumSubscriptionState = (
+  premiumData?: Record<string, unknown>
+): string | null => {
+  const subscriptionState = premiumData?.subscriptionState;
+  return typeof subscriptionState === 'string' ? subscriptionState : null;
+};
 
 const resolveOffering = (offeringData: {
   current: PurchasesOffering | null;
@@ -173,6 +190,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
   const [isPremiumFromFirestore, setIsPremiumFromFirestore] = useState(false);
   const [hasUsedTrialFromFirestore, setHasUsedTrialFromFirestore] = useState(false);
+  const [premiumProvider, setPremiumProvider] = useState<'polar' | 'revenuecat' | null>(null);
+  const [premiumSubscriptionState, setPremiumSubscriptionState] = useState<string | null>(null);
+  const [premiumSource, setPremiumSource] = useState<'live' | 'cached'>('cached');
   const [isFirestoreLoading, setIsFirestoreLoading] = useState(initialAuthenticatedUserKey != null);
   const [cachedPremiumStatus, setCachedPremiumStatus] = useState<boolean | null>(null);
   const [isCachedPremiumLoading, setIsCachedPremiumLoading] = useState(
@@ -208,6 +228,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     setIsRevenueCatLoading(isAuthenticatedUser && Platform.OS === 'android');
     setIsPremiumFromFirestore(false);
     setHasUsedTrialFromFirestore(false);
+    setPremiumProvider(null);
+    setPremiumSubscriptionState(null);
+    setPremiumSource('cached');
     setIsFirestoreLoading(isAuthenticatedUser);
     setCachedPremiumStatus(null);
     setIsCachedPremiumLoading(isAuthenticatedUser);
@@ -476,6 +499,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     if (!user?.uid || user.isAnonymous) {
       setIsPremiumFromFirestore(false);
       setHasUsedTrialFromFirestore(false);
+      setPremiumProvider(null);
+      setPremiumSubscriptionState(null);
+      setPremiumSource('cached');
       setIsFirestoreLoading(false);
       return;
     }
@@ -499,6 +525,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           if (!snapshot.exists()) {
             setIsPremiumFromFirestore(false);
             setHasUsedTrialFromFirestore(false);
+            setPremiumProvider(null);
+            setPremiumSubscriptionState(null);
+            setPremiumSource(snapshot.metadata?.fromCache === true ? 'cached' : 'live');
             setCachedPremiumStatus(false);
             setIsFirestoreLoading(false);
             return;
@@ -511,6 +540,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
           setIsPremiumFromFirestore(premiumStatus);
           setHasUsedTrialFromFirestore(hasTrialHistory);
+          setPremiumProvider(resolvePremiumProvider(premiumData));
+          setPremiumSubscriptionState(resolvePremiumSubscriptionState(premiumData));
+          setPremiumSource(snapshot.metadata?.fromCache === true ? 'cached' : 'live');
           setCachedPremiumStatus(premiumStatus);
           setIsFirestoreLoading(false);
 
@@ -534,6 +566,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           console.error('[PremiumContext] Premium listener error:', error);
           setIsPremiumFromFirestore(false);
           setHasUsedTrialFromFirestore(false);
+          setPremiumProvider(null);
+          setPremiumSubscriptionState(null);
+          setPremiumSource('cached');
           setIsFirestoreLoading(false);
         },
         {
@@ -577,6 +612,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
         if (!userData) {
           setCachedPremiumStatus(false);
+          setPremiumProvider(null);
+          setPremiumSubscriptionState(null);
+          setPremiumSource('cached');
           setIsFirestoreLoading(false);
           return;
         }
@@ -587,6 +625,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
         setIsPremiumFromFirestore(premiumStatus);
         setHasUsedTrialFromFirestore(hasTrialHistory);
+        setPremiumProvider(resolvePremiumProvider(premiumData));
+        setPremiumSubscriptionState(resolvePremiumSubscriptionState(premiumData));
+        setPremiumSource('cached');
         setCachedPremiumStatus(premiumStatus);
         setIsFirestoreLoading(false);
 
@@ -600,6 +641,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           return;
         }
         console.error('Error fetching premium status:', err);
+        setPremiumProvider(null);
+        setPremiumSubscriptionState(null);
+        setPremiumSource('cached');
         setIsFirestoreLoading(false);
       }
     };
@@ -737,6 +781,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     billingDetails,
     isPremium,
     isLoading,
+    premiumProvider,
+    premiumSubscriptionState,
+    premiumSource,
     purchasePremium,
     restorePurchases,
     prices,

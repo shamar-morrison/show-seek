@@ -2,7 +2,11 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { accountDeletionService } from '@/src/services/AccountDeletionService';
 import { exportUserData } from '@/src/services/DataExportService';
-import { clearLocalAccountData } from '@/src/utils/accountDeletion';
+import {
+  clearLocalAccountData,
+  isPolarDeleteBlocked,
+  isPolarSubscriptionActiveError,
+} from '@/src/utils/accountDeletion';
 import { clearAppCache } from '@/src/utils/appCache';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -22,7 +26,13 @@ const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
 export function useProfileLogic() {
   const { t } = useTranslation();
   const { user, resetSession, signOut } = useAuth();
-  const { isPremium, isLoading: isPremiumLoading } = usePremium();
+  const {
+    isPremium,
+    isLoading: isPremiumLoading,
+    premiumProvider,
+    premiumSubscriptionState,
+    premiumSource,
+  } = usePremium();
   const router = useRouter();
 
   const [isExporting, setIsExporting] = useState(false);
@@ -178,7 +188,14 @@ export function useProfileLogic() {
       router.replace('/(auth)/sign-in');
     } catch (error) {
       console.error('[profile] Failed to delete account:', error);
-      Alert.alert(t('common.errorTitle'), t('profile.deleteAccountFailed'));
+      if (isPolarSubscriptionActiveError(error)) {
+        Alert.alert(
+          t('profile.deleteAccountPolarActiveTitle'),
+          t('profile.deleteAccountPolarActiveMessage')
+        );
+      } else {
+        Alert.alert(t('common.errorTitle'), t('profile.deleteAccountFailed'));
+      }
     } finally {
       setIsDeletingAccount(false);
     }
@@ -190,6 +207,23 @@ export function useProfileLogic() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Only block from live listener data. Cached/fallback data may be stale,
+    // so skip the pre-check there and let the callable decide instead.
+    if (
+      premiumSource === 'live' &&
+      isPolarDeleteBlocked({
+        isPremium,
+        provider: premiumProvider,
+        subscriptionState: premiumSubscriptionState,
+      })
+    ) {
+      Alert.alert(
+        t('profile.deleteAccountPolarActiveTitle'),
+        t('profile.deleteAccountPolarActiveMessage')
+      );
+      return;
+    }
 
     Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountMessage'), [
       {
@@ -216,7 +250,16 @@ export function useProfileLogic() {
         },
       },
     ]);
-  }, [executeDeleteAccount, isDeletingAccount, t, user?.uid]);
+  }, [
+    executeDeleteAccount,
+    isDeletingAccount,
+    isPremium,
+    premiumProvider,
+    premiumSource,
+    premiumSubscriptionState,
+    t,
+    user?.uid,
+  ]);
 
   const handleUpgradePress = useCallback(() => {
     router.push('/premium');

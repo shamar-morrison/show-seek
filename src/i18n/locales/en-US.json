@@ -821,6 +821,8 @@
     "deleteAccountFinalTitle": "Delete account permanently?",
     "deleteAccountFinalMessage": "Your lists, ratings, reminders, notes, Trakt connection data, and synced account data will be permanently removed.",
     "deleteAccountFailed": "Failed to delete your account. Please try again.",
+    "deleteAccountPolarActiveTitle": "Cancel your subscription first",
+    "deleteAccountPolarActiveMessage": "Your Premium subscription is still active. Sign in at show-seek.app, open the account menu (your avatar) and tap Manage Subscription to cancel, then return here to delete your account.",
     "clearCacheTitle": "Clear image cache?",
     "clearCacheMessage": "This only clears downloaded posters/backdrops and other cached images. Your lists, account, and settings are not affected.",
     "cacheCleared": "Image cache cleared successfully.",

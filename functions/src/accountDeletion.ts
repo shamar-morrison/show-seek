@@ -13,6 +13,30 @@ interface DeleteAccountRequest {
   auth?: CallableAuth | null;
 }
 
+export const POLAR_CANCELLED_STATE = 'CANCELLED';
+export const POLAR_SUBSCRIPTION_ACTIVE_REASON = 'POLAR_SUBSCRIPTION_ACTIVE';
+
+export interface PremiumForDeletionCheck {
+  isPremium?: boolean | null;
+  provider?: string | null;
+  subscriptionState?: string | null;
+}
+
+export function isPolarDeleteBlocked(
+  premium?: PremiumForDeletionCheck | null
+): boolean {
+  if (!premium) {
+    return false;
+  }
+  if (premium.provider !== 'polar') {
+    return false;
+  }
+  if (premium.isPremium !== true) {
+    return false;
+  }
+  return premium.subscriptionState !== POLAR_CANCELLED_STATE;
+}
+
 const QUERY_DELETE_BATCH_SIZE = 250;
 
 async function deleteRevenueCatWebhookEventsForUser(userId: string): Promise<void> {
@@ -86,6 +110,20 @@ export async function deleteAccountHandler(
 
   const userId = request.auth.uid;
 
+  const userSnap = await admin.firestore().collection('users').doc(userId).get();
+  const premium = (userSnap.data()?.premium ?? null) as PremiumForDeletionCheck | null;
+  if (isPolarDeleteBlocked(premium)) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Active Polar subscription must be cancelled before account deletion',
+      { reason: POLAR_SUBSCRIPTION_ACTIVE_REASON }
+    );
+  }
+
+  // Accepted race (tree delete -> Auth delete): short and bounded by the callable timeout; a late
+  // Polar event can re-create an orphan users/{uid} stub. A pre-written durable marker (can outlive a
+  // failed deletion and block premium writes for a live user) and Auth-first ordering (breaks retry on
+  // tree-delete failure) were both rejected.
   await deleteFirestoreUserTree(userId);
   await deleteAuthUserIfPresent(userId);
 

@@ -1,5 +1,10 @@
 import { TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
-import { clearLocalAccountData } from '@/src/utils/accountDeletion';
+import {
+  clearLocalAccountData,
+  isPolarDeleteBlocked,
+  isPolarSubscriptionActiveError,
+  POLAR_SUBSCRIPTION_ACTIVE_REASON,
+} from '@/src/utils/accountDeletion';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
@@ -71,5 +76,62 @@ describe('clearLocalAccountData', () => {
     expect(mockWriteToSharedPreferences).toHaveBeenCalledTimes(7);
     expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalledTimes(1);
     expect(Notifications.dismissAllNotificationsAsync).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('isPolarDeleteBlocked', () => {
+  it('blocks active and billing-issue Polar subscriptions', () => {
+    expect(
+      isPolarDeleteBlocked({ isPremium: true, provider: 'polar', subscriptionState: 'ACTIVE' })
+    ).toBe(true);
+    expect(
+      isPolarDeleteBlocked({
+        isPremium: true,
+        provider: 'polar',
+        subscriptionState: 'BILLING_ISSUE',
+      })
+    ).toBe(true);
+    expect(isPolarDeleteBlocked({ isPremium: true, provider: 'polar' })).toBe(true);
+  });
+
+  it('allows cancelled, expired, non-polar, and missing premium', () => {
+    expect(
+      isPolarDeleteBlocked({
+        isPremium: true,
+        provider: 'polar',
+        subscriptionState: 'CANCELLED',
+      })
+    ).toBe(false);
+    expect(
+      isPolarDeleteBlocked({ isPremium: false, provider: 'polar', subscriptionState: 'ACTIVE' })
+    ).toBe(false);
+    expect(
+      isPolarDeleteBlocked({
+        isPremium: true,
+        provider: 'revenuecat',
+        subscriptionState: 'ACTIVE',
+      })
+    ).toBe(false);
+    expect(isPolarDeleteBlocked(null)).toBe(false);
+    expect(isPolarDeleteBlocked(undefined)).toBe(false);
+  });
+});
+
+describe('isPolarSubscriptionActiveError', () => {
+  it('matches only the Polar active-subscription reason', () => {
+    expect(
+      isPolarSubscriptionActiveError({
+        code: 'functions/failed-precondition',
+        details: { reason: POLAR_SUBSCRIPTION_ACTIVE_REASON },
+      })
+    ).toBe(true);
+    expect(isPolarSubscriptionActiveError(new Error('boom'))).toBe(false);
+    expect(
+      isPolarSubscriptionActiveError({
+        code: 'functions/failed-precondition',
+        details: { reason: 'SOMETHING_ELSE' },
+      })
+    ).toBe(false);
+    expect(isPolarSubscriptionActiveError(null)).toBe(false);
   });
 });

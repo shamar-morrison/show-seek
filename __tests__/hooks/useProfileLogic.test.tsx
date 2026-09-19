@@ -1,5 +1,5 @@
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
 type AlertButton = {
@@ -14,9 +14,18 @@ const mockResetSession = jest.fn();
 const mockExportUserData = jest.fn();
 const mockDeleteAccount = jest.fn();
 const mockClearLocalAccountData = jest.fn();
-const mockPremiumState = {
+const mockPremiumState: {
+  isPremium: boolean;
+  isLoading: boolean;
+  premiumProvider: 'polar' | 'revenuecat' | null;
+  premiumSubscriptionState: string | null;
+  premiumSource: 'live' | 'cached';
+} = {
   isPremium: true,
   isLoading: false,
+  premiumProvider: null,
+  premiumSubscriptionState: null,
+  premiumSource: 'live',
 };
 
 jest.mock('@/src/context/auth', () => ({
@@ -41,9 +50,14 @@ jest.mock('@/src/services/AccountDeletionService', () => ({
   },
 }));
 
-jest.mock('@/src/utils/accountDeletion', () => ({
-  clearLocalAccountData: (...args: any[]) => mockClearLocalAccountData(...args),
-}));
+jest.mock('@/src/utils/accountDeletion', () => {
+  const actual = jest.requireActual('@/src/utils/accountDeletion');
+  return {
+    clearLocalAccountData: (...args: any[]) => mockClearLocalAccountData(...args),
+    isPolarDeleteBlocked: actual.isPolarDeleteBlocked,
+    isPolarSubscriptionActiveError: actual.isPolarSubscriptionActiveError,
+  };
+});
 
 jest.mock('@/src/utils/appCache', () => ({
   clearAppCache: jest.fn(),
@@ -98,6 +112,9 @@ describe('useProfileLogic', () => {
     jest.clearAllMocks();
     mockPremiumState.isPremium = true;
     mockPremiumState.isLoading = false;
+    mockPremiumState.premiumProvider = null;
+    mockPremiumState.premiumSubscriptionState = null;
+    mockPremiumState.premiumSource = 'live';
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -238,5 +255,96 @@ describe('useProfileLogic', () => {
       'common.errorTitle',
       'profile.deleteAccountFailed'
     );
+  });
+
+  it('blocks deletion with the Polar message for a live active Polar subscription', () => {
+    mockPremiumState.isPremium = true;
+    mockPremiumState.premiumProvider = 'polar';
+    mockPremiumState.premiumSubscriptionState = 'ACTIVE';
+    mockPremiumState.premiumSource = 'live';
+
+    const { result } = renderHook(() => useProfileLogic());
+
+    act(() => {
+      result.current.handleDeleteAccount();
+    });
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'profile.deleteAccountPolarActiveTitle',
+      'profile.deleteAccountPolarActiveMessage'
+    );
+    expect(mockDeleteAccount).not.toHaveBeenCalled();
+  });
+
+  it('skips the pre-check for cached snapshots and lets the callable decide', async () => {
+    mockPremiumState.isPremium = true;
+    mockPremiumState.premiumProvider = 'polar';
+    mockPremiumState.premiumSubscriptionState = 'ACTIVE';
+    mockPremiumState.premiumSource = 'cached';
+    mockDeleteAccount.mockResolvedValue({ success: true });
+    mockClearLocalAccountData.mockResolvedValue(undefined);
+    mockSignOut.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useProfileLogic());
+
+    await confirmDeleteAccount(result.current.handleDeleteAccount);
+
+    expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows deletion for a cancelled Polar subscription in the grace period', async () => {
+    mockPremiumState.isPremium = true;
+    mockPremiumState.premiumProvider = 'polar';
+    mockPremiumState.premiumSubscriptionState = 'CANCELLED';
+    mockPremiumState.premiumSource = 'live';
+    mockDeleteAccount.mockResolvedValue({ success: true });
+    mockClearLocalAccountData.mockResolvedValue(undefined);
+    mockSignOut.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useProfileLogic());
+
+    await confirmDeleteAccount(result.current.handleDeleteAccount);
+
+    expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows deletion for RevenueCat subscribers', async () => {
+    mockPremiumState.isPremium = true;
+    mockPremiumState.premiumProvider = 'revenuecat';
+    mockPremiumState.premiumSubscriptionState = 'ACTIVE';
+    mockPremiumState.premiumSource = 'live';
+    mockDeleteAccount.mockResolvedValue({ success: true });
+    mockClearLocalAccountData.mockResolvedValue(undefined);
+    mockSignOut.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useProfileLogic());
+
+    await confirmDeleteAccount(result.current.handleDeleteAccount);
+
+    expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the Polar message when the server rejects with POLAR_SUBSCRIPTION_ACTIVE', async () => {
+    mockPremiumState.isPremium = true;
+    mockPremiumState.premiumProvider = 'polar';
+    mockPremiumState.premiumSubscriptionState = 'ACTIVE';
+    mockPremiumState.premiumSource = 'cached';
+    mockDeleteAccount.mockRejectedValue({
+      code: 'functions/failed-precondition',
+      details: { reason: 'POLAR_SUBSCRIPTION_ACTIVE' },
+    });
+
+    const { result } = renderHook(() => useProfileLogic());
+
+    await confirmDeleteAccount(result.current.handleDeleteAccount);
+
+    expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'profile.deleteAccountPolarActiveTitle',
+        'profile.deleteAccountPolarActiveMessage'
+      );
+    });
   });
 });

@@ -60,3 +60,32 @@ export async function clearLocalAccountData(userId?: string): Promise<void> {
     Notifications.dismissAllNotificationsAsync(),
   ]);
 }
+
+// NOTE: keep in sync with functions/src/accountDeletion.ts and
+// show-seek-web/lib/polar-delete-guard.ts.
+export const POLAR_CANCELLED_STATE = 'CANCELLED';
+export const POLAR_SUBSCRIPTION_ACTIVE_REASON = 'POLAR_SUBSCRIPTION_ACTIVE';
+
+export interface PolarPremiumStatus {
+  isPremium?: boolean | null;
+  provider?: string | null;
+  subscriptionState?: string | null;
+}
+
+export function isPolarDeleteBlocked(premium?: PolarPremiumStatus | null): boolean {
+  if (!premium) {
+    return false;
+  }
+  if (premium.provider !== 'polar') {
+    return false;
+  }
+  if (premium.isPremium !== true) {
+    return false;
+  }
+  return premium.subscriptionState !== POLAR_CANCELLED_STATE;
+}
+
+export function isPolarSubscriptionActiveError(error: unknown): boolean {
+  const details = (error as { details?: { reason?: unknown } | null } | null)?.details;
+  return details?.reason === POLAR_SUBSCRIPTION_ACTIVE_REASON;
+}

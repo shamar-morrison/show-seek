@@ -531,6 +531,33 @@ export const polarWebhook = onRequest(
         }
 
         const userDoc = await transaction.get(userRef);
+
+        if (!userDoc.exists) {
+          let authUserExists = true;
+          try {
+            await admin.auth().getUser(appUserId);
+          } catch (authError) {
+            const code = (authError as { code?: string } | null)?.code;
+            if (code === 'auth/user-not-found') {
+              authUserExists = false;
+            } else {
+              throw authError;
+            }
+          }
+
+          if (!authUserExists) {
+            transaction.set(eventRef, {
+              appUserId,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              eventTimestampMs: resolvePolarEventTimestampMs(parsedEvent, nowMs),
+              status: 'skipped_no_user',
+              type: parsedEvent.type,
+            });
+
+            return { status: 'skipped_no_user' as const };
+          }
+        }
+
         const existingPremium = (userDoc.data()?.premium ?? {}) as ExistingPremiumData;
 
         const eventTimestampMs = resolvePolarEventTimestampMs(parsedEvent, nowMs);

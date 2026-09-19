@@ -1167,4 +1167,69 @@ describe('PremiumContext', () => {
       expect(result.current.monthlyTrial.reasonKey).toBe('premium.freeTrialUsedMessage');
     });
   });
+
+  it('exposes provider, subscription state, and live source from the Firestore listener', async () => {
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      onNext({
+        ...createSnapshot({
+          isPremium: true,
+          provider: 'polar',
+          subscriptionState: 'ACTIVE',
+        }),
+        metadata: { fromCache: false },
+      });
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.premiumProvider).toBe('polar');
+      expect(result.current.premiumSubscriptionState).toBe('ACTIVE');
+      expect(result.current.premiumSource).toBe('live');
+    });
+  });
+
+  it('treats a live-listener snapshot served from cache as cached source', async () => {
+    let snapshotCallback: ((snapshot: Record<string, unknown>) => void) | null = null;
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      snapshotCallback = onNext;
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await act(async () => {
+      snapshotCallback?.({
+        ...createSnapshot({
+          isPremium: true,
+          provider: 'polar',
+          subscriptionState: 'ACTIVE',
+        }),
+        metadata: { fromCache: true },
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.premiumProvider).toBe('polar');
+      expect(result.current.premiumSubscriptionState).toBe('ACTIVE');
+      expect(result.current.premiumSource).toBe('cached');
+    });
+  });
+
+  it('reports cached source for premium resolved via the getCachedUserDocument fallback', async () => {
+    mockEnablePremiumRealtimeListener = false;
+    mockGetCachedUserDocument.mockResolvedValue({
+      premium: { isPremium: true, provider: 'polar', subscriptionState: 'CANCELLED' },
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.premiumProvider).toBe('polar');
+      expect(result.current.premiumSubscriptionState).toBe('CANCELLED');
+      expect(result.current.premiumSource).toBe('cached');
+    });
+  });
 });
