@@ -89,3 +89,21 @@ export function isPolarSubscriptionActiveError(error: unknown): boolean {
   const details = (error as { details?: { reason?: unknown } | null } | null)?.details;
   return details?.reason === POLAR_SUBSCRIPTION_ACTIVE_REASON;
 }
+
+/**
+ * Whether a Google Play purchase must not start for this premium state.
+ * Unlike isPolarDeleteBlocked, there is NO exemption for CANCELLED: the
+ * RevenueCat webhook ignores RC events for the whole time Polar isPremium is
+ * true, so any Play purchase in that window would double-bill with no change
+ * in the app. Blocked callers must behave like a user-cancelled purchase
+ * (silent no-op). Keep in sync with functions/src/accountDeletion.ts semantics.
+ */
+export function isPolarPurchaseBlocked(premium?: PolarPremiumStatus | null): boolean {
+  if (!premium) {
+    return false;
+  }
+  if (premium.provider !== 'polar') {
+    return false;
+  }
+  return premium.isPremium === true;
+}

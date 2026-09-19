@@ -27,6 +27,18 @@ jest.mock('@/src/hooks/useAccountRequired', () => ({
   useAccountRequired: () => mockRequireAccount,
 }));
 
+const mockPremiumState: {
+  isPremium: boolean;
+  premiumProvider: 'polar' | 'revenuecat' | null;
+} = {
+  isPremium: false,
+  premiumProvider: null,
+};
+
+jest.mock('@/src/context/PremiumContext', () => ({
+  usePremium: () => mockPremiumState,
+}));
+
 jest.mock('@/src/context/AccentColorProvider', () => ({
   useAccentColor: () => ({ accentColor: '#E50914' }),
 }));
@@ -52,6 +64,8 @@ const mockOption = {
 describe('WinbackOfferModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPremiumState.isPremium = false;
+    mockPremiumState.premiumProvider = null;
     mockGetWinbackSubscriptionOption.mockResolvedValue(mockOption);
     mockPurchaseWinbackOffer.mockResolvedValue(true);
     mockRequireAccount.mockReturnValue(false);
@@ -271,6 +285,36 @@ describe('WinbackOfferModal', () => {
       'Network payment failed',
       expect.arrayContaining([expect.objectContaining({ text: 'OK' })])
     );
+  });
+
+  it('silently skips the Play purchase for an active Polar subscriber', async () => {
+    mockPremiumState.isPremium = true;
+    mockPremiumState.premiumProvider = 'polar';
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const onSuccess = jest.fn();
+    const onDecline = jest.fn();
+
+    const { getByText } = render(
+      <WinbackOfferModal
+        visible={true}
+        onDecline={onDecline}
+        onSuccess={onSuccess}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByText('Claim Special Offer'));
+    });
+
+    expect(mockPurchaseWinbackOffer).not.toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onDecline).not.toHaveBeenCalled();
+    expect(mockTrackPaywallWinbackDecision).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
   });
 
   it('calls onDecline when backdrop overlay is pressed', async () => {

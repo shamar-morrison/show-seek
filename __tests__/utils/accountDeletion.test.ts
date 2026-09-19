@@ -2,6 +2,7 @@ import { TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
 import {
   clearLocalAccountData,
   isPolarDeleteBlocked,
+  isPolarPurchaseBlocked,
   isPolarSubscriptionActiveError,
   POLAR_SUBSCRIPTION_ACTIVE_REASON,
 } from '@/src/utils/accountDeletion';
@@ -117,8 +118,7 @@ describe('isPolarDeleteBlocked', () => {
   });
 });
 
-describe('isPolarSubscriptionActiveError', () => {
-  it('matches only the Polar active-subscription reason', () => {
+describe('isPolarSubscriptionActiveError', () => {  it('matches only the Polar active-subscription reason', () => {
     expect(
       isPolarSubscriptionActiveError({
         code: 'functions/failed-precondition',
@@ -133,5 +133,44 @@ describe('isPolarSubscriptionActiveError', () => {
       })
     ).toBe(false);
     expect(isPolarSubscriptionActiveError(null)).toBe(false);
+  });
+});
+
+describe('isPolarPurchaseBlocked', () => {
+  it('blocks Polar premium regardless of subscription state (no CANCELLED exemption)', () => {
+    expect(
+      isPolarPurchaseBlocked({ isPremium: true, provider: 'polar', subscriptionState: 'ACTIVE' })
+    ).toBe(true);
+    expect(
+      isPolarPurchaseBlocked({
+        isPremium: true,
+        provider: 'polar',
+        subscriptionState: 'CANCELLED',
+      })
+    ).toBe(true);
+    expect(
+      isPolarPurchaseBlocked({
+        isPremium: true,
+        provider: 'polar',
+        subscriptionState: 'BILLING_ISSUE',
+      })
+    ).toBe(true);
+    expect(isPolarPurchaseBlocked({ isPremium: true, provider: 'polar' })).toBe(true);
+  });
+
+  it('allows non-premium Polar, RevenueCat premium, and missing premium', () => {
+    expect(
+      isPolarPurchaseBlocked({ isPremium: false, provider: 'polar', subscriptionState: 'ACTIVE' })
+    ).toBe(false);
+    expect(
+      isPolarPurchaseBlocked({
+        isPremium: true,
+        provider: 'revenuecat',
+        subscriptionState: 'ACTIVE',
+      })
+    ).toBe(false);
+    expect(isPolarPurchaseBlocked({ isPremium: false, provider: null })).toBe(false);
+    expect(isPolarPurchaseBlocked(null)).toBe(false);
+    expect(isPolarPurchaseBlocked(undefined)).toBe(false);
   });
 });

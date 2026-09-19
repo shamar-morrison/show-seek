@@ -12,6 +12,7 @@ import { auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
 import { configureRevenueCat } from '@/src/services/revenueCat';
 import { recordNegativeEvent as recordReviewNegativeEvent } from '@/src/services/reviewPromptService';
 import { getCachedUserDocument } from '@/src/services/UserDocumentCache';
+import { isPolarPurchaseBlocked } from '@/src/utils/accountDeletion';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -662,8 +663,26 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     };
   }, [isExpectedAuthenticatedUser, user?.isAnonymous, user?.uid]);
 
+  const authenticatedUserKey = resolveAuthenticatedUserKey(user);
+  const isPremiumStateAligned = premiumStateUserKey === authenticatedUserKey;
+  const livePremium = isPremiumFromRevenueCat || isPremiumFromFirestore;
+  const baseLoading = isRevenueCatLoading || isFirestoreLoading || isCachedPremiumLoading;
+  const isLoading = !isPremiumStateAligned || baseLoading;
+  const isPremium =
+    isPremiumStateAligned && (livePremium || (cachedPremiumStatus === true && !baseLoading));
+  const hasUsedTrial = hasUsedTrialFromRevenueCat || hasUsedTrialFromFirestore;
+
   const purchasePremium = useCallback(
     async (plan: PremiumPlan): Promise<boolean> => {
+      // Polar subscribers must manage billing on the web: a Play purchase here
+      // would be ignored by the RevenueCat webhook while Polar isPremium is true
+      // (double-billing with no change in the app). Return false like a
+      // user-cancelled purchase — callers treat it as a silent no-op. Applies to
+      // live and cached data alike, with no CANCELLED exemption.
+      if (isPolarPurchaseBlocked({ isPremium, provider: premiumProvider })) {
+        return false;
+      }
+
       if (Platform.OS !== 'android') {
         throw new Error('Subscriptions are only configured on Android right now.');
       }
@@ -709,7 +728,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         throw err;
       }
     },
-    [applyCustomerInfo, packagesByPlan, refreshOfferings, user]
+    [applyCustomerInfo, isPremium, packagesByPlan, premiumProvider, refreshOfferings, user]
   );
 
   const restorePurchases = useCallback(async (): Promise<boolean> => {
@@ -741,15 +760,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       throw error;
     }
   }, [applyCustomerInfo, user]);
-
-  const authenticatedUserKey = resolveAuthenticatedUserKey(user);
-  const isPremiumStateAligned = premiumStateUserKey === authenticatedUserKey;
-  const livePremium = isPremiumFromRevenueCat || isPremiumFromFirestore;
-  const baseLoading = isRevenueCatLoading || isFirestoreLoading || isCachedPremiumLoading;
-  const isLoading = !isPremiumStateAligned || baseLoading;
-  const isPremium =
-    isPremiumStateAligned && (livePremium || (cachedPremiumStatus === true && !baseLoading));
-  const hasUsedTrial = hasUsedTrialFromRevenueCat || hasUsedTrialFromFirestore;
 
   const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
     const hasMonthlyIntroOffer = billingDetails.monthly.hasTrialAvailable;
