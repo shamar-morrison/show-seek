@@ -40,6 +40,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install functions dependencies
+        run: npm ci
+        working-directory: functions
+
       - name: Run tests
         run: pnpm test
         if: github.event_name == 'push'
