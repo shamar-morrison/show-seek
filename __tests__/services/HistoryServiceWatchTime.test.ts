@@ -180,4 +180,74 @@ describe('HistoryService watch time', () => {
     deps.onStampsSettled(false);
     expect(onBackfillSettled).toHaveBeenCalledWith(false);
   });
+
+  it('counts Timestamp addedAt list items the same as numeric ones', async () => {
+    const stampedAt = new Date('2026-03-06T10:00:00Z').getTime();
+    const timestampAddedAt = { toMillis: () => stampedAt };
+    mockFetchUserCollection.mockImplementation(
+      async (
+        subcollectionPath: string[],
+        mapFn: (snapshot: { docs: { id: string; data: () => Record<string, unknown> }[] }) => unknown[]
+      ) => {
+        if (subcollectionPath[0] === 'episode_tracking') {
+          return mapFn({ docs: [] });
+        }
+        if (subcollectionPath[0] === 'ratings') {
+          return mapFn({ docs: [] });
+        }
+        if (subcollectionPath[0] === 'lists') {
+          return mapFn({
+            docs: [
+              buildSnapshotDoc('already-watched', {
+                name: 'Already Watched',
+                items: {
+                  // Timestamp stamped movie: 120 min, must count.
+                  'movie-101': {
+                    id: 101,
+                    media_type: 'movie',
+                    title: 'Timestamp Movie',
+                    addedAt: timestampAddedAt,
+                    runtimeMinutes: 120,
+                  },
+                  // Timestamp unstamped TV: 45 min fallback, must count.
+                  'tv-600': {
+                    id: 600,
+                    media_type: 'tv',
+                    name: 'Timestamp Show',
+                    addedAt: timestampAddedAt,
+                  },
+                  // Numeric-string addedAt: coerced, must count (0 min movie).
+                  'movie-102': {
+                    id: 102,
+                    media_type: 'movie',
+                    title: 'String Movie',
+                    addedAt: String(stampedAt),
+                  },
+                  // Null, zero, garbage, and old timestamps stay excluded.
+                  'movie-103': { id: 103, media_type: 'movie', title: 'Null', addedAt: null },
+                  'movie-104': { id: 104, media_type: 'movie', title: 'Zero', addedAt: 0 },
+                  'movie-105': { id: 105, media_type: 'movie', title: 'Garbage', addedAt: 'not-a-date' },
+                  'movie-106': {
+                    id: 106,
+                    media_type: 'movie',
+                    title: 'Old',
+                    addedAt: new Date('2026-01-15T10:00:00Z').getTime(),
+                  },
+                },
+              }),
+            ],
+          });
+        }
+        return [];
+      }
+    );
+
+    const overview = await historyService.fetchUserHistory({}, 1);
+    // 120 (Timestamp stamped movie) + 45 (Timestamp fallback tv) + 0 (string movie).
+    expect(overview.totalWatchMinutes).toBe(165);
+    expect(overview.totalWatched).toBe(3);
+
+    const detail = await historyService.fetchMonthDetail('2026-03', {});
+    expect(detail?.stats.totalWatchMinutes).toBe(165);
+  });
 });

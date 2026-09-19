@@ -6,6 +6,7 @@ import { filterNonScriptedTV } from '@/src/utils/nonScriptedFilter';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
+import { compareAddedAt } from '../utils/timestamps';
 import { ListMediaItem } from './ListService';
 import { writeToSharedPreferences } from './sharedPreferencesService';
 
@@ -116,7 +117,7 @@ export async function getUserWatchlist(
 
     // Sort by addedAt descending and take the first few
     const items = Object.values(itemsMap)
-      .sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0))
+      .sort((a, b) => compareAddedAt(a, b, -1))
       .slice(0, limitCount)
       .map((item) => ({
         id: item.id,

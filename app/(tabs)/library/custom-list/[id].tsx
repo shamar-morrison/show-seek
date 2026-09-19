@@ -24,6 +24,7 @@ import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiS
 import { useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
+import { compareAddedAt } from '@/src/utils/timestamps';
 import { ListMediaItem } from '@/src/services/ListService';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -118,8 +119,8 @@ export default function CustomListDetailScreen() {
 
       switch (sortState.option) {
         case 'recentlyAdded':
-          // Ascending: oldest first (a.addedAt - b.addedAt)
-          return (a.addedAt - b.addedAt) * direction;
+          // Ascending: oldest first
+          return compareAddedAt(a, b, direction);
         case 'releaseDate': {
           // Movies use release_date, TV shows use first_air_date
           const dateA = a.release_date || a.first_air_date || '';

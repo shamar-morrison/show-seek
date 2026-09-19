@@ -1,6 +1,10 @@
 import i18n from '../i18n';
 import type { TVShowEpisodeTracking, WatchedEpisode } from '../types/episodeTracking';
 
+import { compareAddedAt, toMillis } from '../utils/timestamps';
+
+export { compareAddedAt, toMillis };
+
 const EPISODE_KEY_PATTERN = /^(\d+)_(\d+)$/;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -14,44 +18,6 @@ const toInteger = (value: unknown): number | null => {
   if (typeof value === 'string' && value.trim() !== '') {
     const parsed = Number(value);
     return Number.isInteger(parsed) ? parsed : null;
-  }
-
-  return null;
-};
-
-const toMillis = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === 'string' && value.trim() !== '') {
-    const numericValue = Number(value);
-    if (Number.isFinite(numericValue)) {
-      return numericValue;
-    }
-
-    const parsedDate = Date.parse(value);
-    return Number.isNaN(parsedDate) ? null : parsedDate;
-  }
-
-  if (
-    value &&
-    typeof value === 'object' &&
-    'toMillis' in value &&
-    typeof value.toMillis === 'function'
-  ) {
-    const parsed = value.toMillis();
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  if (
-    value &&
-    typeof value === 'object' &&
-    'toDate' in value &&
-    typeof value.toDate === 'function'
-  ) {
-    const parsed = value.toDate();
-    return parsed instanceof Date && !Number.isNaN(parsed.getTime()) ? parsed.getTime() : null;
   }
 
   return null;

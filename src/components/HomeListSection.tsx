@@ -9,6 +9,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useContentFilterWithDiagnostics } from '@/src/hooks/useContentFilter';
 import { useLists } from '@/src/hooks/useLists';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import { compareAddedAt } from '@/src/utils/timestamps';
 import { HomeScreenListItem } from '@/src/types/preferences';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -231,7 +232,7 @@ function UserListSection({
 
   const items = useMemo(() => {
     if (!listData?.items) return [];
-    return Object.values(listData.items).sort((a, b) => b.addedAt - a.addedAt);
+    return Object.values(listData.items).sort((a, b) => compareAddedAt(a, b, -1));
   }, [listData]);
 
   if (isLoading) {
