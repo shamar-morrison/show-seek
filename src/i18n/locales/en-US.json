@@ -1391,6 +1391,7 @@
     "subscriptionManageMessage": "Subscriptions can't be reset in-app. Open your store subscriptions to cancel or change your plan.",
     "subscriptionManageTitle": "Manage Subscription",
     "subscribeButton": "Continue",
+    "freeTrialSubscribeButton": "Try free for 7 days",
     "successMessage": "Thanks for supporting ShowSeek! Premium is now active.",
     "successTitle": "Premium Unlocked",
     "storeNameGooglePlay": "Google Play subscriptions",

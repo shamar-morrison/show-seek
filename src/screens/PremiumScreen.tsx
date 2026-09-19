@@ -72,6 +72,12 @@ export default function PremiumScreen() {
   const readyTitle = resolvedDisplayName
     ? t('premium.readyTitle', { name: resolvedDisplayName })
     : t('premium.readyTitleFallback');
+  // The free trial only applies to the monthly plan, so the CTA reflects the
+  // trial only while monthly is selected and the user is eligible.
+  const subscribeButtonLabel =
+    selectedPlan === 'monthly' && monthlyTrial.isEligible
+      ? t('premium.freeTrialSubscribeButton')
+      : t('premium.subscribeButton');
 
   React.useEffect(() => {
     if (!wasPremiumRef.current && isPremium) {
@@ -187,7 +193,7 @@ export default function PremiumScreen() {
           onRestore={handleRestore}
           onSubscribe={handlePurchase}
           plans={plans}
-          subscribeButtonLabel={t('premium.subscribeButton')}
+          subscribeButtonLabel={subscribeButtonLabel}
           subscribeButtonTestID="subscribe-button"
         />
       }

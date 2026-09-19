@@ -282,6 +282,45 @@ describe('OnboardingPaywallStep', () => {
     );
   });
 
+  it('shows the free-trial CTA only when monthly is selected and eligible', () => {
+    mockPremiumState.billingDetails = {
+      ...createBillingDetails(),
+      monthly: {
+        hasTrialAvailable: true,
+        recurringPeriod: {
+          iso8601: 'P1M',
+          unit: 'month',
+          value: 1,
+        },
+        recurringPrice: '$3.00',
+        storeLabelKey: 'premium.storeNameGooglePlay',
+        trialPeriod: {
+          iso8601: 'P7D',
+          unit: 'day',
+          value: 7,
+        },
+      },
+      yearly: createBillingDetails().yearly,
+    };
+    mockPremiumState.monthlyTrial = {
+      isEligible: true,
+      offerToken: null,
+      reasonKey: null,
+    };
+
+    const { getByTestId, getByText, queryByText } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+    );
+
+    expect(getByText('Continue')).toBeTruthy();
+    expect(queryByText('Try free for 7 days')).toBeNull();
+
+    fireEvent.press(getByTestId('onboarding-plan-monthly'));
+
+    expect(getByText('Try free for 7 days')).toBeTruthy();
+    expect(queryByText('Continue')).toBeNull();
+  });
+
   it('prompts for account instead of showing restore alerts when restore requires auth', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     const authRequiredError = new Error('AUTH_REQUIRED') as Error & { code: string };

@@ -73,6 +73,12 @@ export default function OnboardingPaywallStep({
   const readyTitle = trimmedDisplayName
     ? t('premium.readyTitle', { name: trimmedDisplayName })
     : t('premium.readyTitleFallback');
+  // The free trial only applies to the monthly plan, so the CTA reflects the
+  // trial only while monthly is selected and the user is eligible.
+  const subscribeButtonLabel =
+    selectedPlan === 'monthly' && monthlyTrial.isEligible
+      ? t('premium.freeTrialSubscribeButton')
+      : t('premium.subscribeButton');
 
   React.useEffect(() => {
     if (!wasPremiumRef.current && isPremium) {
@@ -175,7 +181,7 @@ export default function OnboardingPaywallStep({
             onRestore={handleRestore}
             onSubscribe={handlePurchase}
             plans={plans}
-            subscribeButtonLabel={t('premium.subscribeButton')}
+            subscribeButtonLabel={subscribeButtonLabel}
             subscribeButtonTestID="onboarding-subscribe-button"
           />
         }

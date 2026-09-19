@@ -363,6 +363,58 @@ describe('PremiumScreen', () => {
     );
   });
 
+  it('shows the free-trial CTA only when monthly is selected and eligible', () => {
+    mockPremiumState.billingDetails = {
+      ...createBillingDetails(),
+      monthly: {
+        hasTrialAvailable: true,
+        recurringPeriod: {
+          iso8601: 'P1M',
+          unit: 'month',
+          value: 1,
+        },
+        recurringPrice: '$3.00',
+        storeLabelKey: 'premium.storeNameGooglePlay',
+        trialPeriod: {
+          iso8601: 'P7D',
+          unit: 'day',
+          value: 7,
+        },
+      },
+      yearly: createBillingDetails().yearly,
+    };
+    mockPremiumState.monthlyTrial = {
+      isEligible: true,
+      offerToken: null,
+      reasonKey: null,
+    };
+
+    const { getByTestId, getByText, queryByText } = render(<PremiumScreen />);
+
+    // Default selection is yearly, so the CTA stays generic.
+    expect(getByText('Continue')).toBeTruthy();
+    expect(queryByText('Try free for 7 days')).toBeNull();
+
+    fireEvent.press(getByTestId('plan-monthly'));
+
+    expect(getByText('Try free for 7 days')).toBeTruthy();
+    expect(queryByText('Continue')).toBeNull();
+
+    fireEvent.press(getByTestId('plan-yearly'));
+
+    expect(getByText('Continue')).toBeTruthy();
+    expect(queryByText('Try free for 7 days')).toBeNull();
+  });
+
+  it('keeps the generic CTA when monthly is selected but trial is ineligible', () => {
+    const { getByTestId, getByText, queryByText } = render(<PremiumScreen />);
+
+    fireEvent.press(getByTestId('plan-monthly'));
+
+    expect(getByText('Continue')).toBeTruthy();
+    expect(queryByText('Try free for 7 days')).toBeNull();
+  });
+
   it('shows generic restore error message when restore fails without an error message', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     mockRestorePurchases.mockRejectedValueOnce({});

@@ -1147,6 +1147,7 @@
     "readyTitle": "{{name}}, tout est pret.",
     "readyTitleFallback": "Tout est pret.",
     "subscribeButton": "S’abonner",
+    "freeTrialSubscribeButton": "Essayer 7 jours gratuitement",
     "storeNameGooglePlay": "les abonnements Google Play",
     "storeNameAppStore": "les abonnements de l’App Store",
     "storeNameGeneric": "les abonnements de votre boutique",
