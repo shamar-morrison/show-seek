@@ -80,7 +80,7 @@ import {
 } from './sync';
 import {
   normalizeListIds,
-  toFirestoreTimestamp,
+  toMillisOrNow,
   transformFavorite,
   transformRating,
 } from './transforms';
@@ -1179,7 +1179,7 @@ export const __test__ = {
   sanitizeEnrichmentStatusForWrite,
   sanitizeSyncStatusForWrite,
   syncTraktImport,
-  toFirestoreTimestamp,
+  toMillisOrNow,
   traktPaginatedRequest,
   traktRequestRaw,
   transformFavorite,

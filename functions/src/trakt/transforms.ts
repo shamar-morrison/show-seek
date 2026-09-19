@@ -237,15 +237,15 @@ export const normalizeChangedListIds = (listIds: string[]): string[] => Array.fr
 export const normalizeListIds = (listIds: string[]): string[] =>
   Array.from(new Set(listIds.map((item) => item.trim()).filter(Boolean)));
 
-export const toFirestoreTimestamp = (value: string | null | undefined): FirebaseFirestore.Timestamp => {
+export const toMillisOrNow = (value: string | null | undefined): number => {
   if (!value) {
-    return Timestamp.now();
+    return Date.now();
   }
-  const date = new Date(value);
-  if (isNaN(date.getTime())) {
-    return Timestamp.now();
+  const millis = new Date(value).getTime();
+  if (Number.isNaN(millis)) {
+    return Date.now();
   }
-  return Timestamp.fromDate(date);
+  return millis;
 };
 
 export const transformWatchedMovie = (traktMovie: TraktWatchedMovie): Record<string, unknown> | null => {
@@ -254,7 +254,7 @@ export const transformWatchedMovie = (traktMovie: TraktWatchedMovie): Record<str
   }
 
   return stripUndefinedDeep({
-    addedAt: toFirestoreTimestamp(traktMovie.last_watched_at),
+    addedAt: toMillisOrNow(traktMovie.last_watched_at),
     id: traktMovie.movie.ids.tmdb,
     media_type: 'movie',
     release_date: traktMovie.movie.year ? `${traktMovie.movie.year}-01-01` : undefined,
@@ -268,7 +268,7 @@ export const transformWatchedShow = (traktShow: TraktWatchedShow): Record<string
   }
 
   return stripUndefinedDeep({
-    addedAt: toFirestoreTimestamp(traktShow.last_watched_at),
+    addedAt: toMillisOrNow(traktShow.last_watched_at),
     first_air_date: traktShow.show.year ? `${traktShow.show.year}-01-01` : undefined,
     id: traktShow.show.ids.tmdb,
     media_type: 'tv',
@@ -306,7 +306,7 @@ export const transformRating = (traktRating: TraktRating): Record<string, unknow
       docId: `${mediaType}-${tmdbId}`,
       id: String(tmdbId),
       mediaType,
-      ratedAt: toFirestoreTimestamp(traktRating.rated_at),
+      ratedAt: Timestamp.fromDate(new Date(toMillisOrNow(traktRating.rated_at))),
       rating: traktRating.rating,
       title,
     },
@@ -316,7 +316,7 @@ export const transformRating = (traktRating: TraktRating): Record<string, unknow
 
 export const transformListItem = (
   traktItem: TraktListItem
-): { addedAt: FirebaseFirestore.Timestamp; mediaType: 'movie' | 'tv'; title: string; tmdbId: number; traktId?: number } | null => {
+): { addedAt: number; mediaType: 'movie' | 'tv'; title: string; tmdbId: number; traktId?: number } | null => {
   if (!traktItem) {
     return null;
   }
@@ -345,13 +345,13 @@ export const transformListItem = (
   }
 
   return stripUndefinedDeep({
-    addedAt: toFirestoreTimestamp(traktItem.listed_at),
+    addedAt: toMillisOrNow(traktItem.listed_at),
     mediaType,
     title,
     tmdbId,
     traktId,
   }) as {
-    addedAt: FirebaseFirestore.Timestamp;
+    addedAt: number;
     mediaType: 'movie' | 'tv';
     title: string;
     tmdbId: number;
@@ -388,7 +388,7 @@ export const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<st
   }
 
   return stripUndefinedDeep({
-    addedAt: toFirestoreTimestamp(traktItem.listed_at),
+    addedAt: toMillisOrNow(traktItem.listed_at),
     id: tmdbId,
     media_type: mediaType,
     release_date: releaseDate,
@@ -423,7 +423,7 @@ export const transformFavorite = (traktFavorite: TraktFavorite): Record<string, 
 
   return stripUndefinedDeep(
     {
-      addedAt: toFirestoreTimestamp(traktFavorite.listed_at),
+      addedAt: toMillisOrNow(traktFavorite.listed_at),
       id: tmdbId,
       media_type: mediaType,
       title,

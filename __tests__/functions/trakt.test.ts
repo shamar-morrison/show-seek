@@ -5516,36 +5516,36 @@ describe('Trakt sync Firestore sanitization', () => {
   });
 
   describe('Post-June 30 2026 Trakt API Updates (Pagination & extended=progress)', () => {
-    describe('toFirestoreTimestamp helper', () => {
-      it('returns Timestamp for valid ISO date strings', () => {
+    describe('toMillisOrNow helper', () => {
+      it('returns numeric millis for valid ISO date strings', () => {
         const iso = '2026-07-15T10:30:00.000Z';
-        const ts = __test__.toFirestoreTimestamp(iso);
-        expect(ts).toBeInstanceOf(MockTimestamp);
-        expect(ts.toMillis()).toBe(new Date(iso).getTime());
+        const millis = __test__.toMillisOrNow(iso);
+        expect(typeof millis).toBe('number');
+        expect(millis).toBe(new Date(iso).getTime());
       });
 
-      it('returns current Timestamp when value is undefined, null, or empty string', () => {
+      it('returns current millis when value is undefined, null, or empty string', () => {
         const before = Date.now();
-        const tsNull = __test__.toFirestoreTimestamp(null);
-        const tsUndef = __test__.toFirestoreTimestamp(undefined);
-        const tsEmpty = __test__.toFirestoreTimestamp('');
+        const millisNull = __test__.toMillisOrNow(null);
+        const millisUndef = __test__.toMillisOrNow(undefined);
+        const millisEmpty = __test__.toMillisOrNow('');
         const after = Date.now();
 
-        expect(tsNull.toMillis()).toBeGreaterThanOrEqual(before);
-        expect(tsNull.toMillis()).toBeLessThanOrEqual(after);
-        expect(tsUndef.toMillis()).toBeGreaterThanOrEqual(before);
-        expect(tsUndef.toMillis()).toBeLessThanOrEqual(after);
-        expect(tsEmpty.toMillis()).toBeGreaterThanOrEqual(before);
-        expect(tsEmpty.toMillis()).toBeLessThanOrEqual(after);
+        for (const millis of [millisNull, millisUndef, millisEmpty]) {
+          expect(typeof millis).toBe('number');
+          expect(millis).toBeGreaterThanOrEqual(before);
+          expect(millis).toBeLessThanOrEqual(after);
+        }
       });
 
-      it('returns current Timestamp when value is an invalid date string', () => {
+      it('returns current millis when value is an invalid date string', () => {
         const before = Date.now();
-        const ts = __test__.toFirestoreTimestamp('not-a-valid-date');
+        const millis = __test__.toMillisOrNow('not-a-valid-date');
         const after = Date.now();
 
-        expect(ts.toMillis()).toBeGreaterThanOrEqual(before);
-        expect(ts.toMillis()).toBeLessThanOrEqual(after);
+        expect(typeof millis).toBe('number');
+        expect(millis).toBeGreaterThanOrEqual(before);
+        expect(millis).toBeLessThanOrEqual(after);
       });
     });
 
