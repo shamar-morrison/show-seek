@@ -2,6 +2,7 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { isPremiumAuthRequiredError } from '@/src/context/premiumBilling';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { trackPaywallWinbackDecision } from '@/src/services/analytics';
 import type { PaywallWinbackScreen } from '@/src/services/analytics';
@@ -12,6 +13,7 @@ import {
 } from '@/src/services/winbackOffer';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { AlertCircleIcon, Clock01Icon } from '@hugeicons/core-free-icons';
+import { isPolarPurchaseBlocked } from '@/src/utils/accountDeletion';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -64,6 +66,7 @@ export function WinbackOfferModal({
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const requireAccount = useAccountRequired();
+  const { isPremium, premiumProvider } = usePremium();
 
   const [subscriptionOption, setSubscriptionOption] = useState<SubscriptionOption | null>(null);
   const [isLoadingOption, setIsLoadingOption] = useState(false);
@@ -215,6 +218,14 @@ export function WinbackOfferModal({
   const handlePurchase = useCallback(async () => {
     if (isPurchasing || isExpired) return;
 
+    // Polar subscribers must manage billing on the web: a Play purchase here
+    // would be ignored by the RevenueCat webhook while Polar isPremium is true
+    // (double-billing with no change in the app). Behave like a user-cancelled
+    // purchase — stay on the modal without an error.
+    if (isPolarPurchaseBlocked({ isPremium, provider: premiumProvider })) {
+      return;
+    }
+
     setIsPurchasing(true);
     try {
       const result = await purchaseWinbackOffer({ subscriptionOption });
@@ -248,9 +259,11 @@ export function WinbackOfferModal({
   }, [
     currencyCode,
     isExpired,
+    isPremium,
     isPurchasing,
     onDecline,
     onSuccess,
+    premiumProvider,
     priceAmount,
     requireAccount,
     screenName,

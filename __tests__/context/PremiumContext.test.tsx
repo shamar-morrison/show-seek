@@ -1232,4 +1232,140 @@ describe('PremiumContext', () => {
       expect(result.current.premiumSource).toBe('cached');
     });
   });
+
+  it('blocks purchasePremium for an active Polar subscription without touching the SDK', async () => {
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      onNext({
+        ...createSnapshot({
+          isPremium: true,
+          provider: 'polar',
+          subscriptionState: 'ACTIVE',
+        }),
+        metadata: { fromCache: false },
+      });
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+    await waitFor(() => expect(result.current.premiumSource).toBe('live'));
+
+    // Startup sync also touches RevenueCat; isolate the purchase call.
+    mockConfigureRevenueCat.mockClear();
+    mockPurchasePackage.mockClear();
+
+    let purchaseResult = true;
+    await act(async () => {
+      purchaseResult = await result.current.purchasePremium('monthly');
+    });
+
+    expect(purchaseResult).toBe(false);
+    expect(mockConfigureRevenueCat).not.toHaveBeenCalled();
+    expect(mockPurchasePackage).not.toHaveBeenCalled();
+  });
+
+  it('blocks purchasePremium for a cancelled Polar subscription while isPremium is still true', async () => {
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      onNext({
+        ...createSnapshot({
+          isPremium: true,
+          provider: 'polar',
+          subscriptionState: 'CANCELLED',
+        }),
+        metadata: { fromCache: false },
+      });
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+    await waitFor(() => {
+      expect(result.current.premiumSubscriptionState).toBe('CANCELLED');
+    });
+
+    mockPurchasePackage.mockClear();
+
+    let purchaseResult = true;
+    await act(async () => {
+      purchaseResult = await result.current.purchasePremium('yearly');
+    });
+
+    expect(purchaseResult).toBe(false);
+    expect(mockPurchasePackage).not.toHaveBeenCalled();
+  });
+
+  it('blocks purchasePremium for Polar premium resolved from cached data', async () => {
+    mockEnablePremiumRealtimeListener = false;
+    mockGetCachedUserDocument.mockResolvedValue({
+      premium: { isPremium: true, provider: 'polar', subscriptionState: 'ACTIVE' },
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+    await waitFor(() => {
+      expect(result.current.premiumSource).toBe('cached');
+      expect(result.current.premiumProvider).toBe('polar');
+    });
+
+    mockPurchasePackage.mockClear();
+
+    let purchaseResult = true;
+    await act(async () => {
+      purchaseResult = await result.current.purchasePremium('monthly');
+    });
+
+    expect(purchaseResult).toBe(false);
+    expect(mockPurchasePackage).not.toHaveBeenCalled();
+  });
+
+  it('does not block purchasePremium for an expired Polar subscription', async () => {
+    mockGetCustomerInfo.mockResolvedValue(makeCustomerInfo(false));
+    mockLogIn.mockResolvedValue({ customerInfo: makeCustomerInfo(false), created: false });
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      onNext(
+        createSnapshot({
+          isPremium: false,
+          provider: 'polar',
+          subscriptionState: 'EXPIRED',
+        })
+      );
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+    await waitFor(() => expect(result.current.prices.monthly).toBe('$3.00'));
+
+    let purchaseResult = false;
+    await act(async () => {
+      purchaseResult = await result.current.purchasePremium('monthly');
+    });
+
+    expect(mockPurchasePackage).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: '$rc_monthly' })
+    );
+    expect(purchaseResult).toBe(true);
+  });
+
+  it('does not block purchasePremium for a RevenueCat premium subscriber', async () => {
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      onNext(
+        createSnapshot({
+          isPremium: true,
+          provider: 'revenuecat',
+          subscriptionState: 'ACTIVE',
+        })
+      );
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+    await waitFor(() => expect(result.current.prices.monthly).toBe('$3.00'));
+
+    let purchaseResult = false;
+    await act(async () => {
+      purchaseResult = await result.current.purchasePremium('monthly');
+    });
+
+    expect(mockPurchasePackage).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: '$rc_monthly' })
+    );
+    expect(purchaseResult).toBe(true);
+  });
 });
