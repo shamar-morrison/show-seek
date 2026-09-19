@@ -1,5 +1,6 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
+import { toMillis } from '@/src/utils/timestamps';
 import { getSignedInUser } from '@/src/services/serviceSupport';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
@@ -202,7 +203,7 @@ export async function resolveMissingRuntimes(
     }
   });
   showItems.forEach((arr, showId) => {
-    const latest = Math.max(...arr.map((i) => i.addedAt));
+    const latest = Math.max(...arr.map((i) => toMillis(i.addedAt) ?? 0));
     showWatchedAt.set(showId, Math.max(showWatchedAt.get(showId) ?? 0, latest));
   });
 
@@ -216,7 +217,7 @@ export async function resolveMissingRuntimes(
       (id): Lookup => ({
         kind: 'movie',
         id,
-        recency: Math.max(...(movieItems.get(id) ?? []).map((i) => i.addedAt)),
+        recency: Math.max(...(movieItems.get(id) ?? []).map((i) => toMillis(i.addedAt) ?? 0)),
       })
     ),
   ]

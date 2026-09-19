@@ -24,6 +24,7 @@ import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiS
 import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
+import { compareAddedAt } from '@/src/utils/timestamps';
 import { ListMediaItem } from '@/src/services/ListService';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -110,7 +111,7 @@ export default function WatchStatusDetailScreen() {
 
       switch (sortState.option) {
         case 'recentlyAdded':
-          return (a.addedAt - b.addedAt) * direction;
+          return compareAddedAt(a, b, direction);
         case 'releaseDate': {
           const dateA = a.release_date || a.first_air_date || '';
           const dateB = b.release_date || b.first_air_date || '';

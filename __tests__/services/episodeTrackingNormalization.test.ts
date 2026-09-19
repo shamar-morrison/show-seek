@@ -1,4 +1,5 @@
-import { normalizeEpisodeTrackingDoc, toMillis } from '@/src/services/episodeTrackingNormalization';
+import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
+import { compareAddedAt, toMillis } from '@/src/utils/timestamps';
 
 describe('episodeTrackingNormalization', () => {
   it('normalizes sparse Trakt docs and derives missing identifiers from the episode key and doc id', () => {
@@ -153,5 +154,47 @@ describe('toMillis', () => {
     expect(toMillis({})).toBeNull();
     expect(toMillis([])).toBeNull();
     expect(toMillis({ toMillis: () => Number.NaN })).toBeNull();
+  });
+});
+
+describe('compareAddedAt', () => {
+  const oldest = 1700000000000;
+  const middle = 1750000000000;
+  const newest = 1770000000000;
+
+  it('sorts mixed numbers and Timestamps together in both directions', () => {
+    const items = [
+      { id: 'ts-new', addedAt: { toMillis: () => newest } },
+      { id: 'num-old', addedAt: oldest },
+      { id: 'num-new', addedAt: newest },
+      { id: 'ts-mid', addedAt: { toMillis: () => middle } },
+      { id: 'null', addedAt: null },
+    ];
+
+    const ascending = [...items].sort((a, b) => compareAddedAt(a, b, 1));
+    expect(ascending.map((item) => item.id)).toEqual([
+      'null',
+      'num-old',
+      'ts-mid',
+      'ts-new',
+      'num-new',
+    ]);
+
+    const descending = [...items].sort((a, b) => compareAddedAt(a, b, -1));
+    expect(descending.map((item) => item.id)).toEqual([
+      'ts-new',
+      'num-new',
+      'ts-mid',
+      'num-old',
+      'null',
+    ]);
+  });
+
+  it('keeps pure-number ordering identical to raw subtraction', () => {
+    const a = { addedAt: 100 };
+    const b = { addedAt: 200 };
+    expect(compareAddedAt(a, b, 1)).toBe(100 - 200);
+    expect(compareAddedAt(a, b, -1)).toBe((100 - 200) * -1);
+    expect(compareAddedAt(a, a, 1)).toBe(0);
   });
 });

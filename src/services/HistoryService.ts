@@ -1,6 +1,7 @@
 import i18n from '../i18n';
-import { normalizeEpisodeTrackingDoc, toMillis } from './episodeTrackingNormalization';
+import { normalizeEpisodeTrackingDoc } from './episodeTrackingNormalization';
 import type { WatchedEpisode } from '../types/episodeTracking';
+import { toMillis } from '../utils/timestamps';
 import type {
   ActivityItem,
   HistoryData,
