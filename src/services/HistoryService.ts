@@ -69,8 +69,8 @@ class HistoryService {
    */
   private getMonthsAgoTimestamp(months: number): number {
     const date = new Date();
-    date.setMonth(date.getMonth() - months);
     date.setDate(1);
+    date.setMonth(date.getMonth() - months);
     date.setHours(0, 0, 0, 0);
     return date.getTime();
   }

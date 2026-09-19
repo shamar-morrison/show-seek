@@ -250,4 +250,103 @@ describe('HistoryService watch time', () => {
     const detail = await historyService.fetchMonthDetail('2026-03', {});
     expect(detail?.stats.totalWatchMinutes).toBe(165);
   });
+
+  // Six-month cutoff must not overflow when the current day does not exist
+  // in the target month. Each case dates one stamped movie exactly at the
+  // expected cutoff (00:00 local on the 1st); with the old setMonth-first
+  // ordering the cutoff lands a month late and the item is excluded (0 min).
+  // Local-time constructors keep these independent of machine timezone.
+  it.each([
+    ['Aug 29 non-leap', [2025, 7, 29], [2025, 1]],
+    ['Aug 30 non-leap', [2025, 7, 30], [2025, 1]],
+    ['Aug 31 non-leap', [2025, 7, 31], [2025, 1]],
+    ['Aug 30 leap', [2024, 7, 30], [2024, 1]],
+    ['Aug 31 leap', [2024, 7, 31], [2024, 1]],
+    ['Mar 31', [2025, 2, 31], [2024, 8]],
+    ['May 31', [2025, 4, 31], [2024, 10]],
+    ['Oct 31', [2025, 9, 31], [2025, 3]],
+    ['Dec 31', [2025, 11, 31], [2025, 5]],
+    ['Sep 18 control', [2025, 8, 18], [2025, 2]],
+  ] as Array<[string, [number, number, number], [number, number]]>)(
+    'does not overflow the cutoff for %s',
+    async (_label, nowParts, cutoffParts) => {
+      jest.setSystemTime(new Date(nowParts[0], nowParts[1], nowParts[2], 12));
+      const cutoffMs = new Date(cutoffParts[0], cutoffParts[1], 1).getTime();
+      mockFetchUserCollection.mockImplementation(
+        async (
+          subcollectionPath: string[],
+          mapFn: (snapshot: { docs: { id: string; data: () => Record<string, unknown> }[] }) => unknown[]
+        ) => {
+          if (subcollectionPath[0] === 'episode_tracking') {
+            return mapFn({ docs: [] });
+          }
+          if (subcollectionPath[0] === 'ratings') {
+            return mapFn({ docs: [] });
+          }
+          if (subcollectionPath[0] === 'lists') {
+            return mapFn({
+              docs: [
+                buildSnapshotDoc('already-watched', {
+                  name: 'Already Watched',
+                  items: {
+                    'movie-101': {
+                      id: 101,
+                      media_type: 'movie',
+                      title: 'Boundary Movie',
+                      addedAt: cutoffMs,
+                      runtimeMinutes: 60,
+                    },
+                  },
+                }),
+              ],
+            });
+          }
+          return [];
+        }
+      );
+
+      const result = await historyService.fetchUserHistory({});
+      expect(result.totalWatchMinutes).toBe(60);
+    }
+  );
+
+  it('counts a Feb 15 item when now is late August', async () => {
+    jest.setSystemTime(new Date(2025, 7, 31, 12));
+    const midFebruary = new Date(2025, 1, 15, 12).getTime();
+    mockFetchUserCollection.mockImplementation(
+      async (
+        subcollectionPath: string[],
+        mapFn: (snapshot: { docs: { id: string; data: () => Record<string, unknown> }[] }) => unknown[]
+      ) => {
+        if (subcollectionPath[0] === 'episode_tracking') {
+          return mapFn({ docs: [] });
+        }
+        if (subcollectionPath[0] === 'ratings') {
+          return mapFn({ docs: [] });
+        }
+        if (subcollectionPath[0] === 'lists') {
+          return mapFn({
+            docs: [
+              buildSnapshotDoc('already-watched', {
+                name: 'Already Watched',
+                items: {
+                  'movie-101': {
+                    id: 101,
+                    media_type: 'movie',
+                    title: 'February Movie',
+                    addedAt: midFebruary,
+                    runtimeMinutes: 90,
+                  },
+                },
+              }),
+            ],
+          });
+        }
+        return [];
+      }
+    );
+
+    const result = await historyService.fetchUserHistory({});
+    expect(result.totalWatchMinutes).toBe(90);
+  });
 });
