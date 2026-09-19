@@ -6,7 +6,7 @@ import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
 import { requireSignedInUser } from '@/src/services/serviceSupport';
 import { WatchInstance } from '@/src/types/watchedMovies';
-import { createTimeout } from '@/src/utils/timeout';
+import { raceWithTimeout } from '@/src/utils/timeout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
@@ -201,16 +201,13 @@ export const useClearWatches = (movieId: number) => {
 
       const watchesRef = collection(db, `users/${currentUserId}/watched_movies/${movieId}/watches`);
 
-      const snapshot = (await Promise.race([
+      const snapshot = (await raceWithTimeout(
         auditedGetDocs(watchesRef, {
           path: `users/${currentUserId}/watched_movies/${movieId}/watches`,
           queryKey: 'watchedMoviesByMovie',
           callsite: 'useWatchedMovies.useClearWatches',
-        }),
-        createTimeout(10000),
-      ])) as Awaited<
-        ReturnType<typeof getDocs>
-      >;
+        })
+      )) as Awaited<ReturnType<typeof getDocs>>;
 
       if (snapshot.empty) return;
 
@@ -226,7 +223,7 @@ export const useClearWatches = (movieId: number) => {
           batch.delete(doc.ref);
         });
 
-        await Promise.race([batch.commit(), createTimeout(10000)]);
+        await raceWithTimeout(batch.commit());
       }
 
       await syncCollectionTrackingAfterUnwatch(movieId);
@@ -279,14 +276,13 @@ export const useDeleteWatch = (movieId: number) => {
       await deleteDoc(watchRef);
 
       const watchesRef = collection(db, `users/${currentUserId}/watched_movies/${movieId}/watches`);
-      const remainingSnapshot = (await Promise.race([
+      const remainingSnapshot = (await raceWithTimeout(
         auditedGetDocs(watchesRef, {
           path: `users/${currentUserId}/watched_movies/${movieId}/watches`,
           queryKey: 'watchedMoviesByMovie',
           callsite: 'useWatchedMovies.useDeleteWatch',
-        }),
-        createTimeout(10000),
-      ])) as Awaited<ReturnType<typeof getDocs>>;
+        })
+      )) as Awaited<ReturnType<typeof getDocs>>;
 
       if (remainingSnapshot.empty) {
         await syncCollectionTrackingAfterUnwatch(movieId);
