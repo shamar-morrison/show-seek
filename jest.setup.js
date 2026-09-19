@@ -527,3 +527,35 @@ jest.mock('react-native-safe-area-context', () => {
     SafeAreaView: React.forwardRef((props, ref) => React.createElement(View, { ...props, ref })),
   };
 });
+
+// Track real timers per test file so a stray timeout armed in one file can
+// never fire during a later file in the same worker (jest-circus would
+// attribute the resulting unhandled rejection to whatever test is running).
+// Only real timers are tracked: scopes using jest.useFakeTimers() bypass this
+// wrapper entirely, and jest.useRealTimers() restores it, because it restores
+// whatever globals were in place when fake timers were enabled.
+const pendingRealTimers = new Set();
+const nativeSetTimeout = global.setTimeout.bind(global);
+const nativeClearTimeout = global.clearTimeout.bind(global);
+
+global.setTimeout = (fn, ms, ...args) => {
+  const id = nativeSetTimeout(fn, ms, ...args);
+  pendingRealTimers.add(id);
+  return id;
+};
+
+global.clearTimeout = (id) => {
+  pendingRealTimers.delete(id);
+  return nativeClearTimeout(id);
+};
+
+afterAll(() => {
+  for (const id of pendingRealTimers) {
+    try {
+      nativeClearTimeout(id);
+    } catch {
+      // Best-effort: the timer may already have fired.
+    }
+  }
+  pendingRealTimers.clear();
+});
