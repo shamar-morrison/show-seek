@@ -19,7 +19,7 @@ const toInteger = (value: unknown): number | null => {
   return null;
 };
 
-const toMillis = (value: unknown): number | null => {
+export const toMillis = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
   }

@@ -1,5 +1,5 @@
 import i18n from '../i18n';
-import { normalizeEpisodeTrackingDoc } from './episodeTrackingNormalization';
+import { normalizeEpisodeTrackingDoc, toMillis } from './episodeTrackingNormalization';
 import type { WatchedEpisode } from '../types/episodeTracking';
 import type {
   ActivityItem,
@@ -365,16 +365,17 @@ class HistoryService {
     lists.forEach((list) => {
       if (list.items) {
         Object.entries(list.items).forEach(([itemKey, item]) => {
-          if (item.addedAt && item.addedAt >= cutoffTimestamp) {
+          const addedAtMillis = toMillis(item.addedAt);
+          if (addedAtMillis !== null && addedAtMillis >= cutoffTimestamp) {
             listItems.push({
-              timestamp: item.addedAt,
+              timestamp: addedAtMillis,
               genreIds: item.genre_ids,
               listName: list.name,
             });
             // Track already-watched items for watched count
             if (list.id === 'already-watched') {
               alreadyWatchedItems.push({
-                timestamp: item.addedAt,
+                timestamp: addedAtMillis,
                 listId: list.id,
                 itemKey,
                 mediaType: item.media_type,
@@ -576,7 +577,8 @@ class HistoryService {
     lists.forEach((list) => {
       if (list.items) {
         Object.values(list.items).forEach((item) => {
-          if (item.addedAt && item.addedAt >= startOfMonth && item.addedAt <= endOfMonth) {
+          const addedAtMillis = toMillis(item.addedAt);
+          if (addedAtMillis !== null && addedAtMillis >= startOfMonth && addedAtMillis <= endOfMonth) {
             // Create a unique key for this media item
             const mediaKey = `${item.media_type}-${item.id}`;
             if (!seenMedia.has(mediaKey)) {
@@ -587,7 +589,7 @@ class HistoryService {
                 mediaType: item.media_type,
                 title: item.title || item.name || 'Unknown',
                 posterPath: item.poster_path,
-                timestamp: item.addedAt,
+                timestamp: addedAtMillis,
                 listName: list.name,
                 genreIds: item.genre_ids,
                 releaseDate: item.release_date || item.first_air_date || null,
@@ -650,7 +652,8 @@ class HistoryService {
     const stampedDetailMinutes = new Map<string, number>();
     if (alreadyWatchedList?.items) {
       Object.entries(alreadyWatchedList.items).forEach(([itemKey, item]) => {
-        if (item.addedAt && item.addedAt >= startOfMonth && item.addedAt <= endOfMonth) {
+        const addedAtMillis = toMillis(item.addedAt);
+        if (addedAtMillis !== null && addedAtMillis >= startOfMonth && addedAtMillis <= endOfMonth) {
           alreadyWatchedMediaCount += 1;
           detailAlreadyWatchedRefs.push({ itemKey, mediaType: item.media_type });
           if (item.runtimeMinutes != null && item.runtimeMinutes > 0) {
@@ -661,7 +664,7 @@ class HistoryService {
               itemKey,
               mediaType: item.media_type,
               mediaId: item.id,
-              addedAt: item.addedAt,
+              addedAt: addedAtMillis,
             });
           }
           watchedItems.push({
@@ -670,7 +673,7 @@ class HistoryService {
             mediaType: item.media_type,
             title: item.title || item.name || 'Unknown',
             posterPath: item.poster_path,
-            timestamp: item.addedAt,
+            timestamp: addedAtMillis,
             releaseDate: item.release_date || item.first_air_date || null,
             voteAverage: item.vote_average,
           });

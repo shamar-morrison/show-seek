@@ -1,4 +1,4 @@
-import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
+import { normalizeEpisodeTrackingDoc, toMillis } from '@/src/services/episodeTrackingNormalization';
 
 describe('episodeTrackingNormalization', () => {
   it('normalizes sparse Trakt docs and derives missing identifiers from the episode key and doc id', () => {
@@ -121,5 +121,37 @@ describe('episodeTrackingNormalization', () => {
       episodeAirDate: null,
     });
     expect(result!.episodes['1_1']).toBeUndefined();
+  });
+});
+
+describe('toMillis', () => {
+  it('passes finite numbers through unchanged', () => {
+    expect(toMillis(1710000000000)).toBe(1710000000000);
+    expect(toMillis(0)).toBe(0);
+  });
+
+  it('converts Timestamp-like objects via toMillis()', () => {
+    expect(toMillis({ toMillis: () => 1710000000000 })).toBe(1710000000000);
+  });
+
+  it('converts toDate() objects via getTime()', () => {
+    const date = new Date('2026-03-07T12:00:00Z');
+    expect(toMillis({ toDate: () => date })).toBe(date.getTime());
+  });
+
+  it('converts numeric strings', () => {
+    expect(toMillis('1710000000000')).toBe(1710000000000);
+  });
+
+  it('returns null for null, undefined, zero-width and garbage input', () => {
+    expect(toMillis(null)).toBeNull();
+    expect(toMillis(undefined)).toBeNull();
+    expect(toMillis('')).toBeNull();
+    expect(toMillis('not-a-date')).toBeNull();
+    expect(toMillis(Number.NaN)).toBeNull();
+    expect(toMillis(Number.POSITIVE_INFINITY)).toBeNull();
+    expect(toMillis({})).toBeNull();
+    expect(toMillis([])).toBeNull();
+    expect(toMillis({ toMillis: () => Number.NaN })).toBeNull();
   });
 });
