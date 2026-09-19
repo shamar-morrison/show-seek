@@ -32,9 +32,14 @@ jest.mock('@/src/services/CollectionTrackingService', () => ({
   },
 }));
 
-jest.mock('@/src/utils/timeout', () => ({
-  createTimeout: jest.fn(() => new Promise<never>(() => {})),
-}));
+jest.mock('@/src/utils/timeout', () => {
+  const actual = jest.requireActual('@/src/utils/timeout');
+  return {
+    createTimeout: (...args: unknown[]) =>
+      (actual.createTimeout as (...a: unknown[]) => Promise<never>)(...args),
+    raceWithTimeout: actual.raceWithTimeout,
+  };
+});
 
 function createWrapper(client: QueryClient) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
@@ -347,5 +352,78 @@ describe('useWatchedMovies mutations', () => {
     expect(deleteDoc).not.toHaveBeenCalled();
     expect(updateDoc).not.toHaveBeenCalled();
     expect(writeBatch).not.toHaveBeenCalled();
+  });
+
+  it('leaves no timer behind after the operation resolves', async () => {
+    jest.useFakeTimers();
+    const realSetTimeout = global.setTimeout.bind(global);
+    const realClearTimeout = global.clearTimeout.bind(global);
+    const createdTenSecondTimers: unknown[] = [];
+    const clearedTimerIds: unknown[] = [];
+    const setSpy = jest
+      .spyOn(global, 'setTimeout')
+      .mockImplementation(((fn: (...args: any[]) => void, ms?: number, ...args: any[]) => {
+        const id = realSetTimeout(fn, ms as number, ...args);
+        if (ms === 10_000) {
+          createdTenSecondTimers.push(id);
+        }
+        return id;
+      }) as typeof setTimeout);
+    const clearSpy = jest
+      .spyOn(global, 'clearTimeout')
+      .mockImplementation(((id: unknown) => {
+        clearedTimerIds.push(id);
+        realClearTimeout(id as NodeJS.Timeout);
+      }) as typeof clearTimeout);
+    try {
+      (getDocs as jest.Mock).mockResolvedValueOnce(createSnapshot([]));
+      const client = createQueryClient();
+      const { result } = renderHook(() => useClearWatches(999), {
+        wrapper: createWrapper(client),
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync();
+      });
+
+      // The race timer must have been armed and then cancelled; unrelated
+      // short timers owned by other libraries are ignored.
+      expect(createdTenSecondTimers.length).toBeGreaterThan(0);
+      expect(
+        createdTenSecondTimers.every((id) => clearedTimerIds.includes(id))
+      ).toBe(true);
+    } finally {
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
+  it('rejects with Request timed out when the operation hangs', async () => {
+    jest.useFakeTimers();
+    try {
+      (getDocs as jest.Mock).mockReturnValueOnce(new Promise(() => {}));
+      const client = createQueryClient();
+      const { result } = renderHook(() => useClearWatches(999), {
+        wrapper: createWrapper(client),
+      });
+
+      let thrown: unknown;
+      act(() => {
+        void result.current.mutateAsync().catch((error) => {
+          thrown = error;
+        });
+      });
+      // Let the mutation start so the race timer is armed before advancing.
+      await act(async () => {});
+      act(() => {
+        jest.advanceTimersByTime(10_000);
+      });
+      await act(async () => {});
+
+      expect((thrown as Error | undefined)?.message).toBe('Request timed out');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
