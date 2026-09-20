@@ -1391,7 +1391,8 @@
     "upgradeToPremium": "Passer à Premium",
     "premiumTitle": "Suivez votre calendrier de sorties",
     "premiumDescription": "Ne manquez plus jamais la sortie d'une saison, d'un épisode ou d'un film. \n Obtenez une chronologie personnalisée de tous vos prochains films et séries.",
-    "updatingEpisodes": "Mise à jour des épisodes TV..."
+    "updatingEpisodes": "Mise à jour des épisodes TV...",
+    "maxSources": "Vous pouvez sélectionner jusqu'à 6 listes"
   },
   "authGuards": {
     "addFavoritePeople": "Connectez-vous pour ajouter des personnes aux favoris",

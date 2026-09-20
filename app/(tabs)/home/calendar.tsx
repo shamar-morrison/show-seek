@@ -9,8 +9,10 @@ import {
   type SegmentedControlOption,
 } from '@/src/components/ui/SegmentedControl';
 import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { filterCustomLists } from '@/src/constants/lists';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useLists } from '@/src/hooks/useLists';
 import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
@@ -20,7 +22,9 @@ import {
   CalendarMediaFilter,
   CalendarSortMode,
   CalendarSourceFilter,
+  clampCalendarSources,
   filterUpcomingReleases,
+  isDefaultCalendarSourceSelection,
 } from '@/src/utils/calendarViewModel';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
@@ -48,12 +52,25 @@ export default function CalendarScreen() {
 
   const { allReleases, isLoading, isLoadingEnrichment, isRefreshing, refresh } =
     useUpcomingReleases();
+  const { data: lists } = useLists();
+
+  const customSources = useMemo(
+    () =>
+      filterCustomLists(lists ?? []).map((list) => ({
+        id: list.id,
+        name: list.name,
+      })),
+    [lists]
+  );
 
   useEffect(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
-  const hasActiveSourceFilters = selectedSources.length !== CALENDAR_SOURCE_FILTERS.length;
+  const hasActiveSourceFilters = useMemo(
+    () => !isDefaultCalendarSourceSelection(selectedSources),
+    [selectedSources]
+  );
   const hasActiveSort = sortMode !== 'soonest';
 
   useLayoutEffect(() => {
@@ -233,8 +250,9 @@ export default function CalendarScreen() {
       <CalendarSourceFilterModal
         visible={sourceModalVisible}
         selectedSources={selectedSources}
+        customSources={customSources}
         onClose={() => setSourceModalVisible(false)}
-        onApply={setSelectedSources}
+        onApply={(sources) => setSelectedSources(clampCalendarSources(sources))}
       />
       <CalendarSortModal
         visible={sortModalVisible}

@@ -10,7 +10,13 @@ export const CALENDAR_SOURCE_FILTERS = [
   'reminders',
 ] as const;
 
-export type CalendarSourceFilter = (typeof CALENDAR_SOURCE_FILTERS)[number];
+/** Virtual source for reminders; never counts toward the list selection cap. */
+export const REMINDERS_SOURCE_FILTER = 'reminders';
+
+/** Maximum number of list sources selectable on the release calendar. */
+export const MAX_CALENDAR_SOURCE_SELECTIONS = 6;
+
+export type CalendarSourceFilter = string;
 export type CalendarMediaFilter = 'all' | 'movie' | 'tv';
 export type CalendarSortMode = 'soonest' | 'alphabetical' | 'type';
 
@@ -112,19 +118,53 @@ export function getCalendarDayOffset(date: Date, referenceDate: Date = new Date(
 }
 
 export function getCalendarReleaseSources(release: UpcomingRelease): CalendarSourceFilter[] {
-  const sources = new Set<CalendarSourceFilter>();
-
-  release.sourceLists.forEach((source) => {
-    if (CALENDAR_SOURCE_FILTERS.includes(source as CalendarSourceFilter)) {
-      sources.add(source as CalendarSourceFilter);
-    }
-  });
+  // Releases only ever carry tracked list IDs (defaults + custom lists),
+  // so every source listed here is a valid filter value.
+  const sources = new Set<CalendarSourceFilter>(release.sourceLists);
 
   if (release.isReminder) {
-    sources.add('reminders');
+    sources.add(REMINDERS_SOURCE_FILTER);
   }
 
   return Array.from(sources);
+}
+
+/**
+ * Clamp a source selection to the list cap, preserving order and removing
+ * duplicates. The reminders source is always kept and never counts toward
+ * the cap.
+ */
+export function clampCalendarSources(sources: CalendarSourceFilter[]): CalendarSourceFilter[] {  const seen = new Set<CalendarSourceFilter>();
+  const clamped: CalendarSourceFilter[] = [];
+  let listCount = 0;
+
+  for (const source of sources) {
+    if (seen.has(source)) {
+      continue;
+    }
+    seen.add(source);
+
+    if (source === REMINDERS_SOURCE_FILTER) {
+      clamped.push(source);
+      continue;
+    }
+
+    if (listCount < MAX_CALENDAR_SOURCE_SELECTIONS) {
+      clamped.push(source);
+      listCount += 1;
+    }
+  }
+
+  return clamped;
+}
+
+/** Whether a source selection exactly matches the default source set. */
+export function isDefaultCalendarSourceSelection(sources: readonly CalendarSourceFilter[]): boolean {
+  if (sources.length !== CALENDAR_SOURCE_FILTERS.length) {
+    return false;
+  }
+
+  return CALENDAR_SOURCE_FILTERS.every((source) => sources.includes(source));
 }
 
 export function filterUpcomingReleases(

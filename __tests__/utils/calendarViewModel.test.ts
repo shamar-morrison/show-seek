@@ -2,7 +2,10 @@ import type { UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
 import {
   buildCalendarPresentation,
   buildCalendarPresentations,
+  clampCalendarSources,
   filterUpcomingReleases,
+  getCalendarReleaseSources,
+  isDefaultCalendarSourceSelection,
 } from '@/src/utils/calendarViewModel';
 
 function createRelease({
@@ -257,5 +260,106 @@ describe('calendarViewModel', () => {
     expect(presentations.all.totalContentCount).toBe(3);
     expect(presentations.movie.totalContentCount).toBe(2);
     expect(presentations.tv.totalContentCount).toBe(1);
+  });
+
+  it('keeps custom list sources and the reminders rule when resolving sources', () => {
+    expect(
+      getCalendarReleaseSources(
+        createRelease({
+          id: 1,
+          releaseDate: new Date(2026, 0, 10),
+          sourceLists: ['road-trip'],
+        })
+      )
+    ).toEqual(['road-trip']);
+
+    expect(
+      getCalendarReleaseSources(
+        createRelease({
+          id: 2,
+          releaseDate: new Date(2026, 0, 10),
+          sourceLists: ['watchlist', 'road-trip'],
+          isReminder: true,
+        })
+      )
+    ).toEqual(['watchlist', 'road-trip', 'reminders']);
+  });
+
+  it('filters releases by custom list sources', () => {
+    const releases = [
+      createRelease({
+        id: 1,
+        releaseDate: new Date(2026, 0, 10),
+        sourceLists: ['road-trip'],
+      }),
+      createRelease({
+        id: 2,
+        releaseDate: new Date(2026, 0, 10),
+        sourceLists: ['watchlist'],
+      }),
+    ];
+
+    expect(
+      filterUpcomingReleases(releases, {
+        mediaFilter: 'all',
+        selectedSources: ['road-trip'],
+      }).map((release) => release.id)
+    ).toEqual([1]);
+  });
+
+  it('clamps list selections to six while always keeping reminders', () => {
+    expect(
+      clampCalendarSources([
+        'watchlist',
+        'favorites',
+        'currently-watching',
+        'a',
+        'b',
+        'c',
+        'd',
+        'reminders',
+      ])
+    ).toEqual([
+      'watchlist',
+      'favorites',
+      'currently-watching',
+      'a',
+      'b',
+      'c',
+      'reminders',
+    ]);
+
+    expect(clampCalendarSources(['reminders'])).toEqual(['reminders']);
+    expect(clampCalendarSources(['a', 'a', 'b'])).toEqual(['a', 'b']);
+  });
+
+  it('detects the default source selection regardless of order', () => {
+    expect(
+      isDefaultCalendarSourceSelection([
+        'watchlist',
+        'favorites',
+        'currently-watching',
+        'reminders',
+      ])
+    ).toBe(true);
+    expect(
+      isDefaultCalendarSourceSelection([
+        'reminders',
+        'currently-watching',
+        'favorites',
+        'watchlist',
+      ])
+    ).toBe(true);
+    expect(
+      isDefaultCalendarSourceSelection(['watchlist', 'favorites'])
+    ).toBe(false);
+    expect(
+      isDefaultCalendarSourceSelection([
+        'watchlist',
+        'favorites',
+        'currently-watching',
+        'road-trip',
+      ])
+    ).toBe(false);
   });
 });

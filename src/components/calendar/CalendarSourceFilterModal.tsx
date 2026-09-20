@@ -1,4 +1,5 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import {
   BORDER_RADIUS,
   COLORS,
@@ -10,12 +11,20 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
-import { CALENDAR_SOURCE_FILTERS, CalendarSourceFilter } from '@/src/utils/calendarViewModel';
+import {
+  CALENDAR_SOURCE_FILTERS,
+  CalendarSourceFilter,
+  MAX_CALENDAR_SOURCE_SELECTIONS,
+  REMINDERS_SOURCE_FILTER,
+} from '@/src/utils/calendarViewModel';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Cancel01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import { MODAL_LIST_HEIGHT_LG } from '@/src/constants/modalLayout';
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -29,6 +38,7 @@ import {
 interface CalendarSourceFilterModalProps {
   visible: boolean;
   selectedSources: CalendarSourceFilter[];
+  customSources?: Array<{ id: string; name: string }>;
   onClose: () => void;
   onApply: (sources: CalendarSourceFilter[]) => void;
 }
@@ -36,11 +46,13 @@ interface CalendarSourceFilterModalProps {
 export function CalendarSourceFilterModal({
   visible,
   selectedSources,
+  customSources = [],
   onClose,
   onApply,
 }: CalendarSourceFilterModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const toastRef = useRef<ToastRef>(null);
   const [localSources, setLocalSources] = useState<CalendarSourceFilter[]>(selectedSources);
 
   useEffect(() => {
@@ -51,17 +63,31 @@ export function CalendarSourceFilterModal({
 
   const sourceOptions = useMemo(
     () => [
-      { key: 'watchlist' as const, label: t('lists.shouldWatch') },
-      { key: 'favorites' as const, label: t('lists.favorites') },
-      { key: 'currently-watching' as const, label: t('lists.watching') },
-      { key: 'reminders' as const, label: t('library.reminders') },
+      { key: 'watchlist', label: t('lists.shouldWatch') },
+      { key: 'favorites', label: t('lists.favorites') },
+      { key: 'currently-watching', label: t('lists.watching') },
+      { key: REMINDERS_SOURCE_FILTER, label: t('library.reminders') },
+      ...customSources.map((list) => ({ key: list.id, label: list.name })),
     ],
-    [t]
+    [customSources, t]
   );
 
+  const selectedListCount = localSources.filter(
+    (source) => source !== REMINDERS_SOURCE_FILTER
+  ).length;
+  const isListCapped = selectedListCount >= MAX_CALENDAR_SOURCE_SELECTIONS;
+
   const toggleSource = (source: CalendarSourceFilter) => {
+    const isSelected = localSources.includes(source);
+
+    if (!isSelected && source !== REMINDERS_SOURCE_FILTER && isListCapped) {
+      toastRef.current?.show(t('calendar.maxSources'));
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+
     setLocalSources((current) =>
-      current.includes(source) ? current.filter((value) => value !== source) : [...current, source]
+      isSelected ? current.filter((value) => value !== source) : [...current, source]
     );
   };
 
@@ -91,19 +117,29 @@ export function CalendarSourceFilterModal({
             </Pressable>
           </View>
 
-          <View style={styles.optionsContainer}>
-            {sourceOptions.map((option) => {
+          <FlatList
+            data={sourceOptions}
+            keyExtractor={(option) => option.key}
+            extraData={localSources}
+            style={styles.optionsList}
+            contentContainerStyle={styles.optionsListContent}
+            showsVerticalScrollIndicator
+            renderItem={({ item: option }) => {
               const isSelected = localSources.includes(option.key);
+              const isDisabled =
+                !isSelected &&
+                option.key !== REMINDERS_SOURCE_FILTER &&
+                isListCapped;
 
               return (
                 <Pressable
-                  key={option.key}
                   style={[
                     styles.optionRow,
                     isSelected && {
                       borderColor: accentColor,
                       backgroundColor: hexToRGBA(accentColor, 0.12),
                     },
+                    isDisabled && styles.disabledOptionRow,
                   ]}
                   onPress={() => toggleSource(option.key)}
                 >
@@ -130,8 +166,8 @@ export function CalendarSourceFilterModal({
                   </View>
                 </Pressable>
               );
-            })}
-          </View>
+            }}
+          />
 
           <View style={styles.actionsRow}>
             <Pressable style={styles.secondaryButton} onPress={handleReset}>
@@ -144,6 +180,7 @@ export function CalendarSourceFilterModal({
               <Text style={styles.primaryButtonText}>{t('common.apply')}</Text>
             </Pressable>
           </View>
+          <Toast ref={toastRef} />
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -151,7 +188,10 @@ export function CalendarSourceFilterModal({
 }
 
 const styles = StyleSheet.create({
-  optionsContainer: {
+  optionsList: {
+    maxHeight: MODAL_LIST_HEIGHT_LG,
+  },
+  optionsListContent: {
     gap: SPACING.s,
   },
   optionRow: {
@@ -164,6 +204,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
     backgroundColor: COLORS.surfaceLight,
+  },
+  disabledOptionRow: {
+    opacity: 0.4,
   },
   optionLabel: {
     color: COLORS.text,

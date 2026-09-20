@@ -12,6 +12,11 @@ const mockPremiumState = {
   isLoading: false,
 };
 
+const mockListsState = {
+  data: [],
+  isLoading: false,
+};
+
 const createRelease = ({
   id,
   mediaType = 'movie',
@@ -55,6 +60,10 @@ jest.mock('@/src/context/PremiumContext', () => ({
 
 jest.mock('@/src/hooks/useUpcomingReleases', () => ({
   useUpcomingReleases: () => mockUpcomingState,
+}));
+
+jest.mock('@/src/hooks/useLists', () => ({
+  useLists: () => mockListsState,
 }));
 
 jest.mock('@/src/components/calendar/ReleaseCalendar', () => ({

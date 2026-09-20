@@ -1437,6 +1437,7 @@
     "comingSoon": "Yakında",
     "seasonEpisode": "{{season}}. sezon {{episode}}. bölüm",
     "filterSources": "Kaynakları filtrele",
+    "maxSources": "En fazla 6 liste seçebilirsiniz",
     "sortReleases": "Yayınları sırala",
     "soonestFirst": "Önce en yakın",
     "alphabetical": "Alfabetik",

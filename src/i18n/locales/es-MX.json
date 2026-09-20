@@ -1327,7 +1327,8 @@
     "premiumDescription": "No te pierdas nunca el estreno de una temporada, episodio o película. \n Obtén una línea temporal personalizada de tus próximos estrenos de películas y series.",
     "updatingEpisodes": "Actualizando episodios de TV...",
     "upgradeForFullExperience": "Actualiza para obtener la experiencia completa",
-    "upgradeToPremium": "Actualizar a Premium"
+    "upgradeToPremium": "Actualizar a Premium",
+    "maxSources": "Puedes seleccionar hasta 6 listas"
   },
   "authGuards": {
     "addFavoritePeople": "Inicia sesión para añadir personas a favoritos",

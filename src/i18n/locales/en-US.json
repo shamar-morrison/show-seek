@@ -1456,7 +1456,8 @@
     "premiumDescription": "Never miss a season, episode or movie release again. \n Get a personalized timeline of all your upcoming movies and TV shows.",
     "updatingEpisodes": "Updating TV episodes...",
     "upgradeForFullExperience": "Upgrade for the full experience",
-    "upgradeToPremium": "Upgrade to Premium"
+    "upgradeToPremium": "Upgrade to Premium",
+    "maxSources": "You can select up to 6 lists"
   },
   "widgets": {
     "widgetType": "Widget Type",

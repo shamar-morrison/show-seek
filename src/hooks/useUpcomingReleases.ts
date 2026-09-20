@@ -1,5 +1,6 @@
 import { Episode, MovieDetails, tmdbApi, TVShowDetails } from '@/src/api/tmdb';
 import { formatMonthYear } from '@/src/components/CustomDatePicker/utils';
+import { isDefaultList } from '@/src/constants/lists';
 import { useAuth } from '@/src/context/auth';
 import { useRegion } from '@/src/context/RegionProvider';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -171,7 +172,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
 
   const isAuthenticated = !!userId;
 
-  // Extract items from watchlist, favorites, and watching lists
+  // Extract items from the default tracked lists plus the user's custom lists
   const listItems = useMemo(() => {
     if (!lists || !isAuthenticated) return [];
     const items: (ListMediaItem & { sourceList: string })[] = [];
@@ -180,7 +181,9 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     const trackedListIds = ['watchlist', 'favorites', 'currently-watching'];
 
     lists.forEach((list) => {
-      if (trackedListIds.includes(list.id)) {
+      const isTrackedDefault = trackedListIds.includes(list.id);
+      const isCustomList = !isDefaultList(list.id);
+      if (isTrackedDefault || isCustomList) {
         Object.values(list.items || {}).forEach((item) => {
           items.push({ ...item, sourceList: list.id });
         });

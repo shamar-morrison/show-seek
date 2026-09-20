@@ -8,3 +8,5 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
  */
 export const SHEET_HEIGHT = SCREEN_HEIGHT * 0.8;
 export const MODAL_LIST_HEIGHT = SHEET_HEIGHT * 0.5;
+/** Taller list cap for modals with many selectable rows (e.g. filter sources). */
+export const MODAL_LIST_HEIGHT_LG = SHEET_HEIGHT * 0.65;
