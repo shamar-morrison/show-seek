@@ -265,17 +265,24 @@ class ListService {
       const now = Date.now();
       const updateTimeout = createTimeoutWithCleanup(10000);
 
+      // Resolve the display name without clobbering stored custom names:
+      // an explicit listName wins, then the canonical default-list name.
+      // A custom list ID (slug) is never used as a name on update, since
+      // that would erase spaces from the stored display name.
+      const defaultList = DEFAULT_LISTS.find((l) => l.id === listId);
+      const resolvedName = listName || defaultList?.name;
+
       // Fast path for existing lists: update without a read.
+      const updateData: Record<string, unknown> = {
+        [`items.${itemKey}`]: itemToAdd,
+        [`items.${getLegacyListItemKey(mediaItem.id)}`]: deleteField(),
+        updatedAt: now,
+      };
+      if (resolvedName) {
+        updateData.name = resolvedName;
+      }
       try {
-        await Promise.race([
-          updateDoc(listRef, {
-            name: listName || listId, // Keep behavior: ensure name exists for system lists
-            [`items.${itemKey}`]: itemToAdd,
-            [`items.${getLegacyListItemKey(mediaItem.id)}`]: deleteField(),
-            updatedAt: now,
-          }),
-          updateTimeout.promise,
-        ]);
+        await Promise.race([updateDoc(listRef, updateData), updateTimeout.promise]);
         void trackAddToList({
           listKind: normalizeListKind(listId),
           mediaType: mediaItem.media_type,
@@ -291,13 +298,15 @@ class ListService {
       }
 
       // Fallback for first write to a missing list doc with a fresh timeout budget.
+      // A first-time doc still needs a name; prefer the explicit/default name
+      // and only fall back to the slug ID when neither is available.
       const createTimeout = createTimeoutWithCleanup(10000);
       try {
         await Promise.race([
           setDoc(
             listRef,
             {
-              name: listName || listId,
+              name: resolvedName || listId,
               items: {
                 [itemKey]: itemToAdd,
               },

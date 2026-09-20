@@ -74,7 +74,7 @@ describe('ListService', () => {
       expect(updateDoc).toHaveBeenCalledWith(
         mockDocRef,
         expect.objectContaining({
-          name: 'watchlist',
+          name: 'Should Watch',
           'items.movie-123': expect.objectContaining({
             id: 123,
             title: 'Test Movie',
@@ -114,7 +114,7 @@ describe('ListService', () => {
       expect(setDoc).toHaveBeenCalledWith(
         mockDocRef,
         expect.objectContaining({
-          name: 'watchlist',
+          name: 'Should Watch',
           items: expect.objectContaining({
             'movie-123': expect.objectContaining({
               id: 123,
@@ -158,7 +158,7 @@ describe('ListService', () => {
       expect(setDoc).toHaveBeenCalledWith(
         mockDocRef,
         expect.objectContaining({
-          name: 'watchlist',
+          name: 'Should Watch',
           items: expect.objectContaining({
             'movie-123': expect.objectContaining({
               id: 123,
@@ -226,6 +226,88 @@ describe('ListService', () => {
 
       await expect(listService.addToList('watchlist', mediaItem)).rejects.toThrow(
         'Please sign in to continue'
+      );
+    });
+
+    it('should not write a name on update when no listName is provided for a custom list', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/foreign-language-films' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      const mediaItem = {
+        id: 123,
+        title: 'Test Movie',
+        poster_path: '/poster.jpg',
+        media_type: 'movie' as const,
+        vote_average: 8.5,
+        release_date: '2024-01-01',
+      };
+
+      await listService.addToList('foreign-language-films', mediaItem);
+
+      expect(updateDoc).toHaveBeenCalledWith(
+        mockDocRef,
+        expect.objectContaining({
+          'items.movie-123': expect.objectContaining({ id: 123 }),
+          updatedAt: expect.any(Number),
+        })
+      );
+      const [, updatePayload] = (updateDoc as jest.Mock).mock.calls[0];
+      expect(updatePayload).not.toHaveProperty('name');
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+
+    it('should write the provided listName on update for a custom list', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/foreign-language-films' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      const mediaItem = {
+        id: 123,
+        title: 'Test Movie',
+        poster_path: '/poster.jpg',
+        media_type: 'movie' as const,
+        vote_average: 8.5,
+        release_date: '2024-01-01',
+      };
+
+      await listService.addToList('foreign-language-films', mediaItem, 'Foreign Language Films');
+
+      expect(updateDoc).toHaveBeenCalledWith(
+        mockDocRef,
+        expect.objectContaining({
+          name: 'Foreign Language Films',
+          'items.movie-123': expect.objectContaining({ id: 123 }),
+          updatedAt: expect.any(Number),
+        })
+      );
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to the slug ID as name on first create without a listName', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/foreign-language-films' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockRejectedValue({ code: 'not-found', message: 'Not found' });
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      const mediaItem = {
+        id: 123,
+        title: 'Test Movie',
+        poster_path: '/poster.jpg',
+        media_type: 'movie' as const,
+        vote_average: 8.5,
+        release_date: '2024-01-01',
+      };
+
+      await listService.addToList('foreign-language-films', mediaItem);
+
+      expect(setDoc).toHaveBeenCalledWith(
+        mockDocRef,
+        expect.objectContaining({
+          name: 'foreign-language-films',
+          createdAt: expect.any(Number),
+        }),
+        { merge: true }
       );
     });
   });
