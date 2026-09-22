@@ -54,7 +54,7 @@ const resolveTargetSeasonNumber = (
   return fallbackSeasonNumber;
 };
 
-const isContinuousNumbering = (
+export const isContinuousNumbering = (
   seasonCounts: Array<[number, number]>,
   lastAiredEpisode: { seasonNumber: number; episodeNumber: number } | null,
   episodesMap: Record<string, WatchedEpisode>,
@@ -100,40 +100,41 @@ const isContinuousNumbering = (
     }
   }
 
-  // Signal 3: Fallback heuristic using lastAiredEpisode
-  // Only trusted when real season data for lastAiredEpisode isn't yet available,
-  // and the target season is either that season or Season 1 (where S1 data cannot disprove continuation).
-  if (
-    lastAiredEpisode &&
-    lastAiredEpisode.seasonNumber > 1 &&
-    (!targetSeasonNumber ||
-      targetSeasonNumber === 1 ||
-      targetSeasonNumber === lastAiredEpisode.seasonNumber) &&
-    (!seasonsData || !seasonsData.has(lastAiredEpisode.seasonNumber))
-  ) {
+  // Signal 3: Fallback checks using lastAiredEpisode
+  if (lastAiredEpisode && lastAiredEpisode.seasonNumber > 1) {
     const currentSeasonCount =
       seasonCounts.find(([seasonNum]) => seasonNum === lastAiredEpisode.seasonNumber)?.[1] ?? 0;
 
     // Definitive continuous proof: episode number exceeds the current season's total episode count (e.g. S3 count 12, ep 148).
+    // This comparison is self-contained proof independent of which season the user is currently targeting or pending fetch state.
     if (currentSeasonCount > 0 && lastAiredEpisode.episodeNumber > currentSeasonCount) {
       return true;
     }
 
-    let priorCountsSum = 0;
-    for (const [seasonNum, count] of seasonCounts) {
-      if (seasonNum < lastAiredEpisode.seasonNumber) {
-        priorCountsSum += count;
-      } else {
-        break;
-      }
-    }
-
     // Heuristic for unfetched multi-season continuous shows (e.g. HxH S2 count 74, ep 65 where S1 count is 62):
-    // Episode number must exceed priorCountsSum AND priorCountsSum must be substantial (>= 30).
-    // In standard shows with small early seasons (e.g. S1 count 5, S2 count 20, S2E6 airs),
-    // local episode numbers like 6 routinely exceed priorCountsSum (5), so priorCountsSum < 30 is not trusted.
-    if (priorCountsSum >= 30 && lastAiredEpisode.episodeNumber > priorCountsSum) {
-      return true;
+    // Only trusted when real season data for lastAiredEpisode isn't yet available,
+    // and the target season is either that season or Season 1 (where S1 data cannot disprove continuation).
+    if (
+      (!targetSeasonNumber ||
+        targetSeasonNumber === 1 ||
+        targetSeasonNumber === lastAiredEpisode.seasonNumber) &&
+      (!seasonsData || !seasonsData.has(lastAiredEpisode.seasonNumber))
+    ) {
+      let priorCountsSum = 0;
+      for (const [seasonNum, count] of seasonCounts) {
+        if (seasonNum < lastAiredEpisode.seasonNumber) {
+          priorCountsSum += count;
+        } else {
+          break;
+        }
+      }
+
+      // Episode number must exceed priorCountsSum AND priorCountsSum must be substantial (>= 30).
+      // In standard shows with small early seasons (e.g. S1 count 5, S2 count 20, S2E6 airs),
+      // local episode numbers like 6 routinely exceed priorCountsSum (5), so priorCountsSum < 30 is not trusted.
+      if (priorCountsSum >= 30 && lastAiredEpisode.episodeNumber > priorCountsSum) {
+        return true;
+      }
     }
   }
 

@@ -28,7 +28,7 @@ jest.mock('@/src/api/tmdb', () => ({
   },
 }));
 
-import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
+import { isContinuousNumbering, useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import i18n from '@/src/i18n';
 
 function createQueryClient() {
@@ -1465,4 +1465,103 @@ describe('useCurrentlyWatching', () => {
       })
     );
   });
+
+  it('detects continuous numbering via unconditional current-season-count check when target is S1 and lastAired is in S3', async () => {
+    // Direct check: Verify isContinuousNumbering evaluates true regardless of target season
+    expect(
+      isContinuousNumbering(
+        [
+          [1, 62],
+          [2, 74],
+          [3, 12],
+        ],
+        { seasonNumber: 3, episodeNumber: 148 },
+        {},
+        new Map(),
+        1 // target season 1
+      )
+    ).toBe(true);
+
+    expect(
+      isContinuousNumbering(
+        [
+          [1, 62],
+          [2, 74],
+          [3, 12],
+        ],
+        { seasonNumber: 3, episodeNumber: 148 },
+        {},
+        new Map(),
+        2 // target season 2 (previously returned false due to target-season gating)
+      )
+    ).toBe(true);
+
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Continuous Multi-Season Show',
+          posterPath: null,
+          lastUpdated: 5000,
+        },
+        episodes: {
+          ...buildWatchedRange(903, 1, 1, 10),
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 903,
+        status: 'Returning Series',
+        seasons: [
+          { season_number: 1, episode_count: 62, air_date: '2020-01-01' },
+          { season_number: 2, episode_count: 74, air_date: '2022-01-01' },
+          { season_number: 3, episode_count: 12, air_date: '2026-03-01' },
+        ],
+        last_episode_to_air: {
+          season_number: 3,
+          episode_number: 148,
+          air_date: '2026-03-08',
+        },
+      })
+    );
+    // S1 details loaded (begins at episode 1, 62 episodes)
+    const s1Episodes: Array<Record<string, unknown>> = [];
+    for (let ep = 1; ep <= 62; ep++) {
+      s1Episodes.push({
+        season_number: 1,
+        episode_number: ep,
+        name: `S1 Episode ${ep}`,
+        air_date: '2020-01-01',
+      });
+    }
+    mockGetSeasonDetails.mockResolvedValue(buildSeasonDetails(s1Episodes));
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect((result.current.data[0]?.nextEpisode as any)?.title).toBe('S1 Episode 11');
+    });
+
+    // Verify continuous detection via definitive proof (148 > 12):
+    // - totalAiredEpisodes = 148
+    // - remainingAiredEpisodes: S1 (52: 11-62) + S2 continuous (74: 63-136) + S3 continuous (12: 137-148) = 138
+    // - timeRemaining = 138 * 30 min = 4140 min
+    expect(result.current.data[0]).toEqual(
+      expect.objectContaining({
+        tvShowId: 903,
+        percentage: 7, // 10 watched / 148 total
+        timeRemaining: 4140,
+        nextEpisode: {
+          kind: 'unwatched',
+          season: 1,
+          episode: 11,
+          title: 'S1 Episode 11',
+        },
+      })
+    );
+  });
 });
+
