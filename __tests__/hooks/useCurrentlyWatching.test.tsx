@@ -1155,4 +1155,180 @@ describe('useCurrentlyWatching', () => {
       });
     });
   });
+
+  it('treats standard show with later season episode exceeding prior count as standard 1-based numbering when season details pending', async () => {
+    let resolveSeasonDetails!: (value: any) => void;
+    const pendingSeasonDetailsPromise = new Promise((resolve) => {
+      resolveSeasonDetails = resolve;
+    });
+
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Standard Show Later Season',
+          posterPath: null,
+          lastUpdated: 5000,
+        },
+        episodes: {
+          ...buildWatchedRange(805, 1, 1, 5),
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 805,
+        status: 'Returning Series',
+        seasons: [
+          { season_number: 1, episode_count: 5, air_date: '2025-01-01' },
+          { season_number: 2, episode_count: 20, air_date: '2026-03-01' },
+        ],
+        last_episode_to_air: {
+          season_number: 2,
+          episode_number: 6,
+          air_date: '2026-03-08',
+        },
+      })
+    );
+    mockGetSeasonDetails.mockImplementation(() => pendingSeasonDetailsPromise);
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(1);
+    });
+
+    const pendingResult = result.current.data[0];
+    expect(pendingResult).toEqual(
+      expect.objectContaining({
+        tvShowId: 805,
+        percentage: 20,
+        timeRemaining: 180,
+        nextEpisode: {
+          kind: 'unwatched',
+          season: 2,
+          episode: 1,
+          title: i18n.t('media.episodeNumber', { number: 1 }),
+        },
+      })
+    );
+
+    act(() => {
+      resolveSeasonDetails(
+        buildSeasonDetails([
+          { season_number: 2, episode_number: 1, name: 'S2E1 Real Title', air_date: '2026-03-01' },
+          { season_number: 2, episode_number: 2, name: 'S2E2', air_date: '2026-03-02' },
+          { season_number: 2, episode_number: 3, name: 'S2E3', air_date: '2026-03-03' },
+          { season_number: 2, episode_number: 4, name: 'S2E4', air_date: '2026-03-04' },
+          { season_number: 2, episode_number: 5, name: 'S2E5', air_date: '2026-03-05' },
+          { season_number: 2, episode_number: 6, name: 'S2E6', air_date: '2026-03-08' },
+        ])
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.data[0].nextEpisode).toEqual({
+        kind: 'unwatched',
+        season: 2,
+        episode: 1,
+        title: 'S2E1 Real Title',
+      });
+    });
+  });
+
+  it('evaluates pending window behavior for standard show with large season count (S1=30, S2=40, S2E35)', async () => {
+    let resolveSeasonDetails!: (value: any) => void;
+    const pendingSeasonDetailsPromise = new Promise((resolve) => {
+      resolveSeasonDetails = resolve;
+    });
+
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Large Standard Show',
+          posterPath: null,
+          lastUpdated: 5000,
+        },
+        episodes: {
+          ...buildWatchedRange(806, 1, 1, 30),
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 806,
+        status: 'Returning Series',
+        seasons: [
+          { season_number: 1, episode_count: 30, air_date: '2024-01-01' },
+          { season_number: 2, episode_count: 40, air_date: '2026-03-01' },
+        ],
+        last_episode_to_air: {
+          season_number: 2,
+          episode_number: 35,
+          air_date: '2026-03-08',
+        },
+      })
+    );
+    mockGetSeasonDetails.mockImplementation(() => pendingSeasonDetailsPromise);
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(1);
+    });
+
+    const pendingResult = result.current.data[0];
+    // During the pending window before S2 details resolve:
+    // Fallback heuristic flags continuous (35 > 30 && 30 >= 30), guessing S2E31 instead of S2E1
+    expect(pendingResult).toEqual(
+      expect.objectContaining({
+        tvShowId: 806,
+        percentage: 43,
+        timeRemaining: 150, // 5 unwatched (31-35) * 30 min
+        nextEpisode: {
+          kind: 'unwatched',
+          season: 2,
+          episode: 31,
+          title: i18n.t('media.episodeNumber', { number: 31 }),
+        },
+      })
+    );
+
+    // Resolve season details with real TMDB 1-based episodes 1..35
+    const realEpisodes: Array<Record<string, unknown>> = [];
+    for (let ep = 1; ep <= 35; ep++) {
+      realEpisodes.push({
+        season_number: 2,
+        episode_number: ep,
+        name: ep === 1 ? 'S2E1 Real Title' : `Episode ${ep}`,
+        air_date: '2026-03-08',
+      });
+    }
+
+    act(() => {
+      resolveSeasonDetails(buildSeasonDetails(realEpisodes));
+    });
+
+    // Once resolved, Signal 1 overrides: self-corrects to S2E1 with full 35 unwatched episodes (1050 min)
+    await waitFor(() => {
+      expect(result.current.data[0]).toEqual(
+        expect.objectContaining({
+          tvShowId: 806,
+          percentage: 43,
+          timeRemaining: 1050, // 35 unwatched (1-35) * 30 min
+          nextEpisode: {
+            kind: 'unwatched',
+            season: 2,
+            episode: 1,
+            title: 'S2E1 Real Title',
+          },
+        })
+      );
+    });
+  });
 });

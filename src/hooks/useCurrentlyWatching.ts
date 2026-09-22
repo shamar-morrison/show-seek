@@ -38,14 +38,38 @@ const buildSeasonCounts = (showDetails: TVShowDetails): Array<[number, number]> 
     .sort((left, right) => left.season_number - right.season_number)
     .map((season) => [season.season_number, season.episode_count ?? 0]);
 
+const resolveTargetSeasonNumber = (
+  seasonCounts: Array<[number, number]>,
+  episodesMap: Record<string, WatchedEpisode>,
+  fallbackSeasonNumber = 1
+): number => {
+  for (const [seasonNum, count] of seasonCounts) {
+    const watchedInSeason = Object.values(episodesMap).filter(
+      (ep) => ep && ep.seasonNumber === seasonNum
+    ).length;
+    if (watchedInSeason < count) {
+      return seasonNum;
+    }
+  }
+  return fallbackSeasonNumber;
+};
+
 const isContinuousNumbering = (
   seasonCounts: Array<[number, number]>,
   lastAiredEpisode: { seasonNumber: number; episodeNumber: number } | null,
   episodesMap: Record<string, WatchedEpisode>,
-  seasonsData?: Map<number, SeasonDetails>
+  seasonsData?: Map<number, SeasonDetails>,
+  targetSeasonNumber?: number
 ): boolean => {
   // Signal 1: Check fetched season data from TMDB
-  if (seasonsData) {
+  if (seasonsData && seasonsData.size > 0) {
+    if (targetSeasonNumber && seasonsData.has(targetSeasonNumber)) {
+      const targetData = seasonsData.get(targetSeasonNumber);
+      if (targetData?.episodes && targetData.episodes.length > 0) {
+        return targetData.episodes[0].episode_number > 1;
+      }
+    }
+
     for (const [seasonNum, data] of seasonsData.entries()) {
       if (seasonNum > 1 && data.episodes?.length > 0) {
         if (data.episodes[0].episode_number > 1) {
@@ -56,24 +80,35 @@ const isContinuousNumbering = (
   }
 
   // Signal 2: Check watched episodes in episodesMap
-  let priorCount = 0;
+  // Only an episode number exceeding its own season count proves continuous numbering
   for (const [seasonNum, count] of seasonCounts) {
-    if (seasonNum > 1) {
+    if (seasonNum > 1 && count > 0) {
       for (const ep of Object.values(episodesMap)) {
         if (ep && ep.seasonNumber === seasonNum) {
-          if (ep.episodeNumber > count || (priorCount > 0 && ep.episodeNumber > priorCount)) {
+          if (ep.episodeNumber > count) {
             return true;
           }
         }
       }
     }
-    priorCount += count;
   }
 
   // Signal 3: Fallback heuristic using lastAiredEpisode
-  // If lastAiredEpisode is in season > 1 and episodeNumber > sum of prior regular season counts
-  // e.g. S2 last_episode_to_air is 65, where S1 count is 62: 65 > 62.
-  if (lastAiredEpisode && lastAiredEpisode.seasonNumber > 1) {
+  // Only trusted for the specific target season currently being resolved when that season's real episode data isn't yet available.
+  if (
+    lastAiredEpisode &&
+    lastAiredEpisode.seasonNumber > 1 &&
+    (!targetSeasonNumber || targetSeasonNumber === lastAiredEpisode.seasonNumber) &&
+    (!seasonsData || !seasonsData.has(lastAiredEpisode.seasonNumber))
+  ) {
+    const currentSeasonCount =
+      seasonCounts.find(([seasonNum]) => seasonNum === lastAiredEpisode.seasonNumber)?.[1] ?? 0;
+
+    // Definitive continuous proof: episode number exceeds the current season's total episode count (e.g. S3 count 12, ep 148).
+    if (currentSeasonCount > 0 && lastAiredEpisode.episodeNumber > currentSeasonCount) {
+      return true;
+    }
+
     let priorCountsSum = 0;
     for (const [seasonNum, count] of seasonCounts) {
       if (seasonNum < lastAiredEpisode.seasonNumber) {
@@ -82,7 +117,12 @@ const isContinuousNumbering = (
         break;
       }
     }
-    if (priorCountsSum > 0 && lastAiredEpisode.episodeNumber > priorCountsSum) {
+
+    // Heuristic for unfetched multi-season continuous shows (e.g. HxH S2 count 74, ep 65 where S1 count is 62):
+    // Episode number must exceed priorCountsSum AND priorCountsSum must be substantial (>= 30).
+    // In standard shows with small early seasons (e.g. S1 count 5, S2 count 20, S2E6 airs),
+    // local episode numbers like 6 routinely exceed priorCountsSum (5), so priorCountsSum < 30 is not trusted.
+    if (priorCountsSum >= 30 && lastAiredEpisode.episodeNumber > priorCountsSum) {
       return true;
     }
   }
@@ -403,10 +443,17 @@ export function useCurrentlyWatching() {
       const requestSeasonNumbers = new Set<number>();
       const { tvShowId, furthestWatched } = showInfo;
       const showLevelLastAiredEpisode = resolveShowLevelLastAiredEpisode(showDetails, today);
+      const targetSeasonNumber = resolveTargetSeasonNumber(
+        seasonCounts,
+        showInfo.trackingDoc.episodes,
+        furthestWatched.seasonNumber
+      );
       const isContinuous = isContinuousNumbering(
         seasonCounts,
         showLevelLastAiredEpisode,
-        showInfo.trackingDoc.episodes
+        showInfo.trackingDoc.episodes,
+        undefined,
+        targetSeasonNumber
       );
       const nextEpisodeNumbers = getNextEpisodeAfter(
         seasonCounts,
@@ -546,11 +593,17 @@ export function useCurrentlyWatching() {
           return;
         }
 
+        const targetSeasonNumber = resolveTargetSeasonNumber(
+          seasonCounts,
+          trackingDoc.episodes,
+          furthestWatched.seasonNumber
+        );
         const isContinuous = isContinuousNumbering(
           seasonCounts,
           lastAiredEpisode,
           trackingDoc.episodes,
-          seasonsData
+          seasonsData,
+          targetSeasonNumber
         );
 
         // Determine aired episode count for "remaining unwatched aired" calculation
