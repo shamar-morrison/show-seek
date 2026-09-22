@@ -1,4 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 
 const mockSetOptions = jest.fn();
@@ -126,6 +127,14 @@ jest.mock('@/src/components/watching/WatchingShowCard', () => ({
   },
 }));
 
+let latestOptionsSheetProps: any = null;
+jest.mock('@/src/components/watching/WatchProgressOptionsSheet', () => ({
+  WatchProgressOptionsSheet: (props: any) => {
+    latestOptionsSheetProps = props;
+    return null;
+  },
+}));
+
 jest.mock('@/src/components/library/SearchEmptyState', () => ({
   SearchEmptyState: () => null,
 }));
@@ -198,6 +207,9 @@ describe('WatchProgressScreen', () => {
     mockScrollToOffset.mockReset();
     mockIsAccountRequired.mockReturnValue(false);
     latestSortModalProps = null;
+    latestOptionsSheetProps = null;
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     mockUseCurrentlyWatching.mockReturnValue({
       data: mockShows,
       isLoading: false,
@@ -537,5 +549,124 @@ describe('WatchProgressScreen', () => {
     await waitFor(() => {
       expect(mockBulkMutateAsync).toHaveBeenCalledWith({ tvShowIds: [303], hidden: true });
     });
+  });
+
+  it('hides completed shows from Caught Up when the persisted preference is on', async () => {
+    const upcomingShow = {
+      tvShowId: 303,
+      tvShowName: 'Upcoming Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 80,
+      percentage: 90,
+      timeRemaining: 0,
+      isHidden: false,
+      showEnded: false,
+      lastWatchedEpisode: { season: 3, episode: 8, title: 'Episode 8' },
+      nextEpisode: { kind: 'upcoming' as const, season: 3, episode: 9, title: 'Episode 9' },
+    };
+
+    const completeShow = {
+      tvShowId: 404,
+      tvShowName: 'Completed Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 70,
+      percentage: 100,
+      timeRemaining: 0,
+      isHidden: false,
+      showEnded: true,
+      lastWatchedEpisode: { season: 5, episode: 10, title: 'Series Finale' },
+      nextEpisode: { kind: 'complete' as const },
+    };
+
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [upcomingShow, completeShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'watchProgressHideCompleted') return Promise.resolve('true');
+      return Promise.resolve(null);
+    });
+
+    const { getByTestId, getByText, queryByText } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-tabs-tab-caughtUp')).toBeTruthy();
+    });
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-caughtUp'));
+
+    await waitFor(() => {
+      expect(getByText('Upcoming Show')).toBeTruthy();
+    });
+    expect(queryByText('Completed Show')).toBeNull();
+  });
+
+  it('persists the hide-completed toggle to AsyncStorage and filters the list', async () => {
+    const upcomingShow = {
+      tvShowId: 303,
+      tvShowName: 'Upcoming Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 80,
+      percentage: 90,
+      timeRemaining: 0,
+      isHidden: false,
+      showEnded: false,
+      lastWatchedEpisode: { season: 3, episode: 8, title: 'Episode 8' },
+      nextEpisode: { kind: 'upcoming' as const, season: 3, episode: 9, title: 'Episode 9' },
+    };
+
+    const completeShow = {
+      tvShowId: 404,
+      tvShowName: 'Completed Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 70,
+      percentage: 100,
+      timeRemaining: 0,
+      isHidden: false,
+      showEnded: true,
+      lastWatchedEpisode: { season: 5, episode: 10, title: 'Series Finale' },
+      nextEpisode: { kind: 'complete' as const },
+    };
+
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [upcomingShow, completeShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+
+    const { getByTestId, getByText, queryByText } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(latestOptionsSheetProps).not.toBeNull();
+    });
+    expect(latestOptionsSheetProps.hideCompleted).toBe(false);
+
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-caughtUp'));
+
+    await waitFor(() => {
+      expect(getByText('Completed Show')).toBeTruthy();
+    });
+
+    await act(async () => {
+      await latestOptionsSheetProps.onToggleHideCompleted(true);
+    });
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      'watchProgressHideCompleted',
+      'true'
+    );
+
+    await waitFor(() => {
+      expect(getByText('Upcoming Show')).toBeTruthy();
+    });
+    expect(queryByText('Completed Show')).toBeNull();
   });
 });

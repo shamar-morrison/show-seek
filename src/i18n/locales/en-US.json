@@ -450,6 +450,8 @@
     "emptyHiddenWatchProgressHint": "Shows you hide from watch progress will appear here.",
     "emptyCaughtUpProgress": "No caught-up shows",
     "emptyCaughtUpProgressHint": "Shows you're caught up on will appear here.",
+    "hideCompletedSeries": "Hide completed series",
+    "hideCompletedSeriesHint": "Hide ended shows you've finished from Caught Up.",
     "emptyFavoritePeople": "No favorite people",
     "emptyFavoritePeopleHint": "Favorite actors and directors to see them here.",
     "emptySeasonRatings": "No season ratings yet",

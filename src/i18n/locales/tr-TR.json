@@ -450,6 +450,8 @@
     "emptyHiddenWatchProgressHint": "İzleme ilerlemesinden gizlediğin diziler burada görünecek.",
     "emptyCaughtUpProgress": "Güncel dizi yok",
     "emptyCaughtUpProgressHint": "Güncel olduğun diziler burada görünecek.",
+    "hideCompletedSeries": "Tamamlanan dizileri gizle",
+    "hideCompletedSeriesHint": "Bitirdiğin final yapmış dizileri Güncel sekmesinden gizle.",
     "emptyFavoritePeople": "Favori kişi yok",
     "emptyFavoritePeopleHint": "Burada görmek için oyuncu ve yönetmenleri favorilere ekle.",
     "emptySeasonRatings": "Henüz sezon puanı yok",

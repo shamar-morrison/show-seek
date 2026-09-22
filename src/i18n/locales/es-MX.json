@@ -429,6 +429,8 @@
     "emptyHiddenWatchProgressHint": "Las series que ocultes del progreso aparecerán aquí.",
     "emptyCaughtUpProgress": "No hay series al día",
     "emptyCaughtUpProgressHint": "Las series en las que estés al día aparecerán aquí.",
+    "hideCompletedSeries": "Ocultar series terminadas",
+    "hideCompletedSeriesHint": "Oculta de Al día las series finalizadas que ya terminaste.",
     "episodeRatings": "Puntuaciones de episodios",
     "seasonRatings": "Puntuaciones de temporadas",
     "failedToCreateList": "No se pudo crear la lista",

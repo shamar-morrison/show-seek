@@ -10,6 +10,7 @@ import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndic
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
+import { WatchProgressOptionsSheet } from '@/src/components/watching/WatchProgressOptionsSheet';
 import {
   BORDER_RADIUS,
   COLORS,
@@ -37,16 +38,19 @@ import {
   ArrowUpDownIcon,
   Cancel01Icon,
   Search01Icon,
+  SlidersHorizontalIcon,
   Tv01Icon,
   ViewIcon,
   ViewOffSlashIcon,
 } from '@hugeicons/core-free-icons';
+import type { WatchProgressOptionsSheetRef } from '@/src/components/watching/WatchProgressOptionsSheet';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
+const HIDE_COMPLETED_STORAGE_KEY = 'watchProgressHideCompleted';
 const ALLOWED_SORT_OPTIONS: SortOption[] = ['progress', 'alphabetical', 'lastWatched'];
 
 const DEFAULT_SORT_STATE: SortState = {
@@ -67,6 +71,7 @@ export default function WatchProgressScreen() {
   const iconBadgeStyles = useIconBadgeStyles();
   const listRef = useRef<React.ComponentRef<typeof FlashList<InProgressShow>>>(null);
   const toastRef = useRef<ToastRef>(null);
+  const optionsSheetRef = useRef<WatchProgressOptionsSheetRef>(null);
   const isInitialMount = useRef(true);
   const hasCompletedInitialPreferenceLoad = useRef(false);
 
@@ -77,6 +82,7 @@ export default function WatchProgressScreen() {
 
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+  const [hideCompleted, setHideCompleted] = useState(false);
   const [activeTab, setActiveTab] = useState<WatchProgressTab>('watching');
   const [selectedIds, setSelectedIds] = useState<Record<number, true>>({});
   const [actionBarHeight, setActionBarHeight] = useState<number | null>(null);
@@ -84,25 +90,31 @@ export default function WatchProgressScreen() {
   const bulkSetHidden = useBulkSetHiddenFromProgress();
   const isAccountRequired = useAccountRequired();
 
-  // Load sort preference from AsyncStorage
+  // Load sort preference + hide-completed preference from AsyncStorage
   useEffect(() => {
-    const loadPreference = async () => {
+    const loadPreferences = async () => {
       try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved) as SortState;
+        const [savedSort, savedHideCompleted] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY),
+          AsyncStorage.getItem(HIDE_COMPLETED_STORAGE_KEY),
+        ]);
+        if (savedSort) {
+          const parsed = JSON.parse(savedSort) as SortState;
           // Validate that the saved option is still valid
           if (ALLOWED_SORT_OPTIONS.includes(parsed.option)) {
             setSortState(parsed);
           }
         }
+        if (savedHideCompleted !== null) {
+          setHideCompleted(JSON.parse(savedHideCompleted) === true);
+        }
       } catch (error) {
-        console.error('Failed to load sort preference:', error);
+        console.error('Failed to load watch progress preferences:', error);
       } finally {
         setIsLoadingPreference(false);
       }
     };
-    loadPreference();
+    void loadPreferences();
   }, []);
 
   // Handle sort apply and save to AsyncStorage
@@ -115,6 +127,16 @@ export default function WatchProgressScreen() {
     }
   }, []);
 
+  // Handle hide-completed toggle and persist to AsyncStorage
+  const handleToggleHideCompleted = useCallback(async (value: boolean) => {
+    setHideCompleted(value);
+    try {
+      await AsyncStorage.setItem(HIDE_COMPLETED_STORAGE_KEY, JSON.stringify(value));
+    } catch (error) {
+      console.error('Failed to save hide completed preference:', error);
+    }
+  }, []);
+
   // Split into watching vs caught up vs hidden shows
   const watchingShows = useMemo(
     () => (data ?? []).filter((show) => !show.isHidden && show.nextEpisode?.kind === 'unwatched'),
@@ -122,12 +144,13 @@ export default function WatchProgressScreen() {
   );
   const caughtUpShows = useMemo(
     () =>
-      (data ?? []).filter(
-        (show) =>
-          !show.isHidden &&
-          (show.nextEpisode?.kind === 'upcoming' || show.nextEpisode?.kind === 'complete')
-      ),
-    [data]
+      (data ?? []).filter((show) => {
+        if (show.isHidden) return false;
+        if (show.nextEpisode?.kind === 'upcoming') return true;
+        if (show.nextEpisode?.kind === 'complete') return !hideCompleted;
+        return false;
+      }),
+    [data, hideCompleted]
   );
   const hiddenShows = useMemo(() => (data ?? []).filter((show) => show.isHidden), [data]);
   const currentTabShows =
@@ -292,7 +315,7 @@ export default function WatchProgressScreen() {
     }
   }, [isLoadingPreference]);
 
-  // Configure header with search + sort buttons
+  // Configure header with search + options + sort buttons
   useLayoutEffect(() => {
     if (isSearchActive) {
       navigation.setOptions(
@@ -312,6 +335,15 @@ export default function WatchProgressScreen() {
             <HeaderIconButton onPress={searchButton.onPress}>
               <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
             </HeaderIconButton>
+            <HeaderIconButton
+              onPress={() => void optionsSheetRef.current?.present()}
+              testID="watch-progress-options-button"
+            >
+              <View style={iconBadgeStyles.wrapper}>
+                <AppIcon icon={SlidersHorizontalIcon} size={22} color={COLORS.text} />
+                {hideCompleted && <View style={iconBadgeStyles.badge} />}
+              </View>
+            </HeaderIconButton>
             <HeaderIconButton onPress={() => setSortModalVisible(true)}>
               <View style={iconBadgeStyles.wrapper}>
                 <AppIcon icon={ArrowUpDownIcon} size={22} color={COLORS.text} />
@@ -330,6 +362,7 @@ export default function WatchProgressScreen() {
     deactivateSearch,
     searchButton,
     hasActiveSort,
+    hideCompleted,
     t,
   ]);
 
@@ -414,7 +447,7 @@ export default function WatchProgressScreen() {
           selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
         ]}
         keyExtractor={(item) => item.tvShowId.toString()}
-        extraData={[selectedIds, activeTab]}
+        extraData={[selectedIds, activeTab, hideCompleted]}
         ListEmptyComponent={
           searchQuery ? (
             <SearchEmptyState height={EMPTY_STATE_HEIGHT} />
@@ -489,6 +522,11 @@ export default function WatchProgressScreen() {
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={ALLOWED_SORT_OPTIONS}
+      />
+      <WatchProgressOptionsSheet
+        ref={optionsSheetRef}
+        hideCompleted={hideCompleted}
+        onToggleHideCompleted={handleToggleHideCompleted}
       />
       <Toast ref={toastRef} />
     </SafeAreaView>

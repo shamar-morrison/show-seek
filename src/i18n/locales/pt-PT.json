@@ -444,6 +444,8 @@
     "emptyHiddenWatchProgressHint": "As séries que ocultar aparecerão aqui.",
     "emptyCaughtUpProgress": "Nenhuma série em dia",
     "emptyCaughtUpProgressHint": "As séries nas quais está em dia aparecerão aqui.",
+    "hideCompletedSeries": "Ocultar séries concluídas",
+    "hideCompletedSeriesHint": "Oculta de Em dia as séries terminadas que já concluiu.",
     "emptyFavoritePeople": "Nenhuma pessoa favorita",
     "emptyFavoritePeopleHint": "Favorite atores e realizadores para os ver aqui.",
     "emptySeasonRatings": "Ainda não há avaliações de temporadas",
