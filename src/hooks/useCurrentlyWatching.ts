@@ -66,7 +66,14 @@ const isContinuousNumbering = (
     if (targetSeasonNumber && seasonsData.has(targetSeasonNumber)) {
       const targetData = seasonsData.get(targetSeasonNumber);
       if (targetData?.episodes && targetData.episodes.length > 0) {
-        return targetData.episodes[0].episode_number > 1;
+        if (targetData.episodes[0].episode_number > 1) {
+          return true;
+        }
+        // Season 1 always begins at episode 1, so it cannot disprove continuous numbering.
+        // Only later seasons (2+) beginning at episode 1 provide definitive proof of standard numbering.
+        if (targetSeasonNumber > 1) {
+          return false;
+        }
       }
     }
 
@@ -94,11 +101,14 @@ const isContinuousNumbering = (
   }
 
   // Signal 3: Fallback heuristic using lastAiredEpisode
-  // Only trusted for the specific target season currently being resolved when that season's real episode data isn't yet available.
+  // Only trusted when real season data for lastAiredEpisode isn't yet available,
+  // and the target season is either that season or Season 1 (where S1 data cannot disprove continuation).
   if (
     lastAiredEpisode &&
     lastAiredEpisode.seasonNumber > 1 &&
-    (!targetSeasonNumber || targetSeasonNumber === lastAiredEpisode.seasonNumber) &&
+    (!targetSeasonNumber ||
+      targetSeasonNumber === 1 ||
+      targetSeasonNumber === lastAiredEpisode.seasonNumber) &&
     (!seasonsData || !seasonsData.has(lastAiredEpisode.seasonNumber))
   ) {
     const currentSeasonCount =

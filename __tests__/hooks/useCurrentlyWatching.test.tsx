@@ -1331,4 +1331,138 @@ describe('useCurrentlyWatching', () => {
       );
     });
   });
+
+  it('does not lock isContinuous to false when target is Season 1 and later season carries continuation evidence', async () => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Continuous Show S1 Active',
+          posterPath: null,
+          lastUpdated: 5000,
+        },
+        episodes: {
+          ...buildWatchedRange(901, 1, 1, 10),
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 901,
+        status: 'Returning Series',
+        seasons: [
+          { season_number: 1, episode_count: 62, air_date: '2020-01-01' },
+          { season_number: 2, episode_count: 74, air_date: '2026-03-01' },
+        ],
+        last_episode_to_air: {
+          season_number: 2,
+          episode_number: 65,
+          air_date: '2026-03-08',
+        },
+      })
+    );
+    // S1 details loaded (begins at episode 1)
+    const s1Episodes: Array<Record<string, unknown>> = [];
+    for (let ep = 1; ep <= 62; ep++) {
+      s1Episodes.push({
+        season_number: 1,
+        episode_number: ep,
+        name: `S1 Episode ${ep}`,
+        air_date: '2020-01-01',
+      });
+    }
+    mockGetSeasonDetails.mockResolvedValue(buildSeasonDetails(s1Episodes));
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect((result.current.data[0]?.nextEpisode as any)?.title).toBe('S1 Episode 11');
+    });
+
+    // Verify S1 details starting at 1 did not lock isContinuous to false:
+    // With isContinuous = true:
+    // - totalAiredEpisodes = 65 (62 in S1 + 3 in S2: 63, 64, 65)
+    // - remainingAiredEpisodes = 52 (S1 unwatched: 11-62) + 3 (S2 continuous unwatched: 63-65) = 55
+    // - timeRemaining = 55 * 30 = 1650 min (NOT 117 * 30 = 3510 min from false standard scanning)
+    expect(result.current.data[0]).toEqual(
+      expect.objectContaining({
+        tvShowId: 901,
+        percentage: 7, // 10 watched / 136 total
+        timeRemaining: 1650,
+        nextEpisode: {
+          kind: 'unwatched',
+          season: 1,
+          episode: 11,
+          title: 'S1 Episode 11',
+        },
+      })
+    );
+  });
+
+  it('correctly short-circuits to false when loaded Season 2 data begins at episode 1', async () => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Standard Show Loaded S2',
+          posterPath: null,
+          lastUpdated: 5000,
+        },
+        episodes: {
+          ...buildWatchedRange(902, 1, 1, 10),
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 902,
+        status: 'Returning Series',
+        seasons: [
+          { season_number: 1, episode_count: 10, air_date: '2025-01-01' },
+          { season_number: 2, episode_count: 20, air_date: '2026-03-01' },
+        ],
+        last_episode_to_air: {
+          season_number: 2,
+          episode_number: 6,
+          air_date: '2026-03-08',
+        },
+      })
+    );
+    // S2 details loaded and starts at episode 1
+    mockGetSeasonDetails.mockResolvedValue(
+      buildSeasonDetails([
+        { season_number: 2, episode_number: 1, name: 'S2 Premiere', air_date: '2026-03-01' },
+        { season_number: 2, episode_number: 2, name: 'S2 Episode 2', air_date: '2026-03-02' },
+        { season_number: 2, episode_number: 3, name: 'S2 Episode 3', air_date: '2026-03-03' },
+        { season_number: 2, episode_number: 4, name: 'S2 Episode 4', air_date: '2026-03-04' },
+        { season_number: 2, episode_number: 5, name: 'S2 Episode 5', air_date: '2026-03-05' },
+        { season_number: 2, episode_number: 6, name: 'S2 Episode 6', air_date: '2026-03-08' },
+      ])
+    );
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect((result.current.data[0]?.nextEpisode as any)?.title).toBe('S2 Premiere');
+    });
+
+    // Verify S2 beginning at 1 short-circuits isContinuous to false:
+    expect(result.current.data[0]).toEqual(
+      expect.objectContaining({
+        tvShowId: 902,
+        percentage: 33, // 10 watched / 30 total
+        timeRemaining: 180, // 6 unwatched aired (1-6) * 30 min
+        nextEpisode: {
+          kind: 'unwatched',
+          season: 2,
+          episode: 1,
+          title: 'S2 Premiere',
+        },
+      })
+    );
+  });
 });
