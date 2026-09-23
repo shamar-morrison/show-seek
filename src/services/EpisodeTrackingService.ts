@@ -3,7 +3,7 @@ import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit
 import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
 import { hasEpisodeAired } from '@/src/utils/dateUtils';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
-import { collection, deleteField, doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
 import { auth, db } from '../firebase/config';
 import type {
@@ -645,6 +645,25 @@ class EpisodeTrackingService {
           timeout.cancel();
         });
       }
+    } catch (error) {
+      throw new Error(getFirestoreErrorMessage(error));
+    }
+  }
+
+  /**
+   * Delete an entire show's episode tracking document.
+   * Used when removing a show from watch tracking (e.g. unresolvable/orphaned shows).
+   */
+  async deleteShowTracking(tvShowId: number): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+
+      const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+      const timeout = createTimeoutWithCleanup(10000);
+      await Promise.race([deleteDoc(trackingRef), timeout.promise]).finally(() => {
+        timeout.cancel();
+      });
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }

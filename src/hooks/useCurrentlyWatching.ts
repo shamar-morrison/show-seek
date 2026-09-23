@@ -21,6 +21,21 @@ const isAiredOnOrBefore = (airDate: string | null | undefined, today: Date): boo
   return isTmdbDateOnOrBefore(airDate, today);
 };
 
+/**
+ * Detect if a TMDB API error corresponds to a permanent 404 Not Found.
+ * Inspects normalized status, response status, and error message.
+ */
+export const isTmdb404 = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') return false;
+  const status = (error as { status?: unknown }).status;
+  if (status === 404) return true;
+  const response = (error as { response?: { status?: unknown } }).response;
+  if (response && response.status === 404) return true;
+  const message = (error as { message?: unknown }).message;
+  if (typeof message === 'string' && message.includes('404')) return true;
+  return false;
+};
+
 const buildEpisodeNameFallback = (episodeNumber: number): string =>
   i18n.t('media.episodeNumber', { number: episodeNumber });
 
@@ -435,7 +450,11 @@ export function useCurrentlyWatching() {
       queryFn: () => tmdbApi.getTVShowDetails(tvShowId),
       enabled: !!userId && tvShowIds.length > 0,
       staleTime: STALE_TIME,
-      retry: RETRY_COUNT,
+      retry: (failureCount: number, error: unknown) => {
+        // Do not retry 404 errors (permanent failure)
+        if (isTmdb404(error)) return false;
+        return failureCount < RETRY_COUNT;
+      },
     })),
   });
 
@@ -558,9 +577,10 @@ export function useCurrentlyWatching() {
     // Check if we have at least some show details data to work with
     // During initial load, no data exists. During refetch, cached data exists.
     const hasAnyShowDetailsData = showDetailsQueries.some((q) => q.data);
+    const allShowDetailsFinished = showDetailsQueries.every((q) => !q.isLoading);
 
-    // If we're expecting show details but have none, we're still in initial load
-    if (showDetailsQueries.length > 0 && !hasAnyShowDetailsData) {
+    // If we're expecting show details but have none, and queries are still loading, we're still in initial load
+    if (showDetailsQueries.length > 0 && !hasAnyShowDetailsData && !allShowDetailsFinished) {
       return null;
     }
 
@@ -586,9 +606,32 @@ export function useCurrentlyWatching() {
         if (episodesList.length === 0) return;
 
         const metadata = trackingDoc.metadata;
-        const showDetails = showDetailsQueries[index]?.data;
+        const showDetailsQuery = showDetailsQueries[index];
+        const showDetails = showDetailsQuery?.data;
 
-        if (!showDetails) return;
+        if (!showDetails) {
+          if (isTmdb404(showDetailsQuery?.error)) {
+            processedShows.push({
+              tvShowId,
+              tvShowName: metadata.tvShowName,
+              posterPath: metadata.posterPath,
+              backdropPath: null,
+              lastUpdated: metadata.lastUpdated,
+              percentage: 0,
+              timeRemaining: 0,
+              isHidden: true,
+              isUnavailable: true,
+              showEnded: false,
+              lastWatchedEpisode: {
+                season: furthestWatched.seasonNumber,
+                episode: furthestWatched.episodeNumber,
+                title: furthestWatched.episodeName,
+              },
+              nextEpisode: null,
+            });
+          }
+          return;
+        }
 
         const seasonsData = seasonDataByShow.get(tvShowId) || new Map<number, SeasonDetails>();
 
@@ -792,9 +835,10 @@ export function useCurrentlyWatching() {
       showDetailsQueries.some((q) => q.isFetching) ||
       seasonDetailsQueries.some((q) => q.isFetching));
 
-  // Compute error state - only error if base tracking fails or ALL show queries fail
+  // Compute error state - only error if base tracking fails or ALL show queries fail (excluding permanent 404s)
   const allShowDetailsFailed =
-    showDetailsQueries.length > 0 && showDetailsQueries.every((q) => q.error);
+    showDetailsQueries.length > 0 &&
+    showDetailsQueries.every((q) => q.error && !isTmdb404(q.error));
 
   const error = trackingQuery.error
     ? 'Failed to load watching progress.'

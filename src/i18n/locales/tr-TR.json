@@ -1772,7 +1772,12 @@
     "restoredToast": "{{count}} dizi geri yüklendi",
     "restoredToast_one": "{{count}} dizi geri yüklendi",
     "restoredToast_other": "{{count}} dizi geri yüklendi",
-    "hideFailed": "Gizli diziler güncellenemedi"
+    "hideFailed": "Gizli diziler güncellenemedi",
+    "removedToast": "{{name}} takipten kaldırıldı",
+    "removeFailed": "Dizi kaldırılamadı",
+    "unavailableTitle": "Dizi Kullanılamıyor",
+    "unavailableRemovePrompt": "Bu dizi TMDB'de bulunamadı. \"{{name}}\" dizisini takipten kaldırmak istiyor musunuz?",
+    "unavailableCannotRestore": "Kullanılamayan diziler geri yüklenemez"
   },
   "mood": {
     "picker": "Ruh hali seçici",

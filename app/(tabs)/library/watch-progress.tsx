@@ -22,7 +22,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
-import { useBulkSetHiddenFromProgress } from '@/src/hooks/useEpisodeTracking';
+import { useBulkSetHiddenFromProgress, useDeleteShowTracking } from '@/src/hooks/useEpisodeTracking';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
@@ -46,7 +46,7 @@ import {
 import type { WatchProgressOptionsSheetRef } from '@/src/components/watching/WatchProgressOptionsSheet';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
@@ -93,6 +93,7 @@ export default function WatchProgressScreen() {
   const [actionBarHeight, setActionBarHeight] = useState<number | null>(null);
 
   const bulkSetHidden = useBulkSetHiddenFromProgress();
+  const deleteShowTracking = useDeleteShowTracking();
   const isAccountRequired = useAccountRequired();
 
   // Load sort preference + hide-completed preference from AsyncStorage
@@ -182,7 +183,7 @@ export default function WatchProgressScreen() {
 
     for (const { show, lower } of indexedShows) {
       let bucket: WatchProgressTab | null = null;
-      if (show.isHidden) {
+      if (show.isHidden || show.isUnavailable) {
         bucket = 'hidden';
       } else if (show.nextEpisode?.kind === 'unwatched') {
         bucket = 'watching';
@@ -260,8 +261,48 @@ export default function WatchProgressScreen() {
     [clearSelection]
   );
 
+  const handleRemoveUnavailableShow = useCallback(
+    (show: InProgressShow) => {
+      if (isAccountRequired()) return;
+      Alert.alert(
+        t('watching.unavailableTitle', { defaultValue: 'Show Unavailable' }),
+        t('watching.unavailableRemovePrompt', {
+          name: show.tvShowName,
+          defaultValue: `This show could not be found on TMDB. Would you like to remove "${show.tvShowName}" from your tracking?`,
+        }),
+        [
+          { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+          {
+            text: t('common.remove', 'Remove'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteShowTracking.mutateAsync(show.tvShowId);
+                toastRef.current?.show(
+                  t('watching.removedToast', {
+                    name: show.tvShowName,
+                    defaultValue: `Removed ${show.tvShowName} from tracking`,
+                  })
+                );
+              } catch {
+                toastRef.current?.show(
+                  t('watching.removeFailed', { defaultValue: 'Failed to remove show' })
+                );
+              }
+            },
+          },
+        ]
+      );
+    },
+    [deleteShowTracking, isAccountRequired, t]
+  );
+
   const navigateToShow = useCallback(
     (show: InProgressShow) => {
+      if (show.isUnavailable) {
+        handleRemoveUnavailableShow(show);
+        return;
+      }
       const tab = currentTab || 'library';
       if (show.nextEpisode?.kind === 'unwatched') {
         router.push(
@@ -273,7 +314,7 @@ export default function WatchProgressScreen() {
         router.push(`/(tabs)/${tab}/tv/${show.tvShowId}/seasons` as any);
       }
     },
-    [currentTab, router]
+    [currentTab, handleRemoveUnavailableShow, router]
   );
 
   const handleCardPress = useCallback(
@@ -306,8 +347,26 @@ export default function WatchProgressScreen() {
   );
 
   const handleBulkToggleHidden = useCallback(async () => {
-    const tvShowIds = Object.keys(selectedIds).map(Number);
-    if (tvShowIds.length === 0 || bulkSetHidden.isPending) return;
+    const rawIds = Object.keys(selectedIds).map(Number);
+    // Filter out unavailable shows (they cannot be unhidden/restored)
+    const tvShowIds = rawIds.filter((id) => {
+      const found = data.find((s) => s.tvShowId === id);
+      return !found?.isUnavailable;
+    });
+
+    if (tvShowIds.length === 0) {
+      if (rawIds.length > 0) {
+        toastRef.current?.show(
+          t('watching.unavailableCannotRestore', {
+            defaultValue: 'Unavailable shows cannot be restored',
+          })
+        );
+        clearSelection();
+      }
+      return;
+    }
+
+    if (bulkSetHidden.isPending) return;
     if (isAccountRequired()) return;
     const hidden = activeTab !== 'hidden';
     try {
@@ -321,7 +380,7 @@ export default function WatchProgressScreen() {
     } catch {
       toastRef.current?.show(t('watching.hideFailed'));
     }
-  }, [activeTab, bulkSetHidden, clearSelection, isAccountRequired, selectedIds, t]);
+  }, [activeTab, bulkSetHidden, clearSelection, data, isAccountRequired, selectedIds, t]);
 
   const handleActionBarLayout = useCallback((event: LayoutChangeEvent) => {
     const { height } = event.nativeEvent.layout;

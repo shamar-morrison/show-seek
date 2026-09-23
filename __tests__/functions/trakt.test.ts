@@ -6101,6 +6101,14 @@ describe('Trakt sync Firestore sanitization', () => {
           });
         }
 
+        if (url.includes('api.themoviedb.org')) {
+          return Promise.resolve({
+            json: jest.fn().mockResolvedValue({ id: 5001, name: 'Show' }),
+            ok: true,
+            status: 200,
+          });
+        }
+
         throw new Error(`Unexpected fetch URL ${url}`);
       });
 

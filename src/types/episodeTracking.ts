@@ -117,6 +117,8 @@ export interface InProgressShow {
   isHidden: boolean;
   /** Whether the show has ended (status is 'Ended' or 'Canceled' with no future episodes) */
   showEnded: boolean;
+  /** Whether the show could not be found on TMDB (permanent 404) */
+  isUnavailable?: boolean;
   lastWatchedEpisode: {
     season: number;
     episode: number;

@@ -11,6 +11,7 @@ import {
   buildWatchlistItemsMap,
 } from './builders';
 import {
+  fetchTMDBJson,
   getFavorites,
   getLastActivities,
   getListItems,
@@ -47,6 +48,7 @@ import type {
   ReconcileManagedListOptions,
   SyncStatusItems,
   SyncSummaryMode,
+  TMDBShowDetails,
   TraktFavorite,
   TraktIncrementalCustomListState,
   TraktIncrementalState,
@@ -257,9 +259,28 @@ export const reconcileEpisodeTracking = async (
       continue;
     }
 
-    importedEpisodes += Object.keys(remoteDoc.episodes).length;
-
     const existingDoc = existingDocs.get(remoteDoc.showId);
+    if (!existingDoc) {
+      const showIdNumber = Number(remoteDoc.showId);
+      if (Number.isFinite(showIdNumber)) {
+        try {
+          const tmdbShow = await fetchTMDBJson<TMDBShowDetails>(`/tv/${showIdNumber}`);
+          if (!tmdbShow) {
+            console.warn(
+              `[TraktSync] Skipping unresolvable TMDB TV show ID ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"): show not found on TMDB (404)`
+            );
+            continue;
+          }
+        } catch (error) {
+          console.warn(
+            `[TraktSync] Could not verify TMDB existence for show ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"):`,
+            error
+          );
+        }
+      }
+    }
+
+    importedEpisodes += Object.keys(remoteDoc.episodes).length;
     const existingData = (existingDoc?.data() ?? {}) as Record<string, unknown>;
     const existingEpisodes = isPlainObject(existingData.episodes)
       ? (existingData.episodes as Record<string, Record<string, unknown>>)
