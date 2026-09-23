@@ -21,7 +21,7 @@ describe('AboutScreen', () => {
     const { getByText, queryByText } = render(<AboutScreen />);
 
     expect(getByText('ShowSeek')).toBeTruthy();
-    expect(getByText('Version 1.0.0')).toBeTruthy();
+    expect(queryByText('Version 1.0.0')).toBeNull();
     expect(queryByText('Copyright 2026 Placeholder Name')).toBeNull();
     expect(
       getByText('ShowSeek uses the TMDB API but is not endorsed or certified by TMDB')

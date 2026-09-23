@@ -23,8 +23,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const APP_VERSION = '1.0.0';
-
 export default function AboutScreen() {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -45,7 +43,6 @@ export default function AboutScreen() {
             <Image source={require('@/assets/images/icon.png')} style={styles.logoImage} />
           </View>
           <Text style={styles.appName}>ShowSeek</Text>
-          <Text style={styles.versionText}>{`${t('settings.version')} ${APP_VERSION}`}</Text>
         </View>
 
         <View style={styles.separator} />
@@ -100,11 +97,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xl,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  versionText: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
   },
   separator: {
