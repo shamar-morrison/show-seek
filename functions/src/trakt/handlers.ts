@@ -751,7 +751,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
       maxDoublings: 4,
       minBackoffSeconds: TRAKT_SYNC_QUEUE_MIN_BACKOFF_SECONDS,
     },
-    secrets: [TRAKT_CLIENT_ID, TRAKT_CLIENT_SECRET, TRAKT_REDIRECT_URI],
+    secrets: [TRAKT_CLIENT_ID, TRAKT_CLIENT_SECRET, TRAKT_REDIRECT_URI, TMDB_API_KEY],
     timeoutSeconds: 1800,
   },
   async (request): Promise<void> => {

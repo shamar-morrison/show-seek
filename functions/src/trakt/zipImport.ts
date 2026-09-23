@@ -9,6 +9,7 @@ import {
   DEV_SYNC_BYPASS_HEADER,
   MAX_ZIP_SIZE_BYTES,
   TEST_TRAKT_ZIP_IMPORT_COOLDOWN_MS,
+  TMDB_API_KEY,
   TRAKT_ZIP_IMPORT_COOLDOWN_MS,
   TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS,
   TRAKT_ZIP_IMPORT_QUEUE_FUNCTION,
@@ -757,6 +758,7 @@ export const runTraktZipImport = onTaskDispatched<TraktZipImportTaskPayload>(
     retryConfig: {
       maxAttempts: 1,
     },
+    secrets: [TMDB_API_KEY],
     timeoutSeconds: 1800,
   },
   runTraktZipImportHandler

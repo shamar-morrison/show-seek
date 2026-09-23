@@ -272,10 +272,22 @@ export const reconcileEpisodeTracking = async (
             continue;
           }
         } catch (error) {
-          console.warn(
-            `[TraktSync] Could not verify TMDB existence for show ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"):`,
-            error
-          );
+          // Transient TMDB failures (timeouts, 429s, 5xx) fail open: the show
+          // still syncs and a later run can re-verify it. Configuration errors
+          // (missing TMDB_API_KEY secret, 401/403) fail deterministically on
+          // every call, so failing open would silently disable this validation
+          // for all shows — log at error level so it pages/alerts instead.
+          if (error instanceof TraktSyncError && !error.retryable) {
+            console.error(
+              `[TraktSync] TMDB existence validation is misconfigured; cannot verify show ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"). ` +
+                `Failing open. Investigate immediately. category=${error.category} statusCode=${error.statusCode ?? 'unknown'} message=${error.message}`
+            );
+          } else {
+            console.warn(
+              `[TraktSync] Could not verify TMDB existence for show ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"):`,
+              error
+            );
+          }
         }
       }
     }
