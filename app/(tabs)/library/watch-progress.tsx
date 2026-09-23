@@ -265,8 +265,11 @@ export default function WatchProgressScreen() {
     (show: InProgressShow) => {
       if (isAccountRequired()) return;
       Alert.alert(
-        'Show Unavailable',
-        `This show could not be found on TMDB. Would you like to remove "${show.tvShowName}" from your tracking?`,
+        t('watching.unavailableTitle', { defaultValue: 'Show Unavailable' }),
+        t('watching.unavailableRemovePrompt', {
+          name: show.tvShowName,
+          defaultValue: `This show could not be found on TMDB. Would you like to remove "${show.tvShowName}" from your tracking?`,
+        }),
         [
           { text: t('common.cancel', 'Cancel'), style: 'cancel' },
           {
@@ -353,7 +356,11 @@ export default function WatchProgressScreen() {
 
     if (tvShowIds.length === 0) {
       if (rawIds.length > 0) {
-        toastRef.current?.show('Unavailable shows cannot be restored');
+        toastRef.current?.show(
+          t('watching.unavailableCannotRestore', {
+            defaultValue: 'Unavailable shows cannot be restored',
+          })
+        );
         clearSelection();
       }
       return;

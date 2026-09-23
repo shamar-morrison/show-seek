@@ -1765,7 +1765,10 @@
     "restoredToast_other": "{{count}} séries restauradas",
     "hideFailed": "Falha ao atualizar séries ocultas",
     "removedToast": "{{name}} removido do acompanhamento",
-    "removeFailed": "Falha ao remover a série"
+    "removeFailed": "Falha ao remover a série",
+    "unavailableTitle": "Série indisponível",
+    "unavailableRemovePrompt": "Esta série não foi encontrada no TMDB. Deseja remover \"{{name}}\" do seu acompanhamento?",
+    "unavailableCannotRestore": "Séries indisponíveis não podem ser restauradas"
   },
   "widgets": {
     "widgetType": "Tipo de widget",

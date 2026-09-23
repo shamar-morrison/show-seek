@@ -801,4 +801,56 @@ describe('WatchProgressScreen', () => {
     fireEvent.press(getByText('Dead TMDB Show'));
     expect(Alert.alert).not.toHaveBeenCalled();
   });
+
+  it('shows unavailableCannotRestore toast when attempting to restore unavailable shows in bulk', async () => {
+    const unavailableShow = {
+      tvShowId: 306684,
+      tvShowName: 'Dead TMDB Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 50,
+      percentage: 0,
+      timeRemaining: 0,
+      isHidden: true,
+      isUnavailable: true,
+      showEnded: false,
+      lastWatchedEpisode: { season: 1, episode: 1, title: 'Episode 1' },
+      nextEpisode: null,
+    };
+
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [unavailableShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+
+    const { getByTestId, getByText } = render(<WatchProgressScreen />);
+
+    // Switch to Hidden tab
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-tabs-tab-hidden')).toBeTruthy();
+    });
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-hidden'));
+
+    await waitFor(() => {
+      expect(getByText('Dead TMDB Show')).toBeTruthy();
+    });
+
+    // Select the unavailable show via long press
+    fireEvent(getByText('Dead TMDB Show'), 'onLongPress');
+
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-bulk-bar')).toBeTruthy();
+    });
+
+    // Press restore button in bulk bar
+    fireEvent.press(getByTestId('watch-progress-bulk-restore-button'));
+
+    await waitFor(() => {
+      expect(mockToastShow).toHaveBeenCalledWith('Unavailable shows cannot be restored');
+    });
+    expect(mockBulkMutateAsync).not.toHaveBeenCalled();
+  });
 });

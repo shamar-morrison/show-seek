@@ -1801,7 +1801,10 @@
     "restoredToast_other": "{{count}} shows restored",
     "hideFailed": "Failed to update hidden shows",
     "removedToast": "Removed {{name}} from tracking",
-    "removeFailed": "Failed to remove show"
+    "removeFailed": "Failed to remove show",
+    "unavailableTitle": "Show Unavailable",
+    "unavailableRemovePrompt": "This show could not be found on TMDB. Would you like to remove \"{{name}}\" from your tracking?",
+    "unavailableCannotRestore": "Unavailable shows cannot be restored"
   },
   "mood": {
     "picker": "Mood Picker",
