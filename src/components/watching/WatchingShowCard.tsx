@@ -53,6 +53,9 @@ export function WatchingShowCard({
   );
 
   const handleDefaultPress = () => {
+    if (show.isUnavailable) {
+      return;
+    }
     const tab = currentTab || 'library';
     if (show.nextEpisode?.kind === 'unwatched') {
       // Has unwatched aired episode → deep-link to that season
@@ -125,7 +128,7 @@ export function WatchingShowCard({
       )}
       <MediaImage
         source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
-        style={styles.poster}
+        style={[styles.poster, show.isUnavailable && { opacity: 0.6 }]}
       />
 
       <View style={styles.contentContainer}>
@@ -133,32 +136,42 @@ export function WatchingShowCard({
           <Text style={styles.title} numberOfLines={1}>
             {show.tvShowName}
           </Text>
-          {show.nextEpisode?.kind === 'unwatched' && show.timeRemaining > 0 && (
+          {show.isUnavailable ? (
+            <View style={styles.unavailableBadge} testID="watching-card-unavailable-badge">
+              <Text style={styles.unavailableBadgeText}>Unavailable</Text>
+            </View>
+          ) : show.nextEpisode?.kind === 'unwatched' && show.timeRemaining > 0 ? (
             <Text style={styles.timeRemaining}>{getFormatTimeRemaining(show.timeRemaining)}</Text>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.episodeInfo}>
-          <Text style={styles.episodeText} numberOfLines={1}>
-            {show.nextEpisode?.kind === 'complete' ? (
-              <Text style={styles.episodeText}>{t('watching.seriesComplete')}</Text>
-            ) : (
-              <>
-                <Text style={[styles.seasonEpLabel, { color: accentColor }]}>{t('watching.next')}</Text>{' '}
-                {show.nextEpisode?.kind === 'unwatched' || show.nextEpisode?.kind === 'upcoming'
-                  ? show.nextEpisode.season > 0
-                    ? t('watching.nextEpisode', {
-                        seasonEpisode: t('media.seasonEpisode', {
-                          season: show.nextEpisode.season,
-                          episode: show.nextEpisode.episode,
-                        }),
-                        title: show.nextEpisode.title,
-                      })
-                    : show.nextEpisode.title || t('watching.caughtUp')
-                  : t('watching.caughtUp')}
-              </>
-            )}
-          </Text>
+          {show.isUnavailable ? (
+            <Text style={styles.unavailableSubtext} numberOfLines={1}>
+              Show details unavailable on TMDB
+            </Text>
+          ) : (
+            <Text style={styles.episodeText} numberOfLines={1}>
+              {show.nextEpisode?.kind === 'complete' ? (
+                <Text style={styles.episodeText}>{t('watching.seriesComplete')}</Text>
+              ) : (
+                <>
+                  <Text style={[styles.seasonEpLabel, { color: accentColor }]}>{t('watching.next')}</Text>{' '}
+                  {show.nextEpisode?.kind === 'unwatched' || show.nextEpisode?.kind === 'upcoming'
+                    ? show.nextEpisode.season > 0
+                      ? t('watching.nextEpisode', {
+                          seasonEpisode: t('media.seasonEpisode', {
+                            season: show.nextEpisode.season,
+                            episode: show.nextEpisode.episode,
+                          }),
+                          title: show.nextEpisode.title,
+                        })
+                      : show.nextEpisode.title || t('watching.caughtUp')
+                    : t('watching.caughtUp')}
+                </>
+              )}
+            </Text>
+          )}
         </View>
 
         <View style={styles.progressContainer}>
@@ -174,7 +187,7 @@ export function WatchingShowCard({
         </View>
       </View>
 
-      {show.nextEpisode?.kind !== 'unwatched' ? null : (
+      {show.nextEpisode?.kind !== 'unwatched' || show.isUnavailable ? null : (
         <View style={styles.playIconContainer}>
           <AppIcon icon={PlayIcon} size={16} color={COLORS.text} fill={COLORS.text} />
         </View>
@@ -269,6 +282,24 @@ const styles = StyleSheet.create({
   },
   playIconContainer: {
     marginLeft: SPACING.s,
+    opacity: 0.8,
+  },
+  unavailableBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.s,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  unavailableBadgeText: {
+    color: '#fbbf24',
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.medium,
+  },
+  unavailableSubtext: {
+    fontSize: 12,
+    color: '#fbbf24',
     opacity: 0.8,
   },
 });

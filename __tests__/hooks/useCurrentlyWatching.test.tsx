@@ -28,7 +28,7 @@ jest.mock('@/src/api/tmdb', () => ({
   },
 }));
 
-import { isContinuousNumbering, useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
+import { isContinuousNumbering, isTmdb404, useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import i18n from '@/src/i18n';
 
 function createQueryClient() {
@@ -1562,6 +1562,90 @@ describe('useCurrentlyWatching', () => {
         },
       })
     );
+  });
+
+  describe('isTmdb404', () => {
+    it('identifies 404 from status property, response.status, and error message', () => {
+      expect(isTmdb404({ status: 404 })).toBe(true);
+      expect(isTmdb404({ response: { status: 404 } })).toBe(true);
+      expect(isTmdb404(new Error('TMDB API error: 404'))).toBe(true);
+      expect(isTmdb404({ status: 500 })).toBe(false);
+      expect(isTmdb404({ response: { status: 500 } })).toBe(false);
+      expect(isTmdb404(null)).toBe(false);
+      expect(isTmdb404('string error')).toBe(false);
+    });
+  });
+
+  it('handles permanent 404 from TMDB by marking show as isUnavailable', async () => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        episodes: buildWatchedRange(306684, 1, 1, 12),
+        metadata: {
+          tvShowName: 'Dead TMDB Show',
+          posterPath: '/dead.jpg',
+          lastUpdated: 5000,
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockRejectedValue({
+      status: 404,
+      message: 'Not found',
+    });
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.data.length).toBe(1);
+    });
+
+    expect(result.current.data[0]).toEqual(
+      expect.objectContaining({
+        tvShowId: 306684,
+        tvShowName: 'Dead TMDB Show',
+        isUnavailable: true,
+        isHidden: true,
+        percentage: 0,
+        timeRemaining: 0,
+        nextEpisode: null,
+      })
+    );
+    expect(result.current.error).toBeNull();
+  });
+
+  it('does NOT mark a show as isUnavailable on transient 500 failure and retains error state', async () => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        episodes: buildWatchedRange(101, 1, 1, 5),
+        metadata: {
+          tvShowName: 'Healthy Show',
+          posterPath: '/healthy.jpg',
+          lastUpdated: 5000,
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockRejectedValue({
+      status: 500,
+      message: 'Internal Server Error',
+    });
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(
+      () => {
+        expect(result.current.isLoading).toBe(false);
+      },
+      { timeout: 5000 }
+    );
+
+    // Should NOT add unavailable show to data
+    expect(result.current.data).toEqual([]);
+    expect(result.current.error).toBe('Failed to load show details.');
   });
 });
 

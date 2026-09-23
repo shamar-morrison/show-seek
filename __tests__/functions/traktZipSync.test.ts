@@ -265,6 +265,11 @@ describe('Trakt Zip Sync Orchestrator (Stage 2)', () => {
     store = new Map<string, Record<string, unknown>>();
     MockWriteBatch.resetStats();
     firestoreFn.mockImplementation(() => mockFirestore);
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 1396, name: 'Breaking Bad' }),
+    }) as any;
   });
 
   describe('reconcileCustomListsFromZip', () => {

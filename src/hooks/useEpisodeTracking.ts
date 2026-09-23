@@ -668,3 +668,24 @@ export const useMarkShowAllEpisodesUnwatched = () => {
   });
 };
 
+/**
+ * Mutation hook for deleting an entire show's episode tracking document.
+ */
+export const useDeleteShowTracking = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (tvShowId: number) => episodeTrackingService.deleteShowTracking(tvShowId),
+    onSuccess: async (_result, tvShowId) => {
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
+      }
+    },
+  });
+};
+
+

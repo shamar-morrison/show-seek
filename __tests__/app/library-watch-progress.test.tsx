@@ -41,6 +41,7 @@ const mockHiddenShow = {
 
 const mockRouterPush = jest.fn();
 const mockBulkMutateAsync = jest.fn();
+const mockDeleteMutateAsync = jest.fn();
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ setOptions: mockSetOptions }),
@@ -58,6 +59,10 @@ jest.mock('@/src/context/AccentColorProvider', () => ({
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   useBulkSetHiddenFromProgress: () => ({
     mutateAsync: mockBulkMutateAsync,
+    isPending: false,
+  }),
+  useDeleteShowTracking: () => ({
+    mutateAsync: mockDeleteMutateAsync,
     isPending: false,
   }),
 }));
