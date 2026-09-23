@@ -1763,7 +1763,9 @@
     "restoredToast": "{{count}} series restauradas",
     "restoredToast_one": "{{count}} serie restaurada",
     "restoredToast_other": "{{count}} series restauradas",
-    "hideFailed": "No se pudieron actualizar las series ocultas"
+    "hideFailed": "No se pudieron actualizar las series ocultas",
+    "removedToast": "Se eliminó {{name}} del seguimiento",
+    "removeFailed": "Error al eliminar la serie"
   },
   "widgets": {
     "widgetType": "Tipo de widget",

@@ -1832,6 +1832,8 @@
     "restoredToast": "{{count}} séries restaurées",
     "restoredToast_one": "{{count}} série restaurée",
     "restoredToast_other": "{{count}} séries restaurées",
-    "hideFailed": "Échec de la mise à jour des séries masquées"
+    "hideFailed": "Échec de la mise à jour des séries masquées",
+    "removedToast": "{{name}} a été retiré du suivi",
+    "removeFailed": "Échec de la suppression de la série"
   }
 }

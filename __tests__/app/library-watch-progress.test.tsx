@@ -1,5 +1,6 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import React from 'react';
 
 const mockSetOptions = jest.fn();
@@ -86,10 +87,21 @@ jest.mock('@/src/components/ui/CategoryTabs', () => ({
   },
 }));
 
-jest.mock('@/src/components/ui/Toast', () => ({
-  __esModule: true,
-  default: () => null,
-}));
+const mockToastShow = jest.fn();
+
+jest.mock('@/src/components/ui/Toast', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: React.forwardRef((_props: any, ref: any) => {
+      React.useImperativeHandle(ref, () => ({
+        show: (...args: any[]) => mockToastShow(...args),
+        hide: jest.fn(),
+      }));
+      return null;
+    }),
+  };
+});
 
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
@@ -126,9 +138,16 @@ jest.mock('@/src/components/ui/HeaderIconButton', () => ({
 }));
 
 jest.mock('@/src/components/watching/WatchingShowCard', () => ({
-  WatchingShowCard: ({ show, onLongPress }: any) => {
+  WatchingShowCard: ({ show, onPress, onLongPress }: any) => {
     const { Text } = require('react-native');
-    return <Text onLongPress={() => onLongPress?.(show)}>{show.tvShowName}</Text>;
+    return (
+      <Text
+        onPress={() => onPress?.(show)}
+        onLongPress={() => onLongPress?.(show)}
+      >
+        {show.tvShowName}
+      </Text>
+    );
   },
 }));
 
@@ -706,5 +725,80 @@ describe('WatchProgressScreen', () => {
       expect(getByText('Upcoming Show')).toBeTruthy();
     });
     expect(queryByText('Completed Show')).toBeNull();
+  });
+
+  it('covers the remove-unavailable-show flow: alert confirmation, deletion mutation, toast feedback, and guest guard', async () => {
+    const unavailableShow = {
+      tvShowId: 306684,
+      tvShowName: 'Dead TMDB Show',
+      posterPath: null,
+      backdropPath: null,
+      lastUpdated: 50,
+      percentage: 0,
+      timeRemaining: 0,
+      isHidden: true,
+      isUnavailable: true,
+      showEnded: false,
+      lastWatchedEpisode: { season: 1, episode: 1, title: 'Episode 1' },
+      nextEpisode: null,
+    };
+
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [unavailableShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+
+    const { getByTestId, getByText } = render(<WatchProgressScreen />);
+
+    // 1. Switch to Hidden tab where unavailable shows reside
+    await waitFor(() => {
+      expect(getByTestId('watch-progress-tabs-tab-hidden')).toBeTruthy();
+    });
+    fireEvent.press(getByTestId('watch-progress-tabs-tab-hidden'));
+
+    await waitFor(() => {
+      expect(getByText('Dead TMDB Show')).toBeTruthy();
+    });
+
+    // 2. Pressing the card triggers the confirmation alert
+    fireEvent.press(getByText('Dead TMDB Show'));
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Show Unavailable',
+      'This show could not be found on TMDB. Would you like to remove "Dead TMDB Show" from your tracking?',
+      expect.any(Array)
+    );
+
+    const alertButtons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    const removeButton = alertButtons.find((btn: any) => btn.style === 'destructive');
+    expect(removeButton).toBeDefined();
+
+    // 3. Confirm removal -> mutateAsync is called with tvShowId, success toast fires
+    mockDeleteMutateAsync.mockResolvedValueOnce(undefined);
+    await act(async () => {
+      await removeButton.onPress();
+    });
+
+    expect(mockDeleteMutateAsync).toHaveBeenCalledWith(306684);
+    expect(mockToastShow).toHaveBeenCalledWith('Removed Dead TMDB Show from tracking');
+
+    // 4. Test rejection toast on deletion failure
+    mockDeleteMutateAsync.mockRejectedValueOnce(new Error('Network error'));
+    await act(async () => {
+      await removeButton.onPress();
+    });
+
+    expect(mockToastShow).toHaveBeenCalledWith('Failed to remove show');
+
+    // 5. Verify isAccountRequired() blocks the alert for guests
+    (Alert.alert as jest.Mock).mockClear();
+    mockIsAccountRequired.mockReturnValue(true);
+
+    fireEvent.press(getByText('Dead TMDB Show'));
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });

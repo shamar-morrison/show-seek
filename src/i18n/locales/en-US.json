@@ -1799,7 +1799,9 @@
     "restoredToast": "{{count}} shows restored",
     "restoredToast_one": "{{count}} show restored",
     "restoredToast_other": "{{count}} shows restored",
-    "hideFailed": "Failed to update hidden shows"
+    "hideFailed": "Failed to update hidden shows",
+    "removedToast": "Removed {{name}} from tracking",
+    "removeFailed": "Failed to remove show"
   },
   "mood": {
     "picker": "Mood Picker",

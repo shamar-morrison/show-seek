@@ -285,21 +285,21 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   unavailableBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    backgroundColor: COLORS.warningBackground,
+    borderColor: COLORS.warningBorder,
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.s,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   unavailableBadgeText: {
-    color: '#fbbf24',
+    color: COLORS.warningText,
     fontSize: 10,
     fontFamily: FONT_FAMILY.medium,
   },
   unavailableSubtext: {
     fontSize: 12,
-    color: '#fbbf24',
+    color: COLORS.warningText,
     opacity: 0.8,
   },
 });

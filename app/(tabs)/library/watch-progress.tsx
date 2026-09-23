@@ -263,6 +263,7 @@ export default function WatchProgressScreen() {
 
   const handleRemoveUnavailableShow = useCallback(
     (show: InProgressShow) => {
+      if (isAccountRequired()) return;
       Alert.alert(
         'Show Unavailable',
         `This show could not be found on TMDB. Would you like to remove "${show.tvShowName}" from your tracking?`,
@@ -276,6 +277,7 @@ export default function WatchProgressScreen() {
                 await deleteShowTracking.mutateAsync(show.tvShowId);
                 toastRef.current?.show(
                   t('watching.removedToast', {
+                    name: show.tvShowName,
                     defaultValue: `Removed ${show.tvShowName} from tracking`,
                   })
                 );
@@ -289,7 +291,7 @@ export default function WatchProgressScreen() {
         ]
       );
     },
-    [deleteShowTracking, t]
+    [deleteShowTracking, isAccountRequired, t]
   );
 
   const navigateToShow = useCallback(
