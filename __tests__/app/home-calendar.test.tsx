@@ -55,6 +55,7 @@ const mockUpcomingState = {
   ],
   isLoading: false,
   isLoadingEnrichment: false,
+  isEnrichmentFetching: false,
   isRefreshing: false,
   refresh: mockRefresh,
   error: null,
@@ -214,6 +215,7 @@ describe('CalendarScreen', () => {
     ];
     mockUpcomingState.isLoading = false;
     mockUpcomingState.isLoadingEnrichment = false;
+    mockUpcomingState.isEnrichmentFetching = false;
     mockUpcomingState.isRefreshing = false;
     mockUpcomingState.refresh = mockRefresh;
   });
@@ -333,6 +335,7 @@ describe('CalendarScreen', () => {
 
   it('renders cached releases while enrichment is still loading', async () => {
     mockUpcomingState.isLoadingEnrichment = true;
+    mockUpcomingState.isEnrichmentFetching = true;
 
     const { getByTestId, getByText } = await renderCalendarAndWait();
 
@@ -376,6 +379,7 @@ describe('CalendarScreen', () => {
   it('keeps showing skeleton loading while the first result set is enriching', () => {
     mockUpcomingState.allReleases = [];
     mockUpcomingState.isLoadingEnrichment = true;
+    mockUpcomingState.isEnrichmentFetching = true;
 
     const { getByTestId, getByText, queryAllByTestId, queryByTestId } = render(<CalendarScreen />);
 
@@ -385,6 +389,32 @@ describe('CalendarScreen', () => {
     expect(mockReleaseCalendar).not.toHaveBeenCalled();
     expect(queryAllByTestId('calendar-sort-modal-host')).toHaveLength(1);
     expect(queryAllByTestId('calendar-source-filter-modal-host')).toHaveLength(1);
+  });
+
+  it('keeps the skeleton when the selected sources have no resolved releases yet', async () => {
+    // The library has a release, but it belongs to a source outside the current
+    // selection, so the filtered result is empty while enrichment is still in
+    // progress. This must not fall through to the filtered-empty
+    // "No releases match these filters" state.
+    mockUpcomingState.allReleases = [
+      createRelease({ id: 9, mediaType: 'movie', sourceLists: ['custom-list-1'] }),
+    ];
+    mockUpcomingState.isLoadingEnrichment = true;
+    mockUpcomingState.isEnrichmentFetching = true;
+
+    const { getByTestId, getByText, queryByText } = render(<CalendarScreen />);
+
+    // Let the persisted-source read and lists settle so the screen is past the
+    // preference-loading gate, leaving enrichment as the only pending work.
+    await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalled());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(getByTestId('calendar-loading')).toBeTruthy();
+    expect(getByText('Updating TV episodes...')).toBeTruthy();
+    expect(queryByText('No releases match these filters')).toBeNull();
+    expect(queryByText('Clear Filters')).toBeNull();
   });
 
   it('hydrates a saved source selection instead of the defaults', async () => {

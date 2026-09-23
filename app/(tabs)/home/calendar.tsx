@@ -63,8 +63,14 @@ export default function CalendarScreen() {
   // since every user-driven set creates a new array.
   const initialSourcesRef = useRef<CalendarSourceFilter[]>(selectedSources);
 
-  const { allReleases, isLoading, isLoadingEnrichment, isRefreshing, refresh } =
-    useUpcomingReleases();
+  const {
+    allReleases,
+    isLoading,
+    isLoadingEnrichment,
+    isEnrichmentFetching,
+    isRefreshing,
+    refresh,
+  } = useUpcomingReleases();
   const { data: lists, isLoading: isListsLoading } = useLists();
 
   const customSources = useMemo(
@@ -264,7 +270,8 @@ export default function CalendarScreen() {
   );
 
   const hasReleases = allReleases.length > 0;
-  const shouldShowInitialEnrichmentLoading = !hasReleases && isLoadingEnrichment;
+  const hasVisibleReleases = sourceFilteredReleases.length > 0;
+  const shouldShowInitialEnrichmentLoading = !hasVisibleReleases && isEnrichmentFetching;
   const shouldShowInitialLoading =
     isPremiumLoading ||
     isLoading ||

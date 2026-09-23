@@ -50,6 +50,7 @@ export interface UseUpcomingReleasesResult {
   allReleases: UpcomingRelease[];
   isLoading: boolean;
   isLoadingEnrichment: boolean;
+  isEnrichmentFetching: boolean;
   isRefreshing: boolean;
   refresh: () => Promise<void>;
   error: Error | null;
@@ -304,6 +305,16 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     tvDetailsQueries.some((q) => q.isLoading) || movieDetailsQueries.some((q) => q.isLoading);
   const isLoadingSeasons = seasonQueries.some((q) => q.isLoading);
   const isLoadingEnrichment = isLoadingDetails || isLoadingSeasons;
+  // Unlike isLoadingEnrichment (query.isLoading === isPending && isFetching),
+  // this stays true while an already-cached, stale query revalidates in the
+  // background (status 'success', isFetching true, isLoading false). Consumers
+  // use it to avoid treating "still revalidating" as "settled and empty".
+  const isEnrichmentFetching =
+    isLoadingDetails ||
+    isLoadingSeasons ||
+    tvDetailsQueries.some((q) => q.isFetching) ||
+    movieDetailsQueries.some((q) => q.isFetching) ||
+    seasonQueries.some((q) => q.isFetching);
 
   // Build the unified releases list
   const allReleases = useMemo(() => {
@@ -535,6 +546,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     allReleases,
     isLoading,
     isLoadingEnrichment,
+    isEnrichmentFetching,
     isRefreshing,
     refresh,
     error,
