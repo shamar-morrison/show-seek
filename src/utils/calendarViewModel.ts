@@ -16,6 +16,14 @@ export const REMINDERS_SOURCE_FILTER = 'reminders';
 /** Maximum number of list sources selectable on the release calendar. */
 export const MAX_CALENDAR_SOURCE_SELECTIONS = 6;
 
+/**
+ * AsyncStorage key for the persisted calendar source selection.
+ * Device-local only (mirrored per platform, never merged): stores a JSON
+ * string array of source IDs, including the virtual reminders source when
+ * selected.
+ */
+export const CALENDAR_SOURCES_STORAGE_KEY = 'calendarSelectedSources';
+
 export type CalendarSourceFilter = string;
 export type CalendarMediaFilter = 'all' | 'movie' | 'tv';
 export type CalendarSortMode = 'soonest' | 'alphabetical' | 'type';
@@ -165,6 +173,30 @@ export function isDefaultCalendarSourceSelection(sources: readonly CalendarSourc
   }
 
   return CALENDAR_SOURCE_FILTERS.every((source) => sources.includes(source));
+}
+
+/**
+ * Sanitize a persisted source selection: keep only known IDs (defaults +
+ * currently-available custom lists), then dedupe/clamp. Returns null when
+ * nothing usable remains so callers fall back to defaults (e.g. corrupt
+ * payload, or every saved custom list has since been deleted).
+ */
+export function sanitizeCalendarSources(
+  value: unknown,
+  customSourceIds: readonly string[]
+): CalendarSourceFilter[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const knownIds = new Set<string>([...CALENDAR_SOURCE_FILTERS, ...customSourceIds]);
+  const kept = value.filter(
+    (id): id is CalendarSourceFilter =>
+      typeof id === 'string' && id.length > 0 && knownIds.has(id)
+  );
+  const clamped = clampCalendarSources(kept);
+
+  return clamped.length > 0 ? clamped : null;
 }
 
 export function filterUpcomingReleases(

@@ -1,5 +1,7 @@
 import React from 'react';
 import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CALENDAR_SOURCES_STORAGE_KEY } from '@/src/utils/calendarViewModel';
 
 const mockReleaseCalendar = jest.fn();
 const mockRefresh = jest.fn().mockResolvedValue(undefined);
@@ -10,6 +12,10 @@ let latestSourceFilterModalProps: any = null;
 const mockPremiumState = {
   isPremium: false,
   isLoading: false,
+};
+
+const mockAuthState = {
+  loading: false,
 };
 
 const mockListsState = {
@@ -56,6 +62,10 @@ const mockUpcomingState = {
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
+}));
+
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => mockAuthState,
 }));
 
 jest.mock('@/src/hooks/useUpcomingReleases', () => ({
@@ -188,10 +198,14 @@ describe('CalendarScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRefresh.mockClear();
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     latestSortModalProps = null;
     latestSourceFilterModalProps = null;
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
+    mockAuthState.loading = false;
+    mockListsState.data = [];
     mockUpcomingState.allReleases = [
       createRelease({ id: 1, mediaType: 'movie', sourceLists: ['watchlist'] }),
       createRelease({ id: 2, mediaType: 'tv', sourceLists: ['currently-watching'] }),
@@ -204,8 +218,14 @@ describe('CalendarScreen', () => {
     mockUpcomingState.refresh = mockRefresh;
   });
 
-  it('passes filtered releases and free-preview props for free users', () => {
-    render(<CalendarScreen />);
+  async function renderCalendarAndWait() {
+    const result = render(<CalendarScreen />);
+    await waitFor(() => expect(mockReleaseCalendar).toHaveBeenCalled());
+    return result;
+  }
+
+  it('passes filtered releases and free-preview props for free users', async () => {
+    await renderCalendarAndWait();
 
     expect(mockReleaseCalendar).toHaveBeenCalledTimes(1);
     expect(mockReleaseCalendar).toHaveBeenCalledWith(
@@ -221,10 +241,10 @@ describe('CalendarScreen', () => {
     );
   });
 
-  it('passes full-access props for premium users', () => {
+  it('passes full-access props for premium users', async () => {
     mockPremiumState.isPremium = true;
 
-    render(<CalendarScreen />);
+    await renderCalendarAndWait();
 
     expect(mockReleaseCalendar).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -233,8 +253,8 @@ describe('CalendarScreen', () => {
     );
   });
 
-  it('passes refresh props to the release calendar', () => {
-    const { queryAllByTestId } = render(<CalendarScreen />);
+  it('passes refresh props to the release calendar', async () => {
+    const { queryAllByTestId } = await renderCalendarAndWait();
 
     expect(mockReleaseCalendar).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -246,8 +266,8 @@ describe('CalendarScreen', () => {
     expect(queryAllByTestId('calendar-source-filter-modal-host')).toHaveLength(1);
   });
 
-  it('reuses cached presentations when the media tabs change', () => {
-    const { getByTestId } = render(<CalendarScreen />);
+  it('reuses cached presentations when the media tabs change', async () => {
+    const { getByTestId } = await renderCalendarAndWait();
     const initialProps = mockReleaseCalendar.mock.calls[mockReleaseCalendar.mock.calls.length - 1][0];
 
     fireEvent.press(getByTestId('calendar-media-filter-tab-tv'));
@@ -261,7 +281,7 @@ describe('CalendarScreen', () => {
   });
 
   it('opens the sort control from the header and updates the sort mode', async () => {
-    const screen = render(<CalendarScreen />);
+    const screen = await renderCalendarAndWait();
 
     const header = renderLatestHeader();
     fireEvent.press(header.getByTestId('calendar-sort-button'));
@@ -293,7 +313,7 @@ describe('CalendarScreen', () => {
       createRelease({ id: 1, mediaType: 'movie', sourceLists: ['watchlist'] }),
     ];
 
-    const screen = render(<CalendarScreen />);
+    const screen = await renderCalendarAndWait();
 
     const header = renderLatestHeader();
     fireEvent.press(header.getByTestId('calendar-source-filter-button'));
@@ -311,13 +331,46 @@ describe('CalendarScreen', () => {
     );
   });
 
-  it('renders cached releases while enrichment is still loading', () => {
+  it('renders cached releases while enrichment is still loading', async () => {
     mockUpcomingState.isLoadingEnrichment = true;
 
-    const { getByTestId, getByText } = render(<CalendarScreen />);
+    const { getByTestId, getByText } = await renderCalendarAndWait();
 
     expect(getByTestId('release-calendar')).toBeTruthy();
     expect(getByText('Updating TV episodes...')).toBeTruthy();
+  });
+
+  it('does not gate content on auth resolution', async () => {
+    // Auth state is already resolved by the route-level gates before this
+    // screen mounts, so a pending auth flag must not block content here.
+    mockAuthState.loading = true;
+
+    const screen = await renderCalendarAndWait();
+
+    expect(screen.getByTestId('release-calendar')).toBeTruthy();
+    expect(screen.queryByTestId('calendar-loading')).toBeNull();
+  });
+
+  it('shows the genuine empty state when there is no data, regardless of auth', async () => {
+    const screen = await renderCalendarAndWait();
+
+    mockUpcomingState.allReleases = [];
+    mockAuthState.loading = true;
+    screen.rerender(<CalendarScreen />);
+
+    // No releases and nothing loading: empty state, not skeleton — auth
+    // plays no role in this decision anymore
+    expect(screen.getByText('No upcoming releases found')).toBeTruthy();
+    expect(screen.queryByTestId('calendar-loading')).toBeNull();
+
+    mockUpcomingState.allReleases = [
+      createRelease({ id: 1, mediaType: 'movie', sourceLists: ['watchlist'] }),
+    ];
+    mockAuthState.loading = false;
+    screen.rerender(<CalendarScreen />);
+
+    await waitFor(() => expect(screen.getByTestId('release-calendar')).toBeTruthy());
+    expect(screen.queryByTestId('calendar-loading')).toBeNull();
   });
 
   it('keeps showing skeleton loading while the first result set is enriching', () => {
@@ -332,5 +385,171 @@ describe('CalendarScreen', () => {
     expect(mockReleaseCalendar).not.toHaveBeenCalled();
     expect(queryAllByTestId('calendar-sort-modal-host')).toHaveLength(1);
     expect(queryAllByTestId('calendar-source-filter-modal-host')).toHaveLength(1);
+  });
+
+  it('hydrates a saved source selection instead of the defaults', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(['favorites']));
+
+    await renderCalendarAndWait();
+
+    expect(mockReleaseCalendar).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        presentations: expect.objectContaining({
+          all: expect.objectContaining({ totalContentCount: 1 }),
+        }),
+      })
+    );
+    await waitFor(() =>
+      expect(
+        renderLatestHeader().getByTestId('calendar-source-filter-active-indicator')
+      ).toBeTruthy()
+    );
+  });
+
+  it('does not write back the hydrated value on mount', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(['favorites']));
+
+    await renderCalendarAndWait();
+
+    // Hydration applied the saved value: the save effect must recognize it
+    // as already-persisted (same reference) and stay silent
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  it('does not write on mount when there is nothing saved', async () => {
+    await renderCalendarAndWait();
+
+    // Defaults with no stored value: nothing user-driven happened, so the
+    // absent key (which already means defaults) is left alone
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  it('keeps a user edit made while hydration is still in flight', async () => {
+    // Read resolves quickly, lists take longer: the user edits inside the
+    // window where the stored value is known but hydration is still waiting
+    // on lists. Stored ['watchlist', 'favorites'] (2 releases) must NOT
+    // clobber the user's ['reminders'] (1 release).
+    let resolveGetItem!: (value: string | null) => void;
+    (AsyncStorage.getItem as jest.Mock).mockImplementation(
+      () =>
+        new Promise<string | null>((resolve) => {
+          resolveGetItem = resolve;
+        })
+    );
+    mockListsState.isLoading = true;
+
+    const screen = render(<CalendarScreen />);
+
+    await act(async () => {
+      resolveGetItem(JSON.stringify(['watchlist', 'favorites']));
+    });
+
+    // Stored value is read but lists are still pending: user edits now
+    await act(async () => {
+      latestSourceFilterModalProps.onApply(['reminders']);
+      latestSourceFilterModalProps.onClose();
+    });
+
+    // Lists settle -> hydration becomes eligible and must bail, keeping the
+    // user's fresher choice instead of the stale persisted value
+    mockListsState.isLoading = false;
+    screen.rerender(<CalendarScreen />);
+
+    await waitFor(() =>
+      expect(mockReleaseCalendar).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          presentations: expect.objectContaining({
+            all: expect.objectContaining({ totalContentCount: 1 }),
+          }),
+        })
+      )
+    );
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      CALENDAR_SOURCES_STORAGE_KEY,
+      JSON.stringify(['reminders'])
+    );
+  });
+
+  it('drops unknown saved IDs but keeps the rest', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(
+      JSON.stringify(['watchlist', 'deleted-list'])
+    );
+
+    await renderCalendarAndWait();
+
+    expect(mockReleaseCalendar).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        presentations: expect.objectContaining({
+          all: expect.objectContaining({ totalContentCount: 1 }),
+        }),
+      })
+    );
+  });
+
+  it('falls back to defaults for a corrupt saved selection', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('not-json{{{');
+
+    await renderCalendarAndWait();
+
+    expect(mockReleaseCalendar).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        presentations: expect.objectContaining({
+          all: expect.objectContaining({ totalContentCount: 4 }),
+        }),
+      })
+    );
+  });
+
+  it('persists source selection changes to AsyncStorage', async () => {
+    // Note: no renderLatestHeader() here — mounting a second tree would
+    // silently disable subsequent fireEvents on the main tree (RNTL v13
+    // only dispatches events for the most recently rendered root).
+    await renderCalendarAndWait();
+
+    await act(async () => {
+      latestSourceFilterModalProps.onApply(['reminders']);
+      latestSourceFilterModalProps.onClose();
+    });
+
+    await waitFor(() =>
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        CALENDAR_SOURCES_STORAGE_KEY,
+        JSON.stringify(['reminders'])
+      )
+    );
+  });
+
+  it('persists defaults again after Clear Filters resets the selection', async () => {
+    const screen = await renderCalendarAndWait();
+
+    await act(async () => {
+      latestSourceFilterModalProps.onApply(['reminders']);
+      latestSourceFilterModalProps.onClose();
+    });
+
+    await waitFor(() =>
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        CALENDAR_SOURCES_STORAGE_KEY,
+        JSON.stringify(['reminders'])
+      )
+    );
+
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+
+    await act(async () => {
+      latestSourceFilterModalProps.onApply([]);
+      latestSourceFilterModalProps.onClose();
+    });
+
+    await waitFor(() => expect(screen.getByText('No releases match these filters')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Clear Filters'));
+
+    await waitFor(() =>
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        CALENDAR_SOURCES_STORAGE_KEY,
+        JSON.stringify(['watchlist', 'favorites', 'currently-watching', 'reminders'])
+      )
+    );
   });
 });

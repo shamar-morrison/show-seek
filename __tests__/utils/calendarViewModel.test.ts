@@ -6,6 +6,7 @@ import {
   filterUpcomingReleases,
   getCalendarReleaseSources,
   isDefaultCalendarSourceSelection,
+  sanitizeCalendarSources,
 } from '@/src/utils/calendarViewModel';
 
 function createRelease({
@@ -331,6 +332,25 @@ describe('calendarViewModel', () => {
 
     expect(clampCalendarSources(['reminders'])).toEqual(['reminders']);
     expect(clampCalendarSources(['a', 'a', 'b'])).toEqual(['a', 'b']);
+  });
+
+  it('sanitizes persisted source selections against known IDs', () => {
+    expect(sanitizeCalendarSources(['watchlist', 'my-list'], ['my-list'])).toEqual([
+      'watchlist',
+      'my-list',
+    ]);
+    expect(sanitizeCalendarSources(['watchlist', 'reminders'], [])).toEqual([
+      'watchlist',
+      'reminders',
+    ]);
+    // Unknown IDs (e.g. deleted custom lists) drop out, the rest is kept
+    expect(sanitizeCalendarSources(['watchlist', 'deleted-list'], [])).toEqual(['watchlist']);
+    // Nothing usable left (or corrupt payload) falls back to null
+    expect(sanitizeCalendarSources(['deleted-list'], [])).toBeNull();
+    expect(sanitizeCalendarSources([], [])).toBeNull();
+    expect(sanitizeCalendarSources('not-json', [])).toBeNull();
+    expect(sanitizeCalendarSources(null, [])).toBeNull();
+    expect(sanitizeCalendarSources([42, null], [])).toBeNull();
   });
 
   it('detects the default source selection regardless of order', () => {

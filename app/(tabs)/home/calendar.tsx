@@ -19,18 +19,21 @@ import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import {
   buildCalendarPresentations,
   CALENDAR_SOURCE_FILTERS,
+  CALENDAR_SOURCES_STORAGE_KEY,
   CalendarMediaFilter,
   CalendarSortMode,
   CalendarSourceFilter,
   clampCalendarSources,
   filterUpcomingReleases,
   isDefaultCalendarSourceSelection,
+  sanitizeCalendarSources,
 } from '@/src/utils/calendarViewModel';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { ArrowUpDownIcon, Calendar03Icon, SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -49,10 +52,20 @@ export default function CalendarScreen() {
   ]);
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sourceModalVisible, setSourceModalVisible] = useState(false);
+  const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+  const [isPreferenceReadDone, setIsPreferenceReadDone] = useState(false);
+  const didHydrateSourcesRef = useRef(false);
+  const savedSourcesRawRef = useRef<unknown>(null);
+  const lastPersistedSourcesRef = useRef<CalendarSourceFilter[] | null>(null);
+  // Exact array instance from first render. Hydration is the only other
+  // writer before it completes, and it reuses the sanitized instance (see
+  // below) — so any reference deviation here means the user already edited,
+  // since every user-driven set creates a new array.
+  const initialSourcesRef = useRef<CalendarSourceFilter[]>(selectedSources);
 
   const { allReleases, isLoading, isLoadingEnrichment, isRefreshing, refresh } =
     useUpcomingReleases();
-  const { data: lists } = useLists();
+  const { data: lists, isLoading: isListsLoading } = useLists();
 
   const customSources = useMemo(
     () =>
@@ -62,6 +75,97 @@ export default function CalendarScreen() {
       })),
     [lists]
   );
+
+  // Start the persisted-selection read immediately on mount, in parallel
+  // with the lists query — it does not depend on lists to be fetched.
+  useEffect(() => {
+    let cancelled = false;
+
+    const readPreference = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(CALENDAR_SOURCES_STORAGE_KEY);
+        if (!cancelled) {
+          savedSourcesRawRef.current = saved ? JSON.parse(saved) : null;
+        }
+      } catch (error) {
+        console.error('Failed to load calendar source preference:', error);
+        if (!cancelled) {
+          savedSourcesRawRef.current = null;
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPreferenceReadDone(true);
+        }
+      }
+    };
+    void readPreference();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Apply the saved selection once BOTH the stored value has been read and
+  // custom lists are known (so saved custom-list IDs are not mistaken for
+  // unknown IDs and dropped). The loading gate therefore reflects whichever
+  // of the two finishes last, not a strict sequence of one after the other.
+  useEffect(() => {
+    if (!isPreferenceReadDone || isListsLoading || didHydrateSourcesRef.current) {
+      return;
+    }
+    didHydrateSourcesRef.current = true;
+
+    if (selectedSources !== initialSourcesRef.current) {
+      // The user edited while hydration was in flight: their fresher choice
+      // stands and the stale persisted value is discarded. The ref is left
+      // empty on purpose so the save effect below persists the user's edit.
+      setIsLoadingPreference(false);
+      return;
+    }
+
+    const sanitized = sanitizeCalendarSources(
+      savedSourcesRawRef.current,
+      customSources.map((source) => source.id)
+    );
+    if (sanitized) {
+      lastPersistedSourcesRef.current = sanitized;
+      setSelectedSources(sanitized);
+    } else if (isDefaultCalendarSourceSelection(selectedSources)) {
+      // No usable saved value and selection untouched: the current (default)
+      // selection is already what would be persisted, so record it to
+      // suppress a redundant write. A non-default selection here can only be
+      // user-driven (applied before hydration finished) — leave the ref empty
+      // so the save effect still persists it.
+      lastPersistedSourcesRef.current = selectedSources;
+    }
+    setIsLoadingPreference(false);
+  }, [customSources, isListsLoading, isPreferenceReadDone, selectedSources]);
+
+  // Persist genuine user-driven selection changes (modal apply + both resets
+  // flow through setSelectedSources). The reference check skips the
+  // hydration-triggered set: every user action creates a new array, while the
+  // hydrated value is recorded before it is applied.
+  useEffect(() => {
+    if (isLoadingPreference) {
+      return;
+    }
+    if (lastPersistedSourcesRef.current === selectedSources) {
+      return;
+    }
+    lastPersistedSourcesRef.current = selectedSources;
+
+    const savePreference = async () => {
+      try {
+        await AsyncStorage.setItem(
+          CALENDAR_SOURCES_STORAGE_KEY,
+          JSON.stringify(selectedSources)
+        );
+      } catch (error) {
+        console.error('Failed to save calendar source preference:', error);
+      }
+    };
+    void savePreference();
+  }, [isLoadingPreference, selectedSources]);
 
   useEffect(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -162,7 +266,10 @@ export default function CalendarScreen() {
   const hasReleases = allReleases.length > 0;
   const shouldShowInitialEnrichmentLoading = !hasReleases && isLoadingEnrichment;
   const shouldShowInitialLoading =
-    isPremiumLoading || isLoading || shouldShowInitialEnrichmentLoading;
+    isPremiumLoading ||
+    isLoading ||
+    isLoadingPreference ||
+    shouldShowInitialEnrichmentLoading;
   const shouldShowSkeletonUpdatingIndicator =
     isLoadingEnrichment && !isPremiumLoading && !isLoading;
 
