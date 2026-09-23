@@ -62,18 +62,18 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   }),
 }));
 
-jest.mock('@/src/components/ui/SegmentedControl', () => ({
-  SegmentedControl: ({ options, activeKey: _activeKey, onChange, testID }: any) => {
+jest.mock('@/src/components/ui/CategoryTabs', () => ({
+  CategoryTabs: ({ tabs, activeKey: _activeKey, onChange, testID }: any) => {
     const { Text, TouchableOpacity, View } = require('react-native');
     return (
       <View testID={testID}>
-        {options.map((option: any) => (
+        {tabs.map((tab: any) => (
           <TouchableOpacity
-            key={option.key}
-            testID={`${testID}-tab-${option.key}`}
-            onPress={() => onChange(option.key)}
+            key={tab.key}
+            testID={`${testID}-tab-${tab.key}`}
+            onPress={() => onChange(tab.key)}
           >
-            <Text>{option.label}</Text>
+            <Text>{tab.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -219,6 +219,7 @@ describe('WatchProgressScreen', () => {
     });
     mockUseHeaderSearch.mockImplementation((args: any) => ({
       searchQuery: '',
+      debouncedQuery: '',
       isSearchActive: false,
       filteredItems: args.items,
       deactivateSearch: jest.fn(),
@@ -268,7 +269,10 @@ describe('WatchProgressScreen', () => {
     expect(mockUseHeaderSearch).toHaveBeenCalled();
     const lastCallIndex = mockUseHeaderSearch.mock.calls.length - 1;
     const hookArgs = mockUseHeaderSearch.mock.calls[lastCallIndex][0];
-    expect(hookArgs.items).toEqual(mockShows);
+    // Screen does its own single-pass filtering; hook only supplies search UI
+    // state with an empty items array (near-zero filter cost) + 150ms debounce.
+    expect(hookArgs.items).toEqual([]);
+    expect(hookArgs.debounceMs).toBe(150);
     expect(hookArgs.getSearchableText(mockShows[0])).toBe('Mock Show');
   });
 
@@ -345,9 +349,38 @@ describe('WatchProgressScreen', () => {
       expect(getByTestId('watch-progress-tabs')).toBeTruthy();
     });
 
-    expect(getByText('Watching')).toBeTruthy();
-    expect(getByText('Caught Up')).toBeTruthy();
-    expect(getByText('Hidden')).toBeTruthy();
+    expect(getByText('Watching (1)')).toBeTruthy();
+    expect(getByText('Caught Up (0)')).toBeTruthy();
+    expect(getByText('Hidden (1)')).toBeTruthy();
+  });
+
+  it('filters tab counts by the debounced search query', async () => {
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [...mockShows, mockHiddenShow],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refresh: mockRefresh,
+    });
+    mockUseHeaderSearch.mockImplementation(() => ({
+      searchQuery: 'mock',
+      debouncedQuery: 'mock',
+      isSearchActive: true,
+      filteredItems: [],
+      deactivateSearch: jest.fn(),
+      setSearchQuery: jest.fn(),
+      searchButton: { onPress: jest.fn(), showBadge: true },
+    }));
+
+    const { getByText, queryByText } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByText('Watching (1)')).toBeTruthy();
+    });
+
+    // 'Hidden Show' does not match 'mock' (debounced), so Hidden drops to 0.
+    expect(getByText('Hidden (0)')).toBeTruthy();
+    expect(queryByText('Hidden (1)')).toBeNull();
   });
 
   it('keeps hidden shows out of the Watching tab and shows them in the Hidden tab', async () => {
@@ -468,9 +501,9 @@ describe('WatchProgressScreen', () => {
     const { getByTestId, getByText, queryByText } = render(<WatchProgressScreen />);
 
     await waitFor(() => {
-      expect(getByText('Watching')).toBeTruthy();
-      expect(getByText('Caught Up')).toBeTruthy();
-      expect(getByText('Hidden')).toBeTruthy();
+      expect(getByText('Watching (1)')).toBeTruthy();
+      expect(getByText('Caught Up (2)')).toBeTruthy();
+      expect(getByText('Hidden (1)')).toBeTruthy();
     });
 
     // In Watching tab by default

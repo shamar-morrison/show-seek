@@ -7,7 +7,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
-import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { CategoryTab, CategoryTabs } from '@/src/components/ui/CategoryTabs';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
 import { WatchProgressOptionsSheet } from '@/src/components/watching/WatchProgressOptionsSheet';
@@ -59,6 +59,11 @@ const DEFAULT_SORT_STATE: SortState = {
 };
 
 type WatchProgressTab = 'watching' | 'caughtUp' | 'hidden';
+
+// Stable empty array for useHeaderSearch: this screen performs its own
+// single-pass bucket + search filtering (all tab counts), so the hook is only
+// used for search UI state (query, active, buttons) with near-zero filter cost.
+const EMPTY_SEARCH_ITEMS: InProgressShow[] = [];
 
 export default function WatchProgressScreen() {
   const navigation = useNavigation();
@@ -137,31 +142,77 @@ export default function WatchProgressScreen() {
     }
   }, []);
 
-  // Split into watching vs caught up vs hidden shows
-  const watchingShows = useMemo(
-    () => (data ?? []).filter((show) => !show.isHidden && show.nextEpisode?.kind === 'unwatched'),
+  // Stable accessor for useHeaderSearch (avoids invalidating its filter memo).
+  const getSearchableText = useCallback((item: InProgressShow) => item.tvShowName, []);
+
+  // Search state only — items stay empty so the hook performs no real
+  // filtering work. Actual filtering happens in the single-pass memo below.
+  const {
+    searchQuery,
+    debouncedQuery,
+    isSearchActive,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: EMPTY_SEARCH_ITEMS,
+    getSearchableText,
+    debounceMs: 150,
+  });
+
+  // Normalize once per debounced query change (not per item / per render).
+  const normalizedQuery = useMemo(() => debouncedQuery.trim().toLowerCase(), [debouncedQuery]);
+
+  // Lowercase names once per data change — reused for every query keystroke.
+  const indexedShows = useMemo(
+    () => (data ?? []).map((show) => ({ show, lower: show.tvShowName.toLowerCase() })),
     [data]
   );
-  const caughtUpShows = useMemo(
-    () =>
-      (data ?? []).filter((show) => {
-        if (show.isHidden) return false;
-        if (show.nextEpisode?.kind === 'upcoming') return true;
-        if (show.nextEpisode?.kind === 'complete') return !hideCompleted;
-        return false;
-      }),
-    [data, hideCompleted]
-  );
-  const hiddenShows = useMemo(() => (data ?? []).filter((show) => show.isHidden), [data]);
-  const currentTabShows =
-    activeTab === 'watching'
-      ? watchingShows
-      : activeTab === 'caughtUp'
-        ? caughtUpShows
-        : hiddenShows;
 
-  // Sort the data based on current sort state
-  const sortedData = useMemo(() => {
+  // Single pass over all shows: bucket (watching/caughtUp/hidden) + apply the
+  // debounced search predicate once per item. Produces search-filtered counts
+  // for every tab and collects only the active tab's matches for sorting.
+  // Sort runs on the active tab subset only — inactive tabs cost just a counter.
+  const { watchingCount, caughtUpCount, hiddenCount, currentTabShows } = useMemo(() => {
+    let watchingCount = 0;
+    let caughtUpCount = 0;
+    let hiddenCount = 0;
+    const current: InProgressShow[] = [];
+    const hasQuery = normalizedQuery.length > 0;
+
+    for (const { show, lower } of indexedShows) {
+      let bucket: WatchProgressTab | null = null;
+      if (show.isHidden) {
+        bucket = 'hidden';
+      } else if (show.nextEpisode?.kind === 'unwatched') {
+        bucket = 'watching';
+      } else if (show.nextEpisode?.kind === 'upcoming') {
+        bucket = 'caughtUp';
+      } else if (show.nextEpisode?.kind === 'complete') {
+        if (!hideCompleted) bucket = 'caughtUp';
+      }
+      if (!bucket) continue;
+      if (hasQuery && !lower.includes(normalizedQuery)) continue;
+      if (bucket === 'watching') watchingCount += 1;
+      else if (bucket === 'caughtUp') caughtUpCount += 1;
+      else hiddenCount += 1;
+      if (bucket === activeTab) current.push(show);
+    }
+
+    return { watchingCount, caughtUpCount, hiddenCount, currentTabShows: current };
+  }, [indexedShows, normalizedQuery, hideCompleted, activeTab]);
+
+  const watchProgressTabs = useMemo<CategoryTab[]>(
+    () => [
+      { key: 'watching', label: `${t('library.watchingTab')} (${watchingCount})` },
+      { key: 'caughtUp', label: `${t('library.caughtUpTab')} (${caughtUpCount})` },
+      { key: 'hidden', label: `${t('library.hiddenTab')} (${hiddenCount})` },
+    ],
+    [t, watchingCount, caughtUpCount, hiddenCount]
+  );
+
+  // Sort the active tab's (already search-filtered) shows
+  const displayItems = useMemo(() => {
     const sorted = [...currentTabShows];
     const { option, direction } = sortState;
     const multiplier = direction === 'asc' ? 1 : -1;
@@ -180,19 +231,6 @@ export default function WatchProgressScreen() {
 
     return sorted;
   }, [currentTabShows, sortState]);
-
-  // Search01Icon functionality
-  const {
-    searchQuery,
-    isSearchActive,
-    filteredItems: displayItems,
-    deactivateSearch,
-    setSearchQuery,
-    searchButton,
-  } = useHeaderSearch({
-    items: sortedData,
-    getSearchableText: (item) => item.tvShowName,
-  });
 
   // --- Multi-select state ---
   const selectedCount = useMemo(() => Object.keys(selectedIds).length, [selectedIds]);
@@ -215,8 +253,8 @@ export default function WatchProgressScreen() {
   }, []);
 
   const handleTabChange = useCallback(
-    (tab: WatchProgressTab) => {
-      setActiveTab(tab);
+    (tab: string) => {
+      setActiveTab(tab as WatchProgressTab);
       clearSelection();
     },
     [clearSelection]
@@ -426,18 +464,12 @@ export default function WatchProgressScreen() {
           testID="watch-progress-updating-indicator"
         />
       )}
-      <View style={styles.tabsContainer}>
-        <SegmentedControl<WatchProgressTab>
-          options={[
-            { key: 'watching', label: t('library.watchingTab') },
-            { key: 'caughtUp', label: t('library.caughtUpTab') },
-            { key: 'hidden', label: t('library.hiddenTab') },
-          ]}
-          activeKey={activeTab}
-          onChange={handleTabChange}
-          testID="watch-progress-tabs"
-        />
-      </View>
+      <CategoryTabs
+        tabs={watchProgressTabs}
+        activeKey={activeTab}
+        onChange={handleTabChange}
+        testID="watch-progress-tabs"
+      />
       <FlashList
         ref={listRef}
         data={displayItems}
@@ -537,11 +569,6 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  tabsContainer: {
-    paddingHorizontal: SPACING.m,
-    paddingTop: SPACING.s,
-    paddingBottom: SPACING.s,
   },
   actionBar: {
     position: 'absolute',

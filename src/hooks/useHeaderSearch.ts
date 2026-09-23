@@ -20,6 +20,8 @@ interface UseHeaderSearchOptions<T> {
 interface UseHeaderSearchReturn<T> {
   /** Current search query */
   searchQuery: string;
+  /** Debounced search query (updates after debounceMs) */
+  debouncedQuery: string;
   /** Whether search mode is active */
   isSearchActive: boolean;
   /** Items filtered by search query */
@@ -109,6 +111,7 @@ export function useHeaderSearch<T>({
 
   return {
     searchQuery,
+    debouncedQuery,
     isSearchActive,
     filteredItems,
     activateSearch,
