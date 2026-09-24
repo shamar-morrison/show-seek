@@ -96,6 +96,9 @@ describe('useHistory', () => {
       totalWatched: 0,
       totalRated: 0,
       totalAddedToLists: 0,
+      watchedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+      ratedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+      addedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
       totalWatchMinutes: 0,
     });
 
@@ -123,6 +126,9 @@ describe('useHistory', () => {
       totalWatched: 0,
       totalRated: 0,
       totalAddedToLists: 0,
+      watchedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+      ratedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+      addedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
       totalWatchMinutes: 0,
     });
 
@@ -150,6 +156,9 @@ describe('useHistory', () => {
         watched: 0,
         rated: 0,
         addedToLists: 0,
+        watchedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+        ratedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+        addedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
         averageRating: null,
         totalWatchMinutes: 0,
         topGenres: [],

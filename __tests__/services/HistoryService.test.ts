@@ -110,6 +110,11 @@ describe('HistoryService', () => {
         averageRating: 8,
       })
     );
+    // The single valid rating is a movie rating: TV buckets stay empty.
+    expect(result.ratedSplit).toEqual({ movies: 1, tvShows: 0, tvEpisodes: 0 });
+    expect(result.monthlyStats[0].ratedSplit).toEqual({ movies: 1, tvShows: 0, tvEpisodes: 0 });
+    expect(result.watchedSplit).toEqual({ movies: 0, tvShows: 0, tvEpisodes: 0 });
+    expect(result.addedSplit).toEqual({ movies: 0, tvShows: 0, tvEpisodes: 0 });
     expect(warnSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -223,6 +228,9 @@ describe('HistoryService', () => {
 
     expect(detail).not.toBeNull();
     expect(detail?.stats.watched).toBe(4);
+    // 1 already-watched movie, 1 episode group + 1 already-watched TV show,
+    // 2 individual episode plays behind the TV count.
+    expect(detail?.stats.watchedSplit).toEqual({ movies: 1, tvShows: 2, tvEpisodes: 2 });
     expect(detail?.items.watched).toEqual([
       {
         kind: 'episode-group',

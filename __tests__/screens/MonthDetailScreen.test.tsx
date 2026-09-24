@@ -58,13 +58,20 @@ jest.mock('@/src/components/library/ActivityRatingCard', () => ({
 }));
 
 jest.mock('@shopify/flash-list', () => ({
-  FlashList: ({ data, renderItem }: any) => {
+  FlashList: ({ data, renderItem, ListHeaderComponent }: any) => {
     const React = require('react');
     const { View } = require('react-native');
+
+    const header = ListHeaderComponent
+      ? React.isValidElement(ListHeaderComponent)
+        ? ListHeaderComponent
+        : React.createElement(ListHeaderComponent)
+      : null;
 
     return React.createElement(
       View,
       { testID: 'flash-list' },
+      header,
       data.map((item: any, index: number) =>
         React.createElement(View, { key: `${index}` }, renderItem({ item, index }))
       )
@@ -92,6 +99,9 @@ describe('MonthDetailScreen', () => {
           watched: 4,
           rated: 0,
           addedToLists: 0,
+          watchedSplit: { movies: 1, tvShows: 1, tvEpisodes: 3 },
+          ratedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+          addedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
           averageRating: null,
           totalWatchMinutes: 262,
           topGenres: [],
@@ -156,6 +166,9 @@ describe('MonthDetailScreen', () => {
           watched: 0,
           rated: 0,
           addedToLists: 8,
+          watchedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+          ratedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+          addedSplit: { movies: 1, tvShows: 1, tvEpisodes: 0 },
           averageRating: null,
           totalWatchMinutes: 0,
           topGenres: [],
@@ -201,7 +214,9 @@ describe('MonthDetailScreen', () => {
 
     expect(queryByText('Filtered Season')).toBeNull();
     expect(getAllByText('Valid Added Movie')).toHaveLength(1);
-    expect(getAllByText('1')).toHaveLength(2);
+    // Added ledger shows the filtered total (1) plus the Movies (1) and
+    // TV Shows (0) breakdown alongside the tab badge (1).
+    expect(getAllByText('1')).toHaveLength(3);
     expect(getByText('0hrs 0mins')).toBeTruthy();
   });
 
@@ -215,9 +230,9 @@ describe('MonthDetailScreen', () => {
     });
 
     expect(getByTestId('month-tab-bar').props.horizontal).toBe(true);
-    // 'Watched'/'Added' appear twice (summary card + tab bar); 'Rated' only in the tab bar.
+    // Each category label appears twice (summary ledger + tab bar).
     expect(getAllByText('Watched')).toHaveLength(2);
-    expect(getAllByText('Rated')).toHaveLength(1);
+    expect(getAllByText('Rated')).toHaveLength(2);
     expect(getAllByText('Added')).toHaveLength(2);
   });
 
@@ -232,6 +247,9 @@ describe('MonthDetailScreen', () => {
           watched: 1,
           rated: 0,
           addedToLists: 0,
+          watchedSplit: { movies: 0, tvShows: 1, tvEpisodes: 1 },
+          ratedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
+          addedSplit: { movies: 0, tvShows: 0, tvEpisodes: 0 },
           averageRating: null,
           totalWatchMinutes: 45,
           topGenres: [],

@@ -54,6 +54,25 @@ export type MonthWatchedItem =
     };
 
 /**
+ * Movies vs TV breakdown for a single stat category.
+ *
+ * - `movies`: count of movie items (already-watched movies, movie ratings,
+ *   or movie list additions depending on the category).
+ * - `tvShows`: count of TV items. For watched this is distinct shows
+ *   (episode groups + already-watched TV entries); for rated/added it is
+ *   the number of rating/add actions bucketed to TV (seasons and episodes
+ *   count as TV).
+ * - `tvEpisodes`: number of individual TV episodes behind the TV count
+ *   (episode plays for watched, episode-level ratings for rated, always 0
+ *   for added). Used as sub-detail, hidden when 0.
+ */
+export interface MediaSplit {
+  movies: number;
+  tvShows: number;
+  tvEpisodes: number;
+}
+
+/**
  * Stats for a single month
  */
 export interface MonthlyStats {
@@ -69,6 +88,10 @@ export interface MonthlyStats {
   addedToLists: number;
   /** Average rating for the month (null if no ratings) */
   averageRating: number | null;
+  /** Movies vs TV breakdowns for each category */
+  watchedSplit: MediaSplit;
+  ratedSplit: MediaSplit;
+  addedSplit: MediaSplit;
   /** Total watch time in minutes for the month */
   totalWatchMinutes: number;
   /** Top 3 genre names for the month */
@@ -115,6 +138,10 @@ export interface HistoryData {
   totalRated: number;
   /** Total items added to lists in the period */
   totalAddedToLists: number;
+  /** Movies vs TV breakdowns for each category in the period */
+  watchedSplit: MediaSplit;
+  ratedSplit: MediaSplit;
+  addedSplit: MediaSplit;
   /** Total watch time in minutes in the period */
   totalWatchMinutes: number;
 }

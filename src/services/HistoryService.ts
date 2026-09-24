@@ -5,6 +5,7 @@ import { toMillis } from '../utils/timestamps';
 import type {
   ActivityItem,
   HistoryData,
+  MediaSplit,
   MonthlyDetail,
   MonthlyStats,
   MonthWatchedItem,
@@ -310,6 +311,53 @@ class HistoryService {
   }
 
   /**
+   * Watched split: movies are already-watched movie entries; TV shows are
+   * distinct episode-tracking shows plus already-watched TV entries;
+   * TV episodes are raw episode plays.
+   */
+  private buildWatchedSplit(
+    episodeShowIds: Set<number>,
+    alreadyWatched: { mediaType: 'movie' | 'tv' }[],
+    episodeCount: number
+  ): MediaSplit {
+    const movies = alreadyWatched.filter((i) => i.mediaType === 'movie').length;
+    const alreadyWatchedTv = alreadyWatched.filter((i) => i.mediaType === 'tv').length;
+    return {
+      movies,
+      tvShows: episodeShowIds.size + alreadyWatchedTv,
+      tvEpisodes: episodeCount,
+    };
+  }
+
+  /**
+   * Rated split: exact movie ratings count as movies; tv, season, and
+   * episode ratings all bucket into TV. Episode-level ratings are also
+   * tracked as tvEpisodes sub-detail.
+   */
+  private buildRatedSplit(ratings: { mediaType: string }[]): MediaSplit {
+    const movies = ratings.filter((r) => r.mediaType === 'movie').length;
+    const tvEpisodes = ratings.filter((r) => r.mediaType === 'episode').length;
+    return {
+      movies,
+      tvShows: ratings.length - movies,
+      tvEpisodes,
+    };
+  }
+
+  /**
+   * Added split: list items are only movie|tv, counted directly.
+   * Anything non-movie buckets to TV so season/episode strays (which the
+   * month-detail UI filters out) never crash the totals.
+   */
+  private buildAddedSplit(items: { mediaType: string }[]): MediaSplit {
+    return {
+      movies: items.filter((i) => i.mediaType === 'movie').length,
+      tvShows: items.filter((i) => i.mediaType === 'tv').length,
+      tvEpisodes: 0,
+    };
+  }
+
+  /**
    * Calculate percentage change between two values
    */
   private calculatePercentageChange(current: number, previous: number): number {
@@ -351,6 +399,7 @@ class HistoryService {
       timestamp: number;
       genreIds?: number[];
       listName: string;
+      mediaType: 'movie' | 'tv';
     }[] = [];
     // Already-watched items separately for "watched" stats + watch time.
     // Full refs are kept so missing runtimes can be lazily backfilled.
@@ -372,6 +421,7 @@ class HistoryService {
               timestamp: addedAtMillis,
               genreIds: item.genre_ids,
               listName: list.name,
+              mediaType: item.media_type,
             });
             // Track already-watched items for watched count
             if (list.id === 'already-watched') {
@@ -503,12 +553,23 @@ class HistoryService {
         };
       }
 
+      const monthEpisodeShowIds = new Set<number>(
+        monthEpisodes.map((e) => e.tvShowId)
+      );
+
       return {
         month,
         monthName: this.formatMonthName(month),
         watched: totalWatchedForMonth,
         rated: monthRatings.length,
         addedToLists: monthListItems.length,
+        watchedSplit: this.buildWatchedSplit(
+          monthEpisodeShowIds,
+          monthAlreadyWatched,
+          monthEpisodes.length
+        ),
+        ratedSplit: this.buildRatedSplit(monthRatings),
+        addedSplit: this.buildAddedSplit(monthListItems),
         averageRating,
         totalWatchMinutes: totalWatchMinutesForMonth,
         topGenres,
@@ -522,6 +583,8 @@ class HistoryService {
     // Analyze patterns
     const { mostActiveDay, mostActiveTimeOfDay } = this.analyzePatterns(allTimestamps);
 
+    const allEpisodeShowIds = new Set<number>(recentEpisodes.map((e) => e.tvShowId));
+
     return {
       monthlyStats,
       currentStreak,
@@ -531,6 +594,13 @@ class HistoryService {
       totalWatched: recentEpisodes.length + alreadyWatchedItems.length,
       totalRated: recentRatings.length,
       totalAddedToLists: listItems.length,
+      watchedSplit: this.buildWatchedSplit(
+        allEpisodeShowIds,
+        alreadyWatchedItems,
+        recentEpisodes.length
+      ),
+      ratedSplit: this.buildRatedSplit(recentRatings),
+      addedSplit: this.buildAddedSplit(listItems),
       totalWatchMinutes:
         recentEpisodes.reduce((acc, e) => acc + episodeWatchMinutes(e), 0) +
         alreadyWatchedItems.reduce((acc, i) => acc + alreadyWatchedWatchMinutes(i), 0),
@@ -772,6 +842,13 @@ class HistoryService {
     });
     const topGenres = this.calculateTopGenres(genreIdCounts, genreMap);
 
+    const detailEpisodeShowIds = new Set<number>(monthEpisodes.map((e) => e.tvShowId));
+    const detailWatchedSplit = this.buildWatchedSplit(
+      detailEpisodeShowIds,
+      detailAlreadyWatchedRefs,
+      monthEpisodes.length
+    );
+
     return {
       month,
       monthName: this.formatMonthName(month),
@@ -781,6 +858,9 @@ class HistoryService {
         watched: monthEpisodes.length + alreadyWatchedMediaCount,
         rated: ratedItems.length,
         addedToLists: monthListItems.length,
+        watchedSplit: detailWatchedSplit,
+        ratedSplit: this.buildRatedSplit(monthRatings),
+        addedSplit: this.buildAddedSplit(monthListItems),
         averageRating,
         totalWatchMinutes: monthWatchMinutes,
         topGenres,

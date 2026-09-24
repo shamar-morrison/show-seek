@@ -1,6 +1,7 @@
 import { ActivityRatingCard } from '@/src/components/library/ActivityRatingCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { CategoryLedger } from '@/src/components/stats/CategoryLedger';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import {
   ACTIVE_OPACITY,
@@ -123,6 +124,16 @@ export default function MonthDetailScreen() {
       );
   }, [monthDetail]);
   const filteredAddedCount = addedItems.length;
+  // Split of the *displayed* added items (season/episode strays are filtered
+  // out above), so Movies + TV Shows always sums to the headline total.
+  const filteredAddedSplit = useMemo(
+    () => ({
+      movies: addedItems.filter((item) => item.media_type === 'movie').length,
+      tvShows: addedItems.filter((item) => item.media_type === 'tv').length,
+      tvEpisodes: 0,
+    }),
+    [addedItems]
+  );
 
   const [activeTab, setActiveTab] = useState<TabType>('watched');
   const [hasInitializedTab, setHasInitializedTab] = useState(false);
@@ -264,10 +275,10 @@ export default function MonthDetailScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
-      <View style={styles.divider} />
-
+  // Summary + tabs ride along as the list header so the whole screen scrolls
+  // as one unit (the ledger summary is too tall to leave fixed above the list).
+  const listHeader = (
+    <>
       {/* Summary Card */}
       <View style={styles.summaryCard}>
         {showRefreshIndicator && (
@@ -279,32 +290,48 @@ export default function MonthDetailScreen() {
             testID="month-detail-refresh-indicator"
           />
         )}
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryItem}>
-            <AppIcon icon={Tv01Icon} size={20} color={accentColor} />
-            <Text style={styles.summaryValue}>{monthDetail.stats.watched}</Text>
-            <Text style={styles.summaryLabel}>{t('stats.watched')}</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <AppIcon icon={StarIcon} size={20} color={COLORS.warning} />
-            <Text style={styles.summaryValue}>{monthDetail.stats.averageRating ?? '-'}</Text>
+        <CategoryLedger
+          compact
+          icon={Tv01Icon}
+          iconColor={accentColor}
+          title={t('stats.watched')}
+          total={monthDetail.stats.watched}
+          split={monthDetail.stats.watchedSplit}
+        />
+        <View style={styles.summaryDivider} />
+        <CategoryLedger
+          compact
+          icon={StarIcon}
+          iconColor={COLORS.warning}
+          title={t('stats.rated')}
+          total={monthDetail.stats.rated}
+          split={monthDetail.stats.ratedSplit}
+        />
+        <View style={styles.summarySingleRow}>
+          <View style={styles.summarySingleLabel}>
+            <AppIcon icon={StarIcon} size={16} color={COLORS.warning} />
             <Text style={styles.summaryLabel}>{t('stats.avgRating')}</Text>
           </View>
-          <View style={styles.summaryItem}>
-            <AppIcon icon={PlusSignIcon} size={20} color={COLORS.success} />
-            <Text style={styles.summaryValue}>{filteredAddedCount}</Text>
-            <Text style={styles.summaryLabel}>{t('stats.added')}</Text>
-          </View>
+          <Text style={styles.summaryValue}>{monthDetail.stats.averageRating ?? '-'}</Text>
         </View>
+        <View style={styles.summaryDivider} />
+        <CategoryLedger
+          compact
+          icon={PlusSignIcon}
+          iconColor={COLORS.success}
+          title={t('stats.added')}
+          total={filteredAddedCount}
+          split={filteredAddedSplit}
+        />
 
         <View style={styles.summaryWatchTimeRow}>
-          <View style={styles.summaryWatchTimeTotal}>
-            <AppIcon icon={Clock01Icon} size={20} color={accentColor} />
-            <Text style={styles.summaryValue}>
-              {formatWatchHours(monthDetail.stats.totalWatchMinutes)}
-            </Text>
+          <View style={styles.summarySingleLabel}>
+            <AppIcon icon={Clock01Icon} size={16} color={accentColor} />
+            <Text style={styles.summaryLabel}>{t('stats.watchTime')}</Text>
           </View>
-          <Text style={styles.summaryLabel}>{t('stats.watchTime')}</Text>
+          <Text style={styles.summaryValue}>
+            {formatWatchHours(monthDetail.stats.totalWatchMinutes)}
+          </Text>
         </View>
 
         {monthDetail.stats.topGenres.length > 0 && (
@@ -349,14 +376,24 @@ export default function MonthDetailScreen() {
         />
         </ScrollView>
       </View>
+    </>
+  );
+
+  return (
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={styles.divider} />
 
       {/* Content based on active tab */}
       {currentItemCount === 0 ? (
-        <View style={styles.emptyTabContent}>
-          <Text style={styles.emptyTabText}>{t(`stats.monthDetail.emptyTab.${activeTab}`)}</Text>
-        </View>
+        <ScrollView contentContainerStyle={styles.emptyScrollContent}>
+          {listHeader}
+          <View style={styles.emptyTabContent}>
+            <Text style={styles.emptyTabText}>{t(`stats.monthDetail.emptyTab.${activeTab}`)}</Text>
+          </View>
+        </ScrollView>
       ) : activeTab === 'added' ? (
         <FlashList
+          ListHeaderComponent={listHeader}
           data={addedItems}
           renderItem={({ item }) => (
             <MediaListCard
@@ -373,6 +410,7 @@ export default function MonthDetailScreen() {
         />
       ) : activeTab === 'watched' ? (
         <FlashList
+          ListHeaderComponent={listHeader}
           data={watchedItems}
           renderItem={({ item }) => (
             <MediaListCard
@@ -392,6 +430,7 @@ export default function MonthDetailScreen() {
         />
       ) : (
         <FlashList
+          ListHeaderComponent={listHeader}
           data={rated}
           renderItem={({ item }) => (
             <ActivityRatingCard item={item} onPress={handleItemPress} t={t} />
@@ -413,7 +452,9 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     backgroundColor: COLORS.surface,
-    margin: SPACING.m,
+    // No horizontal margin: side spacing comes from the FlashList / ScrollView
+    // content padding the header renders inside (otherwise it doubles up).
+    marginVertical: SPACING.m,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.l,
   },
@@ -422,16 +463,25 @@ const styles = StyleSheet.create({
     top: SPACING.s,
     right: SPACING.s,
   },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  summaryDivider: {
+    height: 1,
+    marginVertical: SPACING.xs,
+    backgroundColor: COLORS.surfaceLight,
   },
-  summaryItem: {
+  summarySingleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.s,
+    paddingLeft: SPACING.xl,
+  },
+  summarySingleLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
   },
   summaryValue: {
-    fontSize: FONT_SIZE.l,
+    fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
   },
@@ -440,18 +490,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   summaryWatchTimeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    marginTop: SPACING.m,
+    justifyContent: 'space-between',
+    marginTop: SPACING.s,
     paddingTop: SPACING.m,
     borderTopWidth: 1,
     borderTopColor: COLORS.surfaceLight,
-  },
-  summaryWatchTimeTotal: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: SPACING.xs,
   },
   topGenresRow: {
     flexDirection: 'row',
@@ -475,7 +520,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.s,
   },
   tabBarContent: {
-    paddingHorizontal: SPACING.m,
     gap: SPACING.s,
   },
   tabButton: {
@@ -517,6 +561,11 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: SPACING.m,
     paddingBottom: SPACING.xxl,
+  },
+  emptyScrollContent: {
+    flexGrow: 1,
+    // Matches the FlashList side padding so the header aligns in both states.
+    paddingHorizontal: SPACING.m,
   },
   emptyTabContent: {
     flex: 1,
