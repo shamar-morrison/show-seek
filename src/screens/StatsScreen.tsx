@@ -1,4 +1,5 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { CategoryLedger } from '@/src/components/stats/CategoryLedger';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import {
@@ -30,34 +31,10 @@ import {
   StarIcon,
   Tv01Icon,
 } from '@hugeicons/core-free-icons';
-import type { IconSvgElement } from '@hugeicons/react-native';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-/**
- * Stats card for displaying a single metric
- */
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  iconColor,
-}: {
-  icon: IconSvgElement;
-  label: string;
-  value: string | number;
-  iconColor: string;
-}) {
-  return (
-    <View style={styles.statCard}>
-      <AppIcon icon={Icon} size={24} color={iconColor} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
 
 /**
  * Comparison indicator showing percentage change
@@ -116,32 +93,46 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
 
       {hasActivity ? (
         <>
-          <View style={styles.monthStats}>
-          <View style={styles.monthStatItem}>
-            <AppIcon icon={Tv01Icon} size={16} color={COLORS.textSecondary} />
-            <Text style={styles.monthStatValue}>{stats.watched}</Text>
-            <Text style={styles.monthStatLabel}>{t('stats.watched')}</Text>
-          </View>
-
-          <View style={styles.monthStatItem}>
-            <AppIcon icon={StarIcon} size={16} color={COLORS.warning} />
+          <CategoryLedger
+            compact
+            icon={Tv01Icon}
+            iconColor={COLORS.textSecondary}
+            title={t('stats.watched')}
+            total={stats.watched}
+            split={stats.watchedSplit}
+          />
+          <View style={styles.monthLedgerDivider} />
+          <CategoryLedger
+            compact
+            icon={StarIcon}
+            iconColor={COLORS.warning}
+            title={t('stats.rated')}
+            total={stats.rated}
+            split={stats.ratedSplit}
+          />
+          <View style={styles.monthSingleRow}>
+            <View style={styles.monthSingleLabel}>
+              <AppIcon icon={StarIcon} size={16} color={COLORS.warning} />
+              <Text style={styles.monthStatLabel}>{t('stats.avgRating')}</Text>
+            </View>
             <Text style={styles.monthStatValue}>{stats.averageRating ?? '-'}</Text>
-            <Text style={styles.monthStatLabel}>{t('stats.avgRating')}</Text>
           </View>
-
-          <View style={styles.monthStatItem}>
-            <AppIcon icon={PlusSignIcon} size={16} color={COLORS.success} />
-            <Text style={styles.monthStatValue}>{stats.addedToLists}</Text>
-            <Text style={styles.monthStatLabel}>{t('stats.added')}</Text>
-          </View>
-        </View>
-        <View style={styles.monthWatchTimeRow}>
-          <View style={styles.monthWatchTimeTotal}>
-            <AppIcon icon={Clock01Icon} size={16} color={COLORS.textSecondary} />
+          <View style={styles.monthLedgerDivider} />
+          <CategoryLedger
+            compact
+            icon={PlusSignIcon}
+            iconColor={COLORS.success}
+            title={t('stats.added')}
+            total={stats.addedToLists}
+            split={stats.addedSplit}
+          />
+          <View style={styles.monthWatchTimeRow}>
+            <View style={styles.monthSingleLabel}>
+              <AppIcon icon={Clock01Icon} size={16} color={COLORS.textSecondary} />
+              <Text style={styles.monthStatLabel}>{t('stats.watchTime')}</Text>
+            </View>
             <Text style={styles.monthStatValue}>{formatWatchHours(stats.totalWatchMinutes)}</Text>
           </View>
-          <Text style={styles.monthStatLabel}>{t('stats.watchTime')}</Text>
-        </View>
         </>
       ) : (
         <Text style={styles.noActivityText}>{t('stats.noActivityThisMonth')}</Text>
@@ -232,33 +223,41 @@ export default function StatsScreen() {
               />
             )}
           </View>
-          <View style={styles.statsGrid}>
-            <StatCard
-              icon={Tv01Icon}
-              label={t('stats.watched')}
-              value={historyData.totalWatched}
-              iconColor={accentColor}
-            />
-            <StatCard
-              icon={StarIcon}
-              label={t('stats.rated')}
-              value={historyData.totalRated}
-              iconColor={COLORS.warning}
-            />
-            <StatCard
-              icon={PlusSignIcon}
-              label={t('stats.added')}
-              value={historyData.totalAddedToLists}
-              iconColor={COLORS.success}
-            />
-          </View>
-          <View style={[styles.statsGrid, styles.overviewWatchRow]}>
-            <StatCard
-              icon={Clock01Icon}
-              label={t('stats.totalHours')}
-              value={formatWatchHours(historyData.totalWatchMinutes)}
-              iconColor={accentColor}
-            />
+          <CategoryLedger
+            icon={Tv01Icon}
+            iconColor={accentColor}
+            title={t('stats.watched')}
+            total={historyData.totalWatched}
+            split={historyData.watchedSplit}
+            testID="stats-watched-ledger"
+          />
+          <View style={styles.ledgerDivider} />
+          <CategoryLedger
+            icon={StarIcon}
+            iconColor={COLORS.warning}
+            title={t('stats.rated')}
+            total={historyData.totalRated}
+            split={historyData.ratedSplit}
+            testID="stats-rated-ledger"
+          />
+          <View style={styles.ledgerDivider} />
+          <CategoryLedger
+            icon={PlusSignIcon}
+            iconColor={COLORS.success}
+            title={t('stats.added')}
+            total={historyData.totalAddedToLists}
+            split={historyData.addedSplit}
+            testID="stats-added-ledger"
+          />
+          <View style={styles.ledgerDivider} />
+          <View style={styles.watchTimeRow}>
+            <View style={styles.watchTimeLabel}>
+              <AppIcon icon={Clock01Icon} size={20} color={accentColor} />
+              <Text style={styles.watchTimeText}>{t('stats.totalHours')}</Text>
+            </View>
+            <Text style={styles.watchTimeValue}>
+              {formatWatchHours(historyData.totalWatchMinutes)}
+            </Text>
           </View>
         </View>
 
@@ -351,30 +350,32 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     marginBottom: SPACING.m,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: SPACING.m,
+  ledgerDivider: {
+    height: 1,
+    marginVertical: SPACING.s,
+    backgroundColor: COLORS.surfaceLight,
   },
-  overviewWatchRow: {
-    marginTop: SPACING.m,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.m,
+  watchTimeRow: {
     alignItems: 'center',
+    paddingVertical: SPACING.s,
+    gap: SPACING.xs,
   },
-  statValue: {
+  watchTimeLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+  },
+  watchTimeText: {
+    fontSize: FONT_SIZE.m,
+    fontFamily: FONT_FAMILY.semiBold,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  watchTimeValue: {
     fontSize: FONT_SIZE.xl,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
-    marginTop: SPACING.s,
-  },
-  statLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
+    textAlign: 'center',
   },
   streakRow: {
     flexDirection: 'row',
@@ -448,13 +449,22 @@ const styles = StyleSheet.create({
   comparisonText: {
     fontSize: FONT_SIZE.xs,
   },
-  monthStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  monthLedgerDivider: {
+    height: 1,
+    marginVertical: SPACING.xs,
+    backgroundColor: COLORS.surfaceLight,
   },
-  monthStatItem: {
+  monthSingleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.s,
+    paddingLeft: SPACING.xl,
+  },
+  monthSingleLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
   },
   monthStatValue: {
     fontSize: FONT_SIZE.m,
@@ -466,18 +476,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   monthWatchTimeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    marginTop: SPACING.m,
+    justifyContent: 'space-between',
+    marginTop: SPACING.s,
     paddingTop: SPACING.m,
     borderTopWidth: 1,
     borderTopColor: COLORS.surfaceLight,
-  },
-  monthWatchTimeTotal: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: SPACING.xs,
   },
   noActivityText: {
     textAlign: 'center',
