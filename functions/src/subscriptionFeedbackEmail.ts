@@ -16,6 +16,11 @@ export const FEEDBACK_FROM_EMAIL = 'ShowSeek <feedback@show-seek.app>';
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
+// Bounded so a stalled Resend request fails promptly instead of blocking
+// the calling webhook's response indefinitely. A timeout surfaces as a
+// normal thrown error for the caller to catch like any other send failure.
+const RESEND_REQUEST_TIMEOUT_MS = 10_000;
+
 interface FeedbackCopy {
   subject: string;
   text: string;
@@ -82,6 +87,7 @@ export const sendCancellationFeedbackEmail = async (
       html: copy.html,
       text: copy.text,
     }),
+    signal: AbortSignal.timeout(RESEND_REQUEST_TIMEOUT_MS),
   });
 
   if (!response.ok) {

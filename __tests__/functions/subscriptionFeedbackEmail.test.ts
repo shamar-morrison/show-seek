@@ -100,4 +100,16 @@ describe('sendCancellationFeedbackEmail', () => {
     expect((error as Error).message).toContain('401');
     expect((error as Error).message).toContain('Invalid API key');
   });
+
+  it('rejects when the Resend request times out', async () => {
+    const abortError = new DOMException('The operation was aborted.', 'AbortError');
+    mockFetch.mockRejectedValueOnce(abortError);
+
+    await expect(
+      sendCancellationFeedbackEmail({ email: 'user@example.com', reason: 'cancelled' })
+    ).rejects.toBe(abortError);
+
+    const init = mockFetch.mock.calls[0][1];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
 });
