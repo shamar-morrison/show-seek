@@ -219,10 +219,13 @@ export const useReminders = () => {
   const currentUser = auth.currentUser;
   const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
+  // Budget gate lives on `enabled` — not on the derived value below. Once the
+  // session read budget is exhausted this stops *new* network fetches, but
+  // already-cached reminders keep being served from cache.
   const query = useQuery({
     queryKey: ['reminders', userId],
     queryFn: () => reminderService.getActiveReminders(userId!),
-    enabled: !!userId,
+    enabled: !!userId && getStatusReadsEnabled(),
     placeholderData: [] as Reminder[],
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
@@ -413,14 +416,12 @@ const useAutoUpdateReminders = (reminders: Reminder[], userId?: string) => {
  */
 export const useMediaReminder = (mediaId: number, mediaType: ReminderMediaType) => {
   const { data: reminders, isLoading } = useReminders();
-  if (!getStatusReadsEnabled()) {
-    return {
-      reminder: null,
-      hasReminder: false,
-      isLoading: false,
-    };
-  }
 
+  // Intentionally no read-budget gate here: hasReminder derives from
+  // whatever is currently cached (the budget only gates *new* fetches via
+  // the query's `enabled` option above). Gating this return value caused
+  // the bell to unfill once the session budget was exhausted even though
+  // the reminder was cached and persisted.
   const reminderId = `${mediaType}-${mediaId}`;
   const reminder = reminders.find((candidate) => candidate.id === reminderId);
 
@@ -494,7 +495,9 @@ export const useCreateReminder = () => {
         }
         return [...base, optimistic];
       });
-      queryClient.setQueryData<Reminder | null>(singleKey, optimistic);
+      // NOTE: the per-media ['reminder', uid, type, id] key intentionally has
+      // no optimistic write — nothing reads it (the bell derives from the
+      // list cache above), and the settled refetch reconciles from Firestore.
       return { listKey, singleKey, previousList, previousSingle: previousSingle ?? null };
     },
     onError: (_error, _variables, context) => {
