@@ -767,4 +767,23 @@ describe('revenuecatWebhook subscription feedback email', () => {
     expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
     expect(mockSendCancellationFeedbackEmail).toHaveBeenCalledTimes(1);
   });
+
+  it('still returns 200 when the auth lookup throws and never sends', async () => {
+    mockProcessedTransaction({ provider: 'revenuecat' });
+    mockGetUser.mockRejectedValueOnce(
+      Object.assign(new Error('No user record'), { code: 'auth/user-not-found' })
+    );
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      id: 'evt_expire_deleted_user',
+      type: 'EXPIRATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+    expect(mockGetUser).toHaveBeenCalledWith('user-1');
+    expect(mockSendCancellationFeedbackEmail).not.toHaveBeenCalled();
+  });
 });
