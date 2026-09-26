@@ -9,6 +9,10 @@ const mockTimestampFromMillis = (ms: number) => ({
 
 const mockRunTransaction = jest.fn();
 const mockCollection = jest.fn();
+const mockGetUser = jest.fn();
+mockGetUser.mockResolvedValue({ email: 'user@example.com' });
+
+const mockSendCancellationFeedbackEmail = jest.fn(async () => ({}));
 
 const firestoreFn: any = jest.fn(() => ({
   collection: mockCollection,
@@ -37,9 +41,15 @@ jest.mock(
   'firebase-admin',
   () => ({
     firestore: firestoreFn,
+    auth: jest.fn(() => ({ getUser: mockGetUser })),
   }),
   { virtual: true }
 );
+
+jest.mock('@/functions/src/subscriptionFeedbackEmail', () => ({
+  sendCancellationFeedbackEmail: (...args: unknown[]) =>
+    mockSendCancellationFeedbackEmail(...args),
+}));
 
 import {
   mapRevenueCatEventToPremiumPayload,
@@ -540,5 +550,221 @@ describe('revenuecatWebhook handler', () => {
     expect(userSetCall).toBeDefined();
     expect(userSetCall[1].premium.provider).toBe('revenuecat');
     expect(userSetCall[1].premium.isPremium).toBe(true);
+  });
+});
+
+describe('revenuecatWebhook subscription feedback email', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetUser.mockResolvedValue({ email: 'user@example.com' });
+    mockSendCancellationFeedbackEmail.mockResolvedValue({});
+
+    mockCollection.mockImplementation((collectionName: string) => ({
+      doc: (docId: string) => ({ path: `${collectionName}/${docId}` }),
+    }));
+  });
+
+  const mockProcessedTransaction = (existingPremium: Record<string, unknown>) => {
+    mockRunTransaction.mockImplementationOnce(async (transactionCallback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('revenuecatWebhookEvents/')) {
+            return { exists: false };
+          }
+
+          return {
+            data: () => ({ premium: existingPremium }),
+            exists: true,
+          };
+        }),
+        set: jest.fn(),
+      };
+
+      return await transactionCallback(transaction);
+    });
+  };
+
+  const postEvent = (event: Record<string, unknown>) => {
+    const response = createResponse();
+
+    return revenuecatWebhook(
+      {
+        body: { event },
+        header: jest.fn(() => 'Bearer hook-secret'),
+        method: 'POST',
+      } as any,
+      response as any
+    ).then(() => response);
+  };
+
+  it("sends reason 'cancelled' on CANCELLATION+processed", async () => {
+    mockProcessedTransaction({ provider: 'revenuecat' });
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      expiration_at_ms: Date.now() + 86400_000,
+      id: 'evt_cancel_1',
+      product_id: 'monthly_showseek_sub',
+      type: 'CANCELLATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+    expect(mockGetUser).toHaveBeenCalledWith('user-1');
+    expect(mockSendCancellationFeedbackEmail).toHaveBeenCalledTimes(1);
+    expect(mockSendCancellationFeedbackEmail).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      reason: 'cancelled',
+    });
+  });
+
+  it("sends reason 'expired' on EXPIRATION+processed", async () => {
+    mockProcessedTransaction({ provider: 'revenuecat' });
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      id: 'evt_expire_1',
+      type: 'EXPIRATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+    expect(mockSendCancellationFeedbackEmail).toHaveBeenCalledTimes(1);
+    expect(mockSendCancellationFeedbackEmail).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      reason: 'expired',
+    });
+  });
+
+  it('never sends on duplicate delivery', async () => {
+    mockRunTransaction.mockImplementationOnce(async (transactionCallback: any) => {
+      const transaction = {
+        get: jest.fn(async () => ({ exists: true })),
+        set: jest.fn(),
+      };
+
+      return await transactionCallback(transaction);
+    });
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      id: 'evt_cancel_duplicate',
+      type: 'CANCELLATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'duplicate' });
+    expect(mockSendCancellationFeedbackEmail).not.toHaveBeenCalled();
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('never sends on stale events', async () => {
+    mockProcessedTransaction({ rcLastEventTimestampMs: 5000 });
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 1000,
+      id: 'evt_cancel_stale',
+      type: 'CANCELLATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'stale' });
+    expect(mockSendCancellationFeedbackEmail).not.toHaveBeenCalled();
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('never sends for other event types', async () => {
+    mockProcessedTransaction({ provider: 'revenuecat' });
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      expiration_at_ms: Date.now() + 86400_000,
+      id: 'evt_renewal_no_email',
+      product_id: 'monthly_showseek_sub',
+      type: 'RENEWAL',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+    expect(mockSendCancellationFeedbackEmail).not.toHaveBeenCalled();
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('never sends when handledBy is polar-guard, even for CANCELLATION', async () => {
+    mockProcessedTransaction({
+      isPremium: true,
+      provider: 'polar',
+      rcLastEventTimestampMs: 500,
+    });
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      id: 'evt_cancel_polar',
+      type: 'CANCELLATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+    expect(mockSendCancellationFeedbackEmail).not.toHaveBeenCalled();
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('never sends when handledBy is polar-guard, even for EXPIRATION', async () => {
+    mockProcessedTransaction({
+      isPremium: true,
+      provider: 'polar',
+      rcLastEventTimestampMs: 500,
+    });
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      id: 'evt_expire_polar',
+      type: 'EXPIRATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+    expect(mockSendCancellationFeedbackEmail).not.toHaveBeenCalled();
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('skips the send when the auth user has no email', async () => {
+    mockProcessedTransaction({ provider: 'revenuecat' });
+    mockGetUser.mockResolvedValue({ email: null });
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      id: 'evt_cancel_no_email',
+      type: 'CANCELLATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+    expect(mockGetUser).toHaveBeenCalledWith('user-1');
+    expect(mockSendCancellationFeedbackEmail).not.toHaveBeenCalled();
+  });
+
+  it('still returns 200 when the email send throws', async () => {
+    mockProcessedTransaction({ provider: 'revenuecat' });
+    mockSendCancellationFeedbackEmail.mockRejectedValueOnce(new Error('resend down'));
+
+    const response = await postEvent({
+      app_user_id: 'user-1',
+      event_timestamp_ms: 2000,
+      id: 'evt_expire_send_fails',
+      type: 'EXPIRATION',
+    });
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+    expect(mockSendCancellationFeedbackEmail).toHaveBeenCalledTimes(1);
   });
 });
