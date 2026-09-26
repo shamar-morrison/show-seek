@@ -59,9 +59,11 @@ jest.mock('@/src/utils/subsequentEpisodeHelpers', () => ({
 
 import {
   useCanCreateReminder,
+  useCancelReminder,
   useCreateReminder,
   useMediaReminder,
   useReminders,
+  useUpdateReminder,
 } from '@/src/hooks/useReminders';
 
 const createQueryClient = () =>
@@ -399,6 +401,179 @@ describe('useReminders hooks', () => {
       });
 
       expect(mockCreateReminder).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('optimistic updates', () => {
+    const movieInput = {
+      mediaType: 'movie' as const,
+      mediaId: 999,
+      title: 'Future Movie',
+      posterPath: null,
+      releaseDate: '2026-06-01',
+      reminderTiming: 'on_release_day' as const,
+    };
+
+    it('fills the bell instantly on create and keeps it after server confirm', async () => {
+      const client = createQueryClient();
+      const listKey = ['reminders', 'test-user-id'] as const;
+      mockGetActiveReminders.mockResolvedValue([]);
+      let resolveCreate!: () => void;
+      mockCreateReminder.mockImplementationOnce(
+        () => new Promise<void>((resolve) => void (resolveCreate = resolve))
+      );
+
+      const { result } = renderHook(
+        () => ({
+          create: useCreateReminder(),
+          media: useMediaReminder(999, 'movie'),
+        }),
+        { wrapper: createWrapper(client) }
+      );
+
+      // Wait for the initial fetch to land (placeholder [] is not stored in
+      // cache, so defined data means the guard sees a known list).
+      await waitFor(() => {
+        expect(client.getQueryData(listKey)).toEqual([]);
+      });
+
+      // Server will return the new reminder on the settled refetch.
+      mockGetActiveReminders.mockResolvedValue([
+        createReminder({ id: 'movie-999', mediaId: 999, title: 'Future Movie' }),
+      ]);
+
+      act(() => {
+        result.current.create.mutate(movieInput);
+      });
+
+      // Bell fills before the service resolves.
+      await waitFor(() => {
+        expect(result.current.media.hasReminder).toBe(true);
+      });
+      expect(mockCreateReminder).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        resolveCreate();
+      });
+
+      // Settled refetch reconciles with server truth; bell stays filled.
+      await waitFor(() => {
+        expect(mockGetActiveReminders.mock.calls.length).toBeGreaterThan(1);
+      });
+      await waitFor(() => {
+        expect(result.current.media.hasReminder).toBe(true);
+      });
+    });
+
+    it('rolls the bell back when create fails (modal shows failure toast)', async () => {
+      const client = createQueryClient();
+      mockGetActiveReminders.mockResolvedValue([]);
+      mockCreateReminder.mockRejectedValueOnce(new Error('boom'));
+
+      const { result } = renderHook(
+        () => ({
+          create: useCreateReminder(),
+          media: useMediaReminder(999, 'movie'),
+        }),
+        { wrapper: createWrapper(client) }
+      );
+
+      await waitFor(() => {
+        expect(result.current.media.hasReminder).toBe(false);
+      });
+
+      await act(async () => {
+        await expect(result.current.create.mutateAsync(movieInput)).rejects.toThrow('boom');
+      });
+
+      expect(client.getQueryData(['reminders', 'test-user-id'])).toEqual([]);
+      expect(result.current.media.hasReminder).toBe(false);
+    });
+
+    it('unfills the bell instantly on cancel and restores it on failure', async () => {
+      const client = createQueryClient();
+      const existing = createReminder({ id: 'movie-999', mediaId: 999 });
+      mockGetActiveReminders.mockResolvedValue([existing]);
+      let rejectCancel!: (error: Error) => void;
+      mockCancelReminder.mockImplementationOnce(
+        () => new Promise<void>((_resolve, reject) => void (rejectCancel = reject))
+      );
+
+      const { result } = renderHook(
+        () => ({
+          cancel: useCancelReminder(),
+          media: useMediaReminder(999, 'movie'),
+        }),
+        { wrapper: createWrapper(client) }
+      );
+
+      await waitFor(() => {
+        expect(result.current.media.hasReminder).toBe(true);
+      });
+
+      act(() => {
+        result.current.cancel.mutate('movie-999');
+      });
+
+      await waitFor(() => {
+        expect(result.current.media.hasReminder).toBe(false);
+      });
+
+      act(() => {
+        rejectCancel(new Error('cancel failed'));
+      });
+
+      // Service rejects -> rollback restores the bell (and the modal toast
+      // shows the failure via the mutateAsync rejection path).
+      await waitFor(() => {
+        expect(result.current.media.hasReminder).toBe(true);
+      });
+      expect(client.getQueryData(['reminders', 'test-user-id'])).toEqual([existing]);
+    });
+
+    it('patches timing instantly on update and restores it on failure', async () => {
+      const client = createQueryClient();
+      mockGetActiveReminders.mockResolvedValue([
+        createReminder({ id: 'movie-999', mediaId: 999, reminderTiming: 'on_release_day' }),
+      ]);
+      let rejectUpdate!: (error: Error) => void;
+      mockUpdateReminder.mockImplementationOnce(
+        () => new Promise<void>((_resolve, reject) => void (rejectUpdate = reject))
+      );
+
+      const { result } = renderHook(
+        () => ({
+          update: useUpdateReminder(),
+          media: useMediaReminder(999, 'movie'),
+        }),
+        { wrapper: createWrapper(client) }
+      );
+
+      await waitFor(() => {
+        expect(client.getQueryData(['reminders', 'test-user-id'])).toEqual([
+          expect.objectContaining({ id: 'movie-999', reminderTiming: 'on_release_day' }),
+        ]);
+      });
+
+      act(() => {
+        result.current.update.mutate({
+          reminderId: 'movie-999',
+          timing: '1_day_before',
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.media.reminder?.reminderTiming).toBe('1_day_before');
+      });
+
+      act(() => {
+        rejectUpdate(new Error('update failed'));
+      });
+
+      await waitFor(() => {
+        expect(result.current.media.reminder?.reminderTiming).toBe('on_release_day');
+      });
+      expect(result.current.media.hasReminder).toBe(true);
     });
   });
 

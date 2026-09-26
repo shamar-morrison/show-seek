@@ -44,6 +44,57 @@ const createReminderScheduleKey = (reminder: Reminder) => {
   return `${reminder.id}:${reminder.releaseDate}:${reminder.notificationScheduledFor}:${nextEpisodeKey}`;
 };
 
+/**
+ * Build a client-side placeholder so the bell fills instantly.
+ * Uses a future `notificationScheduledFor` so the auto-rollover hook
+ * (which only acts on `notificationScheduledFor < now`) skips it until
+ * the server refetch reconciles real scheduling data.
+ * Failure toast is shown by the calling modal (ReminderModal/TVReminderModal)
+ * when `mutateAsync` rejects after `onError` has rolled the cache back.
+ */
+const buildOptimisticReminder = (
+  userId: string,
+  input: CreateReminderInput
+): Reminder => {
+  const now = Date.now();
+  let notificationScheduledFor = now + 60_000;
+  try {
+    const releaseTime = parseTmdbDate(input.releaseDate).getTime();
+    if (Number.isFinite(releaseTime) && releaseTime > notificationScheduledFor) {
+      notificationScheduledFor = releaseTime;
+    }
+  } catch {
+    // Fall back to the future placeholder above.
+  }
+
+  return {
+    id: getReminderId(input),
+    userId,
+    mediaType: input.mediaType,
+    mediaId: input.mediaId,
+    title: input.title,
+    posterPath: input.posterPath,
+    releaseDate: input.releaseDate,
+    reminderTiming: input.reminderTiming,
+    notificationScheduledFor,
+    localNotificationId: null,
+    status: 'active',
+    createdAt: now,
+    updatedAt: now,
+    ...(input.mediaType === 'tv' && {
+      tvFrequency: input.tvFrequency,
+      ...(input.nextEpisode ? { nextEpisode: input.nextEpisode } : {}),
+    }),
+  } as Reminder;
+};
+
+type OptimisticMutationContext = {
+  listKey: ReturnType<typeof getRemindersQueryKey>;
+  singleKey?: ReturnType<typeof getMediaReminderQueryKey>;
+  previousList?: Reminder[];
+  previousSingle?: Reminder | null;
+} | undefined;
+
 const mergeReminderPatch = (
   reminder: Reminder,
   updates?: Partial<Reminder> | void
@@ -389,7 +440,7 @@ export const useCreateReminder = () => {
   const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
-  return useMutation({
+  return useMutation<void, Error, ReminderMutationInput, OptimisticMutationContext>({
     mutationFn: async (input: ReminderMutationInput) => {
       await assertCanCreateReminder({
         queryClient,
@@ -401,7 +452,61 @@ export const useCreateReminder = () => {
       });
       return reminderService.createReminder(input);
     },
-    onSuccess: async (_data, variables) => {
+    onMutate: async (variables) => {
+      if (!userId) return undefined;
+      const listKey = getRemindersQueryKey(userId);
+      const singleKey = getMediaReminderQueryKey(
+        userId,
+        variables.mediaType,
+        variables.mediaId
+      );
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previousList = queryClient.getQueryData<Reminder[]>(listKey);
+      const previousSingle = queryClient.getQueryData<Reminder | null>(singleKey);
+      // Guard: never optimistically insert before the authoritative freemium/
+      // premium-status check in `mutationFn` has a chance to reject. An early
+      // insert would pollute the cache that `assertCanCreateReminder` reads,
+      // making a new over-limit reminder look like a recreate (allowed).
+      // Recreate/overwrite of a known entry is always safe to show instantly.
+      const reminderId = getReminderId(variables);
+      const isRecreate =
+        (previousList ?? []).some((reminder) => reminder.id === reminderId) ||
+        variables.existingReminderId === reminderId;
+      if (!isRecreate && !isPremium) {
+        // Cache explicitly invalidated (stale by decree, e.g. right after
+        // another mutation): don't guess from dirty data — the authoritative
+        // fetch in `mutationFn` decides, and the bell fills on settled refetch.
+        if (queryClient.getQueryState(listKey)?.isInvalidated) return undefined;
+        // Unknown cache state or premium status still loading: let the
+        // authoritative check decide first; bell fills on settled refetch.
+        if (previousList === undefined || isPremiumLoading) return undefined;
+        // Known state already at the free limit: don't flash the bell on;
+        // `mutationFn` will reject and the modal shows the limit alert.
+        if (previousList.length >= MAX_FREE_REMINDERS) return undefined;
+      }
+      const optimistic = buildOptimisticReminder(userId, variables);
+      queryClient.setQueryData<Reminder[]>(listKey, (current) => {
+        const base = current ?? previousList ?? [];
+        if (base.some((reminder) => reminder.id === optimistic.id)) {
+          return base.map((reminder) =>
+            reminder.id === optimistic.id ? optimistic : reminder
+          );
+        }
+        return [...base, optimistic];
+      });
+      queryClient.setQueryData<Reminder | null>(singleKey, optimistic);
+      return { listKey, singleKey, previousList, previousSingle: previousSingle ?? null };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+      if (context.previousList !== undefined) {
+        queryClient.setQueryData(context.listKey, context.previousList);
+      }
+      if (context.singleKey) {
+        queryClient.setQueryData(context.singleKey, context.previousSingle ?? null);
+      }
+    },
+    onSettled: async (_data, _error, variables) => {
       if (!userId) return;
 
       await Promise.all([
@@ -456,9 +561,39 @@ export const useCancelReminder = () => {
   const currentUser = auth.currentUser;
   const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
-  return useMutation({
+  return useMutation<void, Error, string, OptimisticMutationContext>({
     mutationFn: (reminderId: string) => reminderService.cancelReminder(reminderId),
-    onSuccess: async (_data, reminderId) => {
+    onMutate: async (reminderId) => {
+      if (!userId) return undefined;
+      const listKey = getRemindersQueryKey(userId);
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previousList = queryClient.getQueryData<Reminder[]>(listKey);
+      const parsed = parseReminderId(reminderId);
+      const singleKey = parsed
+        ? getMediaReminderQueryKey(userId, parsed.mediaType, parsed.mediaId)
+        : undefined;
+      const previousSingle = singleKey
+        ? queryClient.getQueryData<Reminder | null>(singleKey)
+        : undefined;
+      queryClient.setQueryData<Reminder[]>(listKey, (current) => {
+        const base = current ?? previousList ?? [];
+        return base.filter((reminder) => reminder.id !== reminderId);
+      });
+      if (singleKey) {
+        queryClient.setQueryData<Reminder | null>(singleKey, null);
+      }
+      return { listKey, singleKey, previousList, previousSingle: previousSingle ?? null };
+    },
+    onError: (_error, _reminderId, context) => {
+      if (!context) return;
+      if (context.previousList !== undefined) {
+        queryClient.setQueryData(context.listKey, context.previousList);
+      }
+      if (context.singleKey) {
+        queryClient.setQueryData(context.singleKey, context.previousSingle ?? null);
+      }
+    },
+    onSettled: async (_data, _error, reminderId) => {
       if (!userId) return;
 
       await queryClient.invalidateQueries({ queryKey: getRemindersQueryKey(userId) });
@@ -480,10 +615,54 @@ export const useUpdateReminder = () => {
   const currentUser = auth.currentUser;
   const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
-  return useMutation({
+  return useMutation<
+    void,
+    Error,
+    { reminderId: string; timing: ReminderTiming },
+    OptimisticMutationContext
+  >({
     mutationFn: ({ reminderId, timing }: { reminderId: string; timing: ReminderTiming }) =>
       reminderService.updateReminder(reminderId, timing),
-    onSuccess: async (_data, variables) => {
+    onMutate: async (variables) => {
+      if (!userId) return undefined;
+      const listKey = getRemindersQueryKey(userId);
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previousList = queryClient.getQueryData<Reminder[]>(listKey);
+      const parsed = parseReminderId(variables.reminderId);
+      const singleKey = parsed
+        ? getMediaReminderQueryKey(userId, parsed.mediaType, parsed.mediaId)
+        : undefined;
+      const previousSingle = singleKey
+        ? queryClient.getQueryData<Reminder | null>(singleKey)
+        : undefined;
+      const now = Date.now();
+      queryClient.setQueryData<Reminder[]>(listKey, (current) => {
+        const base = current ?? previousList ?? [];
+        return base.map((reminder) =>
+          reminder.id === variables.reminderId
+            ? { ...reminder, reminderTiming: variables.timing, updatedAt: now }
+            : reminder
+        );
+      });
+      if (singleKey && previousSingle) {
+        queryClient.setQueryData<Reminder | null>(singleKey, {
+          ...previousSingle,
+          reminderTiming: variables.timing,
+          updatedAt: now,
+        });
+      }
+      return { listKey, singleKey, previousList, previousSingle: previousSingle ?? null };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+      if (context.previousList !== undefined) {
+        queryClient.setQueryData(context.listKey, context.previousList);
+      }
+      if (context.singleKey) {
+        queryClient.setQueryData(context.singleKey, context.previousSingle ?? null);
+      }
+    },
+    onSettled: async (_data, _error, variables) => {
       if (!userId) return;
 
       await queryClient.invalidateQueries({ queryKey: getRemindersQueryKey(userId) });
