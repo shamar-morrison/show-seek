@@ -8,6 +8,10 @@ import {
   YEARLY_SUBSCRIPTION_PRODUCT_ID,
   isLegacyLifetimeProductId,
 } from './shared/premiumProducts';
+import {
+  sendCancellationFeedbackEmail,
+  type SubscriptionFeedbackReason,
+} from './subscriptionFeedbackEmail';
 
 export const REVENUECAT_WEBHOOK_AUTH = defineSecret('REVENUECAT_WEBHOOK_AUTH');
 
@@ -313,6 +317,7 @@ export const revenuecatWebhook = onRequest(
     const db = admin.firestore();
     const userRef = db.collection('users').doc(appUserId);
     const eventRef = db.collection('revenuecatWebhookEvents').doc(eventId);
+    const normalizedEventType = normalizeEventType(event.type);
 
     try {
       const result = await db.runTransaction(async (transaction) => {
@@ -333,13 +338,11 @@ export const revenuecatWebhook = onRequest(
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             eventTimestampMs,
             status: 'stale',
-            type: normalizeEventType(event.type),
+            type: normalizedEventType,
           });
 
           return { status: 'stale' as const };
         }
-
-        const normalizedEventType = normalizeEventType(event.type);
 
         if (existingPremium.provider === 'polar' && existingPremium.isPremium === true) {
           transaction.set(
@@ -363,7 +366,7 @@ export const revenuecatWebhook = onRequest(
             type: normalizedEventType,
           });
 
-          return { status: 'processed' as const };
+          return { status: 'processed' as const, handledBy: 'polar-guard' as const };
         }
 
         const premiumPayload = mapRevenueCatEventToPremiumPayload(event, existingPremium, nowMs);
@@ -384,8 +387,38 @@ export const revenuecatWebhook = onRequest(
           type: normalizedEventType,
         });
 
-        return { status: 'processed' as const };
+        return { status: 'processed' as const, handledBy: 'revenuecat' as const };
       });
+
+      if (result.status === 'processed' && result.handledBy === 'revenuecat') {
+        let feedbackReason: SubscriptionFeedbackReason | null = null;
+        if (normalizedEventType === 'CANCELLATION') {
+          feedbackReason = 'cancelled';
+        } else if (normalizedEventType === 'EXPIRATION') {
+          feedbackReason = 'expired';
+        }
+
+        if (feedbackReason !== null) {
+          try {
+            const authUser = await admin.auth().getUser(appUserId);
+            const email = String(authUser.email ?? '').trim();
+            if (!email) {
+              console.warn('Skipping subscription feedback email: no auth email', {
+                appUserId,
+                reason: feedbackReason,
+              });
+            } else {
+              await sendCancellationFeedbackEmail({ email, reason: feedbackReason });
+            }
+          } catch (error) {
+            console.error('Subscription feedback email failed:', {
+              appUserId,
+              reason: feedbackReason,
+              error,
+            });
+          }
+        }
+      }
 
       res.status(200).json({ ok: true, status: result.status });
     } catch (error) {
