@@ -4,7 +4,7 @@ import {
   Delete02Icon,
   DiscordIcon,
   Download01Icon,
-  Globe02Icon,
+  // Globe02Icon, // Hidden: ShowSeek web app link disabled
   InformationCircleIcon,
   Logout01Icon,
   StarIcon,
@@ -58,7 +58,7 @@ export function AppSettingsSection({
   onRateApp,
   onExportData,
   onClearCache,
-  onWebApp,
+  // onWebApp, // Hidden: ShowSeek web app link disabled
   onAbout,
   onDiscord,
   onDeleteAccount,
@@ -101,7 +101,8 @@ export function AppSettingsSection({
               onPress={onSignOut}
               loading={isSigningOut}
             />
-            <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} />
+            {/* Hidden: ShowSeek web app link disabled */}
+            {/* <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} /> */}
           </>
         ) : (
           <>
@@ -117,7 +118,8 @@ export function AppSettingsSection({
               onPress={onClearCache}
               loading={isClearingCache}
             />
-            <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} />
+            {/* Hidden: ShowSeek web app link disabled */}
+            {/* <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} /> */}
             <ActionButton
               icon={InformationCircleIcon}
               label={t('settings.about')}
