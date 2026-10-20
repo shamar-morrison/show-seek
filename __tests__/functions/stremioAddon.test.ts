@@ -1,0 +1,240 @@
+const mockFirestore = jest.fn();
+const mockFetch = jest.fn();
+jest.mock('firebase-admin', () => ({ firestore: mockFirestore }), { virtual: true });
+jest.mock('firebase-admin/firestore', () => ({
+  Timestamp: require('./helpers/stremioFirestore').TestTimestamp,
+  FieldValue: { delete: () => require('./helpers/stremioFirestore').DELETE_FIELD },
+}), { virtual: true });
+jest.mock('firebase-functions/params', () => ({ defineSecret: () => ({ value: () => 'tmdb-secret' }) }), { virtual: true });
+
+import { stremioAddon } from '@/functions/src/stremioAddon';
+import { parseAddonRoute, parsePlayerEvent } from '@/functions/src/stremio/parsing';
+import { clearStremioTokenCache, hashAddonToken, lookupAddonUid } from '@/functions/src/stremio/tokens';
+import { TestFirestore, TestTimestamp } from './helpers/stremioFirestore';
+
+const TOKEN = '1'.repeat(64);
+const HASH = hashAddonToken(TOKEN);
+const NOW = Date.UTC(2026, 9, 20, 12);
+const originalFetch = global.fetch;
+let db: TestFirestore;
+let log: jest.SpyInstance;
+
+function response() {
+  const res = { setHeader: jest.fn(), status: jest.fn(), json: jest.fn(), send: jest.fn() };
+  res.status.mockReturnValue(res);
+  return res;
+}
+async function request(path: string, method = 'GET') {
+  const res = response();
+  await (stremioAddon as any)({ path, method }, res);
+  return res;
+}
+const playerPath = (action = 'stop', time = 900, duration = 1000) =>
+  `/${TOKEN}/player/movie/tt1234567/action=${action}&currentTime=${time}&duration=${duration}.json`;
+const ok = (data: unknown) => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => data });
+
+beforeEach(() => {
+  db = new TestFirestore();
+  db.seed(`stremioAddonTokens/${HASH}`, { uid: 'member', createdAt: TestTimestamp.fromMillis(NOW) });
+  db.seed('users/member', { stremioAddon: { activeTokenHash: HASH } });
+  mockFirestore.mockReset().mockReturnValue(db);
+  mockFetch.mockReset().mockImplementation(async (url: string) => url.includes('/find/')
+    ? ok({ movie_results: [{ id: 42 }] })
+    : ok({ id: 42, title: 'A Movie', runtime: 120, poster_path: '/movie.jpg', release_date: '2020-01-01', genres: [{ id: 18 }], vote_average: 8 }));
+  global.fetch = mockFetch;
+  jest.spyOn(Date, 'now').mockReturnValue(NOW);
+  log = jest.spyOn(console, 'info').mockImplementation(() => {});
+  clearStremioTokenCache();
+});
+afterEach(() => { jest.restoreAllMocks(); });
+afterAll(() => { global.fetch = originalFetch; });
+
+describe('path and path-extra parsing', () => {
+  it('decodes episode IDs once and parses millisecond extras from the path', () => {
+    expect(parseAddonRoute(`/${TOKEN}/player/series/tt1234567%3A2%3A63/action=stop&currentTime=600000&duration=650000.json`)).toEqual({
+      kind: 'player', token: TOKEN,
+      event: { type: 'series', action: 'stop', imdbId: 'tt1234567', season: 2, episode: 63, currentTime: 600000, duration: 650000 },
+    });
+    expect(parsePlayerEvent('movie', 'tt1234567', 'action=start&currentTime=0&duration=0&future=extra')).toMatchObject({ action: 'start', currentTime: 0 });
+  });
+
+  it.each([
+    ['movie', 'tt1234567', 'action=stop&currentTime=-1&duration=1000'],
+    ['movie', 'tt1234567', 'action=stop&currentTime=1e3&duration=1000'],
+    ['movie', 'tt1234567', 'action=stop&currentTime=1.5&duration=1000'],
+    ['movie', 'tt1234567', 'action=stop&currentTime=NaN&duration=1000'],
+    ['movie', 'tt1234567', 'action=stop&currentTime=9007199254740992&duration=1000'],
+    ['movie', 'tt1234567', 'action=stop&currentTime=900'],
+    ['movie', 'tt1234567', 'action=stop&action=start&currentTime=900&duration=1000'],
+    ['movie', 'tt1234567', 'action=stop&currentTime=900&duration=1000&duration=1000'],
+    ['movie', 'tt1234567', 'action=resume&currentTime=900&duration=1000'],
+    ['movie', 'tt1234567', 'action=stop&currentTime=%ZZ&duration=1000'],
+    ['movie', 'tt1234567:1:1', 'action=stop&currentTime=900&duration=1000'],
+    ['series', 'tt1234567%253A1%253A1', 'action=stop&currentTime=900&duration=1000'],
+    ['series', 'tt1234567%3A1%3A0', 'action=stop&currentTime=900&duration=1000'],
+    ['series', 'tt1234567%3A-1%3A1', 'action=stop&currentTime=900&duration=1000'],
+    ['series', '%E0%A4%A', 'action=stop&currentTime=900&duration=1000'],
+    ['series', 'tt1234567%2F1%2F1', 'action=stop&currentTime=900&duration=1000'],
+    ['tv', 'tt1234567', 'action=stop&currentTime=900&duration=1000'],
+  ])('fails soft on malformed event %s / %s / %s', (type, id, extra) => {
+    expect(parsePlayerEvent(type, id, extra)).toBeNull();
+  });
+
+  it('allows season zero specials and bounds route segments', () => {
+    expect(parsePlayerEvent('series', 'tt1:0:1', 'action=stop&currentTime=90&duration=100')).toMatchObject({ season: 0, episode: 1 });
+    expect(parseAddonRoute(`/${TOKEN}/player/movie/${'t'.repeat(257)}/action=stop.json`)).toMatchObject({ kind: 'player', event: null });
+    expect(parseAddonRoute('/' + 'a'.repeat(5000))).toEqual({ kind: 'not_found' });
+  });
+});
+
+describe('stremioAddon HTTP endpoint', () => {
+  it('serves the opted-in manifest only for an active token', async () => {
+    const res = await request(`/${TOKEN}/manifest.json`);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      id: 'app.showseek.stremio', version: '1.0.0', name: 'ShowSeek',
+      description: expect.any(String), resources: ['player'], types: ['movie', 'series'], idPrefixes: ['tt'], catalogs: [],
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['x', 'A'.repeat(64), 'a'.repeat(63), 'g'.repeat(64), '%31'.repeat(64)])('rejects malformed tokens without reads: %s', async (token) => {
+    const res = await request(`/${token}/manifest.json`);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(db.reads).toHaveLength(0);
+    expect(db.writes).toHaveLength(0);
+    expect(mockFirestore).not.toHaveBeenCalled();
+  });
+
+  it('rejects unknown and revoked manifests, including warm cache state', async () => {
+    const unknown = await request(`/${'a'.repeat(64)}/manifest.json`);
+    expect(unknown.status).toHaveBeenCalledWith(404);
+    await lookupAddonUid(HASH);
+    db.seed(`stremioAddonTokens/${HASH}`, { uid: 'member', revokedAt: TestTimestamp.now() });
+    const revoked = await request(`/${TOKEN}/manifest.json`);
+    expect(revoked.status).toHaveBeenCalledWith(404);
+  });
+
+  it.each(['start', 'pause'])('acknowledges %s with zero reads, writes or TMDB calls', async (action) => {
+    const res = await request(playerPath(action, 0, 0));
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+    expect(db.reads).toHaveLength(0);
+    expect(db.writes).toHaveLength(0);
+    expect(mockFirestore).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith('[StremioAddon]', expect.objectContaining({ action, outcome: 'ignored_non_stop' }));
+  });
+
+  it('does not look up an unknown token for non-stop events', async () => {
+    const res = await request(playerPath('start').replace(TOKEN, 'a'.repeat(64)));
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(db.reads).toHaveLength(0);
+  });
+
+  it.each([[899, 1000], [0, 0]])('skips below threshold / unknown duration (%i/%i) without reads', async (time, duration) => {
+    const res = await request(playerPath('stop', time, duration));
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+    expect(db.reads).toHaveLength(0);
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'skipped_below_threshold' }));
+  });
+
+  it.each([900, 1000, 1001])('writes a movie at or above the exact threshold (%i/1000)', async (time) => {
+    const res = await request(playerPath('stop', time));
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(db.data('users/member/watched_movies/42/watches/stremio-42-20261020')).toEqual({ movieId: 42, watchedAt: TestTimestamp.fromMillis(NOW) });
+    expect(db.data('users/member/lists/already-watched')?.items['movie-42'].runtimeMinutes).toBe(120);
+    expect(mockFetch.mock.calls[0][0]).toContain('/find/tt1234567?external_source=imdb_id');
+    expect(log).toHaveBeenCalledWith('[StremioAddon]', expect.objectContaining({ action: 'stop', type: 'movie', ratio: time / 1000, currentTime: time, duration: 1000, outcome: 'written' }));
+  });
+
+  it('makes repeated stops idempotent while saving token-doc reads on cache hits', async () => {
+    await request(playerPath());
+    const writes = db.writes.length;
+    await request(playerPath());
+    expect(db.writes).toHaveLength(writes);
+    expect(db.reads.filter((path) => path === `stremioAddonTokens/${HASH}`)).toHaveLength(1);
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'skipped_duplicate' }));
+  });
+
+  it('handles an encoded episode stop end-to-end, using TMDB numbering and numeric timestamps', async () => {
+    mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(ok({ id: 46298, name: 'Hunter x Hunter', poster_path: '/hxh.jpg' }))
+      .mockResolvedValueOnce(ok({ season_number: 2, episodes: [{
+        id: 777, season_number: 2, episode_number: 63, name: 'Premiere', air_date: '2012-12-15', runtime: 24,
+      }] }));
+    const res = await request(`/${TOKEN}/player/series/tt1234567%3A2%3A63/action=stop&currentTime=1400000&duration=1440000.json`);
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+    expect(db.data('users/member/episode_tracking/46298')?.episodes['2_63']).toEqual({
+      episodeId: 777, tvShowId: 46298, seasonNumber: 2, episodeNumber: 63, watchedAt: NOW,
+      episodeName: 'Premiere', episodeAirDate: '2012-12-15', runtimeMinutes: 24,
+    });
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ type: 'series', outcome: 'written' }));
+  });
+
+  it('acknowledges and logs a continuous-numbering mismatch without writing anything', async () => {
+    mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(ok({ id: 46298, name: 'Hunter x Hunter' }))
+      .mockResolvedValueOnce(ok({ season_number: 2, episodes: [{
+        id: 777, season_number: 2, episode_number: 63, name: 'Premiere', runtime: 24,
+      }] }));
+    const res = await request(`/${TOKEN}/player/series/tt1234567%3A2%3A1/action=stop&currentTime=1400000&duration=1440000.json`);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(db.writes).toHaveLength(0);
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ type: 'series', outcome: 'skipped_unmapped' }));
+  });
+
+  it('blocks a cached token revoked by a different instance before spending TMDB calls', async () => {
+    await lookupAddonUid(HASH);
+    db.seed('users/member', { stremioAddon: { activeTokenHash: null } });
+    const res = await request(playerPath());
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(db.writes).toHaveLength(0);
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'bad_token' }));
+  });
+
+  it('does not recreate a deleted user from a cached mapping', async () => {
+    await lookupAddonUid(HASH);
+    db.remove('users/member');
+    await request(playerPath());
+    expect(db.writes).toHaveLength(0);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('fails soft on malformed extras and never reads extras from the query string', async () => {
+    const malformed = await request(`/${TOKEN}/player/movie/tt1234567/action=unknown&currentTime=900&duration=1000.json`);
+    expect(malformed.status).toHaveBeenCalledWith(200);
+    const queryOnly = await request(`/${TOKEN}/player/movie/tt1234567.json`);
+    expect(queryOnly.status).toHaveBeenCalledWith(404);
+    expect(db.reads).toHaveLength(0);
+  });
+
+  it('sets CORS on success, errors and preflight, with no work for OPTIONS', async () => {
+    for (const [path, method, status] of [['/anything', 'OPTIONS', 204], ['/anything', 'POST', 405], ['/anything', 'GET', 404]] as const) {
+      const res = await request(path, method);
+      expect(res.status).toHaveBeenCalledWith(status);
+      expect(res.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', '*');
+      expect(res.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
+    }
+    expect(db.reads).toHaveLength(0);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('logs unmapped titles and sanitized failures without tokens, URLs or API keys', async () => {
+    mockFetch.mockResolvedValueOnce(ok({ movie_results: [] }));
+    await request(playerPath());
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'skipped_unmapped' }));
+    mockFetch.mockRejectedValueOnce(new Error(`https://example/${TOKEN}?api_key=tmdb-secret`));
+    await request(playerPath());
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'error', reason: 'request_failed' }));
+    await request(`/${TOKEN}/player/movie/tt123/action=${TOKEN}&currentTime=900&duration=1000.json`);
+    const logs = JSON.stringify(log.mock.calls);
+    expect(logs).not.toContain(TOKEN);
+    expect(logs).not.toContain('https://');
+    expect(logs).not.toContain('tmdb-secret');
+    expect(db.writes).toHaveLength(0);
+  });
+});

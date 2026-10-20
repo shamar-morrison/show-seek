@@ -24,6 +24,10 @@ const mockBulkWriterDelete = jest.fn();
 const mockBulkWriterClose = jest.fn();
 const mockRevenueCatWhereGet = jest.fn();
 const mockTraktOAuthStatesGet = jest.fn();
+const mockStremioTokensGet = jest.fn();
+const mockStremioTokensWhere = jest.fn(() => ({
+  limit: jest.fn(() => ({ get: mockStremioTokensGet })),
+}));
 const mockUserDocGet = jest.fn();
 const mockUsersDoc = jest.fn((id: string) => ({ get: mockUserDocGet, path: `users/${id}` }));
 const mockTraktOAuthStatesLimit = jest.fn(() => ({
@@ -44,6 +48,7 @@ beforeEach(() => {
     docs: [],
     empty: true,
   });
+  mockStremioTokensGet.mockResolvedValue({ docs: [], empty: true });
   mockUserDocGet.mockResolvedValue({
     data: () => undefined,
     exists: false,
@@ -80,6 +85,10 @@ beforeEach(() => {
 
       if (name === 'traktOAuthStates') {
         return mockTraktOAuthStatesCollection;
+      }
+
+      if (name === 'stremioAddonTokens') {
+        return { where: mockStremioTokensWhere };
       }
 
       throw new Error(`Unexpected collection ${name}`);
@@ -219,6 +228,30 @@ describe('deleteAccountHandler', () => {
     expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(2, secondStateRef);
     expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(3, thirdStateRef);
     expect(mockBulkWriterClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('deletes all Stremio token pages using uid, including revoked tokens', async () => {
+    const first = { path: 'stremioAddonTokens/old-hash' };
+    const second = { path: 'stremioAddonTokens/active-hash' };
+    mockStremioTokensGet
+      .mockResolvedValueOnce({ docs: [{ ref: first }], empty: false })
+      .mockResolvedValueOnce({ docs: [{ ref: second }], empty: false })
+      .mockResolvedValueOnce({ docs: [], empty: true });
+
+    await deleteAccountHandler({ auth: { uid: 'user-1' } });
+
+    expect(mockStremioTokensWhere).toHaveBeenCalledWith('uid', '==', 'user-1');
+    expect(mockStremioTokensGet).toHaveBeenCalledTimes(3);
+    expect(mockBulkWriterDelete).toHaveBeenCalledWith(first);
+    expect(mockBulkWriterDelete).toHaveBeenCalledWith(second);
+    expect(mockBulkWriterClose).toHaveBeenCalledTimes(2);
+    expect(mockBulkWriterClose.mock.invocationCallOrder[1]).toBeLessThan(mockDeleteUser.mock.invocationCallOrder[0]);
+  });
+
+  it('stops before Auth deletion if Stremio token cleanup fails', async () => {
+    mockStremioTokensGet.mockRejectedValueOnce(new Error('cleanup failed'));
+    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).rejects.toThrow('cleanup failed');
+    expect(mockDeleteUser).not.toHaveBeenCalled();
   });
 
   it('blocks deletion for an active Polar subscription with a matchable reason', async () => {

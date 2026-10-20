@@ -522,6 +522,11 @@ export { importImdbChunk } from './imdbImport';
 export { polarWebhook } from './polarWebhook';
 export { revenuecatWebhook } from './revenuecatWebhook';
 export {
+  stremioAddon,
+  createStremioAddonToken,
+  revokeStremioAddonToken,
+} from './stremioAddon';
+export {
   runTraktEnrichment,
   runTraktSync,
   runTraktZipImport,
