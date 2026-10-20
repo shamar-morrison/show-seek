@@ -43,7 +43,6 @@ function addListItem(
       [`items.${itemKey}`]: { ...item, addedAt: receivedAt },
       [`items.${getLegacyListItemKey(item.id)}`]: FieldValue.delete(),
       updatedAt: receivedAt,
-      name,
     });
   } else {
     transaction.set(snapshot.ref, {

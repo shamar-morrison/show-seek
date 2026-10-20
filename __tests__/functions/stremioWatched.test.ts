@@ -76,6 +76,23 @@ describe('mobile-shaped watched transactions', () => {
     expect([...db.store.keys()].some((key) => key.includes('collection_tracking'))).toBe(false);
   });
 
+  it.each(['movie', 'episode'] as const)('preserves a renamed existing list when adding a watched %s', async (kind) => {
+    const listId = kind === 'movie' ? 'already-watched' : 'currently-watching';
+    const itemKey = kind === 'movie' ? 'movie-42' : 'tv-46298';
+    const listPath = `${USER}/lists/${listId}`;
+    const existingItem = { id: 100, media_type: 'movie', addedAt: 1 };
+    db.seed(listPath, {
+      name: 'My custom list name', items: { 'movie-100': existingItem }, createdAt: 1, updatedAt: 1,
+    });
+
+    expect(await writeStremioWatch('member', HASH, kind === 'movie' ? movie : episode, NOW))
+      .toEqual({ outcome: 'written', listOutcome: 'added' });
+    expect(db.data(listPath)).toMatchObject({
+      name: 'My custom list name', createdAt: 1, updatedAt: NOW,
+      items: { 'movie-100': existingItem, [itemKey]: { addedAt: NOW } },
+    });
+  });
+
   it('honors disabled movie preferences without suppressing the watch', async () => {
     seedUser({ preferences: { autoAddToAlreadyWatched: false, autoRemoveFromShouldWatch: false } });
     db.seed(`${USER}/lists/watchlist`, { items: { 'movie-42': { id: 42 } } });
