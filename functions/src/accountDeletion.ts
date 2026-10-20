@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { HttpsError } from 'firebase-functions/v2/https';
+import { STREMIO_TOKEN_COLLECTION } from './stremio/constants';
 
 export interface DeleteAccountResponse {
   success: true;
@@ -81,12 +82,31 @@ async function deleteTraktOAuthStatesForUser(userId: string): Promise<void> {
   }
 }
 
+async function deleteStremioAddonTokensForUser(userId: string): Promise<void> {
+  const db = admin.firestore();
+  while (true) {
+    const snapshot = await db
+      .collection(STREMIO_TOKEN_COLLECTION)
+      .where('uid', '==', userId)
+      .limit(QUERY_DELETE_BATCH_SIZE)
+      .get();
+    if (snapshot.empty) return;
+
+    const bulkWriter = db.bulkWriter();
+    snapshot.docs.forEach((documentSnapshot) => {
+      bulkWriter.delete(documentSnapshot.ref);
+    });
+    await bulkWriter.close();
+  }
+}
+
 async function deleteFirestoreUserTree(userId: string): Promise<void> {
   const db = admin.firestore();
   const userRef = db.collection('users').doc(userId);
   await db.recursiveDelete(userRef);
   await deleteRevenueCatWebhookEventsForUser(userId);
   await deleteTraktOAuthStatesForUser(userId);
+  await deleteStremioAddonTokensForUser(userId);
 }
 
 async function deleteAuthUserIfPresent(userId: string): Promise<void> {
