@@ -58,9 +58,13 @@ export async function getCachedUserDocument(
     })
     .catch((error) => {
       const message = getFirestoreErrorMessage(error);
-      cachedUserId = userId;
-      cachedData = null;
-      cachedAt = Date.now();
+      // Drop ownership so a later merge cannot turn the failure into a valid partial
+      // entry. Leave another user's entry untouched.
+      if (cachedUserId === userId) {
+        cachedUserId = null;
+        cachedData = null;
+        cachedAt = 0;
+      }
       throw new Error(message);
     })
     .finally(() => {
