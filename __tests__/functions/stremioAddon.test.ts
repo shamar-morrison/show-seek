@@ -32,6 +32,12 @@ async function request(path: string, method = 'GET') {
 const playerPath = (action = 'stop', time = 900, duration = 1000) =>
   `/${TOKEN}/player/movie/tt1234567/action=${action}&currentTime=${time}&duration=${duration}.json`;
 const ok = (data: unknown) => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => data });
+const seriesPath = (season: number, episode: number) =>
+  `/${TOKEN}/player/series/tt1234567%3A${season}%3A${episode}/action=stop&currentTime=1400000&duration=1440000.json`;
+const seriesResponses = (season: number, episodes: unknown[]) =>
+  mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+    .mockResolvedValueOnce(ok({ id: 46298, name: 'Hunter x Hunter', poster_path: '/hxh.jpg' }))
+    .mockResolvedValueOnce(ok({ season_number: season, episodes }));
 
 beforeEach(() => {
   db = new TestFirestore();
@@ -159,30 +165,55 @@ describe('stremioAddon HTTP endpoint', () => {
   });
 
   it('handles an encoded episode stop end-to-end, using TMDB numbering and numeric timestamps', async () => {
-    mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
-      .mockResolvedValueOnce(ok({ id: 46298, name: 'Hunter x Hunter', poster_path: '/hxh.jpg' }))
-      .mockResolvedValueOnce(ok({ season_number: 2, episodes: [{
-        id: 777, season_number: 2, episode_number: 63, name: 'Premiere', air_date: '2012-12-15', runtime: 24,
-      }] }));
-    const res = await request(`/${TOKEN}/player/series/tt1234567%3A2%3A63/action=stop&currentTime=1400000&duration=1440000.json`);
+    seriesResponses(1, [
+      { id: 701, season_number: 1, episode_number: 1, name: 'Pilot', air_date: '1999-10-20', runtime: 24 },
+      { id: 702, season_number: 1, episode_number: 2, name: 'Second', air_date: '1999-11-17', runtime: 24 },
+    ]);
+    const res = await request(seriesPath(1, 2));
     expect(res.json).toHaveBeenCalledWith({ success: true });
-    expect(db.data('users/member/episode_tracking/46298')?.episodes['2_63']).toEqual({
-      episodeId: 777, tvShowId: 46298, seasonNumber: 2, episodeNumber: 63, watchedAt: NOW,
-      episodeName: 'Premiere', episodeAirDate: '2012-12-15', runtimeMinutes: 24,
+    expect(db.data('users/member/episode_tracking/46298')?.episodes['1_2']).toEqual({
+      episodeId: 702, tvShowId: 46298, seasonNumber: 1, episodeNumber: 2, watchedAt: NOW,
+      episodeName: 'Second', episodeAirDate: '1999-11-17', runtimeMinutes: 24,
     });
     expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ type: 'series', outcome: 'written' }));
   });
 
   it('acknowledges and logs a continuous-numbering mismatch without writing anything', async () => {
-    mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
-      .mockResolvedValueOnce(ok({ id: 46298, name: 'Hunter x Hunter' }))
-      .mockResolvedValueOnce(ok({ season_number: 2, episodes: [{
-        id: 777, season_number: 2, episode_number: 63, name: 'Premiere', runtime: 24,
-      }] }));
-    const res = await request(`/${TOKEN}/player/series/tt1234567%3A2%3A1/action=stop&currentTime=1400000&duration=1440000.json`);
+    seriesResponses(2, [{ id: 777, season_number: 2, episode_number: 63, name: 'Premiere', runtime: 24 }]);
+    const res = await request(seriesPath(2, 1));
     expect(res.status).toHaveBeenCalledWith(200);
     expect(db.writes).toHaveLength(0);
-    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ type: 'series', outcome: 'skipped_unmapped' }));
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({
+      type: 'series', outcome: 'skipped_unmapped', reason: 'continuous_numbering_unsupported',
+    }));
+  });
+
+  it('never writes a coincident number from a continuous season (S2E63 on a season starting at 63)', async () => {
+    seriesResponses(2, [{ id: 777, season_number: 2, episode_number: 63, name: 'Premiere', air_date: '2013-01-20', runtime: 24 }]);
+    const res = await request(seriesPath(2, 63));
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+    expect(db.writes).toHaveLength(0);
+    expect(db.data('users/member/episode_tracking/46298')).toBeUndefined();
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({
+      type: 'series', outcome: 'skipped_unmapped', reason: 'continuous_numbering_unsupported',
+    }));
+  });
+
+  it('skips a missing number in a continuous season (S3E9 on a season starting at 137) without leaking tokens', async () => {
+    seriesResponses(3, Array.from({ length: 12 }, (_, i) => ({
+      id: 900 + i, season_number: 3, episode_number: 137 + i, name: `Episode ${137 + i}`, runtime: 24,
+    })));
+    const res = await request(seriesPath(3, 9));
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(db.writes).toHaveLength(0);
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({
+      type: 'series', outcome: 'skipped_unmapped', reason: 'continuous_numbering_unsupported',
+    }));
+    const logs = JSON.stringify(log.mock.calls);
+    expect(logs).toContain('continuous_numbering_unsupported');
+    expect(logs).not.toContain(TOKEN);
+    expect(logs).not.toContain('https://');
+    expect(logs).not.toContain('tmdb-secret');
   });
 
   it('blocks a cached token revoked by a different instance before spending TMDB calls', async () => {
@@ -226,7 +257,9 @@ describe('stremioAddon HTTP endpoint', () => {
   it('logs unmapped titles and sanitized failures without tokens, URLs or API keys', async () => {
     mockFetch.mockResolvedValueOnce(ok({ movie_results: [] }));
     await request(playerPath());
-    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'skipped_unmapped' }));
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({
+      outcome: 'skipped_unmapped', reason: 'no_matching_tmdb_title_or_episode',
+    }));
     mockFetch.mockRejectedValueOnce(new Error(`https://example/${TOKEN}?api_key=tmdb-secret`));
     await request(playerPath());
     expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'error', reason: 'request_failed' }));
