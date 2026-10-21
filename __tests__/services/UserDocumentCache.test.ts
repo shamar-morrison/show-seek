@@ -1,4 +1,8 @@
-import { clearUserDocumentCache, getCachedUserDocument } from '@/src/services/UserDocumentCache';
+import {
+  clearUserDocumentCache,
+  getCachedUserDocument,
+  mergeUserDocumentCache,
+} from '@/src/services/UserDocumentCache';
 
 const mockAuditedGetDoc = jest.fn();
 const mockGetFirestoreErrorMessage = jest.fn((error: unknown) =>
@@ -95,5 +99,31 @@ describe('UserDocumentCache', () => {
 
     await expect(getCachedUserDocument('user-c', { forceRefresh: true })).resolves.toBeNull();
     expect(mockAuditedGetDoc).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not let a merge after a failed read create a partial cache entry', async () => {
+    // The module forces a refresh under Jest; unset the marker so cache hits are observable.
+    const originalJestWorkerId = process.env.JEST_WORKER_ID;
+    delete process.env.JEST_WORKER_ID;
+    try {
+      mockAuditedGetDoc.mockRejectedValueOnce(new Error('raw firestore failure'));
+      mockGetFirestoreErrorMessage.mockReturnValueOnce('Mapped failure');
+
+      await expect(getCachedUserDocument('user-d')).rejects.toThrow('Mapped failure');
+
+      mergeUserDocumentCache('user-d', { region: 'US' });
+
+      const fullDocument = { uid: 'user-d', displayName: 'User D', region: 'US' };
+      mockAuditedGetDoc.mockResolvedValueOnce(createExistingSnapshot(fullDocument));
+
+      await expect(getCachedUserDocument('user-d')).resolves.toEqual(fullDocument);
+      expect(mockAuditedGetDoc).toHaveBeenCalledTimes(2);
+    } finally {
+      if (originalJestWorkerId === undefined) {
+        delete process.env.JEST_WORKER_ID;
+      } else {
+        process.env.JEST_WORKER_ID = originalJestWorkerId;
+      }
+    }
   });
 });
