@@ -32,6 +32,8 @@ export type MappedTitle =
   | { kind: 'movie'; movie: MovieDetails }
   | { kind: 'episode'; show: ShowDetails; episode: EpisodeDetails };
 
+export type UnmappedTitle = { kind: 'unmapped'; reason: 'continuous_numbering_unsupported' };
+
 export class StremioTmdbError extends Error {
   constructor(readonly reason: string, readonly statusCode?: number) {
     // Keep messages categorical: never expose API keys or URLs via error logging.
@@ -96,7 +98,10 @@ function mediaDetails(data: Record<string, unknown>, id: number): MediaDetails |
   };
 }
 
-export async function resolveStremioTitle(event: PlayerEvent, rawApiKey: string): Promise<MappedTitle | null> {
+export async function resolveStremioTitle(
+  event: PlayerEvent,
+  rawApiKey: string
+): Promise<MappedTitle | UnmappedTitle | null> {
   const apiKey = rawApiKey.trim();
   if (!apiKey) throw new StremioTmdbError('missing_api_key');
   const deadline = Date.now() + TMDB_TOTAL_BUDGET_MS;
@@ -127,6 +132,12 @@ export async function resolveStremioTitle(event: PlayerEvent, rawApiKey: string)
   if (!show || !details || typeof show.name !== 'string' || !show.name) return null;
   const season = await requestTmdb(`/tv/${id}/season/${event.season}`, apiKey, deadline);
   if (!season || season.season_number !== event.season || !Array.isArray(season.episodes)) return null;
+  // Mirrors the app's isContinuousNumbering signal. Incoming Cinemeta numbers are per-season,
+  // so a TMDB season numbered from N > 1 cannot be matched safely, even when a number coincides.
+  const firstEpisodeNumber = record(season.episodes[0])?.episode_number;
+  if (typeof firstEpisodeNumber === 'number' && firstEpisodeNumber > 1) {
+    return { kind: 'unmapped', reason: 'continuous_numbering_unsupported' };
+  }
   const matches = season.episodes.filter((value) => {
     const episode = record(value);
     return episode?.season_number === event.season && episode?.episode_number === event.episode;

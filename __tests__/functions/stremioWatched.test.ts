@@ -26,6 +26,12 @@ const episode: MappedTitle = {
 };
 const movieEvent: PlayerEvent = { action: 'stop', type: 'movie', imdbId: 'tt1234567', currentTime: 900, duration: 1000 };
 const episodeEvent: PlayerEvent = { ...movieEvent, type: 'series', season: 2, episode: 63 };
+const UNMAPPED_CONTINUOUS = { kind: 'unmapped', reason: 'continuous_numbering_unsupported' };
+const seasonEpisodes = (season: number, first: number, last: number) =>
+  Array.from({ length: last - first + 1 }, (_, i) => ({
+    id: 1000 + first + i, season_number: season, episode_number: first + i,
+    name: `Episode ${first + i}`, air_date: '2011-10-02', runtime: 24,
+  }));
 const originalFetch = global.fetch;
 let db: TestFirestore;
 
@@ -212,16 +218,42 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
     expect(mockFetch.mock.calls[1][0]).toContain('/movie/42?api_key=api-key');
   });
 
-  it('resolves the show and validates the real continuous-numbered season episode', async () => {
+  it('skips a continuous-numbered season even when the incoming number coincides (S2E63)', async () => {
     mappingResponses('episode');
-    expect(await resolveStremioTitle(episodeEvent, 'key')).toEqual(episode);
+    expect(await resolveStremioTitle(episodeEvent, 'key')).toEqual(UNMAPPED_CONTINUOUS);
     expect(mockFetch.mock.calls[2][0]).toContain('/tv/46298/season/2?');
+    expect(db.writes).toHaveLength(0);
   });
 
   it('never remaps incoming S2E1 to TMDB S2E63 for a continuous-numbered show', async () => {
     mappingResponses('episode');
-    expect(await resolveStremioTitle({ ...episodeEvent, episode: 1 }, 'key')).toBeNull();
+    expect(await resolveStremioTitle({ ...episodeEvent, episode: 1 }, 'key')).toEqual(UNMAPPED_CONTINUOUS);
     expect(db.writes).toHaveLength(0);
+  });
+
+  it('skips a continuous-numbered season when the incoming number does not exist (S3E9)', async () => {
+    mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(ok(episode.show))
+      .mockResolvedValueOnce(ok({ season_number: 3, episodes: seasonEpisodes(3, 137, 148) }));
+    expect(await resolveStremioTitle({ ...episodeEvent, season: 3, episode: 9 }, 'key')).toEqual(UNMAPPED_CONTINUOUS);
+  });
+
+  it('still maps a normal season that starts at episode 1', async () => {
+    mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(ok(episode.show))
+      .mockResolvedValueOnce(ok({ season_number: 1, episodes: seasonEpisodes(1, 1, 3) }));
+    expect(await resolveStremioTitle({ ...episodeEvent, season: 1, episode: 2 }, 'key')).toEqual({
+      kind: 'episode',
+      show: episode.show,
+      episode: { id: 1002, season_number: 1, episode_number: 2, name: 'Episode 2', air_date: '2011-10-02', runtime: 24 },
+    });
+  });
+
+  it('keeps returning null for a season with no episodes', async () => {
+    mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(ok(episode.show))
+      .mockResolvedValueOnce(ok({ season_number: 2, episodes: [] }));
+    expect(await resolveStremioTitle(episodeEvent, 'key')).toBeNull();
   });
 
   it.each([{ movie_results: [] }, { tv_results: [{ id: 42 }] }, { movie_results: [{ id: 42 }, { id: 43 }] }])('skips absent, wrong-type and ambiguous IMDb results: %j', async (result) => {
@@ -237,8 +269,8 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
     expect(await resolveStremioTitle(episodeEvent, 'key')).toBeNull();
     mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
       .mockResolvedValueOnce(ok(episode.show))
-      .mockResolvedValueOnce(ok({ season_number: 2, episodes: [{ ...episode.episode, season_number: 1 }] }));
-    expect(await resolveStremioTitle(episodeEvent, 'key')).toBeNull();
+      .mockResolvedValueOnce(ok({ season_number: 2, episodes: [{ ...episode.episode, season_number: 1, episode_number: 1 }] }));
+    expect(await resolveStremioTitle({ ...episodeEvent, episode: 1 }, 'key')).toBeNull();
   });
 
   it('honors Retry-After on a 429 before a successful retry', async () => {

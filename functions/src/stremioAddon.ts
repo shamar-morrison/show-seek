@@ -112,8 +112,8 @@ export const stremioAddon = onRequest({ secrets: [TMDB_API_KEY] }, async (req, r
     }
 
     const title = await resolveStremioTitle(event!, TMDB_API_KEY.value());
-    if (!title) {
-      logEvent(event, 'skipped_unmapped', { reason: 'no_matching_tmdb_title_or_episode' });
+    if (!title || title.kind === 'unmapped') {
+      logEvent(event, 'skipped_unmapped', { reason: title?.reason ?? 'no_matching_tmdb_title_or_episode' });
     } else {
       const result = await writeStremioWatch(uid, hash, title, receivedAt);
       if (result.outcome === 'bad_token') evictStremioToken(hash);
