@@ -8,10 +8,13 @@ jest.mock('firebase-admin/firestore', () => ({
 jest.mock('firebase-functions/params', () => ({ defineSecret: () => ({ value: () => 'tmdb-secret' }) }), { virtual: true });
 
 import { stremioAddon } from '@/functions/src/stremioAddon';
+import { STREMIO_STOP_RATE_LIMIT_MAX, STREMIO_STOP_RATE_LIMIT_WINDOW_MS } from '@/functions/src/stremio/constants';
 import { parseAddonRoute, parsePlayerEvent } from '@/functions/src/stremio/parsing';
-import { clearStremioTokenCache, hashAddonToken, lookupAddonUid } from '@/functions/src/stremio/tokens';
+import { clearStremioTmdbCache, resolveStremioTitle } from '@/functions/src/stremio/tmdb';
+import * as tokens from '@/functions/src/stremio/tokens';
 import { TestFirestore, TestTimestamp } from './helpers/stremioFirestore';
 
+const { clearStremioTokenCache, clearStremioStopRateLimit, consumeStremioStopAllowance, hashAddonToken, lookupAddonUid } = tokens;
 const TOKEN = '1'.repeat(64);
 const HASH = hashAddonToken(TOKEN);
 const NOW = Date.UTC(2026, 9, 20, 12);
@@ -51,6 +54,8 @@ beforeEach(() => {
   jest.spyOn(Date, 'now').mockReturnValue(NOW);
   log = jest.spyOn(console, 'info').mockImplementation(() => {});
   clearStremioTokenCache();
+  clearStremioStopRateLimit();
+  clearStremioTmdbCache();
 });
 afterEach(() => { jest.restoreAllMocks(); });
 afterAll(() => { global.fetch = originalFetch; });
@@ -157,11 +162,125 @@ describe('stremioAddon HTTP endpoint', () => {
 
   it('makes repeated stops idempotent while saving token-doc reads on cache hits', async () => {
     await request(playerPath());
+    expect(db.reads).toHaveLength(7);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
     const writes = db.writes.length;
     await request(playerPath());
+    expect(db.reads).toHaveLength(10);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(db.writes).toHaveLength(writes);
     expect(db.reads.filter((path) => path === `stremioAddonTokens/${HASH}`)).toHaveLength(1);
     expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'skipped_duplicate' }));
+  });
+
+  it.each([[false, false], [false, true], [true, false], [true, true]])(
+    'preserves first-movie read costs (token warm=%s, mapping warm=%s)', async (tokenWarm, mappingWarm) => {
+      if (tokenWarm) await lookupAddonUid(HASH);
+      if (mappingWarm) await resolveStremioTitle({ action: 'stop', type: 'movie', imdbId: 'tt1234567', currentTime: 900, duration: 1000 }, 'key');
+      db.reads.length = 0;
+      mockFetch.mockClear();
+      await request(playerPath());
+      expect(db.reads).toHaveLength(tokenWarm ? 6 : 7);
+      expect(mockFetch).toHaveBeenCalledTimes(mappingWarm ? 0 : 2);
+      expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'written' }));
+    }
+  );
+
+  it.each([[false, false], [false, true], [true, false], [true, true]])(
+    'preserves same-day repeat read costs (token warm=%s, mapping warm=%s)', async (tokenWarm, mappingWarm) => {
+      await request(playerPath());
+      if (!tokenWarm) clearStremioTokenCache();
+      if (!mappingWarm) clearStremioTmdbCache();
+      db.reads.length = 0;
+      db.writes.length = 0;
+      mockFetch.mockClear();
+      await request(playerPath());
+      expect(db.reads).toHaveLength(tokenWarm ? 3 : 4);
+      expect(mockFetch).toHaveBeenCalledTimes(mappingWarm ? 0 : 2);
+      expect(db.writes).toHaveLength(0);
+      expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'skipped_duplicate' }));
+    }
+  );
+
+  it.each([false, true])('drops stops 31 and 32 without user reads and logs only stop 31 (token warm=%s)', async (tokenWarm) => {
+    for (let i = 0; i < STREMIO_STOP_RATE_LIMIT_MAX; i++) await request(playerPath());
+    if (!tokenWarm) clearStremioTokenCache();
+    db.reads.length = 0;
+    db.writes.length = 0;
+    mockFetch.mockClear();
+    log.mockClear();
+
+    const first = await request(playerPath());
+    expect(first.status).toHaveBeenCalledWith(200);
+    expect(first.json).toHaveBeenCalledWith({ success: true });
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'rate_limited' }));
+    const second = await request(playerPath());
+    expect(second.status).toHaveBeenCalledWith(200);
+    expect(second.json).toHaveBeenCalledWith({ success: true });
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(db.reads).toEqual(tokenWarm ? [] : [`stremioAddonTokens/${HASH}`]);
+    expect(db.writes).toHaveLength(0);
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(JSON.stringify(log.mock.calls)).not.toContain(TOKEN);
+  });
+
+  it('admits stops at the window boundary without extending the window on denial', async () => {
+    for (let i = 0; i < STREMIO_STOP_RATE_LIMIT_MAX; i++) consumeStremioStopAllowance(HASH);
+    await request(playerPath());
+    jest.spyOn(Date, 'now').mockReturnValue(NOW + STREMIO_STOP_RATE_LIMIT_WINDOW_MS - 1);
+    await request(playerPath());
+    expect(mockFetch).not.toHaveBeenCalled();
+    jest.spyOn(Date, 'now').mockReturnValue(NOW + STREMIO_STOP_RATE_LIMIT_WINDOW_MS);
+    await request(playerPath());
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'written' }));
+  });
+
+  it.each([
+    playerPath('start'), playerPath('pause'), playerPath('stop', 899), playerPath('stop', 0, 0),
+    playerPath().replace('action=stop', 'action=unknown'),
+  ])('does not count an ineligible event toward the stop limit', async (path) => {
+    for (let i = 1; i < STREMIO_STOP_RATE_LIMIT_MAX; i++) consumeStremioStopAllowance(HASH);
+    await request(path);
+    expect(db.reads).toHaveLength(0);
+    expect(mockFetch).not.toHaveBeenCalled();
+    await request(playerPath());
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'written' }));
+    await request(playerPath());
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'rate_limited' }));
+  });
+
+  it('never enters the limiter for unknown tokens', async () => {
+    const consume = jest.spyOn(tokens, 'consumeStremioStopAllowance');
+    for (let i = 0; i < 32; i++) await request(playerPath().replace(TOKEN, 'a'.repeat(64)));
+    expect(consume).not.toHaveBeenCalled();
+    expect(db.reads).toHaveLength(32);
+    expect(db.reads.every((path) => path.startsWith('stremioAddonTokens/'))).toBe(true);
+    expect(db.writes).toHaveLength(0);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('does not count or limit manifests, even when the stop allowance is exhausted', async () => {
+    for (let i = 1; i < STREMIO_STOP_RATE_LIMIT_MAX; i++) consumeStremioStopAllowance(HASH);
+    expect((await request(`/${TOKEN}/manifest.json`)).status).toHaveBeenCalledWith(200);
+    await request(playerPath());
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'written' }));
+    expect((await request(`/${TOKEN}/manifest.json`)).status).toHaveBeenCalledWith(200);
+    await request(playerPath());
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'rate_limited' }));
+  });
+
+  it.each(['preflight', 'transaction'])('retains the %s revocation check with a warm TMDB mapping', async (stage) => {
+    await resolveStremioTitle({ action: 'stop', type: 'movie', imdbId: 'tt1234567', currentTime: 900, duration: 1000 }, 'key');
+    mockFetch.mockClear();
+    const revoke = () => db.seed('users/member', { stremioAddon: { activeTokenHash: null } });
+    if (stage === 'preflight') revoke();
+    else db.beforeCommit = revoke;
+    await request(playerPath());
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(db.writes).toHaveLength(0);
+    expect(log).toHaveBeenLastCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'bad_token' }));
   });
 
   it('handles an encoded episode stop end-to-end, using TMDB numbering and numeric timestamps', async () => {

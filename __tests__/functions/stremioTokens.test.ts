@@ -10,8 +10,11 @@ jest.mock('firebase-admin/firestore', () => ({
 jest.mock('firebase-functions/params', () => ({ defineSecret: () => ({ value: () => 'key' }) }), { virtual: true });
 
 import { createStremioAddonToken, revokeStremioAddonToken } from '@/functions/src/stremioAddon';
+import { STREMIO_STOP_RATE_LIMIT_MAX, STREMIO_STOP_RATE_LIMIT_MAX_SIZE, STREMIO_STOP_RATE_LIMIT_WINDOW_MS } from '@/functions/src/stremio/constants';
 import {
+  clearStremioStopRateLimit,
   clearStremioTokenCache,
+  consumeStremioStopAllowance,
   hashAddonToken,
   issueAddonToken,
   lookupAddonUid,
@@ -30,6 +33,7 @@ beforeEach(() => {
   mockFirestore.mockReturnValue(db);
   jest.spyOn(Date, 'now').mockReturnValue(NOW);
   clearStremioTokenCache();
+  clearStremioStopRateLimit();
 });
 afterEach(() => { jest.restoreAllMocks(); });
 
@@ -130,5 +134,47 @@ describe('hash-to-UID cache', () => {
     const count = db.reads.length;
     await lookupAddonUid('0'.repeat(64));
     expect(db.reads).toHaveLength(count + 1);
+  });
+});
+
+describe('per-instance qualifying-stop allowance', () => {
+  const hash = 'a'.repeat(64);
+  const fill = (key: string) => {
+    for (let i = 0; i < STREMIO_STOP_RATE_LIMIT_MAX; i++) {
+      expect(consumeStremioStopAllowance(key)).toEqual({ allowed: true, logDenial: false });
+    }
+  };
+
+  it('allows 30 stops per hash and flags only the first denial in each window', () => {
+    fill(hash);
+    expect(consumeStremioStopAllowance(hash)).toEqual({ allowed: false, logDenial: true });
+    expect(consumeStremioStopAllowance(hash)).toEqual({ allowed: false, logDenial: false });
+    expect(consumeStremioStopAllowance('b'.repeat(64))).toEqual({ allowed: true, logDenial: false });
+    jest.spyOn(Date, 'now').mockReturnValue(NOW + STREMIO_STOP_RATE_LIMIT_WINDOW_MS - 1);
+    expect(consumeStremioStopAllowance(hash)).toEqual({ allowed: false, logDenial: false });
+    jest.spyOn(Date, 'now').mockReturnValue(NOW + STREMIO_STOP_RATE_LIMIT_WINDOW_MS);
+    fill(hash);
+    expect(consumeStremioStopAllowance(hash)).toEqual({ allowed: false, logDenial: true });
+    expect(db.reads).toHaveLength(0);
+    expect(db.writes).toHaveLength(0);
+  });
+
+  it('bounds entries to 1024 and evicts the oldest without refreshing on access', () => {
+    const oldest = '0'.repeat(64);
+    fill(oldest);
+    for (let i = 1; i < STREMIO_STOP_RATE_LIMIT_MAX_SIZE; i++) consumeStremioStopAllowance(i.toString(16).padStart(64, '0'));
+    expect(consumeStremioStopAllowance(oldest).allowed).toBe(false);
+    consumeStremioStopAllowance('f'.repeat(64));
+    expect(consumeStremioStopAllowance(oldest).allowed).toBe(true);
+  });
+
+  it('evicts expired entries before evicting an older live entry', () => {
+    const oldest = '0'.repeat(64);
+    consumeStremioStopAllowance(oldest);
+    for (let i = 1; i < STREMIO_STOP_RATE_LIMIT_MAX_SIZE; i++) consumeStremioStopAllowance(i.toString(16).padStart(64, '0'));
+    jest.spyOn(Date, 'now').mockReturnValue(NOW + STREMIO_STOP_RATE_LIMIT_WINDOW_MS);
+    fill(oldest);
+    consumeStremioStopAllowance('f'.repeat(64));
+    expect(consumeStremioStopAllowance(oldest).allowed).toBe(false);
   });
 });

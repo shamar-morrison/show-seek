@@ -6,7 +6,8 @@ jest.mock('firebase-admin/firestore', () => ({
   FieldValue: { delete: () => require('./helpers/stremioFirestore').DELETE_FIELD },
 }), { virtual: true });
 
-import { resolveStremioTitle, type MappedTitle } from '@/functions/src/stremio/tmdb';
+import { STREMIO_TMDB_CACHE_MAX_SIZE, STREMIO_TMDB_CACHE_TTL_MS } from '@/functions/src/stremio/constants';
+import { clearStremioTmdbCache, resolveStremioTitle, type MappedTitle } from '@/functions/src/stremio/tmdb';
 import { writeStremioWatch } from '@/functions/src/stremio/watched';
 import type { PlayerEvent } from '@/functions/src/stremio/parsing';
 import { TestFirestore, TestTimestamp } from './helpers/stremioFirestore';
@@ -55,6 +56,7 @@ beforeEach(() => {
   mockFetch.mockReset();
   global.fetch = mockFetch;
   jest.spyOn(Date, 'now').mockReturnValue(NOW);
+  clearStremioTmdbCache();
 });
 afterEach(() => { jest.restoreAllMocks(); jest.useRealTimers(); });
 afterAll(() => { global.fetch = originalFetch; });
@@ -211,6 +213,98 @@ describe('mobile-shaped watched transactions', () => {
 });
 
 describe('IMDb-to-TMDB mapping and request budget', () => {
+  function episodeResponses(season = 1) {
+    mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: episode.show.id }] }))
+      .mockResolvedValueOnce(ok(episode.show))
+      .mockResolvedValueOnce(ok({ season_number: season, episodes: seasonEpisodes(season, 1, 3) }));
+  }
+
+  it('caches successful movies and episodes without any second-resolution TMDB calls', async () => {
+    mappingResponses('movie');
+    expect(await resolveStremioTitle(movieEvent, 'key')).toEqual(movie);
+    expect(await resolveStremioTitle(movieEvent, 'key')).toEqual(movie);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    episodeResponses();
+    const event = { ...episodeEvent, season: 1, episode: 1 };
+    const mapped = await resolveStremioTitle(event, 'key');
+    expect(mapped?.kind).toBe('episode');
+    expect(await resolveStremioTitle(event, 'key')).toEqual(mapped);
+    expect(mockFetch).toHaveBeenCalledTimes(5);
+  });
+
+  it('isolates nested mutations of initial results and cache hits from the cached mapping', async () => {
+    mappingResponses('movie');
+    const initial = await resolveStremioTitle(movieEvent, 'key');
+    if (initial?.kind !== 'movie') throw new Error('Expected movie mapping');
+    initial.movie.title = 'Changed';
+    initial.movie.genres[0].id = 999;
+    const hit = await resolveStremioTitle(movieEvent, 'key');
+    expect(hit).toEqual(movie);
+    if (hit?.kind !== 'movie') throw new Error('Expected cached movie');
+    hit.movie.title = 'Changed again';
+    hit.movie.genres.push({ id: 999 });
+    expect(await resolveStremioTitle(movieEvent, 'key')).toEqual(movie);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keys mappings by type, IMDb ID, season and episode', async () => {
+    mappingResponses('movie');
+    await resolveStremioTitle(movieEvent, 'key');
+    mappingResponses('movie');
+    await resolveStremioTitle({ ...movieEvent, imdbId: 'tt7654321' }, 'key');
+    for (const [season, number] of [[1, 1], [1, 2], [2, 1]]) {
+      episodeResponses(season);
+      expect((await resolveStremioTitle({ ...episodeEvent, season, episode: number }, 'key'))?.kind).toBe('episode');
+    }
+    expect(mockFetch).toHaveBeenCalledTimes(13);
+    await resolveStremioTitle({ ...episodeEvent, season: 1, episode: 1 }, 'key');
+    expect(mockFetch).toHaveBeenCalledTimes(13);
+  });
+
+  it('expires mappings at ten minutes without extending TTL on a cache hit', async () => {
+    mappingResponses('movie');
+    await resolveStremioTitle(movieEvent, 'key');
+    jest.spyOn(Date, 'now').mockReturnValue(NOW + STREMIO_TMDB_CACHE_TTL_MS - 1);
+    await resolveStremioTitle(movieEvent, 'key');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    jest.spyOn(Date, 'now').mockReturnValue(NOW + STREMIO_TMDB_CACHE_TTL_MS);
+    mappingResponses('movie');
+    await resolveStremioTitle(movieEvent, 'key');
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+  });
+
+  it('bounds mappings to 500 entries and evicts the oldest', async () => {
+    for (let i = 0; i <= STREMIO_TMDB_CACHE_MAX_SIZE; i++) {
+      mappingResponses('movie');
+      await resolveStremioTitle({ ...movieEvent, imdbId: `tt${i}` }, 'key');
+    }
+    const calls = mockFetch.mock.calls.length;
+    await resolveStremioTitle({ ...movieEvent, imdbId: `tt${STREMIO_TMDB_CACHE_MAX_SIZE}` }, 'key');
+    expect(mockFetch).toHaveBeenCalledTimes(calls);
+    mappingResponses('movie');
+    await resolveStremioTitle({ ...movieEvent, imdbId: 'tt0' }, 'key');
+    expect(mockFetch).toHaveBeenCalledTimes(calls + 2);
+  });
+
+  it.each(['error', 'null', '429'])('does not cache a failed %s resolution', async (failure) => {
+    if (failure === 'error') mockFetch.mockRejectedValueOnce(new Error('network failure'));
+    else if (failure === 'null') mockFetch.mockResolvedValueOnce(ok({ movie_results: [] }));
+    else mockFetch.mockResolvedValueOnce({ ok: false, status: 429, headers: { get: () => '60' } });
+    if (failure === 'null') expect(await resolveStremioTitle(movieEvent, 'key')).toBeNull();
+    else await expect(resolveStremioTitle(movieEvent, 'key')).rejects.toThrow();
+    mappingResponses('movie');
+    expect(await resolveStremioTitle(movieEvent, 'key')).toEqual(movie);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('recomputes continuous-numbering skips every time', async () => {
+    for (let i = 0; i < 2; i++) {
+      mappingResponses('episode');
+      expect(await resolveStremioTitle(episodeEvent, 'key')).toEqual(UNMAPPED_CONTINUOUS);
+    }
+    expect(mockFetch).toHaveBeenCalledTimes(6);
+  });
+
   it('resolves movies by IMDb ID and fetches details for runtime', async () => {
     mappingResponses('movie');
     expect(await resolveStremioTitle(movieEvent, ' api-key ')).toEqual(movie);

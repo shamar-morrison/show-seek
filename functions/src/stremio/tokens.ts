@@ -3,6 +3,9 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { createHash, randomBytes } from 'node:crypto';
 import {
+  STREMIO_STOP_RATE_LIMIT_MAX,
+  STREMIO_STOP_RATE_LIMIT_MAX_SIZE,
+  STREMIO_STOP_RATE_LIMIT_WINDOW_MS,
   STREMIO_TOKEN_CACHE_MAX_SIZE,
   STREMIO_TOKEN_CACHE_TTL_MS,
   STREMIO_TOKEN_COLLECTION,
@@ -10,10 +13,37 @@ import {
 } from './constants';
 
 const tokenCache = new Map<string, { uid: string; expiresAt: number }>();
+const stopRateLimit = new Map<string, { count: number; expiresAt: number; deniedLogged: boolean }>();
 
 export const hashAddonToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 
 export const clearStremioTokenCache = (): void => tokenCache.clear();
+export const clearStremioStopRateLimit = (): void => stopRateLimit.clear();
+
+// Per-instance, best-effort allowance. Call only after the hash resolves to a UID.
+export function consumeStremioStopAllowance(hash: string): { allowed: boolean; logDenial: boolean } {
+  const now = Date.now();
+  const entry = stopRateLimit.get(hash);
+  if (entry && entry.expiresAt > now) {
+    if (entry.count >= STREMIO_STOP_RATE_LIMIT_MAX) {
+      const logDenial = !entry.deniedLogged;
+      entry.deniedLogged = true;
+      return { allowed: false, logDenial };
+    }
+    entry.count++;
+    return { allowed: true, logDenial: false };
+  }
+
+  for (const [key, value] of stopRateLimit) {
+    if (value.expiresAt <= now) stopRateLimit.delete(key);
+  }
+  if (stopRateLimit.size >= STREMIO_STOP_RATE_LIMIT_MAX_SIZE) {
+    const oldest = stopRateLimit.keys().next().value;
+    if (oldest !== undefined) stopRateLimit.delete(oldest);
+  }
+  stopRateLimit.set(hash, { count: 1, expiresAt: now + STREMIO_STOP_RATE_LIMIT_WINDOW_MS, deniedLogged: false });
+  return { allowed: true, logDenial: false };
+}
 
 export const evictStremioToken = (hash: string): void => {
   tokenCache.delete(hash);
