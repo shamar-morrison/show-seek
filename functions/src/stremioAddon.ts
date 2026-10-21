@@ -5,6 +5,7 @@ import { STREMIO_COMPLETION_THRESHOLD, STREMIO_MANIFEST } from './stremio/consta
 import { parseAddonRoute, type PlayerEvent } from './stremio/parsing';
 import { resolveStremioTitle, StremioTmdbError } from './stremio/tmdb';
 import {
+  consumeStremioStopAllowance,
   evictStremioToken,
   hasActiveAddonToken,
   hashAddonToken,
@@ -48,7 +49,7 @@ function logEvent(event: PlayerEvent | null, outcome: string, details: Record<st
 
 // The bearer token is in the route. Never log request URLs, raw requests, tokens or
 // unsanitized errors here. Platform access logs may independently record these URLs.
-export const stremioAddon = onRequest({ secrets: [TMDB_API_KEY] }, async (req, res): Promise<void> => {
+export const stremioAddon = onRequest({ maxInstances: 5, secrets: [TMDB_API_KEY] }, async (req, res): Promise<void> => {
   const receivedAt = Date.now();
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -96,6 +97,14 @@ export const stremioAddon = onRequest({ secrets: [TMDB_API_KEY] }, async (req, r
   const hash = hashAddonToken(route.token);
   try {
     const uid = await lookupAddonUid(hash, route.kind !== 'manifest');
+    if (uid && route.kind === 'player') {
+      const allowance = consumeStremioStopAllowance(hash);
+      if (!allowance.allowed) {
+        if (allowance.logDenial) logEvent(event, 'rate_limited');
+        res.status(200).json({ success: true });
+        return;
+      }
+    }
     // Preflight prevents revoked cached credentials from spending TMDB requests.
     // The writer checks this again inside its transaction to close the revoke race.
     const user = uid ? await admin.firestore().collection('users').doc(uid).get() : null;

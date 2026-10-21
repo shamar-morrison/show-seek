@@ -1,4 +1,10 @@
-import { TMDB_MAX_RETRIES, TMDB_REQUEST_TIMEOUT_MS, TMDB_TOTAL_BUDGET_MS } from './constants';
+import {
+  STREMIO_TMDB_CACHE_MAX_SIZE,
+  STREMIO_TMDB_CACHE_TTL_MS,
+  TMDB_MAX_RETRIES,
+  TMDB_REQUEST_TIMEOUT_MS,
+  TMDB_TOTAL_BUDGET_MS,
+} from './constants';
 import type { PlayerEvent } from './parsing';
 
 interface MediaDetails {
@@ -33,6 +39,25 @@ export type MappedTitle =
   | { kind: 'episode'; show: ShowDetails; episode: EpisodeDetails };
 
 export type UnmappedTitle = { kind: 'unmapped'; reason: 'continuous_numbering_unsupported' };
+
+const titleCache = new Map<string, { title: MappedTitle; expiresAt: number }>();
+
+export const clearStremioTmdbCache = (): void => titleCache.clear();
+
+function cacheMappedTitle(key: string, title: MappedTitle): MappedTitle {
+  const now = Date.now();
+  for (const [cacheKey, entry] of titleCache) {
+    if (entry.expiresAt <= now) titleCache.delete(cacheKey);
+  }
+  titleCache.delete(key);
+  if (titleCache.size >= STREMIO_TMDB_CACHE_MAX_SIZE) {
+    const oldest = titleCache.keys().next().value;
+    if (oldest !== undefined) titleCache.delete(oldest);
+  }
+  // Neither the initial result nor a later cache hit exposes the stored object.
+  titleCache.set(key, { title: structuredClone(title), expiresAt: now + STREMIO_TMDB_CACHE_TTL_MS });
+  return title;
+}
 
 export class StremioTmdbError extends Error {
   constructor(readonly reason: string, readonly statusCode?: number) {
@@ -104,6 +129,11 @@ export async function resolveStremioTitle(
 ): Promise<MappedTitle | UnmappedTitle | null> {
   const apiKey = rawApiKey.trim();
   if (!apiKey) throw new StremioTmdbError('missing_api_key');
+  const cacheKey = event.type === 'movie'
+    ? `movie:${event.imdbId}` : `series:${event.imdbId}:${event.season}:${event.episode}`;
+  const cached = titleCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return structuredClone(cached.title);
+  titleCache.delete(cacheKey);
   const deadline = Date.now() + TMDB_TOTAL_BUDGET_MS;
   const found = await requestTmdb(`/find/${encodeURIComponent(event.imdbId)}?external_source=imdb_id`, apiKey, deadline);
   const results = found?.[event.type === 'movie' ? 'movie_results' : 'tv_results'];
@@ -116,7 +146,7 @@ export async function resolveStremioTitle(
     const movie = await requestTmdb(`/movie/${id}`, apiKey, deadline);
     const details = movie && mediaDetails(movie, id);
     if (!movie || !details || typeof movie.title !== 'string' || !movie.title) return null;
-    return {
+    return cacheMappedTitle(cacheKey, {
       kind: 'movie',
       movie: {
         ...details,
@@ -124,7 +154,7 @@ export async function resolveStremioTitle(
         release_date: typeof movie.release_date === 'string' ? movie.release_date : '',
         runtime: positiveRuntime(movie.runtime),
       },
-    };
+    });
   }
 
   const show = await requestTmdb(`/tv/${id}`, apiKey, deadline);
@@ -145,7 +175,7 @@ export async function resolveStremioTitle(
   if (matches.length !== 1) return null;
   const episode = record(matches[0]);
   if (!episode || !positiveId(episode.id) || typeof episode.name !== 'string') return null;
-  return {
+  return cacheMappedTitle(cacheKey, {
     kind: 'episode',
     show: {
       ...details,
@@ -160,5 +190,5 @@ export async function resolveStremioTitle(
       air_date: typeof episode.air_date === 'string' ? episode.air_date : null,
       runtime: positiveRuntime(episode.runtime),
     },
-  };
+  });
 }
