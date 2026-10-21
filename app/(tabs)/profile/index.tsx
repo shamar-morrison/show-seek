@@ -26,6 +26,7 @@ import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
 import { useProfileSearchScroll } from '@/src/hooks/useProfileSearchScroll';
+import { useStremioConnection } from '@/src/hooks/useStremioConnection';
 import { getFirestoreReadAuditReport } from '@/src/services/firestoreReadAudit';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { UserPreferences } from '@/src/types/preferences';
@@ -91,6 +92,7 @@ export default function ProfileScreen() {
     handleColorPress,
     handleLaunchScreenPress,
     handleTraktPress,
+    handleStremioPress,
     handleAboutPress,
     handlePremiumPress,
   } = useProfileLogic();
@@ -121,6 +123,10 @@ export default function ProfileScreen() {
 
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('preferences');
   const selectedTabRef = useRef(selectedTab);
+  // Reads the shared cached user doc only while the Integrations tab is shown.
+  const { isConnected: isStremioConnected } = useStremioConnection({
+    enabled: selectedTab === 'integrations' && !isGuest,
+  });
   // Written post-commit only: a render-phase write could leak a discarded
   // render's value into the ref. Read by the debounced search timer.
   useEffect(() => {
@@ -334,6 +340,8 @@ export default function ProfileScreen() {
             isTraktLoading={isTraktLoading}
             onImdbImport={() => handleGuardedContentAction(handleImdbImport)}
             onTraktPress={() => handleGuardedContentAction(handleTraktPress)}
+            isStremioConnected={isStremioConnected}
+            onStremioPress={() => handleGuardedContentAction(handleStremioPress)}
             showTitle={false}
             highlightedId={highlightedId}
             registerItemLayout={registerItemLayout}

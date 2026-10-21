@@ -285,6 +285,10 @@ export function useProfileLogic() {
     router.push('/(tabs)/profile/trakt-settings');
   }, [router]);
 
+  const handleStremioPress = useCallback(() => {
+    router.push('/(tabs)/profile/stremio-settings' as any);
+  }, [router]);
+
   const handleAboutPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/(tabs)/profile/about' as any);
@@ -323,6 +327,7 @@ export function useProfileLogic() {
     handleColorPress,
     handleLaunchScreenPress,
     handleTraktPress,
+    handleStremioPress,
     handleAboutPress,
     handlePremiumPress,
   };
