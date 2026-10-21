@@ -79,6 +79,7 @@ describe('IntegrationsSection', () => {
     const { getByTestId, getByText } = render(<IntegrationsSection {...props} />);
 
     expect(getByText('Stremio')).toBeTruthy();
+    expect(getByTestId('integrations-stremio-icon')).toBeTruthy();
     expect(getByTestId('search-item-stremio')).toBeTruthy();
     expect(INTEGRATION_ITEMS).toContainEqual({
       id: 'stremio',

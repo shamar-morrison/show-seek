@@ -51,6 +51,9 @@ jest.mock('@/src/components/ui/Toast', () => {
     }),
   };
 });
+jest.mock('expo-image', () => ({
+  Image: 'Image',
+}));
 jest.mock('expo-clipboard', () => ({
   setStringAsync: (...args: unknown[]) => mockSetStringAsync(...args),
 }));
@@ -122,6 +125,7 @@ describe('StremioSettingsScreen', () => {
   it('creates a link and offers Share (primary) and Copy with the once-only and private notes', async () => {
     const { getByTestId, getByText, queryByTestId } = await renderScreen();
 
+    expect(getByTestId('stremio-logo')).toBeTruthy();
     expect(getByText('Works with Stremio Desktop and Web, not the Android or iOS apps yet.')).toBeTruthy();
     expect(getByText('Finished movies and episodes are marked as watched.')).toBeTruthy();
     expect(queryByTestId('stremio-disconnect-button')).toBeNull();
