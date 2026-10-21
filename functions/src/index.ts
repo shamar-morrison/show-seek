@@ -519,7 +519,7 @@ export const reconcilePremiumStatus = onCall(
 export const deleteAccount = onCall({}, deleteAccountHandler);
 
 export { importImdbChunk } from './imdbImport';
-export { polarWebhook } from './polarWebhook';
+// Polar webhook intentionally not exported (web app decommissioned). Re-add this export and recreate the POLAR_* secrets to restore.
 export { revenuecatWebhook } from './revenuecatWebhook';
 export {
   stremioAddon,
