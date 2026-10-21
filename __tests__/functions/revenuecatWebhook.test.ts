@@ -12,7 +12,7 @@ const mockCollection = jest.fn();
 const mockGetUser = jest.fn();
 mockGetUser.mockResolvedValue({ email: 'user@example.com' });
 
-const mockSendCancellationFeedbackEmail = jest.fn(async () => ({}));
+const mockSendCancellationFeedbackEmail = jest.fn(async (..._args: unknown[]) => ({}));
 
 const firestoreFn: any = jest.fn(() => ({
   collection: mockCollection,
@@ -587,13 +587,15 @@ describe('revenuecatWebhook subscription feedback email', () => {
   const postEvent = (event: Record<string, unknown>) => {
     const response = createResponse();
 
-    return revenuecatWebhook(
-      {
-        body: { event },
-        header: jest.fn(() => 'Bearer hook-secret'),
-        method: 'POST',
-      } as any,
-      response as any
+    return Promise.resolve(
+      revenuecatWebhook(
+        {
+          body: { event },
+          header: jest.fn(() => 'Bearer hook-secret'),
+          method: 'POST',
+        } as any,
+        response as any
+      )
     ).then(() => response);
   };
 
