@@ -7,7 +7,6 @@ import {
   COLORS,
   FONT_FAMILY,
   FONT_SIZE,
-  hexToRGBA,
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -24,7 +23,6 @@ import {
   Copy01Icon,
   InformationCircleIcon,
   Link02Icon,
-  PlayCircle02Icon,
   Share02Icon,
   Unlink01Icon,
 } from '@hugeicons/core-free-icons';
@@ -32,6 +30,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -206,9 +205,12 @@ export default function StremioSettingsScreen() {
       {header}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroSection}>
-          <View style={[styles.iconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
-            <AppIcon icon={PlayCircle02Icon} size={36} color={accentColor} />
-          </View>
+          <Image
+            source={require('@/assets/images/stremio.png')}
+            contentFit="contain"
+            style={styles.stremioLogo}
+            testID="stremio-logo"
+          />
           <Text style={styles.heroSubtitle}>{t('stremio.intro')}</Text>
           {hasActiveLink && (
             <Text style={styles.statusText} testID="stremio-status-active">
@@ -338,12 +340,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.l,
   },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
+  stremioLogo: {
+    width: 64,
+    height: 64,
     marginBottom: SPACING.m,
   },
   heroSubtitle: {

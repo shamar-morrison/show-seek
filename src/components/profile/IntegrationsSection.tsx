@@ -5,7 +5,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { Image } from 'expo-image';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { PlayCircle02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -157,7 +157,14 @@ export function IntegrationsSection({
       case 'stremio':
         return (
           <ActionButton
-            icon={PlayCircle02Icon}
+            customIcon={
+              <Image
+                source={require('@/assets/images/stremio.png')}
+                contentFit="contain"
+                style={styles.stremioLogo}
+                testID="integrations-stremio-icon"
+              />
+            }
             label={t('profile.stremioIntegration')}
             onPress={onStremioPress}
             testID="action-button-stremio-integration"
@@ -208,6 +215,10 @@ const styles = StyleSheet.create({
   imdbLogo: {
     height: 14,
     width: 35,
+  },
+  stremioLogo: {
+    height: 21,
+    width: 21,
   },
   traktConnectedBadge: {
     width: 18,
