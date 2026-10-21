@@ -13,6 +13,7 @@ const mockCreateInstallLink = jest.fn();
 const mockRevokeLink = jest.fn();
 const mockGetCachedUserDocument = jest.fn();
 const mockMergeUserDocumentCache = jest.fn();
+const mockClearUserDocumentCache = jest.fn();
 const mockShare = jest.fn();
 const mockAnalytics = {
   logLogin: jest.fn(),
@@ -59,6 +60,7 @@ jest.mock('@/src/context/auth', () => ({
 jest.mock('@/src/services/UserDocumentCache', () => ({
   getCachedUserDocument: (...args: unknown[]) => mockGetCachedUserDocument(...args),
   mergeUserDocumentCache: (...args: unknown[]) => mockMergeUserDocumentCache(...args),
+  clearUserDocumentCache: (...args: unknown[]) => mockClearUserDocumentCache(...args),
 }));
 jest.mock('@/src/services/analytics', () => mockAnalytics);
 jest.mock('@/src/services/StremioAddonService', () => {
@@ -134,9 +136,8 @@ describe('StremioSettingsScreen', () => {
     expect(getByText("Keep this link private. Don't share it with others.")).toBeTruthy();
     expect(getByText('1. On your computer, open Stremio and go to Addons.')).toBeTruthy();
     expect(getByText('Link active')).toBeTruthy();
-    expect(mockMergeUserDocumentCache).toHaveBeenCalledWith('member', {
-      stremioAddon: { activeTokenHash: 'client-connected' },
-    });
+    expect(mockClearUserDocumentCache).toHaveBeenCalledWith('member');
+    expect(mockMergeUserDocumentCache).not.toHaveBeenCalled();
 
     await act(async () => {
       fireEvent.press(getByTestId('stremio-share-button'));
@@ -212,9 +213,8 @@ describe('StremioSettingsScreen', () => {
     });
 
     expect(mockRevokeLink).toHaveBeenCalledTimes(1);
-    expect(mockMergeUserDocumentCache).toHaveBeenCalledWith('member', {
-      stremioAddon: { activeTokenHash: null },
-    });
+    expect(mockClearUserDocumentCache).toHaveBeenCalledWith('member');
+    expect(mockMergeUserDocumentCache).not.toHaveBeenCalled();
     expect(getByTestId('stremio-create-button')).toBeTruthy();
     expect(queryByTestId('stremio-disconnect-button')).toBeNull();
   });
@@ -281,6 +281,7 @@ describe('StremioSettingsScreen', () => {
       ...storageSpies.map((spy) => spy.mock.calls),
       ...Object.values(mockAnalytics).map((fn) => fn.mock.calls),
       mockMergeUserDocumentCache.mock.calls,
+      mockClearUserDocumentCache.mock.calls,
       mockToastShow.mock.calls,
       alertSpy.mock.calls,
     ]);

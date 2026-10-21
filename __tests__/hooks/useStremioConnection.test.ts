@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 const mockGetCachedUserDocument = jest.fn();
 const mockMergeUserDocumentCache = jest.fn();
+const mockClearUserDocumentCache = jest.fn();
 let mockUser: { uid: string; isAnonymous: boolean } | null = { uid: 'member', isAnonymous: false };
 
 jest.mock('@/src/context/auth', () => ({
@@ -11,12 +12,12 @@ jest.mock('@/src/context/auth', () => ({
 jest.mock('@/src/services/UserDocumentCache', () => ({
   getCachedUserDocument: (...args: unknown[]) => mockGetCachedUserDocument(...args),
   mergeUserDocumentCache: (...args: unknown[]) => mockMergeUserDocumentCache(...args),
+  clearUserDocumentCache: (...args: unknown[]) => mockClearUserDocumentCache(...args),
 }));
 
 import {
   markStremioConnected,
   resetStremioConnectionForTest,
-  STREMIO_CLIENT_CONNECTED_MARKER,
   useStremioConnection,
 } from '@/src/hooks/useStremioConnection';
 
@@ -74,22 +75,52 @@ describe('useStremioConnection', () => {
     expect(result.current.isConnected).toBeNull();
   });
 
-  it('flips state optimistically and merges the cache without a read', () => {
+  it('flips state optimistically and invalidates the cache entry without a read or merge', () => {
     const { result } = renderHook(() => useStremioConnection({ enabled: false }));
 
     act(() => markStremioConnected('member', true));
     expect(result.current.isConnected).toBe(true);
-    expect(mockMergeUserDocumentCache).toHaveBeenLastCalledWith('member', {
-      stremioAddon: { activeTokenHash: STREMIO_CLIENT_CONNECTED_MARKER },
-    });
+    expect(mockClearUserDocumentCache).toHaveBeenLastCalledWith('member');
 
     act(() => markStremioConnected('member', false));
     expect(result.current.isConnected).toBe(false);
-    expect(mockMergeUserDocumentCache).toHaveBeenLastCalledWith('member', {
-      stremioAddon: { activeTokenHash: null },
-    });
+    expect(mockClearUserDocumentCache).toHaveBeenCalledTimes(2);
+    expect(mockClearUserDocumentCache).toHaveBeenLastCalledWith('member');
+
+    expect(mockMergeUserDocumentCache).not.toHaveBeenCalled();
     expect(mockGetCachedUserDocument).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['create', true, 'new-hash'],
+    ['revoke', false, null],
+  ])(
+    'reflects fresh server data on the next refresh after a %s, not the stale cached value',
+    async (_action, isConnected, serverHash) => {
+      // Before the action, the cache held the opposite (now stale) state.
+      mockGetCachedUserDocument.mockResolvedValueOnce({
+        stremioAddon: { activeTokenHash: isConnected ? null : 'old-hash' },
+      });
+      const { result } = renderHook(() => useStremioConnection({ enabled: true }));
+      await waitFor(() => expect(result.current.isConnected).toBe(!isConnected));
+
+      act(() => markStremioConnected('member', isConnected));
+      expect(result.current.isConnected).toBe(isConnected);
+      expect(mockClearUserDocumentCache).toHaveBeenCalledWith('member');
+
+      // The invalidated entry forces the next read to the server, which has the new state.
+      mockGetCachedUserDocument.mockResolvedValueOnce({
+        stremioAddon: { activeTokenHash: serverHash },
+      });
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      expect(mockGetCachedUserDocument).toHaveBeenCalledTimes(2);
+      expect(result.current.isConnected).toBe(isConnected);
+      expect(mockMergeUserDocumentCache).not.toHaveBeenCalled();
+    }
+  );
 
   it('does not let an older in-flight read overwrite an optimistic update', async () => {
     let resolveRead: (doc: unknown) => void = () => {};

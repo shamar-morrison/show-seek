@@ -1,12 +1,6 @@
 import { useAuth } from '@/src/context/auth';
-import { getCachedUserDocument, mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
+import { clearUserDocumentCache, getCachedUserDocument } from '@/src/services/UserDocumentCache';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
-
-/**
- * Stand-in for the server-side token hash after a successful create. The callable
- * returns only the install URL, and the app reads nothing but the hash's presence.
- */
-export const STREMIO_CLIENT_CONNECTED_MARKER = 'client-connected';
 
 interface StremioConnectionState {
   uid: string | null;
@@ -33,13 +27,16 @@ const setState = (next: StremioConnectionState) => {
   listeners.forEach((listener) => listener());
 };
 
-/** Optimistically records the result of a successful create or revoke, without a read. */
+/**
+ * Optimistically records the result of a successful create or revoke, without a read.
+ * The shared user-doc cache entry is invalidated rather than merged into: it may hold a
+ * stale stremioAddon value (or no document at all), and the server already has the new
+ * state, so the next read of the user document goes to the server.
+ */
 export function markStremioConnected(uid: string, isConnected: boolean): void {
   version += 1;
   setState({ uid, isConnected });
-  mergeUserDocumentCache(uid, {
-    stremioAddon: { activeTokenHash: isConnected ? STREMIO_CLIENT_CONNECTED_MARKER : null },
-  });
+  clearUserDocumentCache(uid);
 }
 
 /** Test-only reset of the module store. */
