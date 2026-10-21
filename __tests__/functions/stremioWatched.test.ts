@@ -16,14 +16,14 @@ const NOW = Date.UTC(2026, 9, 20, 12);
 const USER = 'users/member';
 const WATCH = `${USER}/watched_movies/42/watches/stremio-42-20261020`;
 const TRACKING = `${USER}/episode_tracking/46298`;
-const movie: MappedTitle = {
+const movie = {
   kind: 'movie', movie: { id: 42, title: 'Movie', runtime: 120, poster_path: '/movie.jpg', release_date: '2020-01-01', vote_average: 8, genres: [{ id: 18 }] },
-};
-const episode: MappedTitle = {
+} satisfies MappedTitle;
+const episode = {
   kind: 'episode',
   show: { id: 46298, name: 'Hunter x Hunter', poster_path: '/hxh.jpg', first_air_date: '2011-10-02', vote_average: 9, genres: [{ id: 16 }] },
   episode: { id: 777, season_number: 2, episode_number: 63, name: 'Season Two Premiere', air_date: '2012-12-15', runtime: 24 },
-};
+} satisfies MappedTitle;
 const movieEvent: PlayerEvent = { action: 'stop', type: 'movie', imdbId: 'tt1234567', currentTime: 900, duration: 1000 };
 const episodeEvent: PlayerEvent = { ...movieEvent, type: 'series', season: 2, episode: 63 };
 const UNMAPPED_CONTINUOUS = { kind: 'unmapped', reason: 'continuous_numbering_unsupported' };
