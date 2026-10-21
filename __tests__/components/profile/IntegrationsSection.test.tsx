@@ -1,4 +1,8 @@
-import { IntegrationsSection, IntegrationsSectionProps } from '@/src/components/profile/IntegrationsSection';
+import {
+  INTEGRATION_ITEMS,
+  IntegrationsSection,
+  IntegrationsSectionProps,
+} from '@/src/components/profile/IntegrationsSection';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
@@ -28,6 +32,7 @@ describe('IntegrationsSection', () => {
     isTraktLoading: false,
     onImdbImport: jest.fn(),
     onTraktPress: jest.fn(),
+    onStremioPress: jest.fn(),
     ...overrides,
   });
 
@@ -67,5 +72,33 @@ describe('IntegrationsSection', () => {
     );
 
     expect(getByTestId('integrations-trakt-connected-badge')).toBeTruthy();
+  });
+
+  it('renders the Stremio row as a searchable sync item and calls its handler', () => {
+    const props = createProps();
+    const { getByTestId, getByText } = render(<IntegrationsSection {...props} />);
+
+    expect(getByText('Stremio')).toBeTruthy();
+    expect(getByTestId('search-item-stremio')).toBeTruthy();
+    expect(INTEGRATION_ITEMS).toContainEqual({
+      id: 'stremio',
+      titleKey: 'profile.stremioIntegration',
+      category: 'sync',
+    });
+
+    fireEvent.press(getByTestId('action-button-stremio-integration'));
+    expect(props.onStremioPress).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [true, true],
+    [false, false],
+    [null, false],
+  ])('shows the Stremio connected badge only when connected (%p)', (isStremioConnected, shown) => {
+    const { queryByTestId } = render(
+      <IntegrationsSection {...createProps({ isStremioConnected })} />
+    );
+
+    expect(queryByTestId('integrations-stremio-connected-badge') !== null).toBe(shown);
   });
 });

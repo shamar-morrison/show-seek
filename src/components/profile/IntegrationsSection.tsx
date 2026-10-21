@@ -5,7 +5,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { Image } from 'expo-image';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { Tick02Icon } from '@hugeicons/core-free-icons';
+import { PlayCircle02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,7 +13,7 @@ import { StyleSheet, Text, View } from 'react-native';
 /** Stored (not rendered) category keys for integration items. */
 export type IntegrationCategoryKey = 'import' | 'sync';
 
-export type IntegrationItemId = 'imdbImport' | 'trakt';
+export type IntegrationItemId = 'imdbImport' | 'trakt' | 'stremio';
 
 export interface IntegrationConfigItem {
   /** Stable id (also used as the search/scroll id) */
@@ -26,6 +26,7 @@ export interface IntegrationConfigItem {
 export const INTEGRATION_ITEMS: IntegrationConfigItem[] = [
   { id: 'imdbImport', titleKey: 'profile.importFromImdb', category: 'import' },
   { id: 'trakt', titleKey: 'profile.traktIntegration', category: 'sync' },
+  { id: 'stremio', titleKey: 'profile.stremioIntegration', category: 'sync' },
 ];
 
 export interface IntegrationsSectionProps {
@@ -37,6 +38,10 @@ export interface IntegrationsSectionProps {
   onImdbImport: () => void;
   /** Handler for Trakt settings button press */
   onTraktPress: () => void;
+  /** Whether a Stremio addon link is active (null while unknown) */
+  isStremioConnected?: boolean | null;
+  /** Handler for Stremio settings button press */
+  onStremioPress: () => void;
   /** Whether to show section title (default: true) */
   showTitle?: boolean;
   /** Id of the item to briefly highlight (e.g. from profile search) */
@@ -53,6 +58,8 @@ export function IntegrationsSection({
   isTraktLoading,
   onImdbImport,
   onTraktPress,
+  isStremioConnected = null,
+  onStremioPress,
   showTitle = true,
   highlightedId = null,
   registerItemLayout,
@@ -141,6 +148,25 @@ export function IntegrationsSection({
             badge={
               isTraktConnected ? (
                 <View style={styles.traktConnectedBadge} testID="integrations-trakt-connected-badge">
+                  <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
+                </View>
+              ) : null
+            }
+          />
+        );
+      case 'stremio':
+        return (
+          <ActionButton
+            icon={PlayCircle02Icon}
+            label={t('profile.stremioIntegration')}
+            onPress={onStremioPress}
+            testID="action-button-stremio-integration"
+            badge={
+              isStremioConnected === true ? (
+                <View
+                  style={styles.traktConnectedBadge}
+                  testID="integrations-stremio-connected-badge"
+                >
                   <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
                 </View>
               ) : null

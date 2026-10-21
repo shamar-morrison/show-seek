@@ -22,6 +22,7 @@ export default function ProfileLayout() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="trakt-settings" />
+        <Stack.Screen name="stremio-settings" />
         <Stack.Screen
           name="imdb-import"
           options={{
