@@ -106,6 +106,7 @@ export function useTraktSync({
         setLastSyncedAt(syncDate);
         await persistState(status.connected, syncDate, status);
       } else {
+        setLastSyncedAt(null);
         await persistState(status.connected, null, status);
       }
 

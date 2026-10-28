@@ -6223,19 +6223,29 @@ describe('Trakt OAuth invalid_grant handling', () => {
 
   it('builds the authorize URL on auth.trakt.tv with the existing query params', async () => {
     const transactionGet = jest.fn().mockResolvedValue({ data: () => ({}), exists: true });
+    const transactionSet = jest.fn();
     firestoreFn.mockImplementation(() => ({
       collection: jest.fn((name: string) => ({
         doc: jest.fn((id: string) => ({ path: `${name}/${id}` })),
       })),
-      runTransaction: jest.fn(async (callback: any) => callback({ get: transactionGet, set: jest.fn() })),
+      runTransaction: jest.fn(async (callback: any) => callback({ get: transactionGet, set: transactionSet })),
     }));
 
     const { authUrl } = await createOAuthState('user-1');
     const url = new URL(authUrl);
+    const state = url.searchParams.get('state');
 
     expect(`${url.origin}${url.pathname}`).toBe('https://auth.trakt.tv/oauth/authorize');
     expect([...url.searchParams.keys()]).toEqual(['response_type', 'client_id', 'redirect_uri', 'state']);
     expect(url.searchParams.get('response_type')).toBe('code');
+    expect(state).toBeTruthy();
+
+    const stateWrite = transactionSet.mock.calls.find(([ref]) => ref.path.startsWith('traktOAuthStates/'));
+    expect(stateWrite).toBeDefined();
+    const [stateRef, stateDoc, stateOptions] = stateWrite!;
+    expect(stateRef.path).toBe(`traktOAuthStates/${state}`);
+    expect(stateDoc).toMatchObject({ used: false, userId: 'user-1' });
+    expect(stateOptions).toEqual({ merge: true });
   });
 
   it('throws an invalid_grant OAuth error with the Trakt error details', async () => {
@@ -6313,7 +6323,7 @@ describe('Trakt OAuth invalid_grant handling', () => {
   });
 
   describe('runTraktSync', () => {
-    const setupRunTraktSync = (storedRefreshTokenAtFailure: string) => {
+    const setupRunTraktSync = (storedRefreshTokenAtFailure: string, { clearError }: { clearError?: Error } = {}) => {
       const batchSet = jest.fn();
       const { transactionGet, transactionSet } = mockUserTransaction(storedRefreshTokenAtFailure);
       const userRef = {
@@ -6336,7 +6346,12 @@ describe('Trakt OAuth invalid_grant handling', () => {
       firestoreFn.mockImplementation(() => ({
         batch: jest.fn(() => ({ commit: jest.fn().mockResolvedValue(undefined), set: batchSet })),
         collection: jest.fn(() => ({ doc: jest.fn(() => userRef) })),
-        runTransaction: jest.fn(async (callback: any) => callback({ get: transactionGet, set: transactionSet })),
+        runTransaction: jest.fn(async (callback: any) => {
+          if (clearError) {
+            throw clearError;
+          }
+          return callback({ get: transactionGet, set: transactionSet });
+        }),
       }));
       mockOAuthErrorResponse(400, JSON.stringify({ error: 'invalid_grant', error_description: 'session not found' }));
 
@@ -6379,6 +6394,25 @@ describe('Trakt OAuth invalid_grant handling', () => {
 
       expect(transactionSet).not.toHaveBeenCalled();
       expect(getFailedStatus()).toMatchObject({ errorCategory: 'auth_invalid' });
+    });
+
+    it('keeps reauth_required and logs the error when clearing the tokens throws', async () => {
+      const clearError = new Error('firestore unavailable');
+      const { getFailedStatus, transactionSet } = setupRunTraktSync('refresh-1', { clearError });
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      try {
+        await expect(runSync()).resolves.toBeUndefined();
+
+        expect(transactionSet).not.toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          '[TraktSync] Failed to clear rejected Trakt tokens:',
+          expect.objectContaining({ clearError, runId: 'run-1', userId: 'user-1' })
+        );
+        expect(getFailedStatus()).toMatchObject({ errorCategory: 'reauth_required' });
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
     });
   });
 });

@@ -866,14 +866,15 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
       if (normalizedError.category === 'reauth_required') {
         const usedRefreshToken =
           typeof userData.traktRefreshToken === 'string' ? userData.traktRefreshToken : '';
-        let didDisconnect = false;
+        let wasTokenRotated = false;
         try {
-          didDisconnect = await clearTraktTokensIfRefreshTokenUnchanged(userId, usedRefreshToken);
+          wasTokenRotated = !(await clearTraktTokensIfRefreshTokenUnchanged(userId, usedRefreshToken));
         } catch (clearError) {
+          // Keep reauth_required: the rejected token may still be stored, so the user still needs to reconnect.
           console.error('[TraktSync] Failed to clear rejected Trakt tokens:', { clearError, runId, userId });
         }
 
-        if (!didDisconnect) {
+        if (wasTokenRotated) {
           // Another run already replaced the refresh token, so this user is not stuck; record a normal failure.
           normalizedError = new TraktSyncError(normalizedError.message, 'auth_invalid', false, {
             cfRay: normalizedError.cfRay,
