@@ -16,6 +16,7 @@ import {
   TRAKT_ENRICHMENT_QUEUE_MAX_ATTEMPTS,
   TRAKT_ENRICHMENT_QUEUE_MAX_BACKOFF_SECONDS,
   TRAKT_ENRICHMENT_QUEUE_MIN_BACKOFF_SECONDS,
+  TRAKT_INVALID_GRANT_MESSAGE,
   TRAKT_OAUTH_START_COOLDOWN_MS,
   TRAKT_REDIRECT_URI,
   TRAKT_SYNC_BYPASS_UIDS_ENV,
@@ -530,6 +531,7 @@ export const handleDisconnect = async (request: Request, response: ExpressRespon
         traktConnectedAt: FieldValue.delete(),
         traktOauthStartAllowedAt: FieldValue.delete(),
         traktIncrementalState: FieldValue.delete(),
+        traktReauthRequired: FieldValue.delete(),
         traktRefreshToken: FieldValue.delete(),
         traktEnrichmentStatus: FieldValue.delete(),
         traktSyncStatus: FieldValue.delete(),
@@ -713,6 +715,7 @@ export const traktCallback = onRequest(
           traktConnectedAt: Timestamp.now(),
           traktEnrichmentStatus: FieldValue.delete(),
           traktIncrementalState: FieldValue.delete(),
+          traktReauthRequired: FieldValue.delete(),
           traktRefreshToken: tokenData.refresh_token,
           traktSyncStatus: FieldValue.delete(),
           traktTokenExpiresAt: expiresAt,
@@ -773,6 +776,11 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
     const summaryMode = currentSyncStatus?.summaryMode ?? getSyncSummaryMode(userData.traktIncrementalState);
 
     if (!userData.traktConnected) {
+      // A retry after the rejected tokens were cleared must still ask the user to reconnect.
+      const disconnectedError =
+        userData.traktReauthRequired === true
+          ? new TraktSyncError(TRAKT_INVALID_GRANT_MESSAGE, 'reauth_required', false)
+          : new TraktSyncError('Trakt is not connected for this user.', 'auth_invalid', false);
       await writeSyncStatus(
         userId,
         runId,
@@ -784,7 +792,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
           emptyItemsSynced(),
           attempt,
           'failed',
-          new TraktSyncError('Trakt is not connected for this user.', 'auth_invalid', false)
+          disconnectedError
         )
       );
       return;

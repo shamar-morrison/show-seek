@@ -52,6 +52,7 @@ export const CORS_ALLOWED_ORIGINS_ENV = 'TRAKT_ALLOWED_ORIGINS';
 export const TRAKT_SYNC_BYPASS_UIDS_ENV = 'TRAKT_SYNC_BYPASS_UIDS';
 export const TRAKT_SYNC_LOCKED_ACCOUNT_MESSAGE =
   'Your Trakt account is locked. Contact Trakt support with your username to unlock it.';
+export const TRAKT_INVALID_GRANT_MESSAGE = 'Trakt rejected the grant as invalid or expired.';
 export const TRAKT_SYNC_RECONNECT_MESSAGE =
   'Your Trakt connection is no longer valid. Disconnect and reconnect Trakt.';
 export const TRAKT_SYNC_STORAGE_LIMIT_MESSAGE =

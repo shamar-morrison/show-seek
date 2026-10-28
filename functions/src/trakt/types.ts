@@ -162,6 +162,7 @@ export interface TraktUserDoc {
   traktEnrichmentStatus?: Partial<TraktEnrichmentStatus>;
   traktIncrementalState?: TraktIncrementalState;
   traktOauthStartAllowedAt?: FirebaseFirestore.Timestamp;
+  traktReauthRequired?: boolean;
   traktRefreshToken?: string;
   traktSyncStatus?: Partial<TraktSyncStatus>;
   traktTokenExpiresAt?: FirebaseFirestore.Timestamp;

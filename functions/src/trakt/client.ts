@@ -11,6 +11,7 @@ import {
   TRAKT_AUTH_BASE_URL,
   TRAKT_CLIENT_ID,
   TRAKT_CLIENT_SECRET,
+  TRAKT_INVALID_GRANT_MESSAGE,
   TRAKT_OAUTH_START_COOLDOWN_MS,
   TRAKT_OAUTH_STATE_TTL_MS,
   TRAKT_OAUTH_TIMEOUT_MS,
@@ -219,7 +220,7 @@ export const requestOAuthToken = async (
   }
 
   if (oauthError === 'invalid_grant') {
-    throw new TraktOAuthError('Trakt rejected the grant as invalid or expired.', 'invalid_grant', {
+    throw new TraktOAuthError(TRAKT_INVALID_GRANT_MESSAGE, 'invalid_grant', {
       cfRay,
       oauthError,
       oauthErrorDescription,

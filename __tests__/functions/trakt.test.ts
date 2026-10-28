@@ -104,6 +104,7 @@ import {
   refreshAccessToken,
   requestOAuthToken,
   runTraktSync,
+  TRAKT_INVALID_GRANT_MESSAGE,
   TRAKT_OAUTH_STATE_TTL_MS,
   TraktOAuthError,
   traktApi,
@@ -4001,6 +4002,7 @@ describe('Trakt sync Firestore sanitization', () => {
         traktConnected: true,
         traktEnrichmentStatus: 'FIELD_DELETE',
         traktIncrementalState: 'FIELD_DELETE',
+        traktReauthRequired: 'FIELD_DELETE',
         traktRefreshToken: 'refresh-token',
         traktSyncStatus: 'FIELD_DELETE',
       }),
@@ -6315,6 +6317,7 @@ describe('Trakt OAuth invalid_grant handling', () => {
       {
         traktAccessToken: 'FIELD_DELETE',
         traktConnected: false,
+        traktReauthRequired: true,
         traktRefreshToken: 'FIELD_DELETE',
         traktTokenExpiresAt: 'FIELD_DELETE',
       },
@@ -6424,6 +6427,156 @@ describe('Trakt OAuth invalid_grant handling', () => {
       } finally {
         consoleErrorSpy.mockRestore();
       }
+    });
+  });
+
+  describe('traktReauthRequired flag', () => {
+    // In-memory users/user-1 doc: merge writes apply to it and 'FIELD_DELETE' removes a field.
+    const setupStatefulUserDoc = (
+      initialDoc: Record<string, unknown>,
+      { failFirstFailedStatusWrite = false }: { failFirstFailedStatusWrite?: boolean } = {}
+    ) => {
+      const userDoc: Record<string, unknown> = { ...initialDoc };
+      const committedFailedStatuses: Record<string, unknown>[] = [];
+      let shouldFailNextFailedStatusWrite = failFirstFailedStatusWrite;
+
+      const applyMerge = (data: Record<string, unknown>) => {
+        Object.entries(data).forEach(([key, value]) => {
+          if (value === 'FIELD_DELETE') {
+            delete userDoc[key];
+          } else {
+            userDoc[key] = value;
+          }
+        });
+      };
+      const snapshot = () => ({ data: () => ({ ...userDoc }), exists: true });
+
+      const userRef = {
+        collection: jest.fn(() => ({
+          doc: jest.fn((id: string) => ({ id, path: `users/user-1/traktSyncRuns/${id}` })),
+        })),
+        get: jest.fn(async () => snapshot()),
+        path: 'users/user-1',
+      };
+
+      firestoreFn.mockImplementation(() => ({
+        batch: jest.fn(() => {
+          const pendingSets: [unknown, Record<string, unknown>][] = [];
+          return {
+            commit: jest.fn(async () => {
+              const userWrite = pendingSets.find(([ref]) => ref === userRef)?.[1];
+              const status = userWrite?.traktSyncStatus as Record<string, unknown> | undefined;
+              if (status?.status === 'failed' && shouldFailNextFailedStatusWrite) {
+                shouldFailNextFailedStatusWrite = false;
+                throw new Error('status write failed');
+              }
+              if (userWrite) {
+                applyMerge(userWrite);
+              }
+              if (status?.status === 'failed') {
+                committedFailedStatuses.push(status);
+              }
+            }),
+            set: jest.fn((ref: unknown, data: Record<string, unknown>) => {
+              pendingSets.push([ref, data]);
+            }),
+          };
+        }),
+        collection: jest.fn(() => ({ doc: jest.fn(() => userRef) })),
+        runTransaction: jest.fn(async (callback: any) =>
+          callback({
+            get: jest.fn(async () => snapshot()),
+            set: jest.fn((_ref: unknown, data: Record<string, unknown>) => applyMerge(data)),
+          })
+        ),
+      }));
+
+      return { committedFailedStatuses, userDoc };
+    };
+
+    const runSyncAttempt = (retryCount: number) =>
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount,
+        retryReason: undefined,
+      });
+
+    it('keeps reauth_required when the status write fails after the clear and the task retries', async () => {
+      const { committedFailedStatuses, userDoc } = setupStatefulUserDoc(
+        {
+          traktAccessToken: 'access-1',
+          traktConnected: true,
+          traktRefreshToken: 'refresh-1',
+          traktSyncStatus: { runId: 'run-1' },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 1000),
+        },
+        { failFirstFailedStatusWrite: true }
+      );
+      mockOAuthErrorResponse(400, JSON.stringify({ error: 'invalid_grant', error_description: 'session not found' }));
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      try {
+        await expect(runSyncAttempt(0)).rejects.toThrow('status write failed');
+
+        expect(userDoc).toMatchObject({ traktConnected: false, traktReauthRequired: true });
+        expect(userDoc).not.toHaveProperty('traktAccessToken');
+        expect(userDoc).not.toHaveProperty('traktRefreshToken');
+        expect(userDoc).not.toHaveProperty('traktTokenExpiresAt');
+        expect(committedFailedStatuses).toHaveLength(0);
+
+        await expect(runSyncAttempt(1)).resolves.toBeUndefined();
+
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(committedFailedStatuses).toHaveLength(1);
+        expect(committedFailedStatuses[0]).toMatchObject({
+          errorCategory: 'reauth_required',
+          errorMessage: TRAKT_INVALID_GRANT_MESSAGE,
+          status: 'failed',
+        });
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    });
+
+    it('still records auth_invalid for a disconnected user without the flag', async () => {
+      const { committedFailedStatuses } = setupStatefulUserDoc({
+        traktConnected: false,
+        traktSyncStatus: { runId: 'run-1' },
+      });
+
+      await expect(runSyncAttempt(0)).resolves.toBeUndefined();
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(committedFailedStatuses).toHaveLength(1);
+      expect(committedFailedStatuses[0]).toMatchObject({
+        errorCategory: 'auth_invalid',
+        errorMessage: 'Trakt is not connected for this user.',
+        status: 'failed',
+      });
+    });
+
+    it('removes the flag on POST /disconnect', async () => {
+      const userSet = jest.fn().mockResolvedValue(undefined);
+      firestoreFn.mockImplementation(() => ({
+        collection: jest.fn(() => ({ doc: jest.fn(() => ({ path: 'users/user-1', set: userSet })) })),
+      }));
+      const response = createResponse();
+
+      await (traktApi as any)(
+        {
+          body: {},
+          header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+          method: 'POST',
+          path: '/disconnect',
+        },
+        response
+      );
+
+      expect(response.status).toHaveBeenCalledWith(200);
+      expect(userSet).toHaveBeenCalledWith(
+        expect.objectContaining({ traktConnected: false, traktReauthRequired: 'FIELD_DELETE' }),
+        { merge: true }
+      );
     });
   });
 });

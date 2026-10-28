@@ -117,6 +117,8 @@ export const clearTraktTokensIfRefreshTokenUnchanged = async (
       {
         traktAccessToken: FieldValue.delete(),
         traktConnected: false,
+        // Lets a retry of this run report reauth_required instead of a generic disconnect.
+        traktReauthRequired: true,
         traktRefreshToken: FieldValue.delete(),
         traktTokenExpiresAt: FieldValue.delete(),
       },
