@@ -104,6 +104,7 @@ import {
   refreshAccessToken,
   requestOAuthToken,
   runTraktSync,
+  TRAKT_OAUTH_STATE_TTL_MS,
   TraktOAuthError,
   traktApi,
   traktCallback,
@@ -6230,8 +6231,15 @@ describe('Trakt OAuth invalid_grant handling', () => {
       })),
       runTransaction: jest.fn(async (callback: any) => callback({ get: transactionGet, set: transactionSet })),
     }));
+    const nowMillis = 1_800_000_000_000;
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(nowMillis);
 
-    const { authUrl } = await createOAuthState('user-1');
+    let authUrl: string;
+    try {
+      ({ authUrl } = await createOAuthState('user-1'));
+    } finally {
+      dateNowSpy.mockRestore();
+    }
     const url = new URL(authUrl);
     const state = url.searchParams.get('state');
 
@@ -6245,6 +6253,9 @@ describe('Trakt OAuth invalid_grant handling', () => {
     const [stateRef, stateDoc, stateOptions] = stateWrite!;
     expect(stateRef.path).toBe(`traktOAuthStates/${state}`);
     expect(stateDoc).toMatchObject({ used: false, userId: 'user-1' });
+    expect(stateDoc.expiresAt).toBeInstanceOf(MockTimestamp);
+    expect(stateDoc.expiresAt.toMillis()).toBeGreaterThan(nowMillis);
+    expect(stateDoc.expiresAt.toMillis()).toBe(nowMillis + TRAKT_OAUTH_STATE_TTL_MS);
     expect(stateOptions).toEqual({ merge: true });
   });
 

@@ -334,6 +334,68 @@ describe('TraktContext audited flows', () => {
     }
   });
 
+  // Verifies a normal failed poll (backend still connected) stops syncing but keeps Trakt connected.
+  it('keeps Trakt connected when a polled sync fails without reauth_required', async () => {
+    const recentSyncIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
+      switch (key) {
+        case TRAKT_STORAGE_KEYS.CONNECTED:
+          return 'true';
+        case TRAKT_STORAGE_KEYS.LAST_SYNCED:
+          return recentSyncIso;
+        default:
+          return null;
+      }
+    });
+    mockCheckSyncStatus
+      .mockResolvedValueOnce({
+        connected: true,
+        synced: true,
+        status: 'in_progress',
+        lastSyncedAt: recentSyncIso,
+      })
+      .mockResolvedValueOnce({
+        connected: true,
+        errorCategory: 'internal',
+        errorMessage: 'Sync failed.',
+        synced: true,
+        status: 'failed',
+        lastSyncedAt: recentSyncIso,
+      });
+
+    const { result, unmount } = renderHook(() => useTrakt(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    jest.useFakeTimers();
+    try {
+      await act(async () => {
+        await result.current.syncNow();
+      });
+
+      expect(result.current.isSyncing).toBe(true);
+
+      await act(async () => {
+        jest.advanceTimersByTime(TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mockCheckSyncStatus).toHaveBeenCalledTimes(2);
+      expect(result.current.isConnected).toBe(true);
+      expect(result.current.isSyncing).toBe(false);
+      expect(result.current.syncStatus?.status).toBe('failed');
+      expect(result.current.syncStatus?.errorCategory).toBe('internal');
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(TRAKT_STORAGE_KEYS.CONNECTED, 'false');
+    } finally {
+      unmount();
+      jest.useRealTimers();
+    }
+  });
+
   // Verifies persisted Trakt connection, sync status, and enrichment timestamps are restored on mount.
   it('hydrates persisted sync state from storage on mount', async () => {
     const lastSyncedIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
