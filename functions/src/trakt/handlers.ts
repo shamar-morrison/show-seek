@@ -72,6 +72,7 @@ import {
   writeSyncStatus,
 } from './status';
 import {
+  clearTraktTokensIfRefreshTokenUnchanged,
   enqueueSyncRun,
   maybeRefreshAccessToken,
   reconcileCustomLists,
@@ -860,11 +861,37 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
         userId,
       }, nextIncrementalState);
     } catch (error) {
-      const normalizedError = normalizeSyncError(error);
+      let normalizedError = normalizeSyncError(error);
+
+      if (normalizedError.category === 'reauth_required') {
+        const usedRefreshToken =
+          typeof userData.traktRefreshToken === 'string' ? userData.traktRefreshToken : '';
+        let didDisconnect = false;
+        try {
+          didDisconnect = await clearTraktTokensIfRefreshTokenUnchanged(userId, usedRefreshToken);
+        } catch (clearError) {
+          console.error('[TraktSync] Failed to clear rejected Trakt tokens:', { clearError, runId, userId });
+        }
+
+        if (!didDisconnect) {
+          // Another run already replaced the refresh token, so this user is not stuck; record a normal failure.
+          normalizedError = new TraktSyncError(normalizedError.message, 'auth_invalid', false, {
+            cfRay: normalizedError.cfRay,
+            endpoint: normalizedError.endpoint,
+            oauthError: normalizedError.oauthError,
+            oauthErrorDescription: normalizedError.oauthErrorDescription,
+            snippet: normalizedError.snippet,
+            statusCode: normalizedError.statusCode,
+          });
+        }
+      }
+
       console.error('[TraktSync] Sync attempt failed', {
         attempt,
         category: normalizedError.category,
         endpoint: normalizedError.endpoint,
+        oauthError: normalizedError.oauthError,
+        oauthErrorDescription: normalizedError.oauthErrorDescription,
         retryable: normalizedError.retryable,
         runId,
         statusCode: normalizedError.statusCode,

@@ -167,7 +167,9 @@ export function useTraktSync({
             await onSyncCompletedRef.current();
           }
         } else if (status.status === 'failed') {
-          await persistState(true, lastSyncedAt, status);
+          // The backend disconnects Trakt when the refresh token is rejected (reauth_required).
+          setIsConnected(status.connected);
+          await persistState(status.connected, lastSyncedAt, status);
           console.error('[Trakt] Sync failed:', status.errors);
         }
       }

@@ -8,6 +8,7 @@ import {
   TRAKT_API_BASE,
   TRAKT_API_VERSION,
   TRAKT_APP_USER_AGENT,
+  TRAKT_AUTH_BASE_URL,
   TRAKT_CLIENT_ID,
   TRAKT_CLIENT_SECRET,
   TRAKT_OAUTH_START_COOLDOWN_MS,
@@ -136,7 +137,7 @@ export const requestOAuthToken = async (
   let response: globalThis.Response;
 
   try {
-    response = await fetch(`${TRAKT_API_BASE}/oauth/token`, {
+    response = await fetch(`${TRAKT_AUTH_BASE_URL}/oauth/token`, {
       method: 'POST',
       headers: buildTraktHeaders({
         clientId,
@@ -204,8 +205,33 @@ export const requestOAuthToken = async (
     });
   }
 
+  let oauthError: string | undefined;
+  let oauthErrorDescription: string | undefined;
+  if (response.status === 400) {
+    try {
+      const parsed = JSON.parse(rawBody) as { error?: unknown; error_description?: unknown };
+      oauthError = typeof parsed.error === 'string' ? sanitizeSnippet(parsed.error) : undefined;
+      oauthErrorDescription =
+        typeof parsed.error_description === 'string' ? sanitizeSnippet(parsed.error_description) : undefined;
+    } catch {
+      // Non-JSON 400 bodies fall through to the generic OAuth error below.
+    }
+  }
+
+  if (oauthError === 'invalid_grant') {
+    throw new TraktOAuthError('Trakt rejected the grant as invalid or expired.', 'invalid_grant', {
+      cfRay,
+      oauthError,
+      oauthErrorDescription,
+      snippet,
+      statusCode: response.status,
+    });
+  }
+
   throw new TraktOAuthError('Trakt OAuth rejected the request.', 'invalid_oauth', {
     cfRay,
+    oauthError,
+    oauthErrorDescription,
     snippet,
     statusCode: response.status,
   });
@@ -282,7 +308,7 @@ export const createOAuthState = async (userId: string): Promise<{ authUrl: strin
   });
 
   const authUrl =
-    `https://trakt.tv/oauth/authorize?response_type=code&client_id=${encodeURIComponent(clientId)}` +
+    `${TRAKT_AUTH_BASE_URL}/oauth/authorize?response_type=code&client_id=${encodeURIComponent(clientId)}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
 
   return { authUrl, nextAllowedAt };

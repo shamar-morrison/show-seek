@@ -89,6 +89,43 @@ export const maybeRefreshAccessToken = async (userId: string, userData: TraktUse
   return refreshed.access_token;
 };
 
+/**
+ * Disconnects Trakt after a rejected refresh, but only if the stored refresh token is still the one
+ * that was rejected. A different stored token means another run already refreshed successfully.
+ */
+export const clearTraktTokensIfRefreshTokenUnchanged = async (
+  userId: string,
+  usedRefreshToken: string
+): Promise<boolean> => {
+  if (!usedRefreshToken) {
+    return false;
+  }
+
+  const db = admin.firestore();
+  const userRef = db.collection('users').doc(userId);
+
+  return db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(userRef);
+    const userData = (snapshot.data() ?? {}) as TraktUserDoc;
+
+    if (userData.traktRefreshToken !== usedRefreshToken) {
+      return false;
+    }
+
+    transaction.set(
+      userRef,
+      {
+        traktAccessToken: FieldValue.delete(),
+        traktConnected: false,
+        traktRefreshToken: FieldValue.delete(),
+        traktTokenExpiresAt: FieldValue.delete(),
+      },
+      { merge: true }
+    );
+    return true;
+  });
+};
+
 export const countManagedListItemsByMediaType = (
   items: Record<string, Record<string, unknown>>,
   mediaType: 'movie' | 'tv'

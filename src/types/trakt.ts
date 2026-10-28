@@ -23,6 +23,7 @@ export type SyncErrorCategory =
   | 'auth_invalid'
   | 'internal'
   | 'locked_account'
+  | 'reauth_required'
   | 'storage_limit'
   | 'rate_limited'
   | 'upstream_blocked'
@@ -48,6 +49,8 @@ export interface SyncStatus {
   diagnostics?: {
     cfRay?: string;
     endpoint?: string;
+    oauthError?: string;
+    oauthErrorDescription?: string;
     retryAfterSeconds?: number;
     retryReason?: string;
     snippet?: string;
