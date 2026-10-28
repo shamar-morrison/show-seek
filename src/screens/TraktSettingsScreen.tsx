@@ -290,6 +290,7 @@ export default function TraktSettingsScreen() {
 
   const isLockedAccount = syncStatus?.errorCategory === 'locked_account';
   const isRateLimited = syncStatus?.errorCategory === 'rate_limited';
+  const isReauthRequired = syncStatus?.errorCategory === 'reauth_required';
   const isRetryingSync = syncStatus?.status === 'retrying';
   const getSyncErrorMessage = (fallback?: string) => {
     if (syncStatus?.errorCategory === 'storage_limit') {
@@ -299,7 +300,11 @@ export default function TraktSettingsScreen() {
     return fallback ?? t('trakt.firstImportFailedMessage');
   };
   const isInitialSyncFailure =
-    !lastSyncedAt && syncStatus?.status === 'failed' && !isLockedAccount && !isRateLimited;
+    !lastSyncedAt &&
+    syncStatus?.status === 'failed' &&
+    !isLockedAccount &&
+    !isRateLimited &&
+    !isReauthRequired;
   const initialSyncFailureMessage = getSyncErrorMessage(
     syncStatus?.errorMessage ?? syncStatus?.errors?.[0]
   );
@@ -320,7 +325,40 @@ export default function TraktSettingsScreen() {
         })
       : null;
 
-  const syncStatusBanner = isLockedAccount ? (
+  const reauthBanner = isReauthRequired ? (
+    <View
+      style={[
+        styles.errorsContainer,
+        styles.lockedStateContainer,
+        { backgroundColor: hexToRGBA(COLORS.error, 0.1) },
+      ]}
+    >
+      <View style={styles.lockedStateHeader}>
+        <AppIcon icon={AlertCircleIcon} size={18} color={COLORS.error} />
+        <Text style={styles.errorsTitle}>{t('trakt.reauthRequiredTitle')}</Text>
+      </View>
+      <Text style={styles.errorText}>{t('trakt.reauthRequiredMessage')}</Text>
+      <TouchableOpacity
+        style={[styles.primaryButton, styles.reauthButton, { backgroundColor: COLORS.trakt }]}
+        onPress={handleConnectPress}
+        activeOpacity={ACTIVE_OPACITY}
+        disabled={isConnecting || isPremiumLoading}
+      >
+        {isConnecting ? (
+          <ActivityIndicator color={COLORS.white} />
+        ) : (
+          <>
+            <AppIcon icon={Link02Icon} size={20} color={COLORS.white} />
+            <Text style={styles.primaryButtonText}>{t('trakt.reconnectButton')}</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </View>
+  ) : null;
+
+  const syncStatusBanner = isReauthRequired ? (
+    reauthBanner
+  ) : isLockedAccount ? (
     <View
       style={[
         styles.errorsContainer,
@@ -484,6 +522,8 @@ export default function TraktSettingsScreen() {
             <Text style={styles.heroTitle}>{t('trakt.connectHeroTitle')}</Text>
             <Text style={styles.heroSubtitle}>{t('trakt.connectHeroSubtitle')}</Text>
           </View>
+
+          {reauthBanner}
 
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
@@ -990,6 +1030,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
+  },
+  reauthButton: {
+    marginBottom: 0,
   },
   disconnectButton: {
     flexDirection: 'row',

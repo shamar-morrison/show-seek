@@ -7,6 +7,7 @@ export const TRAKT_REDIRECT_URI = defineSecret('TRAKT_REDIRECT_URI');
 export const TMDB_API_KEY = defineSecret('TMDB_API_KEY');
 
 export const TRAKT_API_BASE = 'https://api.trakt.tv';
+export const TRAKT_AUTH_BASE_URL = 'https://auth.trakt.tv';
 export const TRAKT_API_VERSION = '2';
 export const TRAKT_APP_USER_AGENT = 'ShowSeek-TraktFunctions/1.0';
 export const TMDB_API_BASE = 'https://api.themoviedb.org/3';
@@ -51,6 +52,7 @@ export const CORS_ALLOWED_ORIGINS_ENV = 'TRAKT_ALLOWED_ORIGINS';
 export const TRAKT_SYNC_BYPASS_UIDS_ENV = 'TRAKT_SYNC_BYPASS_UIDS';
 export const TRAKT_SYNC_LOCKED_ACCOUNT_MESSAGE =
   'Your Trakt account is locked. Contact Trakt support with your username to unlock it.';
+export const TRAKT_INVALID_GRANT_MESSAGE = 'Trakt rejected the grant as invalid or expired.';
 export const TRAKT_SYNC_RECONNECT_MESSAGE =
   'Your Trakt connection is no longer valid. Disconnect and reconnect Trakt.';
 export const TRAKT_SYNC_STORAGE_LIMIT_MESSAGE =

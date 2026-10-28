@@ -6,11 +6,17 @@ export type TraktSyncErrorCategory =
   | 'auth_invalid'
   | 'internal'
   | 'locked_account'
+  | 'reauth_required'
   | 'storage_limit'
   | 'rate_limited'
   | 'upstream_blocked'
   | 'upstream_unavailable';
-export type TraktOAuthFailureReason = 'invalid_oauth' | 'rate_limited' | 'upstream_blocked' | 'upstream_unavailable';
+export type TraktOAuthFailureReason =
+  | 'invalid_grant'
+  | 'invalid_oauth'
+  | 'rate_limited'
+  | 'upstream_blocked'
+  | 'upstream_unavailable';
 export type ManualSyncCooldownBypassSource = 'allowlist' | 'emulator';
 
 export interface SyncTaskPayload {
@@ -31,6 +37,8 @@ export interface TraktTaskDispatchOptions {
 export interface SyncDiagnostics {
   cfRay?: string;
   endpoint?: string;
+  oauthError?: string;
+  oauthErrorDescription?: string;
   retryAfterSeconds?: number;
   retryReason?: string;
   snippet?: string;
@@ -154,6 +162,7 @@ export interface TraktUserDoc {
   traktEnrichmentStatus?: Partial<TraktEnrichmentStatus>;
   traktIncrementalState?: TraktIncrementalState;
   traktOauthStartAllowedAt?: FirebaseFirestore.Timestamp;
+  traktReauthRequired?: boolean;
   traktRefreshToken?: string;
   traktSyncStatus?: Partial<TraktSyncStatus>;
   traktTokenExpiresAt?: FirebaseFirestore.Timestamp;
@@ -307,6 +316,8 @@ export interface TraktHeaderOptions {
 export interface TraktSyncErrorDetails {
   cfRay?: string;
   endpoint?: string;
+  oauthError?: string;
+  oauthErrorDescription?: string;
   retryAfterSeconds?: number;
   snippet?: string;
   statusCode?: number;
@@ -396,6 +407,8 @@ export class TraktSyncError extends Error {
   retryable: boolean;
   cfRay?: string;
   endpoint?: string;
+  oauthError?: string;
+  oauthErrorDescription?: string;
   retryAfterSeconds?: number;
   snippet?: string;
   statusCode?: number;
@@ -412,6 +425,8 @@ export class TraktSyncError extends Error {
     this.retryable = retryable;
     this.cfRay = details.cfRay;
     this.endpoint = details.endpoint;
+    this.oauthError = details.oauthError;
+    this.oauthErrorDescription = details.oauthErrorDescription;
     this.retryAfterSeconds = details.retryAfterSeconds;
     this.snippet = details.snippet;
     this.statusCode = details.statusCode;
@@ -420,6 +435,8 @@ export class TraktSyncError extends Error {
 
 export class TraktOAuthError extends Error {
   cfRay?: string;
+  oauthError?: string;
+  oauthErrorDescription?: string;
   reason: TraktOAuthFailureReason;
   snippet?: string;
   statusCode?: number;
@@ -429,6 +446,8 @@ export class TraktOAuthError extends Error {
     reason: TraktOAuthFailureReason,
     details: {
       cfRay?: string;
+      oauthError?: string;
+      oauthErrorDescription?: string;
       snippet?: string;
       statusCode?: number;
     } = {}
@@ -437,6 +456,8 @@ export class TraktOAuthError extends Error {
     this.name = 'TraktOAuthError';
     this.reason = reason;
     this.cfRay = details.cfRay;
+    this.oauthError = details.oauthError;
+    this.oauthErrorDescription = details.oauthErrorDescription;
     this.snippet = details.snippet;
     this.statusCode = details.statusCode;
   }

@@ -120,6 +120,44 @@ describe('TraktSettingsScreen', () => {
     expect(queryByText('Server locked account message')).toBeNull();
   });
 
+  it('shows the reauth banner with a Reconnect button after the backend disconnects Trakt', async () => {
+    mockTraktState.isConnected = false;
+    mockTraktState.lastSyncedAt = new Date();
+    mockTraktState.syncStatus = {
+      connected: false,
+      errorCategory: 'reauth_required',
+      errorMessage: 'Trakt rejected the grant as invalid or expired.',
+      lastSyncedAt: new Date().toISOString(),
+      status: 'failed',
+      synced: true,
+    };
+
+    const { getByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText('Trakt Connection Expired')).toBeTruthy();
+    expect(
+      getByText('Your Trakt connection has expired. Reconnect Trakt to keep syncing.')
+    ).toBeTruthy();
+
+    fireEvent.press(getByText('Reconnect Trakt'));
+
+    await waitFor(() => expect(mockTraktState.connectTrakt).toHaveBeenCalledTimes(1));
+  });
+
+  it('shows the reauth banner instead of the first-import failure while still marked connected', () => {
+    mockTraktState.syncStatus = {
+      connected: true,
+      errorCategory: 'reauth_required',
+      status: 'failed',
+      synced: false,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText('Trakt Connection Expired')).toBeTruthy();
+    expect(queryByText("Mirror Sync Didn't Finish")).toBeNull();
+  });
+
   it('keeps retrying syncs on the full-screen import view with retry details', () => {
     mockTraktState.isSyncing = true;
     mockTraktState.syncStatus = {

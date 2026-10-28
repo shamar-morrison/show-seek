@@ -354,6 +354,8 @@ export const createFailureStatus = (
     diagnostics: {
       cfRay: error.cfRay,
       endpoint: error.endpoint,
+      oauthError: error.oauthError,
+      oauthErrorDescription: error.oauthErrorDescription,
       retryAfterSeconds: error.retryAfterSeconds,
       retryReason,
       snippet: error.snippet,
@@ -439,13 +441,17 @@ export const normalizeSyncError = (error: unknown): TraktSyncError => {
           ? 'upstream_unavailable'
           : error.reason === 'rate_limited'
             ? 'rate_limited'
-            : 'auth_invalid';
+            : error.reason === 'invalid_grant'
+              ? 'reauth_required'
+              : 'auth_invalid';
     const retryable =
       category === 'upstream_blocked' ||
       category === 'upstream_unavailable' ||
       category === 'rate_limited';
     return new TraktSyncError(error.message, category, retryable, {
       cfRay: error.cfRay,
+      oauthError: error.oauthError,
+      oauthErrorDescription: error.oauthErrorDescription,
       snippet: error.snippet,
       statusCode: error.statusCode,
     });
