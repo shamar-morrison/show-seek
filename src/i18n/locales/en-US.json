@@ -1107,7 +1107,7 @@
     "intro": "Mark what you watch in Stremio as watched in ShowSeek.",
     "whatSyncs": "Finished movies and episodes are marked as watched.",
     "platforms": "Works with Stremio Desktop and Web, not the Android or iOS apps yet.",
-    "animeNote": "Some shows with alternate episode numbering (like some anime) aren't recorded yet.",
+    "animeNote": "Anime from Stremio's catalogs and the Anime Kitsu catalog is recorded. Episodes that can't be matched reliably are skipped.",
     "createLink": "Create link",
     "createNewLink": "Create new link",
     "share": "Share",

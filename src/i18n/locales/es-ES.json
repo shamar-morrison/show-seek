@@ -1107,7 +1107,7 @@
     "intro": "Marca como visto en ShowSeek lo que ves en Stremio.",
     "whatSyncs": "Las películas y los episodios terminados se marcan como vistos.",
     "platforms": "Funciona con Stremio para escritorio y web, aún no con las apps de Android o iOS.",
-    "animeNote": "Algunas series con otra numeración de episodios (como algunos animes) aún no se registran.",
+    "animeNote": "Se registra el anime de los catálogos de Stremio y del catálogo Anime Kitsu. Se omiten los episodios que no se pueden identificar con seguridad.",
     "createLink": "Crear enlace",
     "createNewLink": "Crear nuevo enlace",
     "share": "Compartir",

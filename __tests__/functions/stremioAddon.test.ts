@@ -103,8 +103,8 @@ describe('stremioAddon HTTP endpoint', () => {
     const res = await request(`/${TOKEN}/manifest.json`);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
-      id: 'app.showseek.stremio', version: '1.0.0', name: 'ShowSeek',
-      description: expect.any(String), resources: ['player'], types: ['movie', 'series'], idPrefixes: ['tt'], catalogs: [],
+      id: 'app.showseek.stremio', version: '1.1.0', name: 'ShowSeek',
+      description: expect.any(String), resources: ['player'], types: ['movie', 'series'], idPrefixes: ['tt', 'kitsu'], catalogs: [],
     });
     expect(mockFetch).not.toHaveBeenCalled();
   });

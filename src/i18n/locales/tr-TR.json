@@ -1099,7 +1099,7 @@
     "intro": "Stremio'da izlediklerinizi ShowSeek'te izlendi olarak işaretleyin.",
     "whatSyncs": "Bitirilen filmler ve bölümler izlendi olarak işaretlenir.",
     "platforms": "Stremio masaüstü ve web ile çalışır, Android ve iOS uygulamalarıyla henüz çalışmaz.",
-    "animeNote": "Farklı bölüm numaralandırması olan bazı diziler (bazı animeler gibi) henüz kaydedilmiyor.",
+    "animeNote": "Stremio kataloglarındaki ve Anime Kitsu kataloğundaki animeler kaydedilir. Güvenilir şekilde eşleştirilemeyen bölümler atlanır.",
     "createLink": "Bağlantı oluştur",
     "createNewLink": "Yeni bağlantı oluştur",
     "share": "Paylaş",

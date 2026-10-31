@@ -1,14 +1,18 @@
 import { STREMIO_TOKEN_PATTERN } from './constants';
 
-export interface PlayerEvent {
+interface PlayerEventBase {
   action: 'start' | 'pause' | 'stop';
   type: 'movie' | 'series';
-  imdbId: string;
-  season?: number;
-  episode?: number;
   currentTime: number;
   duration: number;
 }
+
+// Cinemeta IDs carry an IMDb season and episode. Anime Kitsu IDs carry only an episode
+// number within that Kitsu entry, which is mapped to TMDB separately.
+export type PlayerEvent = PlayerEventBase & (
+  | { imdbId: string; kitsuId?: undefined; season?: number; episode?: number }
+  | { kitsuId: number; imdbId?: undefined; season?: undefined; episode?: number }
+);
 
 export type AddonRoute =
   | { kind: 'manifest'; token: string }
@@ -31,7 +35,10 @@ export function parsePlayerEvent(type: string, encodedId: string, extraArgs: str
     const match = type === 'movie'
       ? /^(tt\d+)$/.exec(videoId)
       : /^(tt\d+):(\d+):(\d+)$/.exec(videoId);
-    if (!match) return null;
+    const kitsuMatch = type === 'movie'
+      ? /^kitsu:(\d+)$/.exec(videoId)
+      : /^kitsu:(\d+):(\d+)$/.exec(videoId);
+    if (!match && !kitsuMatch) return null;
 
     // Extras are a path segment containing query-string syntax, not req.query.
     if (/%(?![a-f\d]{2})/i.test(extraArgs)) return null;
@@ -44,6 +51,16 @@ export function parsePlayerEvent(type: string, encodedId: string, extraArgs: str
     const currentTime = parseInteger(extras.get('currentTime'));
     const duration = parseInteger(extras.get('duration'));
     if (currentTime === null || duration === null) return null;
+
+    if (kitsuMatch) {
+      const kitsuId = parseInteger(kitsuMatch[1]);
+      if (kitsuId === null || kitsuId === 0) return null;
+      if (type === 'movie') return { action, type, kitsuId, currentTime, duration };
+      const episode = parseInteger(kitsuMatch[2]);
+      if (episode === null || episode === 0) return null;
+      return { action, type, kitsuId, episode, currentTime, duration };
+    }
+    if (!match) return null;
 
     if (type === 'series') {
       const season = parseInteger(match[2]);
