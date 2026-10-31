@@ -221,8 +221,11 @@ describe('analytics.android wrappers', () => {
     await analytics.trackPaywallInteraction({ action: 'purchase_attempt' });
     await analytics.trackPaywallInteraction({ action: 'purchase_error' });
     await analytics.trackPaywallInteraction({ action: 'dismiss' });
+    await analytics.trackPaywallInteraction({ action: 'purchase_cancel' });
+    await analytics.trackPaywallInteraction({ action: 'purchase_success' });
+    await analytics.trackPaywallInteraction({ action: 'purchase_not_completed' });
 
-    expect(mockLogEvent).toHaveBeenCalledTimes(3);
+    expect(mockLogEvent).toHaveBeenCalledTimes(6);
     expect(mockLogEvent).toHaveBeenNthCalledWith(1, 'paywall_interaction', {
       paywall_action: 'purchase_attempt',
     });
@@ -232,5 +235,77 @@ describe('analytics.android wrappers', () => {
     expect(mockLogEvent).toHaveBeenNthCalledWith(3, 'paywall_interaction', {
       paywall_action: 'dismiss',
     });
+    expect(mockLogEvent).toHaveBeenNthCalledWith(4, 'paywall_interaction', {
+      paywall_action: 'purchase_cancel',
+    });
+    expect(mockLogEvent).toHaveBeenNthCalledWith(5, 'paywall_interaction', {
+      paywall_action: 'purchase_success',
+    });
+    expect(mockLogEvent).toHaveBeenNthCalledWith(6, 'paywall_interaction', {
+      paywall_action: 'purchase_not_completed',
+    });
+  });
+
+  // auth_error_code is attached only to error actions and is always a short
+  // code string: free text falls back to 'unknown' so no user data leaks.
+  it('sends auth_error_code only for auth error actions', async () => {
+    const analytics = loadModule();
+
+    await analytics.trackAuthInteraction({
+      option: 'email',
+      action: 'error',
+      errorCode: 'auth/network-request-failed',
+    });
+    await analytics.trackAuthInteraction({ option: 'guest', action: 'error' });
+    await analytics.trackAuthInteraction({
+      option: 'google',
+      action: 'error',
+      errorCode: 'Sign in failed for user@example.com',
+    });
+    await analytics.trackAuthInteraction({
+      option: 'google',
+      action: 'tap',
+      errorCode: 'auth/network-request-failed',
+    });
+    await analytics.trackAuthInteraction({
+      option: 'google',
+      action: 'dismiss',
+      errorCode: 'auth/popup-closed-by-user',
+    });
+
+    expect(mockLogEvent.mock.calls).toEqual([
+      [
+        'auth_option_interaction',
+        {
+          auth_option: 'email',
+          auth_action: 'error',
+          auth_error_code: 'auth/network-request-failed',
+        },
+      ],
+      [
+        'auth_option_interaction',
+        { auth_option: 'guest', auth_action: 'error', auth_error_code: 'unknown' },
+      ],
+      [
+        'auth_option_interaction',
+        { auth_option: 'google', auth_action: 'error', auth_error_code: 'unknown' },
+      ],
+      ['auth_option_interaction', { auth_option: 'google', auth_action: 'tap' }],
+      ['auth_option_interaction', { auth_option: 'google', auth_action: 'dismiss' }],
+    ]);
+  });
+
+  it('getAuthErrorCode reads only a short code field', () => {
+    const analytics = loadModule();
+
+    expect(analytics.getAuthErrorCode({ code: 'auth/too-many-requests' })).toBe(
+      'auth/too-many-requests'
+    );
+    expect(analytics.getAuthErrorCode({ message: 'auth/too-many-requests' })).toBe('unknown');
+    expect(analytics.getAuthErrorCode({ code: 'a b' })).toBe('unknown');
+    expect(analytics.getAuthErrorCode({ code: 'x'.repeat(65) })).toBe('unknown');
+    expect(analytics.getAuthErrorCode({ code: 42 })).toBe('unknown');
+    expect(analytics.getAuthErrorCode(null)).toBe('unknown');
+    expect(analytics.getAuthErrorCode(undefined)).toBe('unknown');
   });
 });

@@ -9,7 +9,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
-import { trackAuthInteraction, trackLogin } from '@/src/services/analytics';
+import { getAuthErrorCode, trackAuthInteraction, trackLogin } from '@/src/services/analytics';
 import { persistPersonalOnboardingCache } from '@/src/utils/personalOnboardingCache';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -95,7 +95,11 @@ export default function EmailAuthSection({
       await seedNewAccountPersonalOnboarding(userCredential.user);
       await completeEmailAuth(userCredential.user);
     } catch (error: any) {
-      void trackAuthInteraction({ option: 'email', action: 'error' });
+      void trackAuthInteraction({
+        option: 'email',
+        action: 'error',
+        errorCode: getAuthErrorCode(error),
+      });
       if (error?.code === 'auth/email-already-in-use') {
         showExistingAccountMessage();
         return;
@@ -166,7 +170,11 @@ export default function EmailAuthSection({
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       await completeEmailAuth(userCredential.user);
     } catch (error: any) {
-      void trackAuthInteraction({ option: 'email', action: 'error' });
+      void trackAuthInteraction({
+        option: 'email',
+        action: 'error',
+        errorCode: getAuthErrorCode(error),
+      });
       if (error?.code === 'auth/user-not-found' || error?.code === 'auth/invalid-credential') {
         promptCreateAccount(normalizedEmail, password);
         return;

@@ -2,6 +2,7 @@ import analytics from '@react-native-firebase/analytics';
 
 import {
   getAnalyticsScreenName,
+  getAuthErrorCode,
   type AnalyticsLoginMethod,
   type ImdbImportCompleteParams,
   type ImdbImportFailureParams,
@@ -58,9 +59,10 @@ export type {
   PaywallInteractionAction,
   TrackAuthInteractionParams,
   TrackOnboardingStepViewParams,
+  TrackPaywallInteractionParams,
 } from './analytics.shared';
 
-export { getAnalyticsScreenName, normalizeListKind } from './analytics.shared';
+export { getAnalyticsScreenName, getAuthErrorCode, normalizeListKind } from './analytics.shared';
 
 let analyticsInitialized = false;
 let analyticsInitializationPromise: Promise<boolean> | null = null;
@@ -449,11 +451,18 @@ export const trackPaywallWinbackDecision = async ({
 export const trackAuthInteraction = async ({
   option,
   action,
+  errorCode,
 }: TrackAuthInteractionParams): Promise<void> => {
-  await trackNamedEvent('auth_option_interaction', 'auth_option_interaction', {
+  const eventParams: Record<string, string> = {
     auth_option: option,
     auth_action: action,
-  });
+  };
+
+  if (action === 'error') {
+    eventParams.auth_error_code = getAuthErrorCode({ code: errorCode });
+  }
+
+  await trackNamedEvent('auth_option_interaction', 'auth_option_interaction', eventParams);
 };
 
 export const trackOnboardingStepView = async ({

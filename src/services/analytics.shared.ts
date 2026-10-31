@@ -132,14 +132,37 @@ export type AnalyticsAuthAction = 'tap' | 'dismiss' | 'error';
 export interface TrackAuthInteractionParams {
   option: AnalyticsAuthOption;
   action: AnalyticsAuthAction;
+  /**
+   * Machine-readable error code (e.g. Firebase `auth/network-request-failed`).
+   * Only sent when `action` is 'error'. Never pass error messages or user data.
+   */
+  errorCode?: string;
 }
+
+const AUTH_ERROR_CODE_PATTERN = /^[A-Za-z0-9_\-/.]{1,64}$/;
+
+/**
+ * Extracts a safe, fixed-format error code from an auth error for analytics.
+ * Only the `code` field is ever read; anything that does not look like a short
+ * code (e.g. free text that could contain user data) collapses to 'unknown'.
+ */
+export const getAuthErrorCode = (error: unknown): string => {
+  const code = (error as { code?: unknown } | null | undefined)?.code;
+  return typeof code === 'string' && AUTH_ERROR_CODE_PATTERN.test(code) ? code : 'unknown';
+};
 
 export interface TrackOnboardingStepViewParams {
   stepIndex: number;
   stepId: string;
 }
 
-export type PaywallInteractionAction = 'purchase_attempt' | 'purchase_error' | 'dismiss';
+export type PaywallInteractionAction =
+  | 'purchase_attempt'
+  | 'purchase_error'
+  | 'purchase_cancel'
+  | 'purchase_success'
+  | 'purchase_not_completed'
+  | 'dismiss';
 
 export interface TrackPaywallInteractionParams {
   action: PaywallInteractionAction;

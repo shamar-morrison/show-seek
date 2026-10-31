@@ -12,7 +12,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { configureGoogleAuth, signInAsGuest, signInWithGoogle } from '@/src/firebase/auth';
 import { createUserDocument } from '@/src/firebase/user';
-import { trackAuthInteraction, trackLogin } from '@/src/services/analytics';
+import { getAuthErrorCode, trackAuthInteraction, trackLogin } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
@@ -77,11 +77,19 @@ export default function SignIn() {
       } else if (result.cancelled || result.errorType === 'CANCELLED') {
         void trackAuthInteraction({ option: 'google', action: 'dismiss' });
       } else if (result.error) {
-        void trackAuthInteraction({ option: 'google', action: 'error' });
+        void trackAuthInteraction({
+          option: 'google',
+          action: 'error',
+          errorCode: result.errorCode,
+        });
         Alert.alert(t('auth.signInFailed'), result.error);
       }
-    } catch {
-      void trackAuthInteraction({ option: 'google', action: 'error' });
+    } catch (error) {
+      void trackAuthInteraction({
+        option: 'google',
+        action: 'error',
+        errorCode: getAuthErrorCode(error),
+      });
       Alert.alert(t('common.error'), t('errors.generic'));
     } finally {
       setGoogleLoading(false);
@@ -96,11 +104,19 @@ export default function SignIn() {
       if (result.success) {
         void trackLogin('guest');
       } else if (result.error) {
-        void trackAuthInteraction({ option: 'guest', action: 'error' });
+        void trackAuthInteraction({
+          option: 'guest',
+          action: 'error',
+          errorCode: result.errorCode,
+        });
         Alert.alert(t('auth.signInFailed'), result.error);
       }
-    } catch {
-      void trackAuthInteraction({ option: 'guest', action: 'error' });
+    } catch (error) {
+      void trackAuthInteraction({
+        option: 'guest',
+        action: 'error',
+        errorCode: getAuthErrorCode(error),
+      });
       Alert.alert(t('common.error'), t('errors.generic'));
     } finally {
       setGuestLoading(false);

@@ -105,6 +105,7 @@ describe('firebase auth adapter', () => {
       success: false,
       error: 'Network error. Please check your internet connection.',
       errorType: 'NETWORK_ERROR',
+      errorCode: 'auth/network-request-failed',
     });
   });
 

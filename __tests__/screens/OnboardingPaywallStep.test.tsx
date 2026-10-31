@@ -410,6 +410,9 @@ describe('OnboardingPaywallStep', () => {
         action: 'purchase_error',
       });
       expect(alertSpy).toHaveBeenCalledTimes(1);
+      expect(mockTrackPaywallInteraction).not.toHaveBeenCalledWith({
+        action: 'purchase_cancel',
+      });
 
       mockTrackPaywallInteraction.mockClear();
       alertSpy.mockClear();
@@ -432,7 +435,102 @@ describe('OnboardingPaywallStep', () => {
       expect(mockTrackPaywallInteraction).not.toHaveBeenCalledWith({
         action: 'purchase_error',
       });
+      expect(mockTrackPaywallInteraction).toHaveBeenCalledWith({
+        action: 'purchase_cancel',
+      });
       expect(alertSpy).not.toHaveBeenCalled();
+    } finally {
+      alertSpy.mockRestore();
+    }
+  });
+
+  it('tracks purchase_cancel for each user-cancel signal without alerting', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+
+    try {
+      const cancelErrors = [
+        Object.assign(new Error('x'), { code: 'E_USER_CANCELLED' }),
+        Object.assign(new Error('x'), { code: 'user-cancelled' }),
+        Object.assign(new Error('User canceled'), { code: '' }),
+        Object.assign(new Error('Purchase failed: user cancelled the flow'), { code: '' }),
+      ];
+
+      const { getByTestId } = render(
+        <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+      );
+
+      for (const cancelError of cancelErrors) {
+        mockTrackPaywallInteraction.mockClear();
+        mockPurchasePremium.mockRejectedValueOnce(cancelError);
+
+        fireEvent.press(getByTestId('onboarding-subscribe-button'));
+
+        await act(async () => {
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+
+        expect(mockTrackPaywallInteraction.mock.calls.map(([p]) => p.action)).toEqual([
+          'purchase_attempt',
+          'purchase_cancel',
+        ]);
+      }
+
+      expect(alertSpy).not.toHaveBeenCalled();
+    } finally {
+      alertSpy.mockRestore();
+    }
+  });
+
+  it('tracks purchase_success immediately when the purchase resolves true', async () => {
+    const onClose = jest.fn();
+    mockPurchasePremium.mockResolvedValueOnce(true);
+
+    const { getByTestId } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={onClose} />
+    );
+
+    fireEvent.press(getByTestId('onboarding-subscribe-button'));
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Emitted from the purchase resolution itself: isPremium has not flipped
+    // and onClose (the personalization/navigation path) has not run.
+    expect(mockTrackPaywallInteraction.mock.calls.map(([p]) => p.action)).toEqual([
+      'purchase_attempt',
+      'purchase_success',
+    ]);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('tracks purchase_not_completed (not success or cancel) when the purchase resolves false', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    const onClose = jest.fn();
+    mockPurchasePremium.mockResolvedValueOnce(false);
+
+    try {
+      const { getByTestId } = render(
+        <OnboardingPaywallStep displayName="Taylor" onClose={onClose} />
+      );
+
+      fireEvent.press(getByTestId('onboarding-subscribe-button'));
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mockTrackPaywallInteraction.mock.calls.map(([p]) => p.action)).toEqual([
+        'purchase_attempt',
+        'purchase_not_completed',
+      ]);
+      // Behavior unchanged: a false result stays a silent no-op.
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(mockRequireAccount).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
     } finally {
       alertSpy.mockRestore();
     }

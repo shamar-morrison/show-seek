@@ -94,7 +94,16 @@ export default function OnboardingPaywallStep({
     // regardless of outcome (mirrors trackAuthInteraction tap-before-await).
     void trackPaywallInteraction({ action: 'purchase_attempt' });
     try {
-      await purchasePremium(selectedPlan);
+      const purchased = await purchasePremium(selectedPlan);
+      // Fire as soon as the purchase resolves with an active entitlement, before
+      // any isPremium-driven alert/navigation, so it never depends on later steps.
+      // A `false` result is tracked with a neutral label, not as a cancel: it covers
+      // RevenueCat cancels, Polar-blocked users, and purchases with no active entitlement.
+      if (purchased) {
+        void trackPaywallInteraction({ action: 'purchase_success' });
+      } else {
+        void trackPaywallInteraction({ action: 'purchase_not_completed' });
+      }
     } catch (error: any) {
       if (isPremiumAuthRequiredError(error)) {
         requireAccount();
@@ -109,9 +118,11 @@ export default function OnboardingPaywallStep({
         message === 'user canceled' ||
         message.includes('user cancelled');
 
-      if (!isUserCanceled) {
-        // Genuine failures only — user-initiated cancellation stays silent,
-        // mirroring how trackAuthInteraction maps cancel to dismiss, not error.
+      if (isUserCanceled) {
+        // User-initiated cancellation is tracked separately from genuine
+        // failures, mirroring how trackAuthInteraction maps cancel to dismiss.
+        void trackPaywallInteraction({ action: 'purchase_cancel' });
+      } else {
         void trackPaywallInteraction({ action: 'purchase_error' });
         Alert.alert(t('premium.purchaseFailedTitle'), error.message || t('errors.generic'));
       }

@@ -7,6 +7,8 @@ import { auth } from '@/src/firebase/config';
 import { GoogleAuthProvider, signInAnonymously, signInWithCredential } from 'firebase/auth';
 import { GoogleAuth, GoogleAuthScopes } from 'react-native-google-auth';
 
+import { getAuthErrorCode } from '@/src/services/analytics.shared';
+
 // Track if GoogleAuth has been configured
 let isConfigured = false;
 
@@ -44,6 +46,8 @@ export async function signInWithGoogle(): Promise<
       cancelled?: boolean;
       error?: string;
       errorType: 'CANCELLED' | 'NETWORK_ERROR' | 'GENERIC_ERROR';
+      /** Analytics-safe error code (Firebase code or short fixed string). */
+      errorCode?: string;
     }
 > {
   try {
@@ -62,6 +66,7 @@ export async function signInWithGoogle(): Promise<
         success: false,
         error: 'No Google account found. Please try again.',
         errorType: 'GENERIC_ERROR',
+        errorCode: 'no_saved_credential',
       };
     }
 
@@ -75,6 +80,7 @@ export async function signInWithGoogle(): Promise<
         success: false,
         error: 'No authentication token received. Please try again.',
         errorType: 'GENERIC_ERROR',
+        errorCode: 'no_id_token',
       };
     }
 
@@ -95,7 +101,12 @@ export async function signInWithGoogle(): Promise<
         : error?.code === 'auth/network-request-failed'
           ? 'NETWORK_ERROR'
           : 'GENERIC_ERROR';
-    return { success: false, error: getGoogleAuthErrorMessage(error), errorType };
+    return {
+      success: false,
+      error: getGoogleAuthErrorMessage(error),
+      errorType,
+      errorCode: getAuthErrorCode(error),
+    };
   }
 }
 
@@ -111,6 +122,8 @@ export async function signInAsGuest(): Promise<
       success: false;
       error?: string;
       errorType: 'NETWORK_ERROR' | 'GENERIC_ERROR';
+      /** Analytics-safe error code (Firebase code or short fixed string). */
+      errorCode?: string;
     }
 > {
   try {
@@ -122,6 +135,7 @@ export async function signInAsGuest(): Promise<
       success: false,
       error: 'Unable to continue as guest. Please try again.',
       errorType: error?.code === 'auth/network-request-failed' ? 'NETWORK_ERROR' : 'GENERIC_ERROR',
+      errorCode: getAuthErrorCode(error),
     };
   }
 }

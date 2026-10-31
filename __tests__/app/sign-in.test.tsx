@@ -26,6 +26,7 @@ jest.mock('@/src/firebase/user', () => ({
 jest.mock('@/src/services/analytics', () => ({
   trackLogin: (...args: unknown[]) => mockTrackLogin(...args),
   trackAuthInteraction: (...args: unknown[]) => mockTrackAuthInteraction(...args),
+  getAuthErrorCode: jest.requireActual('@/src/services/analytics.shared').getAuthErrorCode,
 }));
 
 jest.mock('firebase/auth', () => ({
@@ -174,6 +175,61 @@ describe('SignIn', () => {
     });
     await waitFor(() => {
       expect(mockTrackLogin).toHaveBeenCalledWith('guest');
+    });
+  });
+
+  it('tracks Google error with the auth error code from the sign-in result', async () => {
+    mockSignInWithGoogle.mockResolvedValue({
+      success: false,
+      error: 'Network error. Please check your internet connection.',
+      errorType: 'NETWORK_ERROR',
+      errorCode: 'auth/network-request-failed',
+    });
+
+    const { getByText } = render(<SignIn />);
+    fireEvent.press(getByText('auth.google'));
+
+    await waitFor(() => {
+      expect(mockTrackAuthInteraction).toHaveBeenCalledWith({
+        option: 'google',
+        action: 'error',
+        errorCode: 'auth/network-request-failed',
+      });
+    });
+  });
+
+  it('tracks Google error with errorCode unknown when sign-in throws without a code', async () => {
+    mockSignInWithGoogle.mockRejectedValue(new Error('boom user@example.com'));
+
+    const { getByText } = render(<SignIn />);
+    fireEvent.press(getByText('auth.google'));
+
+    await waitFor(() => {
+      expect(mockTrackAuthInteraction).toHaveBeenCalledWith({
+        option: 'google',
+        action: 'error',
+        errorCode: 'unknown',
+      });
+    });
+  });
+
+  it('tracks guest error with the auth error code from the sign-in result', async () => {
+    mockSignInAsGuest.mockResolvedValue({
+      success: false,
+      error: 'Unable to continue as guest. Please try again.',
+      errorType: 'GENERIC_ERROR',
+      errorCode: 'auth/operation-not-allowed',
+    });
+
+    const { getByText } = render(<SignIn />);
+    fireEvent.press(getByText('auth.continueAsGuest'));
+
+    await waitFor(() => {
+      expect(mockTrackAuthInteraction).toHaveBeenCalledWith({
+        option: 'guest',
+        action: 'error',
+        errorCode: 'auth/operation-not-allowed',
+      });
     });
   });
 
@@ -350,7 +406,11 @@ describe('SignIn', () => {
       expect(Alert.alert).toHaveBeenCalledWith('auth.signInFailed', 'auth.invalidCredentials');
     });
 
-    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'email', action: 'error' });
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({
+      option: 'email',
+      action: 'error',
+      errorCode: 'auth/wrong-password',
+    });
     expect(Alert.alert).toHaveBeenCalledTimes(1);
     expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
     expect(mockTrackLogin).not.toHaveBeenCalled();
@@ -404,7 +464,16 @@ describe('SignIn', () => {
       );
     });
 
-    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'email', action: 'error' });
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({
+      option: 'email',
+      action: 'error',
+      errorCode: 'auth/user-not-found',
+    });
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({
+      option: 'email',
+      action: 'error',
+      errorCode: 'auth/email-already-in-use',
+    });
     expect(mockCreateUserDocument).not.toHaveBeenCalled();
     expect(mockTrackLogin).not.toHaveBeenCalled();
   });
@@ -423,7 +492,11 @@ describe('SignIn', () => {
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith('auth.signInFailed', 'auth.tooManyAttempts');
     });
-    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({ option: 'email', action: 'error' });
+    expect(mockTrackAuthInteraction).toHaveBeenCalledWith({
+      option: 'email',
+      action: 'error',
+      errorCode: 'auth/too-many-requests',
+    });
     expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
     expect(mockTrackLogin).not.toHaveBeenCalled();
   });

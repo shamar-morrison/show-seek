@@ -55,9 +55,10 @@ export type {
   PaywallInteractionAction,
   TrackAuthInteractionParams,
   TrackOnboardingStepViewParams,
+  TrackPaywallInteractionParams,
 } from './analytics.shared';
 
-export { getAnalyticsScreenName, normalizeListKind } from './analytics.shared';
+export { getAnalyticsScreenName, getAuthErrorCode, normalizeListKind } from './analytics.shared';
 
 export const initializeAnalytics = async (): Promise<void> => {};
 
