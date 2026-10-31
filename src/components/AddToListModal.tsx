@@ -4,7 +4,6 @@ import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { hasListItemInMap } from '@/src/utils/listItemKeys';
 import { maybeWarnTraktManagedListEdit } from '@/src/utils/traktManagedEdits';
 import { isDefaultList } from '@/src/constants/lists';
-import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
@@ -12,6 +11,7 @@ import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useTrakt } from '@/src/context/TraktContext';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { useAddToList, useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
+import { useSheetListHeight } from '@/src/hooks/useSheetListHeight';
 import { ListMediaItem, UserList } from '@/src/services/ListService';
 import { getListIconComponent } from '@/src/utils/listIcons';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
@@ -150,6 +150,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const listRef = useRef<FlatList<ListWithCount>>(null);
     const createListModalRef = useRef<CreateListModalRef>(null);
     const { width } = useWindowDimensions();
+    const { listStyle, onContentLayout, onListLayout, onListContentSizeChange, resetListHeight } =
+      useSheetListHeight();
     const [operationError, setOperationError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -275,6 +277,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         setOperationError(null);
         setIsSaving(false);
         setSearchQuery('');
+        resetListHeight();
         await sheetRef.current?.present();
       },
       dismiss: async () => {
@@ -667,15 +670,17 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       <>
         <TrueSheet
           ref={sheetRef}
-          detents={[0.9]}
-          scrollable
+          detents={['auto']}
           keyboardMode="pan"
           cornerRadius={BORDER_RADIUS.l}
           backgroundColor={COLORS.surface}
           onDidDismiss={handleDismiss}
           grabber={true}
         >
-          <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+          <GestureHandlerRootView
+            style={[modalSheetStyles.content, styles.content, { width }]}
+            onLayout={onContentLayout}
+          >
             <View style={modalHeaderStyles.header}>
               <Text style={modalHeaderStyles.title}>{bulkHeaderTitle}</Text>
               {isBulkMode && (
@@ -735,7 +740,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 ref={listRef}
                 data={filteredListsWithCounts}
                 keyExtractor={(item) => item.id}
-                style={styles.listContainer}
+                style={listStyle}
+                onLayout={onListLayout}
+                onContentSizeChange={onListContentSizeChange}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled={true}
                 keyboardShouldPersistTaps="handled"
@@ -834,8 +841,8 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
-  listContainer: {
-    maxHeight: MODAL_LIST_HEIGHT,
+  content: {
+    paddingBottom: SPACING.l,
   },
   searchContainer: {
     flexDirection: 'row',

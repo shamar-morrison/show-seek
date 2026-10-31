@@ -5,12 +5,12 @@ import {
   MIN_HOME_LISTS,
 } from '@/src/constants/homeScreenLists';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
-import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
+import { useSheetListHeight } from '@/src/hooks/useSheetListHeight';
 import { UserList } from '@/src/services/ListService';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
@@ -90,6 +90,8 @@ const HomeScreenCustomizationModal = forwardRef<
 >(({ onShowToast, resolvedHomeScreenLists, customLists }, ref) => {
   const sheetRef = useRef<TrueSheet>(null);
   const { width } = useWindowDimensions();
+  const { listStyle, onContentLayout, onListLayout, onListContentSizeChange, resetListHeight } =
+    useSheetListHeight();
   const updateMutation = useUpdateHomeScreenLists();
   const { user } = useAuth();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
@@ -113,6 +115,7 @@ const HomeScreenCustomizationModal = forwardRef<
   useImperativeHandle(ref, () => ({
     present: async () => {
       initializeSelections();
+      resetListHeight();
       await sheetRef.current?.present();
     },
     dismiss: async () => {
@@ -181,13 +184,15 @@ const HomeScreenCustomizationModal = forwardRef<
   return (
     <TrueSheet
       ref={sheetRef}
-      detents={[0.8]}
-      scrollable
+      detents={['auto']}
       cornerRadius={BORDER_RADIUS.l}
       backgroundColor={COLORS.surface}
       grabber={true}
     >
-      <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+      <GestureHandlerRootView
+        style={[modalSheetStyles.content, styles.content, { width }]}
+        onLayout={onContentLayout}
+      >
         <View style={modalHeaderStyles.header}>
           <Text style={modalHeaderStyles.title}>{t('homeCustomization.title')}</Text>
           <Text testID="home-customization-selected-count" style={styles.subtitle}>
@@ -205,7 +210,9 @@ const HomeScreenCustomizationModal = forwardRef<
         )}
 
         <ScrollView
-          style={styles.listContainer}
+          style={[styles.listContainer, listStyle]}
+          onLayout={onListLayout}
+          onContentSizeChange={onListContentSizeChange}
           showsVerticalScrollIndicator
           nestedScrollEnabled={true}
         >
@@ -291,6 +298,9 @@ HomeScreenCustomizationModal.displayName = 'HomeScreenCustomizationModal';
 export default HomeScreenCustomizationModal;
 
 const styles = StyleSheet.create({
+  content: {
+    paddingBottom: SPACING.l,
+  },
   subtitle: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
@@ -307,7 +317,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listContainer: {
-    maxHeight: MODAL_LIST_HEIGHT,
     marginBottom: SPACING.m,
   },
   sectionHeader: {
