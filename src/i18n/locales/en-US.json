@@ -1842,6 +1842,7 @@
     "title": "How are you feeling?",
     "subtitle": "Pick a mood to discover matching content",
     "surpriseMe": "Surprise Me",
+    "takingYouThere": "Taking you there…",
     "results": "{{mood}} Picks",
     "noResults": "No matches for this mood",
     "tryAnother": "Try a different mood",

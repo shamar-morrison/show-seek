@@ -12,20 +12,14 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { ListMediaItem } from '@/src/services/ListService';
-import * as Haptics from 'expo-haptics';
+import { useShuffleCycle } from '@/src/hooks/useShuffleCycle';
 import { Image } from 'expo-image';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Cancel01Icon, ShuffleIcon, StarIcon } from '@hugeicons/core-free-icons';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 interface ShuffleModalProps {
   visible: boolean;
@@ -36,9 +30,6 @@ interface ShuffleModalProps {
 
 const POSTER_WIDTH = 180;
 const POSTER_HEIGHT = 270;
-const ANIMATION_DURATION = 2000; // Total animation time in ms
-const MIN_INTERVAL = 80; // Fastest cycling speed
-const MAX_INTERVAL = 400; // Slowest speed before stopping
 
 export default function ShuffleModal({
   visible,
@@ -49,123 +40,30 @@ export default function ShuffleModal({
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const { resolvePosterPath } = usePosterOverrides();
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [displayedItem, setDisplayedItem] = useState<ListMediaItem | null>(null);
-  const [hasRevealed, setHasRevealed] = useState(false);
-  const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Animation values for the poster
-  const posterScale = useSharedValue(1);
-  const posterOpacity = useSharedValue(1);
-
-  // Select a random target item
-  const selectRandomItem = useCallback(() => {
-    if (items.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * items.length);
-    return items[randomIndex];
-  }, [items]);
-
-  // Clear any pending animation timeouts
-  const clearAnimationTimeouts = useCallback(() => {
-    if (animationTimeoutRef.current) {
-      clearTimeout(animationTimeoutRef.current);
-      animationTimeoutRef.current = null;
-    }
-  }, []);
-
-  // Run the slot-machine animation
-  const runAnimation = useCallback(() => {
-    if (items.length === 0) return;
-
-    setIsAnimating(true);
-    setHasRevealed(false);
-
-    const targetItem = selectRandomItem();
-    if (!targetItem) return;
-
-    // For single item, skip animation
-    if (items.length === 1) {
-      setDisplayedItem(targetItem);
-      setHasRevealed(true);
-      setIsAnimating(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      return;
-    }
-
-    const startTime = Date.now();
-    let currentInterval = MIN_INTERVAL;
-
-    const cycleThroughItems = () => {
-      const elapsed = Date.now() - startTime;
-
-      if (elapsed >= ANIMATION_DURATION) {
-        // Animation complete - reveal the target
-        setDisplayedItem(targetItem);
-        setHasRevealed(true);
-        setIsAnimating(false);
-
-        // Trigger reveal animation and haptic
-        posterScale.value = withSequence(
-          withTiming(1.1, { duration: 150, easing: Easing.out(Easing.exp) }),
-          withTiming(1, { duration: 100 })
-        );
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        return;
-      }
-
-      // Show a random item (not necessarily the target)
-      const randomIndex = Math.floor(Math.random() * items.length);
-      setDisplayedItem(items[randomIndex]);
-
-      // Quick opacity flash for visual feedback
-      posterOpacity.value = withSequence(
-        withTiming(0.7, { duration: currentInterval * 0.3 }),
-        withTiming(1, { duration: currentInterval * 0.3 })
-      );
-
-      // Ease out: increase interval as we approach the end
-      const progress = elapsed / ANIMATION_DURATION;
-      // Exponential easing for smooth slowdown
-      currentInterval = MIN_INTERVAL + (MAX_INTERVAL - MIN_INTERVAL) * Math.pow(progress, 2);
-
-      animationTimeoutRef.current = setTimeout(cycleThroughItems, currentInterval);
-    };
-
-    // Start the cycling
-    cycleThroughItems();
-  }, [items, selectRandomItem, posterScale, posterOpacity]);
+  const { displayedItem, isAnimating, hasRevealed, start, cancel, reset, posterAnimatedStyle } =
+    useShuffleCycle(items);
 
   // Start animation when modal opens
   useEffect(() => {
     if (visible && items.length > 0) {
-      // Reset state
-      setDisplayedItem(null);
-      setHasRevealed(false);
-      posterScale.value = 1;
-      posterOpacity.value = 1;
+      reset();
 
       // Small delay before starting animation
       const startTimeout = setTimeout(() => {
-        runAnimation();
+        start();
       }, 300);
 
       return () => {
         clearTimeout(startTimeout);
-        clearAnimationTimeouts();
+        cancel();
       };
     } else {
-      clearAnimationTimeouts();
+      cancel();
     }
-  }, [visible, items.length, runAnimation, clearAnimationTimeouts, posterScale, posterOpacity]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => clearAnimationTimeouts();
-  }, [clearAnimationTimeouts]);
+  }, [visible, items.length, start, cancel, reset]);
 
   const handleSpinAgain = () => {
-    clearAnimationTimeouts();
-    runAnimation();
+    start();
   };
 
   const handleViewDetails = () => {
@@ -175,15 +73,9 @@ export default function ShuffleModal({
   };
 
   const handleClose = useCallback(() => {
-    clearAnimationTimeouts();
-    setIsAnimating(false);
+    cancel();
     onClose();
-  }, [clearAnimationTimeouts, onClose]);
-
-  const posterAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: posterScale.value }],
-    opacity: posterOpacity.value,
-  }));
+  }, [cancel, onClose]);
 
   // Get display title (movies use 'title', TV shows use 'name')
   const getTitle = (item: ListMediaItem) => {

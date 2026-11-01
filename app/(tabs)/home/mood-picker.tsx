@@ -1,4 +1,4 @@
-import { getRandomMood, MOODS, type MoodConfig } from '@/src/constants/moods';
+import { MOODS, type MoodConfig } from '@/src/constants/moods';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -8,9 +8,10 @@ import { ImageBackground } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import MoodShuffleModal from '@/src/components/MoodShuffleModal';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { ShuffleIcon } from '@hugeicons/core-free-icons';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -126,8 +127,7 @@ export default function MoodPickerScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { accentColor } = useAccentColor();
-  const [isSpinning, setIsSpinning] = useState(false);
-  const surpriseRotation = useSharedValue(0);
+  const [isShuffleVisible, setIsShuffleVisible] = useState(false);
 
   // Fetch a curated backdrop per mood (cached for 30 days, persisted across
   // restarts via the query cache layer, so revisits don't refetch).
@@ -167,45 +167,23 @@ export default function MoodPickerScreen() {
     [router]
   );
 
-  const navigateToRandomMood = useCallback(() => {
-    const randomMood = getRandomMood();
-    handleMoodSelect(randomMood.id);
-  }, [handleMoodSelect]);
-
-  // Ref to store timeout ID for cleanup
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
   const handleSurpriseMe = () => {
-    if (isSpinning) return;
-
+    if (isShuffleVisible) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    setIsSpinning(true);
-
-    // Spin animation then navigate
-    surpriseRotation.value = withSequence(
-      withTiming(360 * 3, { duration: 800 }),
-      withTiming(0, { duration: 0 })
-    );
-
-    // Navigate after animation
-    timeoutRef.current = setTimeout(() => {
-      setIsSpinning(false);
-      navigateToRandomMood();
-    }, 850);
+    setIsShuffleVisible(true);
   };
 
-  const surpriseAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${surpriseRotation.value}deg` }],
-  }));
+  const handleShuffleClose = useCallback(() => {
+    setIsShuffleVisible(false);
+  }, []);
+
+  const handleShuffleSelect = useCallback(
+    (moodId: string) => {
+      setIsShuffleVisible(false);
+      handleMoodSelect(moodId);
+    },
+    [handleMoodSelect]
+  );
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
@@ -237,14 +215,20 @@ export default function MoodPickerScreen() {
         <Pressable
           style={[styles.surpriseButton, { backgroundColor: accentColor }]}
           onPress={handleSurpriseMe}
-          disabled={isSpinning}
+          disabled={isShuffleVisible}
+          testID="mood-surprise-me-button"
         >
-          <Animated.View style={surpriseAnimatedStyle}>
-            <AppIcon icon={ShuffleIcon} size={24} color={COLORS.text} />
-          </Animated.View>
+          <AppIcon icon={ShuffleIcon} size={24} color={COLORS.text} />
           <Text style={styles.surpriseButtonText}>{t('mood.surpriseMe')}</Text>
         </Pressable>
       </ScrollView>
+
+      <MoodShuffleModal
+        visible={isShuffleVisible}
+        backdropByMoodId={backdropByMoodId}
+        onClose={handleShuffleClose}
+        onSelect={handleShuffleSelect}
+      />
     </SafeAreaView>
   );
 }
