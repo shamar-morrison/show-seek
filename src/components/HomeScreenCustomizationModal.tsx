@@ -1,4 +1,5 @@
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   AVAILABLE_TMDB_LISTS,
   MAX_HOME_LISTS,
@@ -14,16 +15,25 @@ import { useSheetListHeight } from '@/src/hooks/useSheetListHeight';
 import { UserList } from '@/src/services/ListService';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
+import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -106,11 +116,39 @@ const HomeScreenCustomizationModal = forwardRef<
   // Local state for pending selections (only persisted on Apply)
   const [pendingSelections, setPendingSelections] = useState<HomeScreenListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const initializeSelections = useCallback(() => {
     setPendingSelections([...resolvedHomeScreenLists]);
     setError(null);
+    setSearchQuery('');
   }, [resolvedHomeScreenLists]);
+
+  const { tmdbRows, watchStatusRows, customRows } = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const matches = (label: string) =>
+      !normalizedQuery || label.toLowerCase().includes(normalizedQuery);
+
+    return {
+      tmdbRows: AVAILABLE_TMDB_LISTS.map((list) => ({
+        id: list.id,
+        label: t(TMDB_LIST_LABEL_KEYS[list.id] ?? list.label),
+      })).filter((row) => matches(row.label)),
+      watchStatusRows: WATCH_STATUS_LISTS.map((list) => ({
+        id: list.id,
+        label: t(list.labelKey),
+      })).filter((row) => matches(row.label)),
+      customRows: customLists
+        .map((list) => ({ id: list.id, label: list.name }))
+        .filter((row) => matches(row.label)),
+    };
+  }, [customLists, searchQuery, t]);
+
+  const hasNoSearchResults =
+    searchQuery.trim().length > 0 &&
+    tmdbRows.length === 0 &&
+    watchStatusRows.length === 0 &&
+    customRows.length === 0;
 
   useImperativeHandle(ref, () => ({
     present: async () => {
@@ -185,6 +223,7 @@ const HomeScreenCustomizationModal = forwardRef<
     <TrueSheet
       ref={sheetRef}
       detents={['auto']}
+      keyboardMode="pan"
       cornerRadius={BORDER_RADIUS.l}
       backgroundColor={COLORS.surface}
       grabber={true}
@@ -209,53 +248,92 @@ const HomeScreenCustomizationModal = forwardRef<
           </View>
         )}
 
+        <View style={styles.searchContainer}>
+          <AppIcon icon={Search01Icon} size={18} color={COLORS.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('library.searchListPlaceholder')}
+            placeholderTextColor={COLORS.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            editable={!updateMutation.isPending}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            testID="home-customization-search-input"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              onPress={() => setSearchQuery('')}
+              disabled={updateMutation.isPending}
+              hitSlop={8}
+              testID="home-customization-clear-search-button"
+            >
+              <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
+            </Pressable>
+          )}
+        </View>
+
         <ScrollView
           style={[styles.listContainer, listStyle]}
           onLayout={onListLayout}
           onContentSizeChange={onListContentSizeChange}
           showsVerticalScrollIndicator
           nestedScrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
         >
+          {hasNoSearchResults && (
+            <Text style={styles.emptySearchText}>{t('common.noResults')}</Text>
+          )}
+
           {/* TMDB Lists Section */}
-          <Text style={styles.sectionHeader}>{t('homeCustomization.tmdbLists')}</Text>
-          {AVAILABLE_TMDB_LISTS.map((list) => (
-            <ListItem
-              key={list.id}
-              id={list.id}
-              label={t(TMDB_LIST_LABEL_KEYS[list.id] ?? list.label)}
-              type="tmdb"
-              isSelected={isSelected(list.id)}
-              onToggle={handleToggle}
-              isPremiumLocked={
-                list.id === 'latest-trailers' && !isPremiumLoading && !canAccessTrailers
-              }
-            />
-          ))}
+          {tmdbRows.length > 0 && (
+            <>
+              <Text style={styles.sectionHeader}>{t('homeCustomization.tmdbLists')}</Text>
+              {tmdbRows.map((row) => (
+                <ListItem
+                  key={row.id}
+                  id={row.id}
+                  label={row.label}
+                  type="tmdb"
+                  isSelected={isSelected(row.id)}
+                  onToggle={handleToggle}
+                  isPremiumLocked={
+                    row.id === 'latest-trailers' && !isPremiumLoading && !canAccessTrailers
+                  }
+                />
+              ))}
+            </>
+          )}
 
           {/* Watch Status Lists Section */}
-          <Text style={styles.sectionHeader}>{t('homeCustomization.watchStatus')}</Text>
-          {WATCH_STATUS_LISTS.map((list) => (
-            <ListItem
-              key={list.id}
-              id={list.id}
-              label={t(list.labelKey)}
-              type="default"
-              isSelected={isSelected(list.id)}
-              onToggle={handleToggle}
-            />
-          ))}
+          {watchStatusRows.length > 0 && (
+            <>
+              <Text style={styles.sectionHeader}>{t('homeCustomization.watchStatus')}</Text>
+              {watchStatusRows.map((row) => (
+                <ListItem
+                  key={row.id}
+                  id={row.id}
+                  label={row.label}
+                  type="default"
+                  isSelected={isSelected(row.id)}
+                  onToggle={handleToggle}
+                />
+              ))}
+            </>
+          )}
 
           {/* Custom Lists Section */}
-          {customLists.length > 0 && (
+          {customRows.length > 0 && (
             <>
               <Text style={styles.sectionHeader}>{t('library.customLists')}</Text>
-              {customLists.map((list) => (
+              {customRows.map((row) => (
                 <ListItem
-                  key={list.id}
-                  id={list.id}
-                  label={list.name}
+                  key={row.id}
+                  id={row.id}
+                  label={row.label}
                   type="custom"
-                  isSelected={isSelected(list.id)}
+                  isSelected={isSelected(row.id)}
                   onToggle={handleToggle}
                 />
               ))}
@@ -315,6 +393,27 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.s,
     textAlign: 'center',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    paddingHorizontal: SPACING.m,
+    marginBottom: SPACING.s,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: FONT_SIZE.m,
+    paddingVertical: SPACING.m,
+  },
+  emptySearchText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    textAlign: 'center',
+    paddingVertical: SPACING.xl,
   },
   listContainer: {
     marginBottom: SPACING.m,

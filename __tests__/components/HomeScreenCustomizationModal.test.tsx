@@ -160,11 +160,7 @@ describe('HomeScreenCustomizationModal', () => {
 
     const ref = createRef<HomeScreenCustomizationModalRef>();
     const { getByTestId } = render(
-      <HomeScreenCustomizationModal
-        ref={ref}
-        resolvedHomeScreenLists={[]}
-        customLists={[]}
-      />
+      <HomeScreenCustomizationModal ref={ref} resolvedHomeScreenLists={[]} customLists={[]} />
     );
 
     await act(async () => {
@@ -175,5 +171,101 @@ describe('HomeScreenCustomizationModal', () => {
 
     expect(mockPush).not.toHaveBeenCalled();
     expect(mockSheetDismiss).not.toHaveBeenCalled();
+  });
+
+  describe('search', () => {
+    const customLists = [
+      { id: 'horror-list', name: 'Horror Night' },
+      { id: 'comedy-list', name: 'Comedy Picks' },
+    ];
+
+    const renderAndPresent = async (resolvedHomeScreenLists: HomeScreenListItem[] = []) => {
+      const ref = createRef<HomeScreenCustomizationModalRef>();
+      const utils = render(
+        <HomeScreenCustomizationModal
+          ref={ref}
+          resolvedHomeScreenLists={resolvedHomeScreenLists}
+          customLists={customLists}
+        />
+      );
+      await act(async () => {
+        await ref.current?.present();
+      });
+      return { ...utils, ref };
+    };
+
+    it('filters rows across all sections and hides empty section headers', async () => {
+      const { getByTestId, queryByTestId, queryByText } = await renderAndPresent();
+
+      fireEvent.changeText(getByTestId('home-customization-search-input'), 'HORROR');
+
+      expect(getByTestId('home-customization-row-horror-list')).toBeTruthy();
+      expect(queryByTestId('home-customization-row-comedy-list')).toBeNull();
+      expect(queryByTestId('home-customization-row-trending-movies')).toBeNull();
+      expect(queryByText('TMDB Lists')).toBeNull();
+      expect(queryByText('Watch Status')).toBeNull();
+      expect(queryByText('Custom Lists')).toBeTruthy();
+    });
+
+    it('matches translated labels of built-in lists', async () => {
+      const { getByTestId, queryByTestId } = await renderAndPresent();
+
+      fireEvent.changeText(getByTestId('home-customization-search-input'), 'upcoming');
+
+      expect(getByTestId('home-customization-row-upcoming-movies')).toBeTruthy();
+      expect(getByTestId('home-customization-row-upcoming-tv')).toBeTruthy();
+      expect(queryByTestId('home-customization-row-trending-movies')).toBeNull();
+    });
+
+    it('clears the search and restores all rows', async () => {
+      const { getByTestId } = await renderAndPresent();
+
+      fireEvent.changeText(getByTestId('home-customization-search-input'), 'horror');
+      fireEvent.press(getByTestId('home-customization-clear-search-button'));
+
+      expect(getByTestId('home-customization-row-trending-movies')).toBeTruthy();
+      expect(getByTestId('home-customization-row-comedy-list')).toBeTruthy();
+    });
+
+    it('shows a no results message when nothing matches', async () => {
+      const { getByTestId, getByText } = await renderAndPresent();
+
+      fireEvent.changeText(getByTestId('home-customization-search-input'), 'zzzz');
+
+      expect(getByText('common.noResults')).toBeTruthy();
+    });
+
+    it('keeps selections that are filtered out of view when applying', async () => {
+      const initial: HomeScreenListItem[] = [
+        { id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' },
+      ];
+      const { getByTestId, getByText } = await renderAndPresent(initial);
+
+      fireEvent.changeText(getByTestId('home-customization-search-input'), 'comedy');
+      fireEvent.press(getByTestId('home-customization-row-comedy-list'));
+
+      expect(getByText('2/6 selected')).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.press(getByText('Apply'));
+      });
+
+      expect(mockMutateAsync).toHaveBeenCalledWith([
+        initial[0],
+        { id: 'comedy-list', type: 'custom', label: 'Comedy Picks' },
+      ]);
+    });
+
+    it('resets the search when the sheet is presented again', async () => {
+      const { getByTestId, ref } = await renderAndPresent();
+
+      fireEvent.changeText(getByTestId('home-customization-search-input'), 'horror');
+      await act(async () => {
+        await ref.current?.present();
+      });
+
+      expect(getByTestId('home-customization-search-input').props.value).toBe('');
+      expect(getByTestId('home-customization-row-trending-movies')).toBeTruthy();
+    });
   });
 });
