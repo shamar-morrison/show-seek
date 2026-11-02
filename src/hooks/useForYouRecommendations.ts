@@ -1,5 +1,6 @@
 import { Movie, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { useAuth } from '@/src/context/auth';
+import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
 import { RatingItem } from '@/src/services/RatingService';
 import { hasListItemInMap } from '@/src/utils/listItemKeys';
 import { filterNonScriptedTV } from '@/src/utils/nonScriptedFilter';
@@ -14,6 +15,10 @@ const MAX_SEEDS = 5;
 const MIN_SEEDS_FOR_FULL_EXPERIENCE = 3;
 const HIDDEN_GEMS_MAX_POPULARITY = 50;
 const HIDDEN_GEMS_MIN_VOTE_AVERAGE = 7.5;
+// Matches useCurrentlyWatching, which shares the episode tracking query key
+const TRACKING_STALE_TIME = 1000 * 60 * 5;
+// Default lists whose items count as watched/watching and are never recommended
+const WATCHED_LIST_IDS = new Set<string>(['already-watched', 'currently-watching']);
 
 export interface SeedItem {
   id: number;
@@ -108,33 +113,67 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
 
   const isAuthenticated = !!user;
 
-  const ratedMovieIds = useMemo(() => {
-    const ids = new Set<number>();
+  const { ratedMovieIds, ratedTvIds } = useMemo(() => {
+    const movieIds = new Set<number>();
+    const tvIds = new Set<number>();
     for (const rating of ratings ?? []) {
-      if (rating.mediaType !== 'movie') continue;
+      if (rating.mediaType !== 'movie' && rating.mediaType !== 'tv') continue;
       const id = parseInt(rating.id, 10);
-      if (!Number.isNaN(id)) ids.add(id);
+      if (Number.isNaN(id)) continue;
+      (rating.mediaType === 'movie' ? movieIds : tvIds).add(id);
     }
-    return ids;
+    return { ratedMovieIds: movieIds, ratedTvIds: tvIds };
   }, [ratings]);
 
-  const alreadyWatchedItems = useMemo(() => {
-    const alreadyWatchedList = lists?.find((list) => list.id === 'already-watched');
-    return alreadyWatchedList?.items;
-  }, [lists]);
+  // Shares the cache entry with useCurrentlyWatching (same key), so on Home this
+  // is usually already populated and costs no extra Firestore read.
+  const trackingUserId = user && !user.isAnonymous ? user.uid : undefined;
+  const { data: trackedShows, isLoading: isLoadingTracking } = useQuery({
+    queryKey: ['episodeTracking', 'allShows', trackingUserId],
+    queryFn: () => episodeTrackingService.getAllWatchedShows(trackingUserId!),
+    enabled: !!trackingUserId,
+    staleTime: TRACKING_STALE_TIME,
+  });
 
-  const excludeWatchedMovies = useCallback(
-    <T extends { id: number }>(items: T[]): T[] => {
-      if (ratedMovieIds.size === 0 && !alreadyWatchedItems) return items;
+  // Shows with at least one episode marked watched
+  const trackedTvIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const show of trackedShows ?? []) {
+      const firstEpisode = Object.values(show.episodes)[0];
+      if (firstEpisode) ids.add(firstEpisode.tvShowId);
+    }
+    return ids;
+  }, [trackedShows]);
+
+  // Items maps of the lists that mean "watched or watching"
+  const watchedListItems = useMemo(
+    () =>
+      (lists ?? [])
+        .filter((list) => WATCHED_LIST_IDS.has(list.id) && list.items)
+        .map((list) => list.items),
+    [lists]
+  );
+
+  /**
+   * Drops items the user has watched or is currently watching. Used by every
+   * section (Because You Loved, Hidden Gems, trending fallback) so they agree.
+   * Movies: rated, or in Already Watched / Currently Watching.
+   * TV: the same, plus any show with an episode marked watched.
+   */
+  const excludeWatched = useCallback(
+    <T extends { id: number }>(items: T[], mediaType: 'movie' | 'tv'): T[] => {
+      const ratedIds = mediaType === 'movie' ? ratedMovieIds : ratedTvIds;
+      const trackedIds = mediaType === 'tv' ? trackedTvIds : null;
+      if (ratedIds.size === 0 && !trackedIds?.size && watchedListItems.length === 0) return items;
       return items.filter((item) => {
-        if (ratedMovieIds.has(item.id)) return false;
-        if (alreadyWatchedItems && hasListItemInMap(alreadyWatchedItems, 'movie', item.id)) {
-          return false;
-        }
-        return true;
+        if (ratedIds.has(item.id)) return false;
+        if (trackedIds?.has(item.id)) return false;
+        return !watchedListItems.some((listItems) =>
+          hasListItemInMap(listItems, mediaType, item.id)
+        );
       });
     },
-    [alreadyWatchedItems, ratedMovieIds]
+    [watchedListItems, ratedMovieIds, ratedTvIds, trackedTvIds]
   );
 
   // Extract preliminary seeds (may have null titles for legacy ratings)
@@ -213,16 +252,25 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
       // Movies are never talk/awards content; TV sections honor the preference.
       // Explicitly saved seeds are untouched — only their recommendations filter.
       const recommendations = isMovieSection
-        ? excludeWatchedMovies(deduped)
-        : filterNonScriptedTV(deduped, hideTalkShowsAndAwards);
+        ? excludeWatched(deduped, 'movie')
+        : excludeWatched(filterNonScriptedTV(deduped, hideTalkShowsAndAwards), 'tv');
       return {
         seed,
         recommendations,
-        isLoading: (query?.isLoading ?? true) || (isMovieSection && isLoadingLists),
+        // Wait for watched data so watched titles don't flash in and then vanish
+        isLoading:
+          (query?.isLoading ?? true) || isLoadingLists || (!isMovieSection && isLoadingTracking),
         error: query?.error as Error | null,
       };
     });
-  }, [seeds, recommendationQueries, excludeWatchedMovies, isLoadingLists, hideTalkShowsAndAwards]);
+  }, [
+    seeds,
+    recommendationQueries,
+    excludeWatched,
+    isLoadingLists,
+    isLoadingTracking,
+    hideTalkShowsAndAwards,
+  ]);
 
   // Fetch Hidden Gems - high quality but low popularity movies
   const { data: hiddenGemsData, isLoading: isLoadingHiddenGemsQuery } = useQuery({
@@ -257,20 +305,25 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
   });
 
   const isLoadingRecommendations = recommendationQueries.some((q) => q.isLoading);
-  const isLoadingTrending = isLoadingTrendingMovies || isLoadingTrendingTV || isLoadingLists;
+  const isLoadingTrending =
+    isLoadingTrendingMovies || isLoadingTrendingTV || isLoadingLists || isLoadingTracking;
 
   const hiddenGems = useMemo(
-    () => excludeWatchedMovies(dedupeById(hiddenGemsData || [])),
-    [excludeWatchedMovies, hiddenGemsData]
+    () => excludeWatched(dedupeById(hiddenGemsData || []), 'movie'),
+    [excludeWatched, hiddenGemsData]
   );
 
   const trendingMovies = useMemo(
-    () => excludeWatchedMovies(dedupeById(trendingMoviesData?.results || [])),
-    [excludeWatchedMovies, trendingMoviesData]
+    () => excludeWatched(dedupeById(trendingMoviesData?.results || []), 'movie'),
+    [excludeWatched, trendingMoviesData]
   );
   const trendingTV = useMemo(
-    () => filterNonScriptedTV(dedupeById(trendingTVData?.results || []), hideTalkShowsAndAwards),
-    [trendingTVData, hideTalkShowsAndAwards]
+    () =>
+      excludeWatched(
+        filterNonScriptedTV(dedupeById(trendingTVData?.results || []), hideTalkShowsAndAwards),
+        'tv'
+      ),
+    [excludeWatched, trendingTVData, hideTalkShowsAndAwards]
   );
 
   return {
