@@ -218,14 +218,13 @@ async function resolveSameNumbering(
 /**
  * Finds the TMDB episode through the TVDB or IMDb ID Cinemeta lists for that episode. This
  * holds when Cinemeta and TMDB group episodes into different seasons (One Piece S2E1 is
- * TMDB S1E9) or when TMDB has no show for the IMDb ID (Bleach: Thousand-Year Blood War S4E1
- * is TMDB Bleach S2E41).
+ * TMDB S1E9) or when TMDB's show for the IMDb ID is missing or a stray entry (Bleach:
+ * Thousand-Year Blood War S4E1 is TMDB Bleach S2E41).
  */
 async function resolveByEpisodeIds(
   imdbId: string,
   season: number,
   episode: number,
-  known: ShowResult | null,
   tmdb: Tmdb,
   deadline: number
 ): Promise<MappedTitle | null> {
@@ -250,12 +249,19 @@ async function resolveByEpisodeIds(
     const showId = record(results[0])?.show_id;
     const found = episodeDetails(results[0]);
     if (!positiveId(showId) || !found) continue;
-    const show = known?.show.id === showId ? known : await fetchShow(showId, tmdb);
+    const show = await fetchShow(showId, tmdb);
     return show ? { kind: 'episode', show: show.show, episode: found } : null;
   }
   return null;
 }
 
+/**
+ * Prefers the episode's own TVDB or IMDb ID over the show TMDB returns for the series IMDb
+ * ID, because that show can be a stray duplicate. Bleach: Thousand-Year Blood War has a
+ * one-episode, non-anime TMDB entry carrying its IMDb ID, which made S4 unmappable and would
+ * have recorded S1E1 on the wrong show. Matching numbers is the fallback when Cinemeta lists
+ * no usable episode IDs.
+ */
 async function resolveImdb(event: PlayerEvent & { imdbId: string }, tmdb: Tmdb, deadline: number) {
   const found = await tmdb(`/find/${encodeURIComponent(event.imdbId)}?external_source=imdb_id`);
   const results = found?.[event.type === 'movie' ? 'movie_results' : 'tv_results'];
@@ -263,12 +269,26 @@ async function resolveImdb(event: PlayerEvent & { imdbId: string }, tmdb: Tmdb, 
   const id = Array.isArray(results) && results.length === 1 ? record(results[0])?.id : undefined;
   if (event.type === 'movie') return positiveId(id) ? fetchMovie(id, tmdb) : null;
 
-  const show = positiveId(id) ? await fetchShow(id, tmdb) : null;
-  if (!show || show.isAnime) {
-    const mapped = await resolveByEpisodeIds(event.imdbId, event.season!, event.episode!, show, tmdb, deadline);
+  let lookupError: StremioTmdbError | null = null;
+  try {
+    const mapped = await resolveByEpisodeIds(event.imdbId, event.season!, event.episode!, tmdb, deadline);
     if (mapped) return mapped;
+  } catch (error) {
+    // Without a TMDB show there is nothing to fall back to, so the failure is the outcome.
+    if (!(error instanceof StremioTmdbError) || !positiveId(id)) throw error;
+    lookupError = error;
   }
-  return show ? resolveSameNumbering(show, event.season!, event.episode!, tmdb) : null;
+
+  const show = positiveId(id) ? await fetchShow(id, tmdb) : null;
+  if (!show) {
+    if (lookupError) throw lookupError;
+    return null;
+  }
+  // Cinemeta and TMDB group anime seasons differently, so an anime's matching numbers are
+  // only trusted once the episode IDs were checked. Other shows keep matching numbers
+  // through a Cinemeta outage.
+  if (lookupError && show.isAnime) throw lookupError;
+  return resolveSameNumbering(show, event.season!, event.episode!, tmdb);
 }
 
 /**
@@ -341,7 +361,7 @@ async function resolveKitsuFromMeta(
   const video = matches.length === 1 ? matches[0] : null;
   if (!video || typeof video.imdb_id !== 'string' || !/^tt\d+$/.test(video.imdb_id)) return null;
   if (!nonNegative(video.imdbSeason) || !positiveId(video.imdbEpisode)) return null;
-  return resolveByEpisodeIds(video.imdb_id, video.imdbSeason, video.imdbEpisode, null, tmdb, deadline);
+  return resolveByEpisodeIds(video.imdb_id, video.imdbSeason, video.imdbEpisode, tmdb, deadline);
 }
 
 async function resolveKitsu(

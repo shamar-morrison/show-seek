@@ -201,16 +201,58 @@ describe('Cinemeta anime episodes', () => {
     expect(requested()).not.toContain(`${TMDB}/tv/30984/season/2`);
   });
 
-  it('maps a title TMDB has no show for through the episode IMDb ID', async () => {
-    routes = {
-      [`${TMDB}/find/tt14986406?imdb_id`]: { tv_results: [] },
-      [`${CINEMETA}/tt14986406.json`]: { meta: { videos: [{ season: 4, episode: 1, imdb_id: 'tt39128668' }] } },
-      [`${TMDB}/find/tt39128668?imdb_id`]: { tv_episode_results: [{ ...episode(9041, 2, 41), show_id: 30984 }] },
-      [`${TMDB}/tv/30984`]: anime(30984, 'Bleach', [[1, 366], [2, 50]]),
-    };
-    await request('series', 'tt14986406:4:1');
-    expect(tracked(30984)?.['2_41']).toMatchObject({ episodeId: 9041, seasonNumber: 2, episodeNumber: 41 });
-    expect(db.data('users/member/episode_tracking/30984')?.metadata.tvShowName).toBe('Bleach');
+  // Bleach: Thousand-Year Blood War's IMDb ID now finds a stray one-episode, non-anime TMDB
+  // show (340620). Its episodes live in TMDB Bleach (30984) season 2.
+  const strayTybw = {
+    id: 340620, name: 'Bleach: Thousand-Year Blood War', poster_path: null, first_air_date: '2022-10-10',
+    vote_average: 0, genres: [], origin_country: ['US'], original_language: 'en',
+    seasons: [{ season_number: 1, episode_count: 1 }],
+  };
+  const tybwRoutes = (tvResults: unknown[]) => ({
+    [`${TMDB}/find/tt14986406?imdb_id`]: { tv_results: tvResults },
+    [`${TMDB}/tv/340620`]: strayTybw,
+    [`${TMDB}/tv/340620/season/1`]: { season_number: 1, episodes: [episode(8041224, 1, 1)] },
+    [`${CINEMETA}/tt14986406.json`]: {
+      meta: {
+        videos: [
+          { season: 1, episode: 1, imdb_id: 'tt17073864' },
+          { season: 4, episode: 1, imdb_id: 'tt39128668' },
+          { season: 4, episode: 5, imdb_id: 'tt43711315' },
+        ],
+      },
+    },
+    [`${TMDB}/find/tt17073864?imdb_id`]: { tv_episode_results: [{ ...episode(9001, 2, 1), show_id: 30984 }] },
+    [`${TMDB}/find/tt39128668?imdb_id`]: { tv_episode_results: [{ ...episode(9041, 2, 41), show_id: 30984 }] },
+    [`${TMDB}/find/tt43711315?imdb_id`]: { tv_episode_results: [{ ...episode(9045, 2, 45), show_id: 30984 }] },
+    [`${TMDB}/tv/30984`]: anime(30984, 'Bleach', [[1, 366], [2, 50]]),
+  });
+
+  describe.each([
+    ['a stray non-anime TMDB show', [{ id: 340620 }]],
+    ['no TMDB show', []],
+  ])('when the series IMDb ID finds %s', (_label, tvResults) => {
+    it.each([
+      ['tt14986406:4:5', '2_45', 9045],
+      ['tt14986406:4:1', '2_41', 9041],
+      ['tt14986406:1:1', '2_1', 9001],
+    ])('maps %s to Bleach (30984) by the episode IMDb ID', async (id, key, episodeId) => {
+      routes = tybwRoutes(tvResults);
+      await request('series', id);
+      expect(Object.keys(tracked(30984))).toEqual([key]);
+      expect(tracked(30984)?.[key]).toMatchObject({ episodeId, tvShowId: 30984 });
+      expect(db.data('users/member/episode_tracking/30984')?.metadata.tvShowName).toBe('Bleach');
+      expect(db.data('users/member/episode_tracking/340620')).toBeUndefined();
+      expect(requested().some((url) => url.startsWith(`${TMDB}/tv/340620`))).toBe(false);
+      expect(lastLog()).toMatchObject({ outcome: 'written', videoId: id, tmdb: `tv:30984:S${key.replace('_', 'E')}` });
+    });
+  });
+
+  it('skips rather than guesses when Cinemeta has no episode ID and the stray show lacks the season', async () => {
+    routes = tybwRoutes([{ id: 340620 }]);
+    routes[`${CINEMETA}/tt14986406.json`] = { meta: { videos: [{ season: 4, episode: 5 }] } };
+    await request('series', 'tt14986406:4:5');
+    expect(db.writes).toHaveLength(0);
+    expect(lastLog()).toMatchObject({ outcome: 'skipped_unmapped', videoId: 'tt14986406:4:5' });
   });
 
   it('tries the IMDb episode ID when the TVDB one is unknown to TMDB', async () => {
@@ -256,15 +298,44 @@ describe('Cinemeta anime episodes', () => {
     expect(lastLog()).toMatchObject({ outcome: 'error', reason: 'http_error', statusCode: 503 });
   });
 
-  it('keeps non-anime shows on the direct TMDB match without calling Cinemeta', async () => {
+});
+
+describe('regular Cinemeta shows', () => {
+  const regularShow = { ...anime(6, 'Animated, not Japanese', [[1, 10]]), origin_country: ['US'], original_language: 'en' };
+  const regularRoutes = () => ({
+    [`${TMDB}/find/tt2?imdb_id`]: { tv_results: [{ id: 6 }] },
+    [`${TMDB}/tv/6`]: regularShow,
+    [`${TMDB}/tv/6/season/1`]: season(1, 1, 10),
+  });
+
+  it('resolves the same episode through its TVDB ID, with no extra TMDB requests', async () => {
     routes = {
-      [`${TMDB}/find/tt2?imdb_id`]: { tv_results: [{ id: 6 }] },
-      [`${TMDB}/tv/6`]: { ...anime(6, 'Animated, not Japanese', [[1, 10]]), origin_country: ['US'], original_language: 'en' },
-      [`${TMDB}/tv/6/season/1`]: season(1, 1, 10),
+      ...regularRoutes(),
+      [`${CINEMETA}/tt2.json`]: { meta: { videos: [{ season: 1, episode: 2, tvdb_id: 602 }] } },
+      [`${TMDB}/find/602?tvdb_id`]: { tv_episode_results: [{ ...episode(1002, 1, 2), show_id: 6 }] },
+    };
+    await request('series', 'tt2:1:2');
+    expect(tracked(6)).toEqual({ '1_2': expect.objectContaining({ episodeId: 1002, seasonNumber: 1, episodeNumber: 2 }) });
+    // Three TMDB requests, as matching numbers took: the episode lookup replaces the season fetch.
+    expect(requested().filter((url) => url.startsWith(TMDB))).toEqual([
+      `${TMDB}/find/tt2`, `${TMDB}/find/602`, `${TMDB}/tv/6`,
+    ]);
+  });
+
+  it('falls back to matching numbers when Cinemeta lists no episode IDs', async () => {
+    routes = { ...regularRoutes(), [`${CINEMETA}/tt2.json`]: { meta: { videos: [{ season: 1, episode: 2 }] } } };
+    await request('series', 'tt2:1:2');
+    expect(tracked(6)).toEqual({ '1_2': expect.objectContaining({ episodeId: 1002, seasonNumber: 1, episodeNumber: 2 }) });
+  });
+
+  it('keeps matching numbers through a Cinemeta outage', async () => {
+    routes = {
+      ...regularRoutes(),
+      [`${CINEMETA}/tt2.json`]: () => ({ ok: false, status: 503, headers: { get: () => null }, json: async () => ({}) }),
     };
     await request('series', 'tt2:1:2');
     expect(Object.keys(tracked(6))).toEqual(['1_2']);
-    expect(requested().some((url) => url.includes('cinemeta'))).toBe(false);
+    expect(lastLog()).toMatchObject({ outcome: 'written', videoId: 'tt2:1:2', tmdb: 'tv:6:S1E2' });
   });
 });
 

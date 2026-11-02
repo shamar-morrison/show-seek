@@ -40,10 +40,13 @@ function seedUser(extra: Record<string, unknown> = {}) {
   db.seed(USER, { stremioAddon: { activeTokenHash: HASH }, ...extra });
 }
 const ok = (data: unknown) => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => data });
+// Cinemeta lists no TVDB or IMDb episode IDs, so series resolution falls back to matching numbers.
+const NO_EPISODE_IDS = ok({ meta: { videos: [] } });
 function mappingResponses(type: 'movie' | 'episode') {
   mockFetch.mockResolvedValueOnce(ok(type === 'movie' ? { movie_results: [{ id: 42 }] } : { tv_results: [{ id: 46298 }] }));
   if (type === 'movie') mockFetch.mockResolvedValueOnce(ok(movie.movie));
   else {
+    mockFetch.mockResolvedValueOnce(NO_EPISODE_IDS);
     mockFetch.mockResolvedValueOnce(ok(episode.show));
     mockFetch.mockResolvedValueOnce(ok({ season_number: 2, episodes: [episode.episode] }));
   }
@@ -215,6 +218,7 @@ describe('mobile-shaped watched transactions', () => {
 describe('IMDb-to-TMDB mapping and request budget', () => {
   function episodeResponses(season = 1) {
     mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: episode.show.id }] }))
+      .mockResolvedValueOnce(NO_EPISODE_IDS)
       .mockResolvedValueOnce(ok(episode.show))
       .mockResolvedValueOnce(ok({ season_number: season, episodes: seasonEpisodes(season, 1, 3) }));
   }
@@ -229,7 +233,7 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
     const mapped = await resolveStremioTitle(event, 'key');
     expect(mapped?.kind).toBe('episode');
     expect(await resolveStremioTitle(event, 'key')).toEqual(mapped);
-    expect(mockFetch).toHaveBeenCalledTimes(5);
+    expect(mockFetch).toHaveBeenCalledTimes(6);
   });
 
   it('isolates nested mutations of initial results and cache hits from the cached mapping', async () => {
@@ -256,9 +260,9 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
       episodeResponses(season);
       expect((await resolveStremioTitle({ ...episodeEvent, season, episode: number }, 'key'))?.kind).toBe('episode');
     }
-    expect(mockFetch).toHaveBeenCalledTimes(13);
+    expect(mockFetch).toHaveBeenCalledTimes(16);
     await resolveStremioTitle({ ...episodeEvent, season: 1, episode: 1 }, 'key');
-    expect(mockFetch).toHaveBeenCalledTimes(13);
+    expect(mockFetch).toHaveBeenCalledTimes(16);
   });
 
   it('expires mappings at ten minutes without extending TTL on a cache hit', async () => {
@@ -302,7 +306,7 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
       mappingResponses('episode');
       expect(await resolveStremioTitle(episodeEvent, 'key')).toEqual(UNMAPPED_CONTINUOUS);
     }
-    expect(mockFetch).toHaveBeenCalledTimes(6);
+    expect(mockFetch).toHaveBeenCalledTimes(8);
   });
 
   it('resolves movies by IMDb ID and fetches details for runtime', async () => {
@@ -315,7 +319,7 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
   it('skips a continuous-numbered season even when the incoming number coincides (S2E63)', async () => {
     mappingResponses('episode');
     expect(await resolveStremioTitle(episodeEvent, 'key')).toEqual(UNMAPPED_CONTINUOUS);
-    expect(mockFetch.mock.calls[2][0]).toContain('/tv/46298/season/2?');
+    expect(mockFetch.mock.calls[3][0]).toContain('/tv/46298/season/2?');
     expect(db.writes).toHaveLength(0);
   });
 
@@ -327,6 +331,7 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
 
   it('skips a continuous-numbered season when the incoming number does not exist (S3E9)', async () => {
     mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(NO_EPISODE_IDS)
       .mockResolvedValueOnce(ok(episode.show))
       .mockResolvedValueOnce(ok({ season_number: 3, episodes: seasonEpisodes(3, 137, 148) }));
     expect(await resolveStremioTitle({ ...episodeEvent, season: 3, episode: 9 }, 'key')).toEqual(UNMAPPED_CONTINUOUS);
@@ -334,6 +339,7 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
 
   it('still maps a normal season that starts at episode 1', async () => {
     mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(NO_EPISODE_IDS)
       .mockResolvedValueOnce(ok(episode.show))
       .mockResolvedValueOnce(ok({ season_number: 1, episodes: seasonEpisodes(1, 1, 3) }));
     expect(await resolveStremioTitle({ ...episodeEvent, season: 1, episode: 2 }, 'key')).toEqual({
@@ -345,6 +351,7 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
 
   it('keeps returning null for a season with no episodes', async () => {
     mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(NO_EPISODE_IDS)
       .mockResolvedValueOnce(ok(episode.show))
       .mockResolvedValueOnce(ok({ season_number: 2, episodes: [] }));
     expect(await resolveStremioTitle(episodeEvent, 'key')).toBeNull();
@@ -358,10 +365,12 @@ describe('IMDb-to-TMDB mapping and request budget', () => {
 
   it('skips nonexistent seasons and wrong-season episode payloads', async () => {
     mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(NO_EPISODE_IDS)
       .mockResolvedValueOnce(ok(episode.show))
       .mockResolvedValueOnce({ ok: false, status: 404 });
     expect(await resolveStremioTitle(episodeEvent, 'key')).toBeNull();
     mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+      .mockResolvedValueOnce(NO_EPISODE_IDS)
       .mockResolvedValueOnce(ok(episode.show))
       .mockResolvedValueOnce(ok({ season_number: 2, episodes: [{ ...episode.episode, season_number: 1, episode_number: 1 }] }));
     expect(await resolveStremioTitle({ ...episodeEvent, episode: 1 }, 'key')).toBeNull();

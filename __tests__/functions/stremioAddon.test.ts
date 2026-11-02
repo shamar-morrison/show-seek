@@ -37,8 +37,10 @@ const playerPath = (action = 'stop', time = 900, duration = 1000) =>
 const ok = (data: unknown) => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => data });
 const seriesPath = (season: number, episode: number) =>
   `/${TOKEN}/player/series/tt1234567%3A${season}%3A${episode}/action=stop&currentTime=1400000&duration=1440000.json`;
+// Cinemeta lists no episode IDs here, so these episodes resolve by matching TMDB numbers.
 const seriesResponses = (season: number, episodes: unknown[]) =>
   mockFetch.mockResolvedValueOnce(ok({ tv_results: [{ id: 46298 }] }))
+    .mockResolvedValueOnce(ok({ meta: { videos: [] } }))
     .mockResolvedValueOnce(ok({ id: 46298, name: 'Hunter x Hunter', poster_path: '/hxh.jpg' }))
     .mockResolvedValueOnce(ok({ season_number: season, episodes }));
 

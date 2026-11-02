@@ -3,7 +3,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { STREMIO_COMPLETION_THRESHOLD, STREMIO_MANIFEST } from './stremio/constants';
 import { parseAddonRoute, type PlayerEvent } from './stremio/parsing';
-import { resolveStremioTitle, StremioTmdbError } from './stremio/tmdb';
+import { resolveStremioTitle, StremioTmdbError, type MappedTitle } from './stremio/tmdb';
 import {
   consumeStremioStopAllowance,
   evictStremioToken,
@@ -35,10 +35,28 @@ export const revokeStremioAddonToken = onCall({}, async (request) =>
   revokeAddonToken(requireAccount(request.auth))
 );
 
+// The Stremio video ID, rebuilt from the parsed event, shows which episode and ID format
+// (tt or kitsu) each event carried. It comes from the ID path segment, never the token.
+function stremioVideoId(event: PlayerEvent | null): string | null {
+  if (!event) return null;
+  if (event.kitsuId !== undefined) {
+    return event.episode === undefined ? `kitsu:${event.kitsuId}` : `kitsu:${event.kitsuId}:${event.episode}`;
+  }
+  return event.season === undefined ? event.imdbId : `${event.imdbId}:${event.season}:${event.episode}`;
+}
+
+// The TMDB target a mapped event resolved to.
+function mappedTarget(title: MappedTitle): string {
+  return title.kind === 'movie'
+    ? `movie:${title.movie.id}`
+    : `tv:${title.show.id}:S${title.episode.season_number}E${title.episode.episode_number}`;
+}
+
 function logEvent(event: PlayerEvent | null, outcome: string, details: Record<string, unknown> = {}): void {
   console.info('[StremioAddon]', {
     action: event?.action ?? null,
     type: event?.type ?? null,
+    videoId: stremioVideoId(event),
     currentTime: event?.currentTime ?? null,
     duration: event?.duration ?? null,
     ratio: event && event.duration > 0 ? event.currentTime / event.duration : null,
@@ -126,7 +144,10 @@ export const stremioAddon = onRequest({ maxInstances: 5, secrets: [TMDB_API_KEY]
     } else {
       const result = await writeStremioWatch(uid, hash, title, receivedAt);
       if (result.outcome === 'bad_token') evictStremioToken(hash);
-      logEvent(event, result.outcome, result.listOutcome ? { listOutcome: result.listOutcome } : {});
+      logEvent(event, result.outcome, {
+        tmdb: mappedTarget(title),
+        ...(result.listOutcome ? { listOutcome: result.listOutcome } : {}),
+      });
     }
     res.status(200).json({ success: true });
   } catch (error) {
