@@ -595,7 +595,7 @@ function CardMediaInfoShell({
             source={{ uri: imageUrl }}
             style={styles.backdrop}
             contentFit="cover"
-            transition={200}
+            transition={100}
             recyclingKey={imageUrl}
           />
         ) : (
