@@ -1,7 +1,9 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -10,18 +12,22 @@ import {
   FONT_SIZE,
   SPACING,
 } from '@/src/constants/theme';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
+import type { UserList } from '@/src/services/ListService';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import * as Haptics from 'expo-haptics';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
-  ArrowLeft01Icon,
   Delete02Icon,
   PencilEdit01Icon,
   PlusSignCircleIcon,
+  Search01Icon,
 } from '@hugeicons/core-free-icons';
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -42,8 +48,9 @@ const DEFAULT_LIST_IDS = [
   'dropped',
 ];
 
+const getListSearchText = (list: UserList) => `${list.name} ${list.description ?? ''}`;
+
 export default function ManageListsScreen() {
-  const router = useRouter();
   const { data: lists, isLoading, isError, error, refetch } = useLists();
   const deleteMutation = useDeleteList();
   const renameModalRef = useRef<RenameListModalRef>(null);
@@ -103,19 +110,62 @@ export default function ManageListsScreen() {
     );
   };
 
-  const customLists = lists?.filter((list) => !DEFAULT_LIST_IDS.includes(list.id)) || [];
+  const allLists = useMemo(() => lists ?? [], [lists]);
+
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: allLists,
+    getSearchableText: getListSearchText,
+  });
+
+  const isFiltering = searchQuery.trim().length > 0;
+
+  const { defaultLists, customLists } = useMemo(
+    () => ({
+      defaultLists: filteredItems.filter((list) => DEFAULT_LIST_IDS.includes(list.id)),
+      customLists: filteredItems.filter((list) => !DEFAULT_LIST_IDS.includes(list.id)),
+    }),
+    [filteredItems]
+  );
+
+  const showDefaultSection = !isFiltering || defaultLists.length > 0;
+  const showCustomSection = !isFiltering || customLists.length > 0;
+  const hasNoSearchResults = isFiltering && !showDefaultSection && !showCustomSection;
+
+  const screenOptions = isSearchActive
+    ? {
+        headerShown: true,
+        title: t('library.manageLists'),
+        ...getSearchHeaderOptions({
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          onClose: deactivateSearch,
+          placeholder: t('library.searchListPlaceholder'),
+        }),
+      }
+    : {
+        headerShown: true,
+        title: t('library.manageLists'),
+        header: undefined,
+        headerTitle: undefined,
+        headerRight: () => (
+          <HeaderIconButton testID="manage-lists-search-button" onPress={searchButton.onPress}>
+            <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
+          </HeaderIconButton>
+        ),
+      };
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={screenStyles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>{t('library.manageLists')}</Text>
-          <View style={{ width: 28 }} />
-        </View>
+      <Stack.Screen options={screenOptions} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
 
         {isLoading ? (
           <FullScreenLoading />
@@ -128,13 +178,20 @@ export default function ManageListsScreen() {
             }}
           />
         ) : (
-          <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('library.defaultLists')}</Text>
-              <Text style={styles.sectionSubtitle}>{t('library.defaultListsDescription')}</Text>
-              {lists
-                ?.filter((list) => DEFAULT_LIST_IDS.includes(list.id))
-                .map((list) => (
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={[
+              styles.contentContainer,
+              hasNoSearchResults && styles.emptyContentContainer,
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {hasNoSearchResults && <SearchEmptyState />}
+            {showDefaultSection && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('library.defaultLists')}</Text>
+                <Text style={styles.sectionSubtitle}>{t('library.defaultListsDescription')}</Text>
+                {defaultLists.map((list) => (
                   <View key={list.id} style={styles.listItem}>
                     <View style={styles.listInfo}>
                       <Text style={styles.listName}>{list.name}</Text>
@@ -152,86 +209,91 @@ export default function ManageListsScreen() {
                     </View>
                   </View>
                 ))}
-            </View>
-
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{t('library.customLists')}</Text>
-                <TouchableOpacity
-                  testID="create-custom-list-button"
-                  accessibilityRole="button"
-                  accessibilityLabel={t('library.createCustomList')}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  onPress={handleCreateCustomList}
-                  activeOpacity={ACTIVE_OPACITY}
-                  style={styles.createButton}
-                >
-                  <AppIcon icon={PlusSignCircleIcon} size={22} color={COLORS.text} />
-                </TouchableOpacity>
               </View>
-              {customLists.length > 0 ? (
-                <>
-                  <Text style={styles.sectionSubtitle}>{t('library.customListsDescription')}</Text>
-                  {customLists.map((list) => {
-                    const isDeletingThis =
-                      deleteMutation.isPending && deleteMutation.variables === list.id;
-                    const actionsDisabled = deleteMutation.isPending;
+            )}
 
-                    return (
-                      <View
-                        key={list.id}
-                        testID={`manage-list-row-${list.id}`}
-                        style={[styles.listItem, isDeletingThis && styles.listItemDeleting]}
-                      >
-                        <View style={styles.listInfo}>
-                          <Text style={styles.listName}>{list.name}</Text>
-                          <Text style={styles.listCount}>
-                            {(() => {
-                              const count = Object.keys(list.items || {}).length;
-                              return count === 1
-                                ? t('library.itemCountOne')
-                                : t('library.itemCount', { count });
-                            })()}
-                          </Text>
+            {showCustomSection && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>{t('library.customLists')}</Text>
+                  <TouchableOpacity
+                    testID="create-custom-list-button"
+                    accessibilityRole="button"
+                    accessibilityLabel={t('library.createCustomList')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    onPress={handleCreateCustomList}
+                    activeOpacity={ACTIVE_OPACITY}
+                    style={styles.createButton}
+                  >
+                    <AppIcon icon={PlusSignCircleIcon} size={22} color={COLORS.text} />
+                  </TouchableOpacity>
+                </View>
+                {customLists.length > 0 ? (
+                  <>
+                    <Text style={styles.sectionSubtitle}>
+                      {t('library.customListsDescription')}
+                    </Text>
+                    {customLists.map((list) => {
+                      const isDeletingThis =
+                        deleteMutation.isPending && deleteMutation.variables === list.id;
+                      const actionsDisabled = deleteMutation.isPending;
+
+                      return (
+                        <View
+                          key={list.id}
+                          testID={`manage-list-row-${list.id}`}
+                          style={[styles.listItem, isDeletingThis && styles.listItemDeleting]}
+                        >
+                          <View style={styles.listInfo}>
+                            <Text style={styles.listName}>{list.name}</Text>
+                            <Text style={styles.listCount}>
+                              {(() => {
+                                const count = Object.keys(list.items || {}).length;
+                                return count === 1
+                                  ? t('library.itemCountOne')
+                                  : t('library.itemCount', { count });
+                              })()}
+                            </Text>
+                          </View>
+                          <View style={styles.listActions}>
+                            <TouchableOpacity
+                              testID={`rename-list-${list.id}`}
+                              onPress={() =>
+                                handleRenameList(list.id, list.name, list.description ?? '')
+                              }
+                              style={styles.actionButton}
+                              activeOpacity={ACTIVE_OPACITY}
+                              disabled={actionsDisabled}
+                            >
+                              <AppIcon
+                                icon={PencilEdit01Icon}
+                                size={20}
+                                color={COLORS.textSecondary}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              testID={`delete-list-${list.id}`}
+                              onPress={() => handleDeleteList(list.id, list.name)}
+                              style={styles.actionButton}
+                              activeOpacity={ACTIVE_OPACITY}
+                              disabled={actionsDisabled}
+                            >
+                              {isDeletingThis ? (
+                                <ActivityIndicator size="small" color={COLORS.error} />
+                              ) : (
+                                <AppIcon icon={Delete02Icon} size={20} color={COLORS.error} />
+                              )}
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                        <View style={styles.listActions}>
-                          <TouchableOpacity
-                            testID={`rename-list-${list.id}`}
-                            onPress={() =>
-                              handleRenameList(list.id, list.name, list.description ?? '')
-                            }
-                            style={styles.actionButton}
-                            activeOpacity={ACTIVE_OPACITY}
-                            disabled={actionsDisabled}
-                          >
-                            <AppIcon
-                              icon={PencilEdit01Icon}
-                              size={20}
-                              color={COLORS.textSecondary}
-                            />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            testID={`delete-list-${list.id}`}
-                            onPress={() => handleDeleteList(list.id, list.name)}
-                            style={styles.actionButton}
-                            activeOpacity={ACTIVE_OPACITY}
-                            disabled={actionsDisabled}
-                          >
-                            {isDeletingThis ? (
-                              <ActivityIndicator size="small" color={COLORS.error} />
-                            ) : (
-                              <AppIcon icon={Delete02Icon} size={20} color={COLORS.error} />
-                            )}
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </>
-              ) : (
-                <Text style={styles.emptyText}>{t('library.emptyLists')}</Text>
-              )}
-            </View>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <Text style={styles.emptyText}>{t('library.emptyLists')}</Text>
+                )}
+              </View>
+            )}
           </ScrollView>
         )}
       </SafeAreaView>
@@ -242,25 +304,14 @@ export default function ManageListsScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  title: {
-    fontSize: FONT_SIZE.xl,
-    fontFamily: FONT_FAMILY.bold,
-    color: COLORS.text,
-  },
   content: {
     flex: 1,
   },
   contentContainer: {
     padding: SPACING.l,
+  },
+  emptyContentContainer: {
+    flexGrow: 1,
   },
   section: {
     marginBottom: SPACING.xl,

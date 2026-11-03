@@ -1,5 +1,5 @@
 import ManageListsScreen from '@/app/manage-lists';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
 
@@ -87,6 +87,30 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+type ScreenOptions = {
+  headerShown?: boolean;
+  title?: string;
+  headerRight?: () => React.ReactElement<{ onPress: () => void; testID?: string }> | null;
+  header?: () => React.ReactElement<{ onSearchChange: (query: string) => void }>;
+};
+
+const getScreenOptions = (root: ReturnType<typeof render>): ScreenOptions =>
+  root.UNSAFE_getByType('Screen' as unknown as React.ComponentType).props.options;
+
+const openSearch = (root: ReturnType<typeof render>) => {
+  const searchButton = getScreenOptions(root).headerRight?.();
+  act(() => {
+    searchButton?.props.onPress();
+  });
+};
+
+const typeSearch = (root: ReturnType<typeof render>, query: string) => {
+  const header = getScreenOptions(root).header?.();
+  act(() => {
+    header?.props.onSearchChange(query);
+  });
+};
+
 describe('ManageListsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -161,5 +185,43 @@ describe('ManageListsScreen', () => {
     // 1 spinner for custom-1 and 1 trash icon for custom-2
     expect(UNSAFE_queryAllByType(ActivityIndicator)).toHaveLength(1);
     expect(queryAllByTestId('delete-icon')).toHaveLength(1);
+  });
+
+  it('uses the native stack header with a search button', () => {
+    const root = render(<ManageListsScreen />);
+    const options = getScreenOptions(root);
+
+    expect(options.headerShown).toBe(true);
+    expect(options.title).toBe('Manage Lists');
+    expect(options.header).toBeUndefined();
+    expect(options.headerRight?.()?.props.testID).toBe('manage-lists-search-button');
+  });
+
+  it('filters default and custom lists by the search query', () => {
+    mockListsState.data = [defaultList, customList1, customList2];
+    const root = render(<ManageListsScreen />);
+
+    openSearch(root);
+    expect(getScreenOptions(root).header).toBeDefined();
+
+    typeSearch(root, 'second');
+
+    expect(root.getByText('Second Custom List')).toBeTruthy();
+    expect(root.queryByText('My Custom List')).toBeNull();
+    expect(root.queryByText('Watchlist')).toBeNull();
+    expect(root.queryByText('Default Lists')).toBeNull();
+    expect(root.getByText('Custom Lists')).toBeTruthy();
+  });
+
+  it('shows the no-results state when nothing matches the search', () => {
+    mockListsState.data = [defaultList, customList1];
+    const root = render(<ManageListsScreen />);
+
+    openSearch(root);
+    typeSearch(root, 'zzz');
+
+    expect(root.getByText('No results found')).toBeTruthy();
+    expect(root.queryByText('Default Lists')).toBeNull();
+    expect(root.queryByText('Custom Lists')).toBeNull();
   });
 });
