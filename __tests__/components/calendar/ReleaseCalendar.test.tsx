@@ -305,13 +305,9 @@ describe('ReleaseCalendar', () => {
     fireEvent.press(getByTestId('release-calendar-temporal-tabs-all-tab-next-week'));
 
     rerender(<ReleaseCalendar presentations={presentations} activeMediaFilter="movie" />);
-    expect(getByTestId('calendar-loading-content-only')).toBeTruthy();
-    flushProgressiveRender();
     expect(mockScrollToOffset).toHaveBeenLastCalledWith({ offset: 0, animated: false });
 
     rerender(<ReleaseCalendar presentations={presentations} activeMediaFilter="all" />);
-    expect(getByTestId('calendar-loading-content-only')).toBeTruthy();
-    flushProgressiveRender();
     expect(mockScrollToOffset).toHaveBeenLastCalledWith({ offset: 120, animated: false });
 
     fireEvent.press(getByTestId('release-calendar-temporal-tabs-all-tab-next-week'));
@@ -426,7 +422,7 @@ describe('ReleaseCalendar', () => {
     expect(getByText('Two')).toBeTruthy();
   });
 
-  it('shows a content-only skeleton before rendering a new media tab', () => {
+  it('switches media tabs without remounting the list behind a skeleton', () => {
     const releases = [
       createRelease({ id: 1, day: 10, mediaType: 'movie' }),
       createRelease({
@@ -445,11 +441,7 @@ describe('ReleaseCalendar', () => {
 
     rerender(<ReleaseCalendar presentations={presentations} activeMediaFilter="tv" />);
 
-    expect(getByTestId('calendar-loading-content-only')).toBeTruthy();
-    expect(queryByTestId('release-calendar-section-list-tv')).toBeNull();
-
-    flushProgressiveRender();
-
+    expect(queryByTestId('calendar-loading-content-only')).toBeNull();
     expect(getByTestId('release-calendar-section-list-tv')).toBeTruthy();
   });
 

@@ -12,7 +12,6 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
-import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import type { UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
 import {
   getCalendarDayOffset,
@@ -95,7 +94,10 @@ export function ReleaseCalendar({
   const styles = useStyles();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { isReady } = useProgressiveRender(activeMediaFilter);
+  // Defer only the initial mount (navigation transition). Media filter
+  // switches reuse the mounted FlashList so cells recycle instead of the whole
+  // list unmounting and remounting on every switch.
+  const { isReady } = useProgressiveRender();
   const listRef = useRef<ReleaseCalendarListRef | null>(null);
   const tabStateRef = useRef<Record<CalendarMediaFilter, MediaTabState>>({
     all: { ...INITIAL_TAB_STATE.all },
@@ -342,9 +344,42 @@ export function ReleaseCalendar({
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         drawDistance={600}
+        // Each media filter swaps in a different dataset and restores its own
+        // scroll offset; key-based anchoring across datasets would fight that.
+        maintainVisibleContentPosition={MAINTAIN_VISIBLE_CONTENT_POSITION}
         ListFooterComponent={listFooter}
       />
     </View>
+  );
+}
+
+const MAINTAIN_VISIBLE_CONTENT_POSITION = { disabled: true } as const;
+
+// Hermes builds a new Intl formatter on every toLocaleDateString call, which
+// adds up across cards and grouped episodes. Reuse one formatter per locale.
+const monthShortFormatters = new Map<string, Intl.DateTimeFormat>();
+const monthDayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function getCachedFormatter(
+  cache: Map<string, Intl.DateTimeFormat>,
+  locale: string,
+  options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+  let formatter = cache.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    cache.set(locale, formatter);
+  }
+  return formatter;
+}
+
+function formatMonthShort(date: Date, locale: string): string {
+  return getCachedFormatter(monthShortFormatters, locale, { month: 'short' }).format(date);
+}
+
+function formatMonthDay(date: Date, locale: string): string {
+  return getCachedFormatter(monthDayFormatters, locale, { month: 'short', day: 'numeric' }).format(
+    date
   );
 }
 
@@ -612,9 +647,7 @@ function ReleaseDateColumn({ date }: { date: Date }) {
     <View style={[styles.dateColumn, isToday && styles.dateColumnToday]}>
       <Text style={[styles.dateDay, isToday && styles.dateDayHighlight]}>{date.getDate()}</Text>
       <Text style={[styles.dateMonth, isToday && styles.dateMonthHighlight]}>
-        {date
-          .toLocaleDateString(i18n.language, { month: 'short' })
-          .toLocaleUpperCase(i18n.language)}
+        {formatMonthShort(date, i18n.language).toLocaleUpperCase(i18n.language)}
       </Text>
       {isToday ? (
         <View style={styles.todayBadge}>
@@ -640,10 +673,7 @@ function formatEpisodeDate(
     return t('calendar.tomorrow');
   }
 
-  return releaseDate.toLocaleDateString(locale, {
-    month: 'short',
-    day: 'numeric',
-  });
+  return formatMonthDay(releaseDate, locale);
 }
 
 function getCountdownLabel(releaseDate: Date, t: ReturnType<typeof useTranslation>['t']): string {
@@ -660,8 +690,22 @@ function getCountdownLabel(releaseDate: Date, t: ReturnType<typeof useTranslatio
   return t('calendar.inDays', { count: dayOffset });
 }
 
-const useStyles = () =>
-  useThemedStyles(({ accentColor }) => ({
+// Every card renders several components that each need these styles. Share one
+// sheet per accent color instead of rebuilding it per component instance.
+const stylesCache = new Map<string, ReturnType<typeof createStyles>>();
+
+function useStyles() {
+  const { accentColor } = useAccentColor();
+  let styles = stylesCache.get(accentColor);
+  if (!styles) {
+    styles = createStyles(accentColor);
+    stylesCache.set(accentColor, styles);
+  }
+  return styles;
+}
+
+function createStyles(accentColor: string) {
+  return StyleSheet.create({
     container: {
       flex: 1,
     },
@@ -909,4 +953,5 @@ const useStyles = () =>
       fontSize: FONT_SIZE.s,
       fontFamily: FONT_FAMILY.bold,
     },
-  }));
+  });
+}
