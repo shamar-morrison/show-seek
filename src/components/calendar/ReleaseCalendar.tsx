@@ -436,6 +436,9 @@ const SingleReleaseCard = React.memo(function SingleReleaseCard({
         isReminder={item.release.isReminder}
         releaseDate={item.releaseDate}
         resolvePosterPath={resolvePosterPath}
+        // Every card on the Movies/TV tabs shares one media type, so the
+        // badge only carries information on the All tab.
+        showMediaTypeBadge={mediaFilterKey === 'all'}
         body={
           item.release.nextEpisode ? (
             <View>
@@ -506,6 +509,7 @@ const GroupedReleaseCard = React.memo(function GroupedReleaseCard({
             isReminder={item.isReminder}
             releaseDate={item.releaseDate}
             resolvePosterPath={resolvePosterPath}
+            showMediaTypeBadge={mediaFilterKey === 'all'}
             body={
               <Text style={styles.episodeInfo}>
                 {t('calendar.upcomingEpisodesCount', { count: item.episodes.length })}
@@ -565,6 +569,7 @@ interface CardMediaInfoShellProps {
     fallbackPosterPath: string | null | undefined
   ) => string | null;
   body?: React.ReactNode;
+  showMediaTypeBadge: boolean;
 }
 
 function CardMediaInfoShell({
@@ -578,6 +583,7 @@ function CardMediaInfoShell({
   releaseDate,
   resolvePosterPath,
   body,
+  showMediaTypeBadge,
 }: CardMediaInfoShellProps) {
   const styles = useStyles();
   const { t } = useTranslation();
@@ -623,15 +629,17 @@ function CardMediaInfoShell({
         {body}
         <View style={styles.countdownRow}>
           <Text style={styles.countdown}>{getCountdownLabel(releaseDate, t)}</Text>
-          <View style={styles.metaBadgeRow}>
-            <View style={styles.mediaTypeBadge}>
-              {mediaType === 'movie' ? (
-                <AppIcon icon={Film01Icon} size={12} color={COLORS.white} />
-              ) : (
-                <AppIcon icon={Tv01Icon} size={12} color={COLORS.white} />
-              )}
+          {showMediaTypeBadge ? (
+            <View style={styles.metaBadgeRow}>
+              <View style={styles.mediaTypeBadge}>
+                {mediaType === 'movie' ? (
+                  <AppIcon icon={Film01Icon} size={12} color={COLORS.white} />
+                ) : (
+                  <AppIcon icon={Tv01Icon} size={12} color={COLORS.white} />
+                )}
+              </View>
             </View>
-          </View>
+          ) : null}
         </View>
       </View>
     </View>
@@ -849,6 +857,7 @@ function createStyles(accentColor: string) {
       marginTop: 2,
     },
     countdownRow: {
+      minHeight: 20,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',

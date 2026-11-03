@@ -33,7 +33,9 @@ interface AppIconProps {
   testID?: string;
 }
 
-export function AppIcon({
+// Memoized: icons are usually static (module-level icon, primitive size/color),
+// so recycled list cells and parent re-renders can skip redrawing the SVG.
+export const AppIcon = React.memo(function AppIcon({
   icon,
   size = 24,
   color = COLORS.text,
@@ -64,4 +66,4 @@ export function AppIcon({
       {renderedIcon}
     </View>
   );
-}
+});
