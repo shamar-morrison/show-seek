@@ -24,7 +24,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   Delete02Icon,
   PencilEdit01Icon,
-  PlusSignCircleIcon,
+  PlusSignIcon,
   Search01Icon,
 } from '@hugeicons/core-free-icons';
 import React, { useMemo, useRef } from 'react';
@@ -155,9 +155,14 @@ export default function ManageListsScreen() {
         header: undefined,
         headerTitle: undefined,
         headerRight: () => (
-          <HeaderIconButton testID="manage-lists-search-button" onPress={searchButton.onPress}>
-            <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
-          </HeaderIconButton>
+          <View style={styles.headerButtons}>
+            <HeaderIconButton testID="manage-lists-search-button" onPress={searchButton.onPress}>
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
+            </HeaderIconButton>
+            <HeaderIconButton testID="create-custom-list-button" onPress={handleCreateCustomList}>
+              <AppIcon icon={PlusSignIcon} size={24} color={COLORS.text} />
+            </HeaderIconButton>
+          </View>
         ),
       };
 
@@ -214,20 +219,7 @@ export default function ManageListsScreen() {
 
             {showCustomSection && (
               <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>{t('library.customLists')}</Text>
-                  <TouchableOpacity
-                    testID="create-custom-list-button"
-                    accessibilityRole="button"
-                    accessibilityLabel={t('library.createCustomList')}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    onPress={handleCreateCustomList}
-                    activeOpacity={ACTIVE_OPACITY}
-                    style={styles.createButton}
-                  >
-                    <AppIcon icon={PlusSignCircleIcon} size={22} color={COLORS.text} />
-                  </TouchableOpacity>
-                </View>
+                <Text style={styles.sectionTitle}>{t('library.customLists')}</Text>
                 {customLists.length > 0 ? (
                   <>
                     <Text style={styles.sectionSubtitle}>
@@ -304,6 +296,10 @@ export default function ManageListsScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   content: {
     flex: 1,
   },
@@ -320,15 +316,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.l,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.xs,
-  },
-  createButton: {
-    padding: SPACING.xs,
   },
   sectionSubtitle: {
     fontSize: FONT_SIZE.s,

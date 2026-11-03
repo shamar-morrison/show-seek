@@ -90,17 +90,20 @@ jest.mock('react-native-safe-area-context', () => ({
 type ScreenOptions = {
   headerShown?: boolean;
   title?: string;
-  headerRight?: () => React.ReactElement<{ onPress: () => void; testID?: string }> | null;
+  headerRight?: () => React.ReactElement | null;
   header?: () => React.ReactElement<{ onSearchChange: (query: string) => void }>;
 };
 
 const getScreenOptions = (root: ReturnType<typeof render>): ScreenOptions =>
   root.UNSAFE_getByType('Screen' as unknown as React.ComponentType).props.options;
 
+const renderHeaderRight = (root: ReturnType<typeof render>) =>
+  render(getScreenOptions(root).headerRight!()!);
+
 const openSearch = (root: ReturnType<typeof render>) => {
-  const searchButton = getScreenOptions(root).headerRight?.();
+  const headerRight = renderHeaderRight(root);
   act(() => {
-    searchButton?.props.onPress();
+    fireEvent.press(headerRight.getByTestId('manage-lists-search-button'));
   });
 };
 
@@ -158,9 +161,11 @@ describe('ManageListsScreen', () => {
   });
 
   it('opens the create custom list sheet when the header button is pressed', () => {
-    const { getByTestId } = render(<ManageListsScreen />);
+    const root = render(<ManageListsScreen />);
+    const headerRight = renderHeaderRight(root);
 
-    fireEvent.press(getByTestId('create-custom-list-button'));
+    expect(root.queryByTestId('create-custom-list-button')).toBeNull();
+    fireEvent.press(headerRight.getByTestId('create-custom-list-button'));
 
     expect(mockCreatePresent).toHaveBeenCalledTimes(1);
   });
@@ -187,14 +192,16 @@ describe('ManageListsScreen', () => {
     expect(queryAllByTestId('delete-icon')).toHaveLength(1);
   });
 
-  it('uses the native stack header with a search button', () => {
+  it('uses the native stack header with search and create buttons', () => {
     const root = render(<ManageListsScreen />);
     const options = getScreenOptions(root);
 
     expect(options.headerShown).toBe(true);
     expect(options.title).toBe('Manage Lists');
     expect(options.header).toBeUndefined();
-    expect(options.headerRight?.()?.props.testID).toBe('manage-lists-search-button');
+    const headerRight = renderHeaderRight(root);
+    expect(headerRight.getByTestId('manage-lists-search-button')).toBeTruthy();
+    expect(headerRight.getByTestId('create-custom-list-button')).toBeTruthy();
   });
 
   it('filters default and custom lists by the search query', () => {
