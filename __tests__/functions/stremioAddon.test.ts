@@ -145,7 +145,7 @@ describe('stremioAddon HTTP endpoint', () => {
     expect(db.reads).toHaveLength(0);
   });
 
-  it.each([[899, 1000], [0, 0]])('skips below threshold / unknown duration (%i/%i) without reads', async (time, duration) => {
+  it.each([[799, 1000], [0, 0]])('skips below threshold / unknown duration (%i/%i) without reads', async (time, duration) => {
     const res = await request(playerPath('stop', time, duration));
     expect(res.json).toHaveBeenCalledWith({ success: true });
     expect(db.reads).toHaveLength(0);
@@ -153,7 +153,7 @@ describe('stremioAddon HTTP endpoint', () => {
     expect(log).toHaveBeenCalledWith('[StremioAddon]', expect.objectContaining({ outcome: 'skipped_below_threshold' }));
   });
 
-  it.each([900, 1000, 1001])('writes a movie at or above the exact threshold (%i/1000)', async (time) => {
+  it.each([800, 1000, 1001])('writes a movie at or above the exact threshold (%i/1000)', async (time) => {
     const res = await request(playerPath('stop', time));
     expect(res.status).toHaveBeenCalledWith(200);
     expect(db.data('users/member/watched_movies/42/watches/stremio-42-20261020')).toEqual({ movieId: 42, watchedAt: TestTimestamp.fromMillis(NOW) });
@@ -240,7 +240,7 @@ describe('stremioAddon HTTP endpoint', () => {
   });
 
   it.each([
-    playerPath('start'), playerPath('pause'), playerPath('stop', 899), playerPath('stop', 0, 0),
+    playerPath('start'), playerPath('pause'), playerPath('stop', 799), playerPath('stop', 0, 0),
     playerPath().replace('action=stop', 'action=unknown'),
   ])('does not count an ineligible event toward the stop limit', async (path) => {
     for (let i = 1; i < STREMIO_STOP_RATE_LIMIT_MAX; i++) consumeStremioStopAllowance(HASH);

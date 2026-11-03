@@ -1,4 +1,6 @@
-export const STREMIO_COMPLETION_THRESHOLD = 0.9;
+// Matches Trakt's scrobble cutoff. Viewers often stop at the end credits, which can run
+// past 10% of an episode (a 52 min episode with 5.5 min of credits ends at ~89%).
+export const STREMIO_COMPLETION_THRESHOLD = 0.8;
 export const STREMIO_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 export const STREMIO_TOKEN_COLLECTION = 'stremioAddonTokens';
 export const STREMIO_TOKEN_CACHE_TTL_MS = 60_000;
