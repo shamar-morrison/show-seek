@@ -24,6 +24,15 @@ export default function ProfileLayout() {
         <Stack.Screen name="trakt-settings" />
         <Stack.Screen name="stremio-settings" />
         <Stack.Screen
+          name="stremio-how-it-works"
+          options={{
+            headerShown: true,
+            headerTitle: t('stremio.how.title'),
+            headerStyle: { backgroundColor: COLORS.background },
+            headerTintColor: COLORS.text,
+          }}
+        />
+        <Stack.Screen
           name="imdb-import"
           options={{
             headerShown: true,

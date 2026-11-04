@@ -7,6 +7,7 @@ const RAW_TOKEN = 'f'.repeat(64);
 const INSTALL_URL = `https://us-central1-showseek-app-2025.cloudfunctions.net/stremioAddon/${RAW_TOKEN}/manifest.json`;
 
 const mockRouterBack = jest.fn();
+const mockRouterPush = jest.fn();
 const mockToastShow = jest.fn();
 const mockSetStringAsync = jest.fn();
 const mockCreateInstallLink = jest.fn();
@@ -27,7 +28,7 @@ jest.mock('react-native', () => ({
   Share: { share: (...args: unknown[]) => mockShare(...args) },
 }));
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: mockRouterBack, push: jest.fn() }),
+  useRouter: () => ({ back: mockRouterBack, push: mockRouterPush }),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => {
@@ -126,8 +127,7 @@ describe('StremioSettingsScreen', () => {
     const { getByTestId, getByText, queryByTestId } = await renderScreen();
 
     expect(getByTestId('stremio-logo')).toBeTruthy();
-    expect(getByText('Works with Stremio Desktop and Web, not the Android or iOS apps yet.')).toBeTruthy();
-    expect(getByText('Finished movies and episodes are marked as watched.')).toBeTruthy();
+    expect(getByText('Your link appears here after you create it.')).toBeTruthy();
     expect(queryByTestId('stremio-disconnect-button')).toBeNull();
 
     await act(async () => {
@@ -138,7 +138,8 @@ describe('StremioSettingsScreen', () => {
     expect(getByTestId('stremio-install-url').props.children).toBe(INSTALL_URL);
     expect(getByText('This link is shown only once. A new link replaces it.')).toBeTruthy();
     expect(getByText("Keep this link private. Don't share it with others.")).toBeTruthy();
-    expect(getByText('1. On your computer, open Stremio and go to Addons.')).toBeTruthy();
+    expect(getByText('Click Add addon, paste your link, then click Install.')).toBeTruthy();
+    expect(queryByTestId('stremio-create-button')).toBeNull();
     expect(getByText('Link active')).toBeTruthy();
     expect(mockClearUserDocumentCache).toHaveBeenCalledWith('member');
     expect(mockMergeUserDocumentCache).not.toHaveBeenCalled();
@@ -168,6 +169,29 @@ describe('StremioSettingsScreen', () => {
     expect(second.queryByText(INSTALL_URL)).toBeNull();
     expect(second.getByText('Link active')).toBeTruthy();
     expect(second.getByTestId('stremio-create-new-button')).toBeTruthy();
+  });
+
+  it('opens How does it work? from the header info button and keeps the setup guide inline', async () => {
+    const { getByTestId, getByText, queryByTestId } = await renderScreen();
+
+    expect(getByText('Setup Guide')).toBeTruthy();
+    expect(getByTestId('stremio-step-1')).toBeTruthy();
+    expect(getByTestId('stremio-step-5')).toBeTruthy();
+    expect(queryByTestId('stremio-how-it-works')).toBeNull();
+    expect(queryByTestId('stremio-platform-notice')).toBeNull();
+
+    fireEvent.press(getByTestId('stremio-info-button'));
+    expect(mockRouterPush).toHaveBeenCalledWith('/(tabs)/profile/stremio-how-it-works');
+  });
+
+  it('keeps a created link visible after opening How does it work?', async () => {
+    const { getByTestId } = await renderScreen();
+    await act(async () => {
+      fireEvent.press(getByTestId('stremio-create-button'));
+    });
+
+    fireEvent.press(getByTestId('stremio-info-button'));
+    expect(getByTestId('stremio-install-url').props.children).toBe(INSTALL_URL);
   });
 
   it('confirms before replacing an active link', async () => {
