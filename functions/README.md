@@ -2,23 +2,23 @@
 
 ## RevenueCat Secrets
 
-RevenueCat integration uses these Firebase Functions secrets:
+RevenueCat integration uses this Firebase Functions secret:
 
 - `REVENUECAT_WEBHOOK_AUTH`: shared auth token expected in webhook `Authorization` header.
-- `REVENUECAT_API_KEY`: RevenueCat secret API key used by `reconcilePremiumStatus` and the
-  RevenueCat migration/repair scripts.
 
-Set them with:
+Set it with:
 
 ```bash
 firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH --project showseek-app-2025
-firebase functions:secrets:set REVENUECAT_API_KEY --project showseek-app-2025
 ```
 
-Deploy the RevenueCat functions:
+The RevenueCat migration/repair scripts in `src/scripts/` read the RevenueCat secret API key
+from the `REVENUECAT_API_KEY` environment variable instead.
+
+Deploy the RevenueCat webhook:
 
 ```bash
-firebase deploy --only functions:revenuecatWebhook,functions:reconcilePremiumStatus --project showseek-app-2025
+firebase deploy --only functions:revenuecatWebhook --project showseek-app-2025
 ```
 
 ## Trakt Functions Secrets
