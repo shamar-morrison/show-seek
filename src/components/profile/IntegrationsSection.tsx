@@ -5,7 +5,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { Image } from 'expo-image';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { Tick02Icon } from '@hugeicons/core-free-icons';
+import { Tick02Icon, Tv01Icon } from '@hugeicons/core-free-icons';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,7 +13,7 @@ import { StyleSheet, Text, View } from 'react-native';
 /** Stored (not rendered) category keys for integration items. */
 export type IntegrationCategoryKey = 'import' | 'sync';
 
-export type IntegrationItemId = 'imdbImport' | 'trakt' | 'stremio';
+export type IntegrationItemId = 'imdbImport' | 'tvtimeImport' | 'trakt' | 'stremio';
 
 export interface IntegrationConfigItem {
   /** Stable id (also used as the search/scroll id) */
@@ -25,6 +25,7 @@ export interface IntegrationConfigItem {
 
 export const INTEGRATION_ITEMS: IntegrationConfigItem[] = [
   { id: 'imdbImport', titleKey: 'profile.importFromImdb', category: 'import' },
+  { id: 'tvtimeImport', titleKey: 'profile.importFromTvTime', category: 'import' },
   { id: 'trakt', titleKey: 'profile.traktIntegration', category: 'sync' },
   { id: 'stremio', titleKey: 'profile.stremioIntegration', category: 'sync' },
 ];
@@ -36,6 +37,8 @@ export interface IntegrationsSectionProps {
   isTraktLoading: boolean;
   /** Handler for IMDb import button */
   onImdbImport: () => void;
+  /** Handler for TV Time import button */
+  onTvTimeImport: () => void;
   /** Handler for Trakt settings button press */
   onTraktPress: () => void;
   /** Whether a Stremio addon link is active (null while unknown) */
@@ -57,6 +60,7 @@ export function IntegrationsSection({
   isTraktConnected,
   isTraktLoading,
   onImdbImport,
+  onTvTimeImport,
   onTraktPress,
   isStremioConnected = null,
   onStremioPress,
@@ -99,11 +103,11 @@ export function IntegrationsSection({
       {INTEGRATION_ITEMS.map((item, index) => {
         const highlighted = highlightedId === item.id;
         return (
-            <View
-              key={item.id}
-              collapsable={false}
-              testID={`search-item-${item.id}`}
-              onLayout={(event) => emitRowOffset(item.id, event.nativeEvent.layout.y)}
+          <View
+            key={item.id}
+            collapsable={false}
+            testID={`search-item-${item.id}`}
+            onLayout={(event) => emitRowOffset(item.id, event.nativeEvent.layout.y)}
             style={[
               styles.itemWrapper,
               index < INTEGRATION_ITEMS.length - 1 && styles.itemSpacing,
@@ -138,6 +142,14 @@ export function IntegrationsSection({
             onPress={onImdbImport}
           />
         );
+      case 'tvtimeImport':
+        return (
+          <ActionButton
+            icon={Tv01Icon}
+            label={t('profile.importFromTvTime')}
+            onPress={onTvTimeImport}
+          />
+        );
       case 'trakt':
         return (
           <ActionButton
@@ -147,7 +159,10 @@ export function IntegrationsSection({
             loading={isTraktLoading}
             badge={
               isTraktConnected ? (
-                <View style={styles.traktConnectedBadge} testID="integrations-trakt-connected-badge">
+                <View
+                  style={styles.traktConnectedBadge}
+                  testID="integrations-trakt-connected-badge"
+                >
                   <AppIcon icon={Tick02Icon} size={12} color={COLORS.white} />
                 </View>
               ) : null

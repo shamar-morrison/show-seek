@@ -31,6 +31,7 @@ describe('IntegrationsSection', () => {
     isTraktConnected: false,
     isTraktLoading: false,
     onImdbImport: jest.fn(),
+    onTvTimeImport: jest.fn(),
     onTraktPress: jest.fn(),
     onStremioPress: jest.fn(),
     ...overrides,
@@ -54,9 +55,11 @@ describe('IntegrationsSection', () => {
     const { getByTestId } = render(<IntegrationsSection {...props} />);
 
     fireEvent.press(getByTestId('action-button-import-from-imdb'));
+    fireEvent.press(getByTestId('action-button-import-from-tv-time'));
     fireEvent.press(getByTestId('action-button-trakt-integration'));
 
     expect(props.onImdbImport).toHaveBeenCalledTimes(1);
+    expect(props.onTvTimeImport).toHaveBeenCalledTimes(1);
     expect(props.onTraktPress).toHaveBeenCalledTimes(1);
   });
 
