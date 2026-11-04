@@ -39,6 +39,7 @@ import {
 } from '@/functions/src/shared/tvtimeImport';
 import {
   claimTvTimeChunkSlot,
+  markTvTimeImportFinished,
   importTvTimeChunk,
   isTvTimeCooldownBypassed,
   normalizeTitle,
@@ -85,6 +86,13 @@ class MockDocRef {
 
   async get() {
     return new MockDocSnapshot(this, this.backingStore.get(this.path));
+  }
+
+  async create(value: Record<string, unknown>) {
+    if (this.backingStore.has(this.path)) {
+      throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 });
+    }
+    this.backingStore.set(this.path, clone(value));
   }
 
   async set(value: Record<string, unknown>, options?: { merge?: boolean }) {
@@ -289,6 +297,12 @@ describe('importTvTimeChunk — auth, gating and validation', () => {
       'a non-positive watch timestamp',
       { shows: [showEntity({ plays: [play(1, 1, 0)] })] },
       'watchedAt',
+    ],
+    ['a non-boolean final flag', { final: 'yes' }, 'final must be a boolean'],
+    [
+      'a timestamp past year 9999',
+      { shows: [showEntity({ plays: [play(1, 1, 253_402_300_800_000)] })] },
+      'no later than year 9999',
     ],
   ])('rejects %s', async (_name, overrides, messagePart) => {
     seedPremiumUser();
@@ -585,8 +599,13 @@ describe('importTvTimeChunk — shows', () => {
     expect(ambiguous.unresolvedTitles).toEqual(['The Office']);
 
     const byYear = await callImport(
-      authed(chunk({ shows: [showEntity({ title: 'The Office (2005)', tvdbId: null })] }))
+      authed(
+        chunk({
+          shows: [showEntity({ status: 'watchlist', title: 'The Office (2005)', tvdbId: null })],
+        })
+      )
     );
+    expect(byYear.skipped).toEqual({});
     expect(byYear.imported.shows).toBe(1);
   });
 });
@@ -630,6 +649,7 @@ describe('importTvTimeChunk — movies', () => {
     expect(second.imported).toMatchObject({
       customListsCreated: 0,
       listItems: 0,
+      movies: 0, // matched, but nothing new to add
       ratings: 0,
       watchedMovies: 0,
     });
@@ -710,6 +730,7 @@ describe('claimTvTimeChunkSlot — rate limiting', () => {
 
     expect(limitDoc().session).toEqual({
       chunks: 2,
+      finishedAt: null,
       id: 'import-A1',
       lastChunkAt: T0 + 5_000,
       nextAllowedImportAt: T0 + TVTIME_IMPORT_COOLDOWN_MS,
@@ -755,6 +776,38 @@ describe('claimTvTimeChunkSlot — rate limiting', () => {
     expect(limitDoc().session.id).toBe('import-B1');
   });
 
+  it('lets a new import start once the previous one has finished, subject to the cooldown', async () => {
+    const cooldown = 10_000;
+    await claimTvTimeChunkSlot(db(), 'user-1', 'import-A1', T0, cooldown);
+    await markTvTimeImportFinished(db(), 'user-1', 'import-A1', T0 + 1_000);
+    expect(limitDoc().session.finishedAt).toBe(T0 + 1_000);
+
+    // Not "already running" any more, but the cooldown from its start still applies.
+    await expect(
+      claimTvTimeChunkSlot(db(), 'user-1', 'import-B1', T0 + 2_000, cooldown)
+    ).rejects.toMatchObject({ details: { reason: 'cooldown' } });
+    await expect(
+      claimTvTimeChunkSlot(db(), 'user-1', 'import-B1', T0 + cooldown, cooldown)
+    ).resolves.toBeUndefined();
+    expect(limitDoc().session).toMatchObject({ finishedAt: null, id: 'import-B1' });
+  });
+
+  it('treats a finished import as running again when its chunks are retried', async () => {
+    await claimTvTimeChunkSlot(db(), 'user-1', 'import-A1', T0, 0);
+    await markTvTimeImportFinished(db(), 'user-1', 'import-A1', T0 + 1_000);
+    await claimTvTimeChunkSlot(db(), 'user-1', 'import-A1', T0 + 2_000, 0);
+
+    await expect(
+      claimTvTimeChunkSlot(db(), 'user-1', 'import-B1', T0 + 3_000, 0)
+    ).rejects.toMatchObject({ details: { reason: 'in_progress' } });
+  });
+
+  it('only marks the current import finished', async () => {
+    await claimTvTimeChunkSlot(db(), 'user-1', 'import-A1', T0);
+    await markTvTimeImportFinished(db(), 'user-1', 'import-old1', T0 + 1_000);
+    expect(limitDoc().session.finishedAt).toBeNull();
+  });
+
   it('rejects bursts above the per-minute limit', async () => {
     for (let index = 0; index < TVTIME_IMPORT_MAX_CALLS_PER_MINUTE; index += 1) {
       await claimTvTimeChunkSlot(db(), 'user-1', 'import-A1', T0 + index);
@@ -782,6 +835,16 @@ describe('claimTvTimeChunkSlot — rate limiting', () => {
     process.env.FUNCTIONS_EMULATOR = 'true';
     expect(isTvTimeCooldownBypassed('user-1')).toBe(true);
     expect(TEST_TVTIME_IMPORT_COOLDOWN_MS).toBeLessThan(TVTIME_IMPORT_COOLDOWN_MS);
+  });
+
+  it('marks the import finished when the callable gets the final chunk', async () => {
+    seedPremiumUser();
+    await callImport(authed(chunk({})));
+    expect(limitDoc().session.finishedAt).toBeNull();
+
+    await callImport(authed(chunk({ final: true })));
+    expect(limitDoc().session).toMatchObject({ chunks: 2, id: 'import-1234' });
+    expect(limitDoc().session.finishedAt).toEqual(expect.any(Number));
   });
 
   it('is enforced by the callable before any TMDB request', async () => {

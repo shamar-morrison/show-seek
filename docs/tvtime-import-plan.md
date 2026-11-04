@@ -273,8 +273,8 @@ Every write uses a deterministic key: the `S_E` key on episodes, `tvtime-{tmdbId
   - idempotent re-runs
   - payload validation errors
 - **Refactor safety:** the existing IMDb tests must still pass after the helpers move.
-- **Emulator end-to-end:** run a synthetic 20k-play export with a 1,100-episode show through the real chunker to check chunk timing against the 300s limit.
-- **Manual QA:** `node scripts/generate-tvtime-fixtures.mjs --zip <dir>` writes importable ZIPs (add `--stress` for a 1,100-episode show) that resolve against live TMDB. We have no real export, so if a beta user has one, test it before release, especially for the items the fixture README marks as inferred.
+- **Emulator end-to-end:** run a synthetic 20k-play export with a 1,600-play show through the real chunker to check chunk timing against the 300s limit.
+- **Manual QA:** `node scripts/generate-tvtime-fixtures.mjs --zip <dir>` writes importable ZIPs (add `--stress` for a 1,600-play show that gets split) that resolve against live TMDB. We have no real export, so if a beta user has one, test it before release, especially for the items the fixture README marks as inferred.
 
 ## Rollout order
 

@@ -47,6 +47,8 @@ export interface TvTimeImportLimitDoc {
     chunks: number;
     /** When a *different* import may start. */
     nextAllowedImportAt: number;
+    /** Set once the client's last chunk succeeds; a finished import no longer blocks a new one. */
+    finishedAt: number | null;
   };
   updatedAt: number;
 }
@@ -112,6 +114,8 @@ export interface TvTimeImportChunkRequest {
   importId: string;
   shows: TvTimeShowEntity[];
   movies: TvTimeMovieEntity[];
+  /** True on the last chunk the client sends in a run, so the server can mark the import finished. */
+  final?: boolean;
 }
 
 export type TvTimeSkipReason =
@@ -133,7 +137,9 @@ export type TvTimeIgnoredReason =
   | 'rewatched_episodes'
   | 'episode_ratings'
   /** Client-side: identical plays (same episode, same timestamp) collapsed. */
-  | 'duplicate_plays';
+  | 'duplicate_plays'
+  /** Client-side: Data Extractor episode rows, which carry no usable show ids. */
+  | 'unsupported_episodes';
 
 export interface TvTimeImportCounts {
   shows: number;

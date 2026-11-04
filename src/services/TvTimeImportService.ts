@@ -7,7 +7,11 @@ import {
   type TvTimeRateLimitDetails,
 } from '@/functions/src/shared/tvtimeImport';
 import { db, functions } from '@/src/firebase/config';
-import type { PickedTvTimeFile } from '@/src/utils/tvtimeImport/files';
+import {
+  TVTIME_MAX_EXPORT_BYTES,
+  TvTimeImportError,
+  type PickedTvTimeFile,
+} from '@/src/utils/tvtimeImport/files';
 import { prepareTvTimeImport, type PreparedTvTimeImport } from '@/src/utils/tvtimeImport/prepare';
 import { getTvTimeErrorCode } from '@/src/utils/tvtimeImportError';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -46,6 +50,8 @@ interface StoredRun {
   fingerprint: string;
   completed: number[];
   startedAt: number;
+  /** Stats from every completed chunk, so a resumed run's summary covers the whole import. */
+  stats?: TvTimeImportStats;
 }
 
 const CALLABLE_TIMEOUT_MS = 300_000; // matches the function's timeoutSeconds
@@ -80,16 +86,26 @@ class TvTimeImportService {
       return [];
     }
 
+    // Refuse oversized picks before loading them into memory as base64.
+    const declaredBytes = result.assets.reduce((total, asset) => total + (asset.size ?? 0), 0);
+    if (declaredBytes > TVTIME_MAX_EXPORT_BYTES) {
+      throw new TvTimeImportError('too_large');
+    }
+
     const fileSystem = await this.load('fileSystem');
     return Promise.all(
-      result.assets.map(async (asset) => ({
-        bytes: decodeBase64(
-          await fileSystem.readAsStringAsync(asset.uri, {
+      result.assets.map(async (asset) => {
+        let base64: string;
+        try {
+          base64 = await fileSystem.readAsStringAsync(asset.uri, {
             encoding: fileSystem.EncodingType.Base64,
-          })
-        ),
-        name: asset.name || 'tvtime-export',
-      }))
+          });
+        } catch (error) {
+          console.error('[TvTimeImportService] Could not read picked file:', error);
+          throw new TvTimeImportError('unreadable_file');
+        }
+        return { bytes: decodeBase64(base64), name: asset.name || 'tvtime-export' };
+      })
     );
   }
 
@@ -136,20 +152,24 @@ class TvTimeImportService {
   ): Promise<TvTimeImportRunResult> {
     const fingerprint = fingerprintOf(prepared);
     const stored = await this.getStoredRun(userId);
+    const isSameExport = stored?.fingerprint === fingerprint;
     const run: StoredRun = {
-      completed: stored?.fingerprint === fingerprint ? stored.completed : [],
+      completed: isSameExport ? stored.completed : [],
       fingerprint,
       // Reuse the unfinished run's id even for a different file: the server treats a
       // new id inside the cooldown as a new import and refuses it.
       importId: stored?.importId ?? createImportId(),
       startedAt: stored?.startedAt ?? Date.now(),
+      stats: (isSameExport ? stored.stats : undefined) ?? prepared.stats,
     };
     await this.saveRun(userId, run);
 
     const indexes = onlyChunkIndexes ?? prepared.chunks.map((_, index) => index);
     const pending = indexes.filter((index) => !run.completed.includes(index));
     const alreadyDone = indexes.length - pending.length;
-    let stats = prepared.stats;
+    // Retrying failed chunks: the caller already holds the earlier stats and merges them.
+    // Resuming after a restart: start from what the earlier chunks reported.
+    let stats = onlyChunkIndexes ? prepared.stats : run.stats!;
     let doneThisRun = 0;
     const failedChunkIndexes: number[] = [];
     const report = () =>
@@ -164,10 +184,16 @@ class TvTimeImportService {
     report();
 
     try {
-      for (const index of pending) {
-        const result = await this.sendChunk({ importId: run.importId, ...prepared.chunks[index] });
+      for (const [position, index] of pending.entries()) {
+        const result = await this.sendChunk({
+          importId: run.importId,
+          ...prepared.chunks[index],
+          // Lets the server mark the import finished, so a new one isn't refused as "already running".
+          ...(position === pending.length - 1 ? { final: true } : {}),
+        });
         if (result) {
           stats = mergeTvTimeImportStats(stats, result);
+          run.stats = mergeTvTimeImportStats(run.stats!, result);
           run.completed.push(index);
           await this.saveRun(userId, run);
         } else {
@@ -176,6 +202,12 @@ class TvTimeImportService {
         doneThisRun += 1;
         report();
       }
+    } catch (error) {
+      // A run the server refused before accepting anything has nothing to resume.
+      if (error instanceof TvTimeImportRunError && run.completed.length === 0) {
+        await this.clearStoredRun(userId);
+      }
+      throw error;
     } finally {
       keepAwake?.deactivateKeepAwake(KEEP_AWAKE_TAG);
     }
@@ -265,7 +297,19 @@ export function fingerprintOf(prepared: PreparedTvTimeImport): string {
     summary.movies,
     summary.movieWatches,
     summary.lists,
+    // Two exports can share every count; the content hash tells them apart.
+    hashString(JSON.stringify(prepared.chunks)),
   ].join(':');
+}
+
+/** 32-bit FNV-1a, hex. Not cryptographic: it only has to tell two exports apart. */
+function hashString(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 function createImportId(): string {

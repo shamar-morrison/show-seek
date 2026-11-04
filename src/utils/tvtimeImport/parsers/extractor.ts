@@ -11,7 +11,13 @@ export function parseExtractorExport(entries: TvTimeFileEntry[], library: TvTime
   if (!entry) return;
 
   for (const row of parseCsv(entry.text)) {
-    if (toText(row.type) !== 'watch' || toText(row.media_type) !== 'movie') {
+    const mediaType = toText(row.media_type);
+    // TV rows (labelled episode/show/series depending on version) have no usable ids.
+    if (mediaType && mediaType !== 'movie') {
+      library.ignore('unsupported_episodes');
+      continue;
+    }
+    if (toText(row.type) !== 'watch' || mediaType !== 'movie') {
       library.skip('malformed_row');
       continue;
     }

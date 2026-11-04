@@ -866,7 +866,7 @@
   },
   "tvtimeImport": {
     "title": "Import your TV Time history",
-    "selectStageBody": "Pick the ZIP you downloaded, or the CSV/JSON files from it. The file is read on this device; only your viewing history is sent to ShowSeek, never your TV Time login or account details.",
+    "selectStageBody": "Pick the ZIP you downloaded, or the CSV/JSON files from it. The file is read on this device. Only your watch history, ratings, favorites, watchlist and lists are sent to ShowSeek, never your TV Time login or account details.",
     "selectFile": "Choose file",
     "replaceFile": "Choose a different file",
     "startImport": "Start import",
@@ -915,7 +915,9 @@
     "keepAppOpen": "Keep ShowSeek open until this finishes.",
     "backToFile": "Back",
     "finalSummaryTitle": "Import complete",
+    "partialSummaryTitle": "Import partly finished",
     "completeBody": "Your TV Time history is now in ShowSeek.",
+    "partialBody": "Most of your TV Time history is now in ShowSeek. Some batches didn't finish; retry them below.",
     "completeBodyNothingNew": "Everything in this export was already in ShowSeek or couldn't be matched.",
     "importedTitle": "Imported",
     "skippedTitle": "Skipped",
@@ -944,7 +946,8 @@
     "ignored": {
       "rewatchedEpisodes": "Episode rewatches (latest kept)",
       "episodeRatings": "Episode ratings",
-      "duplicatePlays": "Duplicate entries"
+      "duplicatePlays": "Duplicate entries",
+      "unsupportedEpisodes": "TV episodes (this export has no show IDs)"
     },
     "unresolvedTitlesTitle": "Not found",
     "unresolvedTitlesBody": "These titles couldn't be matched automatically. You can add them yourself using search.",
@@ -959,6 +962,7 @@
         "empty": "No file was selected.",
         "too_large": "This file is too large to import (150 MB maximum).",
         "unreadable_zip": "This ZIP file is damaged or can't be opened.",
+        "unreadable_file": "This file couldn't be opened. If it's in Google Drive or another cloud app, save it to your device first, then choose it again.",
         "no_history": "This export only contains account details, not your watch history. Make sure you chose the full TV Time data export.",
         "trakt_export": "This looks like a Trakt export. Use the Trakt import in Integrations instead.",
         "summary_only": "This is the TV Time summary page. Choose the CSV or JSON files from the same export instead.",

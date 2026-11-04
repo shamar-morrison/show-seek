@@ -130,9 +130,23 @@ export class TvTimeLibrary {
     return undefined;
   }
 
+  /**
+   * For references that carry only a title (list items, favorites): an id/title+year
+   * match, else the one movie with that title. Two same-titled movies → no match.
+   */
+  findReferencedMovie(lookup: MovieLookup): MovieDraft | undefined {
+    const found = this.findMovie(lookup);
+    if (found || !lookup.title || lookup.year) return found;
+    const title = lookup.title.trim().toLowerCase();
+    const matches = this.movies.filter((movie) => movie.title.trim().toLowerCase() === title);
+    return matches.length === 1 ? matches[0] : undefined;
+  }
+
   /** Gets or creates a movie matched on uuid, then ids, then title+year. */
   movie(lookup: MovieLookup & { altTitle?: string | null; addedAt?: number | null }): MovieDraft {
     let draft = this.findMovie(lookup);
+    // Same title and year but different ids: two films, not one (e.g. remakes).
+    if (draft && hasConflictingIds(draft, lookup)) draft = undefined;
     if (!draft) {
       draft = {
         addedAt: null,
@@ -174,6 +188,15 @@ export function addToList(
   if (!trimmed) return;
   const existing = target.lists.get(trimmed);
   if (existing === undefined || addedAt < existing) target.lists.set(trimmed, addedAt);
+}
+
+function hasConflictingIds(draft: MovieDraft, lookup: MovieLookup): boolean {
+  const differs = <T>(a: T | null, b: T | null | undefined) => a !== null && !!b && a !== b;
+  return (
+    differs(draft.imdbId, lookup.imdbId) ||
+    differs(draft.tvdbId, lookup.tvdbId) ||
+    differs(draft.tmdbId, lookup.tmdbId)
+  );
 }
 
 function movieKeys(lookup: MovieLookup): string[] {

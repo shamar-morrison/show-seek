@@ -68,7 +68,7 @@ export function parseLiberatorExport(entries: TvTimeFileEntry[], library: TvTime
     if (tvdbId !== null) library.show(tvdbId, { title: toText(show.title) }).favorite = true;
   }
   for (const movie of (favorites?.movies as LiberatorMovie[] | undefined) ?? []) {
-    const found = library.findMovie(movieLookup(movie));
+    const found = referencedMovie(library, movie);
     if (found) found.favorite = true;
     else library.skip('missing_identifiers');
   }
@@ -89,7 +89,7 @@ export function parseLiberatorExport(entries: TvTimeFileEntry[], library: TvTime
       );
     }
     for (const movie of list.movies ?? []) {
-      const found = library.findMovie(movieLookup(movie));
+      const found = referencedMovie(library, movie);
       if (!found) {
         library.skip('missing_identifiers');
         continue;
@@ -193,6 +193,15 @@ function findShowByTitle(library: TvTimeLibrary, title: string) {
     if (show.title === title) return show;
   }
   return undefined;
+}
+
+/** A favorite/list movie: the matching movie, or a new one when it has ids or a title of its own. */
+function referencedMovie(library: TvTimeLibrary, item: LiberatorMovie) {
+  const lookup = movieLookup(item);
+  const found = library.findReferencedMovie(lookup);
+  if (found) return found;
+  if (!lookup.tvdbId && !lookup.imdbId && !lookup.title) return undefined;
+  return library.movie({ ...lookup, addedAt: parseTvTimeDate(item.added_at, library.now) });
 }
 
 function movieLookup(item: LiberatorMovie) {

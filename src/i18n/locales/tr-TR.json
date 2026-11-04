@@ -860,7 +860,7 @@
   },
   "tvtimeImport": {
     "title": "TV Time geçmişinizi içe aktarın",
-    "selectStageBody": "İndirdiğiniz ZIP dosyasını veya içindeki CSV/JSON dosyalarını seçin. Dosya bu cihazda okunur; ShowSeek'e yalnızca izleme geçmişiniz gönderilir, TV Time oturum bilgileriniz veya hesap ayrıntılarınız asla gönderilmez.",
+    "selectStageBody": "İndirdiğiniz ZIP dosyasını veya içindeki CSV/JSON dosyalarını seçin. Dosya bu cihazda okunur. ShowSeek'e yalnızca izleme geçmişiniz, puanlarınız, favorileriniz, izleme listeniz ve listeleriniz gönderilir; TV Time oturum bilgileriniz veya hesap ayrıntılarınız asla gönderilmez.",
     "selectFile": "Dosya seç",
     "replaceFile": "Başka bir dosya seç",
     "startImport": "İçe aktarmayı başlat",
@@ -909,7 +909,9 @@
     "keepAppOpen": "Bu işlem bitene kadar ShowSeek'i açık tutun.",
     "backToFile": "Geri",
     "finalSummaryTitle": "İçe aktarma tamamlandı",
+    "partialSummaryTitle": "İçe aktarma kısmen tamamlandı",
     "completeBody": "TV Time geçmişiniz artık ShowSeek'te.",
+    "partialBody": "TV Time geçmişinizin büyük kısmı artık ShowSeek'te. Bazı gruplar tamamlanmadı; aşağıdan yeniden deneyin.",
     "completeBodyNothingNew": "Bu dışa aktarımdaki her şey zaten ShowSeek'teydi veya eşleştirilemedi.",
     "importedTitle": "İçe aktarıldı",
     "skippedTitle": "Atlandı",
@@ -938,7 +940,8 @@
     "ignored": {
       "rewatchedEpisodes": "Yeniden izlenen bölümler (en sonuncusu tutulur)",
       "episodeRatings": "Bölüm puanları",
-      "duplicatePlays": "Yinelenen kayıtlar"
+      "duplicatePlays": "Yinelenen kayıtlar",
+      "unsupportedEpisodes": "Dizi bölümleri (bu dışa aktarmada dizi kimlikleri yok)"
     },
     "unresolvedTitlesTitle": "Bulunamadı",
     "unresolvedTitlesBody": "Bu başlıklar otomatik olarak eşleştirilemedi. Bunları arama ile kendiniz ekleyebilirsiniz.",
@@ -953,6 +956,7 @@
         "empty": "Hiçbir dosya seçilmedi.",
         "too_large": "Bu dosya içe aktarmak için çok büyük (en fazla 150 MB).",
         "unreadable_zip": "Bu ZIP dosyası bozuk veya açılamıyor.",
+        "unreadable_file": "Bu dosya açılamadı. Google Drive'da veya başka bir bulut uygulamasındaysa önce cihazınıza kaydedip yeniden seçin.",
         "no_history": "Bu dışa aktarım yalnızca hesap bilgilerini içeriyor, izleme geçmişinizi içermiyor. Tam TV Time veri dışa aktarımını seçtiğinizden emin olun.",
         "trakt_export": "Bu bir Trakt dışa aktarımına benziyor. Bunun yerine Entegrasyonlar'daki Trakt içe aktarmayı kullanın.",
         "summary_only": "Bu, TV Time özet sayfası. Bunun yerine aynı dışa aktarımdaki CSV veya JSON dosyalarını seçin.",

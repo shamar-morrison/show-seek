@@ -180,19 +180,33 @@ export async function ensureCustomList(
   const baseId = normalizeListIdBase(listName);
   let nextId = baseId;
   let attempt = 0;
+  const lists = context.db.collection('users').doc(context.userId).collection('lists');
+  let ref: FirebaseFirestore.DocumentReference;
 
-  while (DEFAULT_LIST_IDS.has(nextId) || context.listCache.has(nextId)) {
-    attempt += 1;
-    nextId = `${baseId}-${attempt}`;
+  // create() fails if the id is taken (e.g. the user just made a list in the app), so an
+  // existing list is never replaced; try the next suffix instead.
+  for (;;) {
+    while (DEFAULT_LIST_IDS.has(nextId) || context.listCache.has(nextId)) {
+      attempt += 1;
+      nextId = `${baseId}-${attempt}`;
+    }
+    ref = lists.doc(nextId);
+    try {
+      await ref.create({
+        createdAt: Date.now(),
+        isCustom: true,
+        items: {},
+        name: listName,
+      });
+      break;
+    } catch (error) {
+      if (!isAlreadyExistsError(error) || attempt >= MAX_LIST_ID_ATTEMPTS) {
+        throw error;
+      }
+      attempt += 1;
+      nextId = `${baseId}-${attempt}`;
+    }
   }
-
-  const ref = context.db.collection('users').doc(context.userId).collection('lists').doc(nextId);
-  await ref.set({
-    createdAt: Date.now(),
-    isCustom: true,
-    items: {},
-    name: listName,
-  });
 
   context.listCache.set(nextId, {
     data: {
@@ -311,36 +325,48 @@ export async function upsertMovieOrTvRating(
     .doc(context.userId)
     .collection('ratings')
     .doc(`${mediaType}-${mediaId}`);
-  const snapshot = await ref.get();
+  // A transaction, so a rating the user saves in the app meanwhile is never overwritten.
+  return context.db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
 
-  if (snapshot.exists) {
-    if (policy === 'never') {
-      return false;
+    if (snapshot.exists) {
+      if (policy === 'never') {
+        return false;
+      }
+
+      const existingData = snapshot.data() ?? {};
+      if (typeof existingData.ratedAt === 'number' && existingData.ratedAt >= rating.ratedAt) {
+        return false;
+      }
     }
 
-    const existingData = snapshot.data() ?? {};
-    if (typeof existingData.ratedAt === 'number' && existingData.ratedAt >= rating.ratedAt) {
-      return false;
-    }
-  }
+    transaction.set(
+      ref,
+      {
+        id: mediaId,
+        mediaType,
+        posterPath: resolved.value.poster_path ?? null,
+        ratedAt: rating.ratedAt,
+        rating: rating.rating,
+        releaseDate:
+          resolved.kind === 'movie'
+            ? (resolved.value.release_date ?? null)
+            : (resolved.value.first_air_date ?? null),
+        title: resolved.kind === 'movie' ? resolved.value.title : resolved.value.name,
+      },
+      { merge: false }
+    );
 
-  await ref.set(
-    {
-      id: mediaId,
-      mediaType,
-      posterPath: resolved.value.poster_path ?? null,
-      ratedAt: rating.ratedAt,
-      rating: rating.rating,
-      releaseDate:
-        resolved.kind === 'movie'
-          ? (resolved.value.release_date ?? null)
-          : (resolved.value.first_air_date ?? null),
-      title: resolved.kind === 'movie' ? resolved.value.title : resolved.value.name,
-    },
-    { merge: false }
-  );
+    return true;
+  });
+}
 
-  return true;
+const MAX_LIST_ID_ATTEMPTS = 50;
+
+/** Firestore's ALREADY_EXISTS (gRPC code 6), as thrown by DocumentReference.create(). */
+function isAlreadyExistsError(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === 6 || code === 'already-exists' || code === 'ALREADY_EXISTS';
 }
 
 /** Writes one deterministic watch doc; a re-run with the same id is a no-op. */

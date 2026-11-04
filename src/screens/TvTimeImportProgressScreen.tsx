@@ -78,6 +78,7 @@ const IGNORED_LABEL_KEYS: Record<TvTimeIgnoredReason, string> = {
   duplicate_plays: 'tvtimeImport.ignored.duplicatePlays',
   episode_ratings: 'tvtimeImport.ignored.episodeRatings',
   rewatched_episodes: 'tvtimeImport.ignored.rewatchedEpisodes',
+  unsupported_episodes: 'tvtimeImport.ignored.unsupportedEpisodes',
 };
 
 const MAX_LISTED_TITLES = 50;
@@ -115,9 +116,10 @@ export default function TvTimeImportProgressScreen() {
   const isRunning = status === 'running';
   const progressPercent =
     totalChunks > 0 ? Math.min(100, Math.round((completedChunks / totalChunks) * 100)) : 0;
+  const isPartial = status === 'success' && failedChunkIndexes.length > 0;
   const title =
     status === 'success'
-      ? t('tvtimeImport.finalSummaryTitle')
+      ? t(isPartial ? 'tvtimeImport.partialSummaryTitle' : 'tvtimeImport.finalSummaryTitle')
       : status === 'failed'
         ? t('tvtimeImport.errors.importFailedTitle')
         : t('tvtimeImport.importingTitle');
@@ -220,15 +222,17 @@ export default function TvTimeImportProgressScreen() {
         <View style={styles.stageCard}>
           <Text style={styles.stageTitle}>{title}</Text>
           <Text style={styles.stageDescription}>
-            {status === 'success'
-              ? t(
-                  importedEntries.length > 0
-                    ? 'tvtimeImport.completeBody'
-                    : 'tvtimeImport.completeBodyNothingNew'
-                )
-              : status === 'failed'
-                ? (errorMessage ?? t('tvtimeImport.errors.importFailedFallback'))
-                : t('tvtimeImport.progressBody')}
+            {isPartial
+              ? t('tvtimeImport.partialBody')
+              : status === 'success'
+                ? t(
+                    importedEntries.length > 0
+                      ? 'tvtimeImport.completeBody'
+                      : 'tvtimeImport.completeBodyNothingNew'
+                  )
+                : status === 'failed'
+                  ? (errorMessage ?? t('tvtimeImport.errors.importFailedFallback'))
+                  : t('tvtimeImport.progressBody')}
           </Text>
 
           <View style={styles.stageContent}>
@@ -273,8 +277,17 @@ export default function TvTimeImportProgressScreen() {
               </>
             ) : (
               <>
-                <View style={[styles.completeBadge, { backgroundColor: COLORS.success }]}>
-                  <AppIcon icon={Tick02Icon} size={20} color={COLORS.white} />
+                <View
+                  style={[
+                    styles.completeBadge,
+                    { backgroundColor: isPartial ? COLORS.warning : COLORS.success },
+                  ]}
+                >
+                  <AppIcon
+                    icon={isPartial ? AlertCircleIcon : Tick02Icon}
+                    size={20}
+                    color={COLORS.white}
+                  />
                 </View>
 
                 {failedChunkIndexes.length > 0 ? (

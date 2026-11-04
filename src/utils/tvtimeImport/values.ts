@@ -53,6 +53,8 @@ export function parseTvTimeDate(raw: unknown, now: number): number | null {
   const month = Number(mo) - 1;
   const day = Number(d);
   const ms = Number(fraction.padEnd(3, '0').slice(0, 3));
+  // Date.UTC would quietly roll 10:75 over to 11:15.
+  if (Number(h) > 23 || Number(mi) > 59 || Number(s) > 59) return null;
   let value = Date.UTC(year, month, day, Number(h), Number(mi), Number(s), ms);
 
   const check = new Date(value);

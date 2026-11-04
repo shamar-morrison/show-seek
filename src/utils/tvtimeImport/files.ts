@@ -16,6 +16,7 @@ export type TvTimeImportErrorCode =
   | 'empty'
   | 'too_large'
   | 'unreadable_zip'
+  | 'unreadable_file'
   | 'no_history'
   | 'trakt_export'
   | 'summary_only'
@@ -94,13 +95,15 @@ export function readTvTimeExportFiles(files: PickedTvTimeFile[]): TvTimeFileEntr
 
   const entries: TvTimeFileEntry[] = [];
   const seenNames: string[] = [];
+  // Uncompressed bytes across every picked ZIP, so several archives share one limit.
+  const budget = { inflated: 0 };
 
   for (const file of files) {
     const name = basenameOf(file.name);
     seenNames.push(name);
 
     if (name.endsWith('.zip') || looksLikeZip(file.bytes)) {
-      entries.push(...readZip(file.bytes, seenNames));
+      entries.push(...readZip(file.bytes, seenNames, budget));
       continue;
     }
 
@@ -122,9 +125,17 @@ export function readTvTimeExportFiles(files: PickedTvTimeFile[]): TvTimeFileEntr
   return entries;
 }
 
-function readZip(bytes: Uint8Array, seenNames: string[]): TvTimeFileEntry[] {
+/**
+ * Inflates only files whose name we recognize, so account files (access tokens, logins)
+ * are never decompressed. The cost: a renamed tracking CSV inside a ZIP isn't found.
+ * Loose renamed CSVs are still identified by their header.
+ */
+function readZip(
+  bytes: Uint8Array,
+  seenNames: string[],
+  budget: { inflated: number }
+): TvTimeFileEntry[] {
   let unzipped: Record<string, Uint8Array>;
-  let uncompressedTotal = 0;
 
   try {
     unzipped = unzipSync(bytes, {
@@ -134,8 +145,8 @@ function readZip(bytes: Uint8Array, seenNames: string[]): TvTimeFileEntry[] {
         if (!isRelevantTvTimeFile(name)) {
           return false;
         }
-        uncompressedTotal += file.originalSize;
-        if (uncompressedTotal > TVTIME_MAX_EXPORT_BYTES) {
+        budget.inflated += file.originalSize;
+        if (budget.inflated > TVTIME_MAX_EXPORT_BYTES) {
           throw new TvTimeImportError('too_large');
         }
         return true;

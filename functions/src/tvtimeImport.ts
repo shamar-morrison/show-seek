@@ -214,6 +214,10 @@ export const importTvTimeChunk = onCall(
       userIdSuffix: userId.slice(-6),
     });
 
+    if (payload.final) {
+      await markTvTimeImportFinished(db, userId, payload.importId, Date.now());
+    }
+
     return stats;
   }
 );
@@ -237,7 +241,7 @@ export function isTvTimeCooldownBypassed(userId: string): boolean {
  * Reserves one chunk call for this user, or throws. Rules, in order:
  * 1. Burst: at most TVTIME_IMPORT_MAX_CALLS_PER_MINUTE calls in a rolling minute.
  * 2. Same importId (within its max lifetime) → continue that import.
- * 3. Different importId while the current import is still active → `already-exists`.
+ * 3. Different importId while the current import is still active (not finished, not stale) → `already-exists`.
  * 4. Different importId before the cooldown (measured from the last import's start) → `resource-exhausted`.
  * 5. Per-import chunk cap.
  *
@@ -270,11 +274,13 @@ export async function claimTvTimeChunkSlot(
       current.id === importId &&
       now - current.startedAt < TVTIME_IMPORT_SESSION_MAX_LIFETIME_MS
     ) {
-      session = current;
+      // Running again (e.g. retrying failed chunks), so it blocks other imports until it finishes.
+      session = { ...current, finishedAt: null };
     } else {
       if (
         current &&
         current.id !== importId &&
+        !current.finishedAt &&
         now - current.lastChunkAt < TVTIME_IMPORT_SESSION_STALE_MS
       ) {
         throwRefused('in_progress', current.lastChunkAt + TVTIME_IMPORT_SESSION_STALE_MS - now);
@@ -284,6 +290,7 @@ export async function claimTvTimeChunkSlot(
       }
       session = {
         chunks: 0,
+        finishedAt: null,
         id: importId,
         lastChunkAt: now,
         nextAllowedImportAt: now + cooldownMs,
@@ -302,6 +309,29 @@ export async function claimTvTimeChunkSlot(
       updatedAt: now,
     };
     transaction.set(ref, next);
+  });
+}
+
+/** Marks the import finished after its final chunk succeeds, so a new import isn't refused as `in_progress`. */
+export async function markTvTimeImportFinished(
+  db: FirebaseFirestore.Firestore,
+  userId: string,
+  importId: string,
+  now: number
+): Promise<void> {
+  const ref = db.collection('users').doc(userId).collection('import_limits').doc('tvtime');
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const state = snapshot.data() as Partial<TvTimeImportLimitDoc> | undefined;
+    if (!state?.session || state.session.id !== importId) {
+      return;
+    }
+    transaction.set(ref, {
+      ...state,
+      session: { ...state.session, finishedAt: now },
+      updatedAt: now,
+    });
   });
 }
 
@@ -709,6 +739,7 @@ async function writeShow(
 
   const { show } = resolution;
   const isPrimaryPart = !entity.part || entity.part.index === 0;
+  const writesBefore = countWrites(stats);
 
   if (resolution.unmatched > 0) {
     skip(stats, 'unmatched_episode', resolution.unmatched);
@@ -724,7 +755,6 @@ async function writeShow(
     return;
   }
 
-  stats.imported.shows += 1;
   const media: ResolvedListMedia = { kind: 'tv', value: show };
 
   if (entity.status) {
@@ -736,6 +766,17 @@ async function writeShow(
   }
   await addToCustomLists(context, stats, entity.lists, media);
   await writeRating(context, stats, entity.rating, media);
+
+  // Counted on the primary part only, when the show (or its first part) added anything.
+  if (countWrites(stats) > writesBefore) {
+    stats.imported.shows += 1;
+  }
+}
+
+/** Items written so far, to tell whether a show or movie added anything new. */
+function countWrites(stats: TvTimeImportStats): number {
+  const { imported } = stats;
+  return imported.watchedEpisodes + imported.watchedMovies + imported.listItems + imported.ratings;
 }
 
 async function writeEpisodeTracking(
@@ -749,46 +790,57 @@ async function writeEpisodeTracking(
     .doc(context.userId)
     .collection('episode_tracking')
     .doc(String(show.id));
-  const snapshot = await ref.get();
-  const existing = snapshot.data() ?? {};
-  const existingEpisodes = (existing.episodes ?? {}) as Record<string, unknown>;
-  const existingMetadata = (existing.metadata ?? {}) as Record<string, unknown>;
+  // A transaction, so an episode the user marks in the app meanwhile is never overwritten.
+  // Stats are applied only after it commits (the callback can run more than once).
+  const { alreadyTracked, newCount } = await context.db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const existing = snapshot.data() ?? {};
+    const existingEpisodes = (existing.episodes ?? {}) as Record<string, unknown>;
+    const existingMetadata = (existing.metadata ?? {}) as Record<string, unknown>;
 
-  const newEpisodes: Record<string, Partial<MappedEpisode>> = {};
-  let latestWatchedAt = 0;
+    const newEpisodes: Record<string, Partial<MappedEpisode>> = {};
+    let latestWatchedAt = 0;
+    let tracked = 0;
 
-  episodes.forEach((episode, key) => {
-    if (existingEpisodes[key]) {
-      skip(stats, 'already_tracked_episode');
-      return;
+    episodes.forEach((episode, key) => {
+      if (existingEpisodes[key]) {
+        tracked += 1;
+        return;
+      }
+      newEpisodes[key] = removeUndefined({ ...episode });
+      latestWatchedAt = Math.max(latestWatchedAt, episode.watchedAt);
+    });
+
+    const count = Object.keys(newEpisodes).length;
+    if (count > 0) {
+      // Watch Progress sorts by lastUpdated: use the real latest watch, never "now",
+      // so a bulk import keeps the user's actual viewing order.
+      const existingLastUpdated =
+        typeof existingMetadata.lastUpdated === 'number' ? existingMetadata.lastUpdated : 0;
+
+      transaction.set(
+        ref,
+        {
+          episodes: newEpisodes,
+          metadata: {
+            lastUpdated: Math.max(existingLastUpdated, latestWatchedAt),
+            posterPath:
+              (existingMetadata.posterPath as string | null | undefined) ??
+              show.poster_path ??
+              null,
+            tvShowName: (existingMetadata.tvShowName as string | undefined) ?? show.name,
+          },
+        },
+        { merge: true }
+      );
     }
-    newEpisodes[key] = removeUndefined({ ...episode });
-    latestWatchedAt = Math.max(latestWatchedAt, episode.watchedAt);
+
+    return { alreadyTracked: tracked, newCount: count };
   });
 
-  const newCount = Object.keys(newEpisodes).length;
-  if (newCount === 0) {
-    return;
+  if (alreadyTracked > 0) {
+    skip(stats, 'already_tracked_episode', alreadyTracked);
   }
-
-  // Watch Progress sorts by lastUpdated: use the real latest watch, never "now",
-  // so a bulk import keeps the user's actual viewing order.
-  const existingLastUpdated =
-    typeof existingMetadata.lastUpdated === 'number' ? existingMetadata.lastUpdated : 0;
-
-  await ref.set(
-    {
-      episodes: newEpisodes,
-      metadata: {
-        lastUpdated: Math.max(existingLastUpdated, latestWatchedAt),
-        posterPath:
-          (existingMetadata.posterPath as string | null | undefined) ?? show.poster_path ?? null,
-        tvShowName: (existingMetadata.tvShowName as string | undefined) ?? show.name,
-      },
-    },
-    { merge: true }
-  );
-
   stats.imported.watchedEpisodes += newCount;
 }
 
@@ -827,7 +879,7 @@ async function writeMovie(
 
   const movie = resolution.value;
   const media: ResolvedListMedia = { kind: 'movie', value: movie };
-  stats.imported.movies += 1;
+  const writesBefore = countWrites(stats);
 
   const watches = Array.from(new Set(entity.watches)).sort((left, right) => left - right);
   if (watches.length > 0) {
@@ -858,6 +910,10 @@ async function writeMovie(
   }
   await addToCustomLists(context, stats, entity.lists, media);
   await writeRating(context, stats, entity.rating, media);
+
+  if (countWrites(stats) > writesBefore) {
+    stats.imported.movies += 1;
+  }
 }
 
 /** True when the movie has watches that did not come from a previous TV Time import. */
@@ -982,7 +1038,16 @@ export function parseTvTimeImportChunk(data: unknown): TvTimeImportChunkRequest 
     );
   }
 
-  return { importId: payload.importId, movies, shows };
+  if (payload.final !== undefined && typeof payload.final !== 'boolean') {
+    throw new HttpsError('invalid-argument', 'final must be a boolean.');
+  }
+
+  return {
+    importId: payload.importId,
+    movies,
+    shows,
+    ...(payload.final === true ? { final: true } : {}),
+  };
 }
 
 function parseShow(raw: unknown, path: string): TvTimeShowEntity {
@@ -1162,11 +1227,19 @@ function parseIntInRange(value: unknown, path: string, min: number, max: number)
   return value;
 }
 
+/** 9999-12-31T23:59:59.999Z: the latest instant Firestore and Date can both represent. */
+const MAX_TIMESTAMP_MS = 253_402_300_799_999;
+
 function parseTimestamp(value: unknown, path: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+  if (
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    value <= 0 ||
+    value > MAX_TIMESTAMP_MS
+  ) {
     throw new HttpsError(
       'invalid-argument',
-      `${path} must be a positive epoch-millisecond timestamp.`
+      `${path} must be a positive epoch-millisecond timestamp no later than year 9999.`
     );
   }
   return value;

@@ -6,7 +6,7 @@ Synthetic TV Time exports for the TV Time importer (see `docs/tvtime-import-plan
 ```sh
 node scripts/generate-tvtime-fixtures.mjs                      # rewrite this folder
 node scripts/generate-tvtime-fixtures.mjs --zip <dir>          # + importable ZIPs for manual QA
-node scripts/generate-tvtime-fixtures.mjs --zip <dir> --stress # + a 1,100-episode One Piece history
+node scripts/generate-tvtime-fixtures.mjs --zip <dir> --stress # + a 1,600-play One Piece history (split across chunks)
 ```
 
 A single synthetic user library (`SCENARIO` in the generator) is rendered into every export format still in circulation after TV Time shut down in July 2026. `expected.json` states what a correct parser should recover from each format, normalized to the `functions/src/shared/tvtimeImport.ts` contract. The parser tests should assert against it.

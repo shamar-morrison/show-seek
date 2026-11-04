@@ -2,6 +2,7 @@ import {
   createEmptyTvTimeImportStats,
   type TvTimeImportStats,
 } from '@/functions/src/shared/tvtimeImport';
+import { TVTIME_MAX_EXPORT_BYTES } from '@/src/utils/tvtimeImport/files';
 import type { PreparedTvTimeImport } from '@/src/utils/tvtimeImport/prepare';
 
 const USER = 'user-1';
@@ -52,6 +53,8 @@ function callableError(code: string, details?: unknown) {
 
 function loadService() {
   const mockCallable = jest.fn();
+  const documentPicker = { getDocumentAsync: jest.fn() };
+  const fileSystem = { EncodingType: { Base64: 'base64' }, readAsStringAsync: jest.fn() };
   const keepAwake = {
     activateKeepAwakeAsync: jest.fn(async () => undefined),
     deactivateKeepAwake: jest.fn(),
@@ -60,9 +63,18 @@ function loadService() {
   jest.doMock('firebase/functions', () => ({ httpsCallable: jest.fn(() => mockCallable) }));
   jest.doMock('firebase/firestore', () => ({ doc: jest.fn(), getDoc: jest.fn() }));
   jest.doMock('expo-keep-awake', () => keepAwake, { virtual: true });
+  jest.doMock('expo-document-picker', () => documentPicker, { virtual: true });
+  jest.doMock('expo-file-system/legacy', () => fileSystem, { virtual: true });
   const module =
     require('@/src/services/TvTimeImportService') as typeof import('@/src/services/TvTimeImportService');
-  return { AsyncStorage: asyncStorage(), keepAwake, mockCallable, ...module };
+  return {
+    AsyncStorage: asyncStorage(),
+    documentPicker,
+    fileSystem,
+    keepAwake,
+    mockCallable,
+    ...module,
+  };
 }
 
 function asyncStorage() {
@@ -120,6 +132,7 @@ describe('TvTimeImportService', () => {
     expect(new Set(ids).size).toBe(1);
     expect(ids[0]).toMatch(/^[A-Za-z0-9-]{8,64}$/);
     expect(progress).toEqual([0, 1, 2]);
+    expect(mockCallable.mock.calls.map(([request]) => request.final)).toEqual([undefined, true]);
     expect(keepAwake.activateKeepAwakeAsync).toHaveBeenCalled();
     expect(keepAwake.deactivateKeepAwake).toHaveBeenCalled();
     expect(await AsyncStorage.getItem(`tvtimeImport:activeRun:${USER}`)).toBeNull();
@@ -158,22 +171,36 @@ describe('TvTimeImportService', () => {
     expect(mockCallable).toHaveBeenCalledTimes(2);
   });
 
-  it('stops the run on a cooldown refusal and keeps the run for resuming', async () => {
+  it('stops the run on a cooldown refusal and keeps a partly sent run for resuming', async () => {
     const { tvTimeImportService, mockCallable, TvTimeImportRunError, AsyncStorage } = loadService();
     const details = {
       nextAllowedImportAt: '2026-07-01T12:00:00.000Z',
       reason: 'cooldown',
       retryAfterMs: 1,
     };
-    mockCallable.mockRejectedValueOnce(callableError('resource-exhausted', details));
+    mockCallable
+      .mockResolvedValueOnce({ data: chunkStats(1) })
+      .mockRejectedValueOnce(callableError('resource-exhausted', details));
 
     const error = await settle(tvTimeImportService.runPreparedImport(prepared(2), USER)).catch(
       (e) => e
     );
     expect(error).toBeInstanceOf(TvTimeImportRunError);
     expect(error).toMatchObject({ code: 'resource-exhausted', details });
-    expect(mockCallable).toHaveBeenCalledTimes(1);
+    expect(mockCallable).toHaveBeenCalledTimes(2);
     expect(await AsyncStorage.getItem(`tvtimeImport:activeRun:${USER}`)).not.toBeNull();
+  });
+
+  it('forgets a run the server refused before any chunk got through', async () => {
+    const { tvTimeImportService, mockCallable, AsyncStorage } = loadService();
+    mockCallable.mockRejectedValueOnce(
+      callableError('already-exists', { reason: 'in_progress', retryAfterMs: 60_000 })
+    );
+
+    await expect(
+      settle(tvTimeImportService.runPreparedImport(prepared(2), USER))
+    ).rejects.toMatchObject({ code: 'already-exists' });
+    expect(await AsyncStorage.getItem(`tvtimeImport:activeRun:${USER}`)).toBeNull();
   });
 
   it('resumes an interrupted run with the same importId and skips finished chunks', async () => {
@@ -195,7 +222,42 @@ describe('TvTimeImportService', () => {
     expect(mockCallable).toHaveBeenCalledTimes(2); // chunk 0 was already done
     expect(mockCallable.mock.calls.every(([request]) => request.importId === firstId)).toBe(true);
     expect(mockCallable.mock.calls.map(([request]) => request.shows[0].tvdbId)).toEqual([2, 3]);
+    expect(mockCallable.mock.calls.map(([request]) => request.final)).toEqual([undefined, true]);
     expect(result.failedChunkIndexes).toEqual([]);
+    // The summary covers the chunk sent before the interruption too.
+    expect(result.stats.imported.watchedEpisodes).toBe(3);
+  });
+
+  it('tells apart exports whose counts match but whose content differs', () => {
+    const { fingerprintOf } = loadService();
+    const a = prepared(2);
+    const b = prepared(2);
+    b.chunks[1].shows[0].title = 'Another show';
+
+    expect(fingerprintOf(a)).toBe(fingerprintOf(prepared(2)));
+    expect(fingerprintOf(a)).not.toBe(fingerprintOf(b));
+  });
+
+  it('refuses oversized picks before reading them, and reports unreadable files', async () => {
+    const { tvTimeImportService, documentPicker, fileSystem } = loadService();
+
+    documentPicker.getDocumentAsync.mockResolvedValueOnce({
+      assets: [{ name: 'export.zip', size: TVTIME_MAX_EXPORT_BYTES + 1, uri: 'file:///a' }],
+      canceled: false,
+    });
+    await expect(tvTimeImportService.pickFiles()).rejects.toMatchObject({ code: 'too_large' });
+    expect(fileSystem.readAsStringAsync).not.toHaveBeenCalled();
+
+    documentPicker.getDocumentAsync.mockResolvedValueOnce({
+      assets: [{ name: 'export.zip', size: 10, uri: 'content://drive/a' }],
+      canceled: false,
+    });
+    fileSystem.readAsStringAsync.mockRejectedValueOnce(new Error('not downloaded'));
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    await expect(tvTimeImportService.pickFiles()).rejects.toMatchObject({
+      code: 'unreadable_file',
+    });
+    spy.mockRestore();
   });
 
   it('decodes base64 like the platform decoder', () => {

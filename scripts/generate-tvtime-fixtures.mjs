@@ -18,7 +18,7 @@
  *   node scripts/generate-tvtime-fixtures.mjs                 # rewrite committed fixtures
  *   node scripts/generate-tvtime-fixtures.mjs --zip <dir>     # also write importable ZIPs
  *   node scripts/generate-tvtime-fixtures.mjs --zip <dir> --stress
- *        # ZIPs include a 1,100-episode One Piece history (chunk-splitting / timeout QA)
+ *        # ZIPs include a 1,600-play One Piece history (over the 1,500-play chunk limit, so the show is split)
  */
 import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
@@ -484,11 +484,11 @@ for (const show of SHOWS) {
 }
 
 function stressShow() {
-  // One Piece: 1,100 plays across TMDB-style arcs. TVDB/TMDB season splits differ,
-  // so this also exercises the per-call fallback-lookup cap.
+  // One Piece: 1,600 plays, more than one chunk holds (1,500), so the show is split.
+  // TVDB/TMDB season splits differ, so this also exercises the per-call fallback-lookup cap.
   const plays = [];
   let start = at('2021-01-01 18:00:00');
-  for (let i = 0; i < 1100; i += 1) {
+  for (let i = 0; i < 1600; i += 1) {
     const season = Math.floor(i / 50) + 1;
     plays.push({ episode: (i % 50) + 1, season, watchedAt: addHours(start, i * 6) });
   }

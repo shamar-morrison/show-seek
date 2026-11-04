@@ -866,7 +866,7 @@
   },
   "tvtimeImport": {
     "title": "Importe seu histórico do TV Time",
-    "selectStageBody": "Escolha o ZIP que você baixou ou os arquivos CSV/JSON que estão nele. O arquivo é lido neste dispositivo; só o seu histórico é enviado ao ShowSeek, nunca seu login ou os dados da sua conta do TV Time.",
+    "selectStageBody": "Escolha o ZIP que você baixou ou os arquivos CSV/JSON que estão nele. O arquivo é lido neste dispositivo. Só o seu histórico, avaliações, favoritos, títulos para assistir e listas são enviados ao ShowSeek, nunca seu login ou os dados da sua conta do TV Time.",
     "selectFile": "Escolher arquivo",
     "replaceFile": "Escolher outro arquivo",
     "startImport": "Iniciar importação",
@@ -915,7 +915,9 @@
     "keepAppOpen": "Mantenha o ShowSeek aberto até terminar.",
     "backToFile": "Voltar",
     "finalSummaryTitle": "Importação concluída",
+    "partialSummaryTitle": "Importação parcial",
     "completeBody": "Seu histórico do TV Time agora está no ShowSeek.",
+    "partialBody": "A maior parte do seu histórico do TV Time já está no ShowSeek. Alguns lotes não terminaram; tente novamente abaixo.",
     "completeBodyNothingNew": "Tudo desta exportação já estava no ShowSeek ou não pôde ser encontrado.",
     "importedTitle": "Importado",
     "skippedTitle": "Ignorado",
@@ -944,7 +946,8 @@
     "ignored": {
       "rewatchedEpisodes": "Episódios reassistidos (o mais recente é mantido)",
       "episodeRatings": "Avaliações de episódios",
-      "duplicatePlays": "Entradas duplicadas"
+      "duplicatePlays": "Entradas duplicadas",
+      "unsupportedEpisodes": "Episódios de séries (esta exportação não tem IDs de séries)"
     },
     "unresolvedTitlesTitle": "Não encontrados",
     "unresolvedTitlesBody": "Não foi possível encontrar estes títulos automaticamente. Você pode adicioná-los usando a busca.",
@@ -959,6 +962,7 @@
         "empty": "Nenhum arquivo foi selecionado.",
         "too_large": "Este arquivo é grande demais para importar (máximo de 150 MB).",
         "unreadable_zip": "Este arquivo ZIP está danificado ou não pode ser aberto.",
+        "unreadable_file": "Não foi possível abrir este arquivo. Se ele estiver no Google Drive ou em outro app de nuvem, salve-o primeiro no seu dispositivo e escolha-o de novo.",
         "no_history": "Esta exportação contém só os dados da conta, não o seu histórico. Verifique se você escolheu a exportação completa de dados do TV Time.",
         "trakt_export": "Isto parece uma exportação do Trakt. Use a importação do Trakt em Integrações.",
         "summary_only": "Esta é a página de resumo do TV Time. Escolha os arquivos CSV ou JSON da mesma exportação.",

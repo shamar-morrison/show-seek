@@ -159,6 +159,11 @@ export function buildTvTimeChunks(
 function splitShow(show: TvTimeShowEntity): TvTimeShowEntity[] {
   if (show.plays.length <= TVTIME_IMPORT_MAX_PLAYS_PER_CHUNK) return [show];
 
+  const seasonSizes = new Map<number, number>();
+  for (const play of show.plays) {
+    seasonSizes.set(play.season, (seasonSizes.get(play.season) ?? 0) + 1);
+  }
+
   // Plays are sorted by season/episode; cut at season boundaries where possible.
   const groups: (typeof show.plays)[] = [];
   let group: typeof show.plays = [];
@@ -167,7 +172,7 @@ function splitShow(show: TvTimeShowEntity): TvTimeShowEntity[] {
     if (
       group.length >= TVTIME_IMPORT_MAX_PLAYS_PER_CHUNK ||
       (crossesSeason &&
-        group.length + countSeason(show.plays, play.season) > TVTIME_IMPORT_MAX_PLAYS_PER_CHUNK)
+        group.length + (seasonSizes.get(play.season) ?? 0) > TVTIME_IMPORT_MAX_PLAYS_PER_CHUNK)
     ) {
       groups.push(group);
       group = [];
@@ -177,10 +182,6 @@ function splitShow(show: TvTimeShowEntity): TvTimeShowEntity[] {
   if (group.length) groups.push(group);
 
   return groups.map((plays, index) => ({ ...show, part: { index, total: groups.length }, plays }));
-}
-
-function countSeason(plays: TvTimeShowEntity['plays'], season: number): number {
-  return plays.filter((play) => play.season === season).length;
 }
 
 function summarize(shows: TvTimeShowEntity[], movies: TvTimeMovieEntity[]): TvTimeImportSummary {

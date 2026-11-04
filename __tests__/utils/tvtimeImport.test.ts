@@ -123,7 +123,14 @@ describe('TV Time export parsing — fixtures', () => {
     const plays = (result: ReturnType<typeof parse>) =>
       result.shows.map((show) => [show.tvdbId, show.status, show.plays.length]).sort();
     const movieState = (result: ReturnType<typeof parse>) =>
-      result.movies.map((movie) => [movie.title, movie.watches.length, movie.watchlist]).sort();
+      result.movies
+        .map((movie) => [
+          movie.title,
+          movie.watches.length,
+          movie.watchlist,
+          movie.lists.map((list) => list.name).sort(),
+        ])
+        .sort();
 
     const both = parse(looseFiles('refract'));
     const csvOnly = parse(looseFiles('refract', (name) => name.endsWith('.csv')));
@@ -131,6 +138,7 @@ describe('TV Time export parsing — fixtures', () => {
 
     expect(plays(csvOnly)).toEqual(plays(both));
     expect(plays(jsonOnly)).toEqual(plays(both));
+    expect(movieState(csvOnly)).toEqual(movieState(both));
     expect(movieState(jsonOnly)).toEqual(movieState(both));
     expect(both.stats.ignored).toEqual({}); // CSV+JSON overlap is not reported as duplicates
   });
@@ -146,6 +154,75 @@ describe('TV Time export parsing — fixtures', () => {
     });
 
     expect(view(fromCsv)).toEqual(view(fromJson));
+  });
+});
+
+describe('TV Time export parsing — edge cases', () => {
+  const file = (name: string, text: string): PickedTvTimeFile => ({ bytes: strToU8(text), name });
+
+  it('reads GDPR episodes from the v1 file when v2 is missing, without doubling them when present', () => {
+    const withV2 = parse(looseFiles('gdpr'));
+    const v1Only = parse(looseFiles('gdpr', (name) => name !== 'tracking-prod-records-v2.csv'));
+    const rayDonovan = (result: ReturnType<typeof parse>) =>
+      result.shows.find((show) => show.tvdbId === 259866)?.plays ?? [];
+
+    expect(rayDonovan(v1Only)).toEqual([
+      {
+        episode: 1,
+        season: 1,
+        tvdbEpisodeId: 90569530,
+        watchedAt: Date.UTC(2016, 7, 5, 16, 48, 22),
+      },
+    ]);
+    // With v2 present the v1 copy is ignored, so the fixture totals stay as expected.
+    expect(normalize('gdpr', withV2)).toEqual(EXPECTED.gdpr);
+  });
+
+  it('counts Data Extractor TV rows as unsupported episodes, not unreadable rows', () => {
+    const header = 'type,media_type,tmdb_id,imdb_id,tvdb_id,title,year,season,episode,watched_at\n';
+    const result = parse([
+      file(
+        'tv-time-export.csv',
+        header +
+          'watch,movie,27205,tt1375666,,Inception,2010,,,2018-03-10T20:00:00Z\n' +
+          'watch,episode,,,,Lost,2004,1,1,2018-03-11T20:00:00Z\n' +
+          'watch,,,,,,,,,\n'
+      ),
+    ]);
+
+    expect(result.movies).toHaveLength(1);
+    expect(result.stats.ignored).toEqual({ unsupported_episodes: 1 });
+    expect(result.stats.skipped).toEqual({ malformed_row: 1 });
+  });
+
+  it('keeps a Liberator favorite movie that appears nowhere else in the export', () => {
+    const favorites = JSON.stringify({
+      movies: [{ id: { imdb: 'tt0110912', tvdb: null }, title: 'Pulp Fiction' }],
+      shows: [],
+    });
+    const result = parse([
+      ...looseFiles('liberator', (name) => name !== 'favorites.json'),
+      file('favorites.json', favorites),
+    ]);
+
+    expect(result.movies.find((movie) => movie.imdbId === 'tt0110912')).toMatchObject({
+      favorite: true,
+      title: 'Pulp Fiction',
+    });
+  });
+
+  it('keeps two same-titled films from one year apart when their ids differ', () => {
+    const header = 'type,media_type,tmdb_id,imdb_id,tvdb_id,title,year,season,episode,watched_at\n';
+    const result = parse([
+      file(
+        'tv-time-export.csv',
+        header +
+          'watch,movie,1001,tt0000001,,Twin,2020,,,2021-01-01T00:00:00Z\n' +
+          'watch,movie,1002,tt0000002,,Twin,2020,,,2021-02-01T00:00:00Z\n'
+      ),
+    ]);
+
+    expect(result.movies.map((movie) => movie.imdbId).sort()).toEqual(['tt0000001', 'tt0000002']);
   });
 });
 
@@ -278,6 +355,8 @@ describe('parseTvTimeDate', () => {
 
   it.each([
     '2016-02-30 21:00:00',
+    '2024-01-01 10:75:00',
+    '2024-01-01 24:00:00',
     '50663409-12-05 02:20:00',
     '0001-01-01',
     '1985-01-01',

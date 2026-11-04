@@ -60,6 +60,8 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
     show.status = TVTIME_STATUS_MAP[toText(row.status)] ?? show.status;
   }
 
+  // Episodes the CSV already gave; JSON adds only the rest, so overlap isn't a "duplicate".
+  const csvEpisodeKeys = new Set<string>();
   for (const row of episodesCsv.flatMap((entry) => parseCsv(entry.text))) {
     const tvdbId = toPositiveInt(row.series_tvdb_id);
     if (tvdbId === null) {
@@ -71,6 +73,7 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
       title: toText(row.title),
     });
     if (!toBool(row.is_watched)) continue;
+    csvEpisodeKeys.add(episodeKey(tvdbId, row.season, row.episode));
     addPlay(library, show, row.season, row.episode, row.tvdb_id, row.watched_at);
   }
 
@@ -85,8 +88,6 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
     });
     if (!known || show.status === null)
       show.status = TVTIME_STATUS_MAP[toText(item.status)] ?? show.status;
-    if (episodesCsv.length > 0) continue; // episodes already came from the CSV
-
     for (const seasonRaw of item.seasons ?? []) {
       const season = seasonRaw as { number?: number; episodes?: unknown[] };
       for (const episodeRaw of season.episodes ?? []) {
@@ -97,6 +98,7 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
           watched_at?: string | null;
         };
         if (episode.is_watched !== true) continue;
+        if (csvEpisodeKeys.has(episodeKey(tvdbId, season.number, episode.number))) continue;
         addPlay(library, show, season.number, episode.number, episode.id?.tvdb, episode.watched_at);
       }
     }
@@ -104,11 +106,18 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
 
   // --- Movies --------------------------------------------------------------
   const moviesCsv = pick('movies', 'csv').flatMap((entry) => parseCsv(entry.text));
-  const moviesJson =
-    moviesCsv.length > 0
-      ? []
-      : pick('movies', 'json').flatMap((entry) => parseJsonArray(entry.text) ?? []);
-  const movieRows = [
+  const moviesJson = pick('movies', 'json').flatMap((entry) => parseJsonArray(entry.text) ?? []);
+  const movieRows: {
+    createdAt: string | undefined;
+    imdb: unknown;
+    title: unknown;
+    tvdb: unknown;
+    uuid: string | null;
+    watched: boolean;
+    watchedAt: unknown;
+    year: unknown;
+    fromJson?: boolean;
+  }[] = [
     ...moviesCsv.map((row) => ({
       createdAt: row.created_at,
       imdb: row.imdb_id,
@@ -129,6 +138,7 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
       };
       return {
         createdAt: undefined,
+        fromJson: true,
         imdb: item.id?.imdb,
         title: item.title,
         tvdb: item.id?.tvdb,
@@ -148,6 +158,8 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
       uuid: row.uuid,
       year: toYear(row.year),
     };
+    // CSV wins; JSON only adds movies the CSV doesn't have.
+    if (row.fromJson && moviesCsv.length > 0 && library.findMovie(lookup)) continue;
     if (row.watched) {
       const watchedAt = parseTvTimeDate(row.watchedAt, now);
       if (watchedAt === null) {
@@ -198,11 +210,19 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
       const show = library.show(item.tvdb, { title: item.name });
       addToList(show, item.list, show.addedAt ?? now);
     } else if (item.type === 'movie') {
-      const movie = library.findMovie({ title: item.name, tvdbId: item.tvdb, uuid: item.uuid });
+      const movie = library.findReferencedMovie({
+        title: item.name,
+        tvdbId: item.tvdb,
+        uuid: item.uuid,
+      });
       if (movie) addToList(movie, item.list, movie.addedAt ?? now);
       else library.skip('missing_identifiers');
     }
   }
+}
+
+function episodeKey(tvdbId: number, season: unknown, episode: unknown): string {
+  return `${tvdbId}:${toNonNegativeInt(season)}:${toNonNegativeInt(episode)}`;
 }
 
 function addPlay(

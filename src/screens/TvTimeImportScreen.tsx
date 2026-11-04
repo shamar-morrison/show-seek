@@ -19,7 +19,7 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useTvTimeImportFlow } from '@/src/context/TvTimeImportFlowContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
-import { tvTimeImportService } from '@/src/services/TvTimeImportService';
+import { fingerprintOf, tvTimeImportService } from '@/src/services/TvTimeImportService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import type { TvTimeExportFormat } from '@/src/utils/tvtimeImport/prepare';
 import { getTvTimeParseErrorKey } from '@/src/utils/tvtimeImportError';
@@ -36,7 +36,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -59,7 +59,8 @@ const FORMAT_LABEL_KEYS: Record<TvTimeExportFormat, string> = {
 interface LimitState {
   /** Another import's cooldown is running and this device has no unfinished run to resume. */
   blockedUntil: number | null;
-  hasUnfinishedRun: boolean;
+  /** Fingerprint of this device's unfinished run, if it got at least one chunk through. */
+  unfinishedRunFingerprint: string | null;
 }
 
 export default function TvTimeImportScreen() {
@@ -73,7 +74,7 @@ export default function TvTimeImportScreen() {
   const [isPicking, setIsPicking] = useState(false);
   const [limitState, setLimitState] = useState<LimitState>({
     blockedUntil: null,
-    hasUnfinishedRun: false,
+    unfinishedRunFingerprint: null,
   });
 
   useEffect(() => {
@@ -99,7 +100,8 @@ export default function TvTimeImportScreen() {
             !resumable && limits.nextAllowedImportAt && limits.nextAllowedImportAt > Date.now()
               ? limits.nextAllowedImportAt
               : null,
-          hasUnfinishedRun: storedRun !== null,
+          unfinishedRunFingerprint:
+            storedRun && storedRun.completed.length > 0 ? storedRun.fingerprint : null,
         });
       } catch (error) {
         // The server enforces the limit regardless; this is only an early hint.
@@ -112,9 +114,30 @@ export default function TvTimeImportScreen() {
     };
   }, [user?.uid]);
 
+  // Lift the cooldown notice as soon as it runs out.
+  useEffect(() => {
+    const until = limitState.blockedUntil;
+    if (until === null) return;
+    const timer = setTimeout(
+      () => setLimitState((state) => ({ ...state, blockedUntil: null })),
+      Math.max(0, until - Date.now())
+    );
+    return () => clearTimeout(timer);
+  }, [limitState.blockedUntil]);
+
+  // Hashes every chunk, so compute it once per picked export.
+  const preparedFingerprint = useMemo(
+    () => (preparedImport ? fingerprintOf(preparedImport) : null),
+    [preparedImport]
+  );
+
   const summary = preparedImport?.summary;
   const hasChunks = (preparedImport?.chunks.length ?? 0) > 0;
   const isBlocked = limitState.blockedUntil !== null;
+  const canStart = hasChunks && !isPicking && !isBlocked;
+  // Only the same export can resume; the run's progress is tied to its chunks.
+  const isResuming =
+    preparedFingerprint !== null && limitState.unfinishedRunFingerprint === preparedFingerprint;
   const skippedCount = Object.values(preparedImport?.stats.skipped ?? {}).reduce(
     (total, value) => total + (value ?? 0),
     0
@@ -144,7 +167,7 @@ export default function TvTimeImportScreen() {
   };
 
   const handleStartImport = () => {
-    if (!preparedImport || !hasChunks || isBlocked) return;
+    if (!preparedImport || !canStart) return;
     router.push(TVTIME_IMPORT_PROGRESS_ROUTE);
   };
 
@@ -213,21 +236,21 @@ export default function TvTimeImportScreen() {
               style={[
                 styles.primaryButton,
                 styles.startButton,
-                {
-                  backgroundColor:
-                    hasChunks && !isPicking && !isBlocked ? accentColor : COLORS.surfaceLight,
-                },
+                canStart ? { backgroundColor: accentColor } : styles.startButtonDisabled,
               ]}
               onPress={handleStartImport}
               activeOpacity={ACTIVE_OPACITY}
-              disabled={!hasChunks || isPicking || isBlocked}
+              disabled={!canStart}
+              accessibilityState={{ disabled: !canStart }}
               testID="tvtime-import-start"
             >
-              <AppIcon icon={Upload01Icon} size={18} color={COLORS.white} />
-              <Text style={styles.startButtonText}>
-                {limitState.hasUnfinishedRun
-                  ? t('tvtimeImport.resumeImport')
-                  : t('tvtimeImport.startImport')}
+              <AppIcon
+                icon={Upload01Icon}
+                size={18}
+                color={canStart ? COLORS.white : COLORS.textSecondary}
+              />
+              <Text style={[styles.startButtonText, !canStart && styles.startButtonTextDisabled]}>
+                {isResuming ? t('tvtimeImport.resumeImport') : t('tvtimeImport.startImport')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -261,9 +284,7 @@ export default function TvTimeImportScreen() {
               <View style={styles.inlineNote}>
                 <AppIcon icon={InformationCircleIcon} size={16} color={COLORS.textSecondary} />
                 <Text style={styles.inlineNoteText}>
-                  {limitState.hasUnfinishedRun
-                    ? t('tvtimeImport.resumeNote')
-                    : t('tvtimeImport.readyNote')}
+                  {isResuming ? t('tvtimeImport.resumeNote') : t('tvtimeImport.readyNote')}
                 </Text>
               </View>
             </>
@@ -483,10 +504,18 @@ const styles = StyleSheet.create({
     gap: SPACING.s,
     justifyContent: 'center',
   },
+  // Dimmed so it can't be mistaken for the Select file button above it.
+  startButtonDisabled: {
+    backgroundColor: COLORS.surfaceLight,
+    opacity: 0.5,
+  },
   startButtonText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
+  },
+  startButtonTextDisabled: {
+    color: COLORS.textSecondary,
   },
   tvTimeIcon: {
     borderRadius: 16,

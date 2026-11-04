@@ -39,6 +39,7 @@ export function parseGdprExport(entries: TvTimeFileEntry[], library: TvTimeLibra
 
   // --- Episodes and per-show flags (v2 is the source of truth) -------------
   const flags = new Map<number, SeriesFlags>();
+  let v2Plays = 0;
   for (const row of rows('tracking-prod-records-v2.csv')) {
     const key = toText(row.key);
     const showId = toPositiveInt(row.s_id);
@@ -65,6 +66,7 @@ export function parseGdprExport(entries: TvTimeFileEntry[], library: TvTimeLibra
         ...(tvdbEpisodeId !== null ? { tvdbEpisodeId } : {}),
         watchedAt,
       });
+      v2Plays += 1;
     } else if (key.startsWith('user-series-') && showId !== null) {
       library.show(showId, { title: toText(row.series_name) });
       flags.set(showId, {
@@ -72,6 +74,35 @@ export function parseGdprExport(entries: TvTimeFileEntry[], library: TvTimeLibra
         archived: toBool(row.is_archived),
         followed: toBool(row.is_followed),
         forLater: toBool(row.is_for_later),
+      });
+    }
+  }
+
+  // v1 episode rows copy v2's, so they're only read when v2 has none (or wasn't picked).
+  if (v2Plays === 0) {
+    for (const row of rows('tracking-prod-records.csv')) {
+      if (toText(row.entity_type) !== 'episode') continue;
+      const type = toText(row.type);
+      if (type !== 'watch' && type !== 'rewatch') continue;
+      const showId = toPositiveInt(row.series_id);
+      const season = toNonNegativeInt(row.season_number);
+      const episode = toNonNegativeInt(row.episode_number);
+      if (showId === null || season === null || episode === null) {
+        library.skip('malformed_row');
+        continue;
+      }
+      const watchedAt = watchDate(row, now);
+      if (watchedAt === null) {
+        library.skip('invalid_date');
+        continue;
+      }
+      const show = library.show(showId, { title: toText(row.series_name) });
+      const tvdbEpisodeId = toPositiveInt(row.episode_id);
+      library.addPlay(show, {
+        episode,
+        season,
+        ...(tvdbEpisodeId !== null ? { tvdbEpisodeId } : {}),
+        watchedAt,
       });
     }
   }
@@ -120,19 +151,20 @@ export function parseGdprExport(entries: TvTimeFileEntry[], library: TvTimeLibra
 
   // --- Movies (only in v1, keyed by TV Time uuid, no external ids) ---------
   for (const row of rows('tracking-prod-records.csv')) {
-    if (toText(row.entity_type) !== 'movie') continue; // v1 episode rows duplicate v2
+    if (toText(row.entity_type) !== 'movie') continue;
     const type = toText(row.type);
     const uuid = toText(row.uuid);
-    const title = toText(row.movie_name);
+    const slug = toText(row.alpha_range_key)
+      .replace(`${type}-alpha-`, '')
+      .replace(/-/g, ' ')
+      .trim();
+    // The slug is a lower-cased, dashed copy of the title; good enough for an exact title match.
+    const title = toText(row.movie_name) || slug;
     if (!title) {
       library.skip('missing_identifiers');
       continue;
     }
 
-    const slug = toText(row.alpha_range_key)
-      .replace(`${type}-alpha-`, '')
-      .replace(/-/g, ' ')
-      .trim();
     const year = toYear(row.release_date);
 
     if (type === 'watch' || type === 'rewatch') {
@@ -204,7 +236,7 @@ function toV2Position(row: CsvRow): { season: number; episode: number } | null {
 
 function watchDate(row: CsvRow, now: number): number | null {
   const epoch = toText(row.watch_date_range_key).match(/watch-date-(\d+)/)?.[1];
-  return epoch ? parseEpochSeconds(epoch, now) : parseTvTimeDate(row.created_at, now);
+  return (epoch ? parseEpochSeconds(epoch, now) : null) ?? parseTvTimeDate(row.created_at, now);
 }
 
 function parseLists(rows: CsvRow[], library: TvTimeLibrary): void {
