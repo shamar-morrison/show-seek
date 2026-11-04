@@ -341,6 +341,12 @@ service cloud.firestore {
       match /trakt_imports/{importId} {
         allow read: if isNonAnonymousOwner(userId);
       }
+
+      // Import rate-limit state (e.g. TV Time cooldown). Server-written only;
+      // readable so the app can show when the next import is allowed.
+      match /import_limits/{source} {
+        allow read: if isNonAnonymousOwner(userId);
+      }
     }
   }
 }
