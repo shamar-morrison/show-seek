@@ -860,8 +860,6 @@
   },
   "tvtimeImport": {
     "title": "TV Time geçmişinizi içe aktarın",
-    "description": "TV Time kapandı. Kaydettiğiniz dışa aktarımı — izlenen bölümler, filmler, izleme listesi, favoriler, listeler ve puanlar — burada zaten takip ettiğiniz hiçbir şeyi değiştirmeden ShowSeek'e getirin.",
-    "selectStageTitle": "Dışa aktarımınızı seçin",
     "selectStageBody": "İndirdiğiniz ZIP dosyasını veya içindeki CSV/JSON dosyalarını seçin. Dosya bu cihazda okunur; ShowSeek'e yalnızca izleme geçmişiniz gönderilir, TV Time oturum bilgileriniz veya hesap ayrıntılarınız asla gönderilmez.",
     "selectFile": "Dosya seç",
     "replaceFile": "Başka bir dosya seç",

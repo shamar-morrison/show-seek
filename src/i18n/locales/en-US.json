@@ -866,8 +866,6 @@
   },
   "tvtimeImport": {
     "title": "Import your TV Time history",
-    "description": "TV Time has shut down. Bring the export you saved — watched episodes, movies, watchlist, favorites, lists and ratings — into ShowSeek without changing anything you already track here.",
-    "selectStageTitle": "Choose your export",
     "selectStageBody": "Pick the ZIP you downloaded, or the CSV/JSON files from it. The file is read on this device; only your viewing history is sent to ShowSeek, never your TV Time login or account details.",
     "selectFile": "Choose file",
     "replaceFile": "Choose a different file",

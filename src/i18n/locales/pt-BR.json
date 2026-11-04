@@ -866,8 +866,6 @@
   },
   "tvtimeImport": {
     "title": "Importe seu histórico do TV Time",
-    "description": "O TV Time foi encerrado. Traga a exportação que você salvou — episódios assistidos, filmes, lista para assistir, favoritos, listas e avaliações — para o ShowSeek sem alterar nada do que você já acompanha aqui.",
-    "selectStageTitle": "Escolha sua exportação",
     "selectStageBody": "Escolha o ZIP que você baixou ou os arquivos CSV/JSON que estão nele. O arquivo é lido neste dispositivo; só o seu histórico é enviado ao ShowSeek, nunca seu login ou os dados da sua conta do TV Time.",
     "selectFile": "Escolher arquivo",
     "replaceFile": "Escolher outro arquivo",

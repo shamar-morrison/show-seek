@@ -31,7 +31,6 @@ import {
   InformationCircleIcon,
   StarIcon,
   TickDouble01Icon,
-  Tv01Icon,
   Upload01Icon,
 } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
@@ -154,11 +153,12 @@ export default function TvTimeImportScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroSection}>
           <View style={styles.syncIconsContainer}>
-            <View
-              style={[styles.sourceIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.16) }]}
-            >
-              <AppIcon icon={Tv01Icon} size={32} color={accentColor} />
-            </View>
+            <Image
+              source={require('@/assets/images/tvtime.png')}
+              contentFit="cover"
+              style={styles.tvTimeIcon}
+              testID="tvtime-import-hero-icon"
+            />
             <AppIcon
               icon={ArrowRight01Icon}
               size={24}
@@ -174,7 +174,6 @@ export default function TvTimeImportScreen() {
             </View>
           </View>
           <Text style={styles.heroTitle}>{t('tvtimeImport.title')}</Text>
-          <Text style={styles.heroSubtitle}>{t('tvtimeImport.description')}</Text>
         </View>
 
         {isBlocked ? (
@@ -188,10 +187,7 @@ export default function TvTimeImportScreen() {
           </View>
         ) : null}
 
-        <StageCard
-          title={t('tvtimeImport.selectStageTitle')}
-          description={t('tvtimeImport.selectStageBody')}
-        >
+        <StageCard description={t('tvtimeImport.selectStageBody')}>
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: COLORS.surfaceLight }]}
@@ -216,7 +212,7 @@ export default function TvTimeImportScreen() {
             <TouchableOpacity
               style={[
                 styles.primaryButton,
-                styles.buttonContent,
+                styles.startButton,
                 {
                   backgroundColor:
                     hasChunks && !isPicking && !isBlocked ? accentColor : COLORS.surfaceLight,
@@ -329,18 +325,9 @@ export default function TvTimeImportScreen() {
   );
 }
 
-function StageCard({
-  children,
-  description,
-  title,
-}: {
-  children: React.ReactNode;
-  description: string;
-  title: string;
-}) {
+function StageCard({ children, description }: { children: React.ReactNode; description: string }) {
   return (
     <View style={styles.stageCard}>
-      <Text style={styles.stageTitle}>{title}</Text>
       <Text style={styles.stageDescription}>{description}</Text>
       <View style={styles.stageContent}>{children}</View>
     </View>
@@ -392,17 +379,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.s,
   },
-  heroSubtitle: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
-    lineHeight: 22,
-    textAlign: 'center',
-  },
   heroTitle: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.xl,
-    marginBottom: SPACING.s,
     textAlign: 'center',
   },
   inlineNote: {
@@ -481,13 +461,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: 70,
   },
-  sourceIconCircle: {
-    alignItems: 'center',
-    borderRadius: 35,
-    height: 70,
-    justifyContent: 'center',
-    width: 70,
-  },
   stageCard: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.xl,
@@ -502,15 +475,23 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     lineHeight: 22,
   },
-  stageTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: FONT_SIZE.l,
+  // No flexWrap here: a wrapping row pins its line to the top of the 52px
+  // minimum height, which left empty space under the label.
+  startButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACING.s,
+    justifyContent: 'center',
   },
   startButtonText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
+  },
+  tvTimeIcon: {
+    borderRadius: 16,
+    height: 70,
+    width: 70,
   },
   syncIconsContainer: {
     alignItems: 'center',

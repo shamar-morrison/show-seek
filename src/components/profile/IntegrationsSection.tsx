@@ -5,7 +5,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { Image } from 'expo-image';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { Tick02Icon, Tv01Icon } from '@hugeicons/core-free-icons';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -145,7 +145,14 @@ export function IntegrationsSection({
       case 'tvtimeImport':
         return (
           <ActionButton
-            icon={Tv01Icon}
+            customIcon={
+              <Image
+                source={require('@/assets/images/tvtime.png')}
+                contentFit="cover"
+                style={styles.tvTimeLogo}
+                testID="integrations-tvtime-icon"
+              />
+            }
             label={t('profile.importFromTvTime')}
             onPress={onTvTimeImport}
           />
@@ -230,6 +237,11 @@ const styles = StyleSheet.create({
   imdbLogo: {
     height: 14,
     width: 35,
+  },
+  tvTimeLogo: {
+    borderRadius: 5,
+    height: 22,
+    width: 22,
   },
   stremioLogo: {
     height: 21,
