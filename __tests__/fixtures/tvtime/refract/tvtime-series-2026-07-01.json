@@ -1,0 +1,1956 @@
+[
+  {
+    "id": {
+      "imdb": "tt0903747",
+      "tvdb": 81189
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98726559
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2016-01-04T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93935655
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2016-01-05T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94834988
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2016-01-06T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91554478
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2016-01-07T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96000034
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2016-01-08T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90151117
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2016-01-09T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92984738
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2016-01-10T21:00:00Z"
+          }
+        ],
+        "number": 1
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91169853
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2016-01-12T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93573207
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2016-01-13T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90684526
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2016-01-14T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97608687
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2016-01-15T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98890390
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2016-01-16T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95587825
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2016-01-17T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95055564
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2016-01-18T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95577735
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2016-01-19T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90628407
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2016-01-20T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96527018
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2016-01-21T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94379888
+            },
+            "is_watched": true,
+            "number": 11,
+            "watched_at": "2016-01-22T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94339662
+            },
+            "is_watched": true,
+            "number": 12,
+            "watched_at": "2016-01-23T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94553981
+            },
+            "is_watched": true,
+            "number": 13,
+            "watched_at": "2016-01-24T21:00:00Z"
+          }
+        ],
+        "number": 2
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92612403
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2016-01-26T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91769710
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2016-01-27T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90071602
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2016-01-28T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90509417
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2016-01-29T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91824759
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2016-01-30T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97259295
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2016-01-31T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94541099
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2016-02-01T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90895672
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2016-02-02T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96984328
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2016-02-03T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92272470
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2016-02-04T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93517037
+            },
+            "is_watched": true,
+            "number": 11,
+            "watched_at": "2016-02-05T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91337308
+            },
+            "is_watched": true,
+            "number": 12,
+            "watched_at": "2016-02-06T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93461276
+            },
+            "is_watched": true,
+            "number": 13,
+            "watched_at": "2016-02-07T21:00:00Z"
+          }
+        ],
+        "number": 3
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90462690
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2016-02-09T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90370423
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2016-02-10T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96624942
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2016-02-11T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93414335
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2016-02-12T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96869789
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2016-02-13T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91966756
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2016-02-14T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91308762
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2016-02-15T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92555357
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2016-02-16T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97407419
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2016-02-17T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95197156
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2016-02-18T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95049547
+            },
+            "is_watched": true,
+            "number": 11,
+            "watched_at": "2016-02-19T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98405200
+            },
+            "is_watched": true,
+            "number": 12,
+            "watched_at": "2016-02-20T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91039136
+            },
+            "is_watched": true,
+            "number": 13,
+            "watched_at": "2016-02-21T21:00:00Z"
+          }
+        ],
+        "number": 4
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90922399
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2016-02-23T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97701320
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2016-02-24T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91327776
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2016-02-25T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92262595
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2016-02-26T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98548608
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2016-02-27T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97206449
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2016-02-28T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95373545
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2016-02-29T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95642916
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2016-03-01T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98658444
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2016-03-02T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90280770
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2016-03-03T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96477836
+            },
+            "is_watched": true,
+            "number": 11,
+            "watched_at": "2016-03-04T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94452777
+            },
+            "is_watched": true,
+            "number": 12,
+            "watched_at": "2016-03-05T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98160478
+            },
+            "is_watched": true,
+            "number": 13,
+            "watched_at": "2016-03-06T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92746300
+            },
+            "is_watched": true,
+            "number": 14,
+            "watched_at": "2016-03-07T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97436346
+            },
+            "is_watched": true,
+            "number": 15,
+            "watched_at": "2016-03-08T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98113203
+            },
+            "is_watched": true,
+            "number": 16,
+            "watched_at": "2016-03-09T21:00:00Z"
+          }
+        ],
+        "number": 5
+      }
+    ],
+    "status": "up_to_date",
+    "title": "Breaking Bad"
+  },
+  {
+    "id": {
+      "imdb": "tt5753856",
+      "tvdb": 334824
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90413618
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2020-07-01T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97804926
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2020-07-02T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94042538
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2020-07-03T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90058750
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2020-07-04T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93545543
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2020-07-05T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98902885
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2020-07-06T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96265771
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2020-07-07T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96697893
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2020-07-08T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97809461
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2020-07-09T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93965107
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2020-07-10T20:00:00Z"
+          }
+        ],
+        "number": 1
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92090521
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2020-07-11T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97008547
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2020-07-12T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92272115
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2020-07-13T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94518979
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2020-07-14T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94885902
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2020-07-15T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90920906
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2020-07-16T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95048577
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2020-07-17T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96196165
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2020-07-18T20:00:00Z"
+          }
+        ],
+        "number": 2
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92287014
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2020-07-19T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95066976
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2020-07-20T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98575489
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2020-07-21T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90042401
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2020-07-22T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93440342
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2020-07-23T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96837320
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2020-07-24T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91161114
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2020-07-25T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94965491
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2020-07-26T20:00:00Z"
+          }
+        ],
+        "number": 3
+      }
+    ],
+    "status": "up_to_date",
+    "title": "Dark"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 266189
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97958285
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2017-04-21T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90035544
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2017-04-22T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91195341
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2017-04-22T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95513490
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2017-04-23T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96844060
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2017-04-23T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96663481
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2017-04-24T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94640525
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2017-04-24T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90623797
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2017-04-25T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93240791
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2017-04-25T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98073298
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2017-04-26T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98876696
+            },
+            "is_watched": true,
+            "number": 11,
+            "watched_at": "2017-04-26T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90986159
+            },
+            "is_watched": true,
+            "number": 12,
+            "watched_at": "2017-04-27T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 4764625
+            },
+            "is_watched": true,
+            "number": 13,
+            "watched_at": "2017-04-27T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95573003
+            },
+            "is_watched": true,
+            "number": 14,
+            "watched_at": "2017-04-28T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96303782
+            },
+            "is_watched": true,
+            "number": 15,
+            "watched_at": "2017-04-28T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94704892
+            },
+            "is_watched": true,
+            "number": 16,
+            "watched_at": "2017-04-29T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98902082
+            },
+            "is_watched": true,
+            "number": 17,
+            "watched_at": "2017-04-29T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94443032
+            },
+            "is_watched": true,
+            "number": 18,
+            "watched_at": "2017-04-30T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95442057
+            },
+            "is_watched": true,
+            "number": 19,
+            "watched_at": "2017-04-30T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97770134
+            },
+            "is_watched": true,
+            "number": 20,
+            "watched_at": "2017-05-01T00:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90529396
+            },
+            "is_watched": true,
+            "number": 21,
+            "watched_at": "2017-05-01T12:38:26Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93468263
+            },
+            "is_watched": true,
+            "number": 22,
+            "watched_at": "2017-05-02T00:38:26Z"
+          }
+        ],
+        "number": 1
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90456615
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2017-06-01T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92223668
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2017-06-02T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94810383
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2017-06-03T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93519337
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2017-06-04T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96983017
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2017-06-05T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95334234
+            },
+            "is_watched": false,
+            "number": 6,
+            "watched_at": null
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92409918
+            },
+            "is_watched": false,
+            "number": 7,
+            "watched_at": null
+          }
+        ],
+        "number": 2
+      }
+    ],
+    "status": "stopped",
+    "title": "The Blacklist"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 336924
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98158691
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2019-01-02T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92678415
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2019-01-03T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 6461784
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2019-01-04T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98339823
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2019-01-05T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98592324
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2019-01-06T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98434165
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2019-01-07T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90331204
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2019-01-08T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98752937
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2019-01-09T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92218615
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2019-01-10T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95066307
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2019-01-11T21:00:00Z"
+          }
+        ],
+        "number": 1
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90982065
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2020-01-02T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94856631
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2020-01-03T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95652033
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2020-01-04T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92028181
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2020-01-05T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90541060
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2020-01-06T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92306529
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2020-01-07T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98437160
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2020-01-08T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98609752
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2020-01-09T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 7448023
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2020-01-10T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92902911
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2020-01-11T21:00:00Z"
+          }
+        ],
+        "number": 2
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98519960
+            },
+            "is_watched": false,
+            "number": 1,
+            "watched_at": null
+          }
+        ],
+        "number": 3
+      }
+    ],
+    "status": "continuing",
+    "title": "You"
+  },
+  {
+    "id": {
+      "imdb": "tt1475582",
+      "tvdb": 176941
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96873388
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2016-01-01T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93779997
+            },
+            "is_watched": false,
+            "number": 2,
+            "watched_at": null
+          }
+        ],
+        "number": 0
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92807634
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2015-12-02T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95905855
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2015-12-03T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98591040
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2015-12-04T20:00:00Z"
+          }
+        ],
+        "number": 1
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95565144
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2015-12-05T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95224080
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2015-12-06T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98851585
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2015-12-07T20:00:00Z"
+          }
+        ],
+        "number": 2
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98720347
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2015-12-08T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94063651
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2015-12-09T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96559801
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2015-12-10T20:00:00Z"
+          }
+        ],
+        "number": 3
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92998756
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2017-01-01T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97930270
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2017-01-02T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96754026
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2017-01-03T21:00:00Z"
+          }
+        ],
+        "number": 4
+      }
+    ],
+    "status": "up_to_date",
+    "title": "Sherlock"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 281485
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97684365
+            },
+            "is_watched": false,
+            "number": 1,
+            "watched_at": null
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90780385
+            },
+            "is_watched": false,
+            "number": 2,
+            "watched_at": null
+          }
+        ],
+        "number": 1
+      }
+    ],
+    "status": "not_started_yet",
+    "title": "Marvel's Agent Carter"
+  },
+  {
+    "id": {
+      "imdb": "tt0944947",
+      "tvdb": 121361
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90804904
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2019-04-11T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97199274
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2019-04-12T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96084215
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2019-04-13T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93721902
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2019-04-14T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96309373
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2019-04-15T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97785564
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2019-04-16T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93735776
+            },
+            "is_watched": true,
+            "number": 7,
+            "watched_at": "2019-04-17T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 93167182
+            },
+            "is_watched": true,
+            "number": 8,
+            "watched_at": "2019-04-18T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98914008
+            },
+            "is_watched": true,
+            "number": 9,
+            "watched_at": "2019-04-19T21:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97868584
+            },
+            "is_watched": true,
+            "number": 10,
+            "watched_at": "2019-04-20T21:00:00Z"
+          }
+        ],
+        "number": 1
+      },
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96972294
+            },
+            "is_watched": false,
+            "number": 1,
+            "watched_at": null
+          }
+        ],
+        "number": 2
+      }
+    ],
+    "status": "continuing",
+    "title": "Game of Thrones"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 349310
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98606694
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2021-01-30T22:11:37Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92264798
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2021-02-01T04:11:37Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90173631
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2021-02-02T10:11:37Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90139067
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2021-02-03T16:11:37Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94830630
+            },
+            "is_watched": true,
+            "number": 5,
+            "watched_at": "2021-02-04T22:11:37Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 6733513
+            },
+            "is_watched": true,
+            "number": 6,
+            "watched_at": "2021-02-06T04:11:37Z"
+          }
+        ],
+        "number": 1
+      }
+    ],
+    "status": "up_to_date",
+    "title": "Bodyguard"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 320724
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 94881701
+            },
+            "is_watched": false,
+            "number": 1,
+            "watched_at": null
+          }
+        ],
+        "number": 1
+      }
+    ],
+    "status": "not_started_yet",
+    "title": "Legion"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 259866
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90569530
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2016-08-05T16:48:22Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97478345
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2016-08-06T16:48:22Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90125313
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2016-08-07T16:48:22Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91448518
+            },
+            "is_watched": true,
+            "number": 4,
+            "watched_at": "2016-08-08T16:48:22Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 90940208
+            },
+            "is_watched": false,
+            "number": 5,
+            "watched_at": null
+          }
+        ],
+        "number": 1
+      }
+    ],
+    "status": "stopped",
+    "title": "Ray Donovan"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 397770
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 8253358
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2025-03-20T10:31:09Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 97073791
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2025-03-20T11:31:09Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95326156
+            },
+            "is_watched": true,
+            "number": 3,
+            "watched_at": "2025-03-20T12:31:09Z"
+          }
+        ],
+        "number": 1386
+      }
+    ],
+    "status": "continuing",
+    "title": "Mah-e Asal"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 455514
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 92293978
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2025-05-13T00:37:58Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98277245
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2025-05-13T00:38:34Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 98105873
+            },
+            "is_watched": false,
+            "number": 3,
+            "watched_at": null
+          }
+        ],
+        "number": 1
+      }
+    ],
+    "status": "continuing",
+    "title": "Hello, Nice to Meet You. Could You Please Divorce Me?"
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 999000001
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 95417293
+            },
+            "is_watched": true,
+            "number": 1,
+            "watched_at": "2019-06-02T20:00:00Z"
+          },
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 96815224
+            },
+            "is_watched": true,
+            "number": 2,
+            "watched_at": "2019-06-03T20:00:00Z"
+          }
+        ],
+        "number": 1
+      }
+    ],
+    "status": "continuing",
+    "title": ""
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": 366524
+    },
+    "seasons": [
+      {
+        "episodes": [
+          {
+            "id": {
+              "imdb": null,
+              "tvdb": 91799595
+            },
+            "is_watched": false,
+            "number": 1,
+            "watched_at": null
+          }
+        ],
+        "number": 1
+      }
+    ],
+    "status": "not_started_yet",
+    "title": "Halo"
+  }
+]

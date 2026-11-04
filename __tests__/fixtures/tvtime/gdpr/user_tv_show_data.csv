@@ -1,0 +1,14 @@
+user_id,tv_show_id,is_followed,is_favorited,nb_episodes_seen,tv_show_name
+4242,81189,1,1,62,Breaking Bad
+4242,334824,1,0,26,Dark
+4242,266189,1,0,27,The Blacklist
+4242,336924,1,0,20,You
+4242,176941,1,0,13,Sherlock
+4242,281485,1,0,0,Marvel's Agent Carter
+4242,121361,1,1,10,Game of Thrones
+4242,349310,1,0,6,Bodyguard (2018)
+4242,320724,1,0,0,Legion
+4242,259866,1,0,4,Ray Donovan
+4242,397770,1,0,3,Mah-e Asal
+4242,455514,1,0,2,"Hello, Nice to Meet You. Could You Please Divorce Me?"
+4242,366524,1,0,0,Halo

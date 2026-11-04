@@ -1,0 +1,35 @@
+[
+  {
+    "id": "795c9313-6977-4a99-a615-e34b1d9425da",
+    "items": [
+      {
+        "custom_order": 0,
+        "name": "Dark",
+        "tvdb_id": 334824,
+        "type": "series",
+        "uuid": null
+      },
+      {
+        "custom_order": 1,
+        "name": "Game of Thrones",
+        "tvdb_id": 121361,
+        "type": "series",
+        "uuid": null
+      }
+    ],
+    "name": "Fantasy & Sci-Fi"
+  },
+  {
+    "id": "af1a63e1-3e2f-48a1-acc6-a20f3bb606ce",
+    "items": [
+      {
+        "custom_order": 0,
+        "name": "Parasite",
+        "tvdb_id": null,
+        "type": "movie",
+        "uuid": "e1b215db-664d-479a-af0e-f89018c5ffd2"
+      }
+    ],
+    "name": "Best of Korea"
+  }
+]

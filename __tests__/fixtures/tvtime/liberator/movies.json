@@ -1,0 +1,115 @@
+[
+  {
+    "created_at": "2018-03-10T20:00:00.000Z",
+    "id": {
+      "imdb": "tt1375666",
+      "tvdb": null
+    },
+    "is_watched": true,
+    "rating": 8,
+    "title": "Inception",
+    "uuid": "7bad8270-d09d-4bb4-a2d9-d01eedb8660c",
+    "watched_at": "2018-03-10T20:00:00.000Z",
+    "rewatch_count": 1
+  },
+  {
+    "created_at": "2015-06-01T21:30:00.000Z",
+    "id": {
+      "imdb": "tt0133093",
+      "tvdb": 169
+    },
+    "is_watched": true,
+    "rating": null,
+    "title": "The Matrix",
+    "uuid": "036be7cc-7052-4429-a2b6-417cfe2866ad",
+    "watched_at": "2015-06-01T21:30:00.000Z",
+    "rewatch_count": 0
+  },
+  {
+    "created_at": "2024-01-15T10:00:00.000Z",
+    "id": {
+      "imdb": "tt0816692",
+      "tvdb": null
+    },
+    "is_watched": false,
+    "rating": null,
+    "title": "Interstellar",
+    "uuid": "831e645b-ea1d-47fe-a0df-c64f7620782e"
+  },
+  {
+    "created_at": "2020-02-15T19:00:00.000Z",
+    "id": {
+      "imdb": "tt6751668",
+      "tvdb": null
+    },
+    "is_watched": true,
+    "rating": null,
+    "title": "Parasite",
+    "uuid": "e1b215db-664d-479a-af0e-f89018c5ffd2",
+    "watched_at": "2020-02-15T19:00:00.000Z",
+    "rewatch_count": 0
+  },
+  {
+    "created_at": "2019-09-10T08:01:29.000Z",
+    "id": {
+      "imdb": "tt1396484",
+      "tvdb": 1435
+    },
+    "is_watched": true,
+    "rating": null,
+    "title": "It",
+    "uuid": "b136208b-f3de-4c47-ae5d-0dd12bdb6a71",
+    "watched_at": "2019-09-10T08:01:29.000Z",
+    "rewatch_count": 0
+  },
+  {
+    "created_at": "2024-01-15T10:00:00.000Z",
+    "id": {
+      "imdb": "tt17196124",
+      "tvdb": 340491
+    },
+    "is_watched": false,
+    "rating": null,
+    "title": "Grimcutty",
+    "uuid": "9422ff08-8754-4bfc-a9de-3567cbc5ab4b"
+  },
+  {
+    "created_at": "2025-02-11T17:34:58.000Z",
+    "id": {
+      "imdb": "tt27554389",
+      "tvdb": 341914
+    },
+    "is_watched": true,
+    "rating": null,
+    "title": "Don’t Call it Mystery",
+    "uuid": "557f5a1f-5d82-4157-a2cb-6c100757301e",
+    "watched_at": "2025-02-11T17:34:58.000Z",
+    "rewatch_count": 0
+  },
+  {
+    "created_at": "2021-02-06T13:00:00.000Z",
+    "id": {
+      "imdb": null,
+      "tvdb": null
+    },
+    "is_watched": true,
+    "rating": null,
+    "title": "Space Sweepers",
+    "uuid": "9f174c6b-ee2b-47ce-a32e-b1aa4444c7f3",
+    "watched_at": "2021-02-06T13:00:00.000Z",
+    "rewatch_count": 0
+  },
+  {
+    "created_at": "2019-08-01T18:00:00.000Z",
+    "id": {
+      "imdb": null,
+      "tvdb": null
+    },
+    "is_watched": true,
+    "rating": null,
+    "title": "The Lion King",
+    "uuid": "9807e7b8-2ce3-4868-a9d8-8ff55fa36726",
+    "watched_at": "2019-08-01T18:00:00.000Z",
+    "rewatch_count": 0
+  }
+]

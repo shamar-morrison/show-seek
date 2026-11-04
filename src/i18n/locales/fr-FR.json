@@ -803,6 +803,7 @@
     "allowUnreleasedEpisodeWatchesDescription": "Permet de marquer comme vus des épisodes datés dans le futur avant leur diffusion officielle",
     "sendFeedback": "Envoyer des commentaires",
     "importFromImdb": "Importer depuis IMDb",
+    "importFromTvTime": "Importer depuis TV Time",
     "exportData": "Exporter les données",
     "webApp": "ShowSeek Web",
     "joinDiscord": "Rejoignez notre Discord",
@@ -861,6 +862,123 @@
     "webAppModal": {
       "description": "Continuer vers l’application web ShowSeek ?",
       "title": "Ouvrir l’application web"
+    }
+  },
+  "tvtimeImport": {
+    "title": "Importez votre historique TV Time",
+    "selectStageBody": "Choisissez le ZIP téléchargé ou les fichiers CSV/JSON qu’il contient. Le fichier est lu sur cet appareil. Seuls votre historique, vos notes, vos favoris, vos titres à voir et vos listes sont envoyés à ShowSeek, jamais vos identifiants ni les données de votre compte TV Time.",
+    "selectFile": "Choisir un fichier",
+    "replaceFile": "Choisir un autre fichier",
+    "startImport": "Lancer l’importation",
+    "resumeImport": "Reprendre l’importation",
+    "detectedFormat": "Détecté",
+    "formats": {
+      "gdpr": "Demande de données TV Time (RGPD)",
+      "refract": "TV Time Out by Refract",
+      "liberator": "TV Time Liberator",
+      "extractor": "TV Time Data Extractor"
+    },
+    "formatHelp": {
+      "gdpr": "Le ZIP que TV Time vous a envoyé après une demande de données. Inclut les revisionnages et les notes ; les films sont retrouvés par leur titre.",
+      "refract": "Les fichiers nommés tvtime-series, tvtime-movies, etc. (CSV ou JSON), ou le ZIP qui les contient.",
+      "liberator": "Le fichier tv-time-export.zip de l’extension Liberator, ou ses fichiers shows.json et movies.json.",
+      "extractor": "Un seul fichier tv-time-export.csv. Seuls les films peuvent être importés depuis celui-ci."
+    },
+    "meta": {
+      "shows": "Séries",
+      "episodes": "Épisodes",
+      "movies": "Films",
+      "watchlist": "À voir",
+      "lists": "Listes",
+      "ratings": "Notes"
+    },
+    "skippedRowsNote_one": "{{count}} ligne de votre fichier ne peut pas être importée (informations manquantes ou date invalide).",
+    "skippedRowsNote_other": "{{count}} lignes de votre fichier ne peuvent pas être importées (informations manquantes ou dates invalides).",
+    "readyNote": "Gardez ShowSeek ouvert pendant l’importation. Les grandes bibliothèques peuvent prendre quelques minutes.",
+    "resumeNote": "Votre dernière importation ne s’est pas terminée. En relançant, elle reprendra là où elle s’est arrêtée.",
+    "cooldownNotice": "Vous avez récemment importé depuis TV Time. Vous pourrez lancer une autre importation après {{time}}.",
+    "whichFileTitle": "Quel fichier ai-je ?",
+    "whatWillBeImportedTitle": "Ce qui est importé",
+    "features": {
+      "historyTitle": "Historique de visionnage",
+      "historyDescription": "Chaque épisode et film vu, avec la date à laquelle vous l’avez regardé.",
+      "listsTitle": "À voir, favoris et listes",
+      "listsDescription": "Les séries que vous regardiez, vouliez voir ou aviez arrêtées, ainsi que vos favoris et listes personnalisées.",
+      "ratingsTitle": "Notes",
+      "ratingsDescription": "Notes des séries et des films, si votre export les contient. Les notes d’épisodes ne sont pas prises en charge.",
+      "safeTitle": "Vos données ShowSeek restent intactes",
+      "safeDescription": "Rien de ce que vous suivez déjà n’est modifié. Les épisodes, films et notes déjà présents dans ShowSeek restent tels quels."
+    },
+    "importingTitle": "Importation depuis TV Time",
+    "progressBody": "Recherche de vos séries et films et ajout dans ShowSeek.",
+    "progressChunks": "{{completed}} lot(s) sur {{total}}",
+    "keepAppOpen": "Gardez ShowSeek ouvert jusqu’à la fin.",
+    "backToFile": "Retour",
+    "finalSummaryTitle": "Importation terminée",
+    "partialSummaryTitle": "Importation partielle",
+    "completeBody": "Votre historique TV Time est maintenant dans ShowSeek.",
+    "partialBody": "La majeure partie de votre historique TV Time est maintenant dans ShowSeek. Certains lots n’ont pas abouti ; réessayez-les ci-dessous.",
+    "completeBodyNothingNew": "Tout le contenu de cet export était déjà dans ShowSeek ou n’a pas pu être retrouvé.",
+    "importedTitle": "Importé",
+    "skippedTitle": "Ignoré",
+    "ignoredTitle": "Non importé",
+    "imported": {
+      "shows": "Séries",
+      "movies": "Films",
+      "watchedEpisodes": "Épisodes vus",
+      "watchedMovies": "Visionnages de films",
+      "ratings": "Notes",
+      "listItems": "Éléments de listes",
+      "customListsCreated": "Listes créées"
+    },
+    "skipped": {
+      "alreadyTrackedEpisode": "Épisodes déjà marqués comme vus",
+      "alreadyTrackedMovie": "Films déjà marqués comme vus",
+      "existingRating": "Titres que vous aviez déjà notés",
+      "unresolvedShow": "Séries introuvables",
+      "unresolvedMovie": "Films introuvables",
+      "ambiguousTitle": "Titres avec plusieurs correspondances",
+      "unmatchedEpisode": "Épisodes non retrouvés",
+      "invalidDate": "Lignes avec une date invalide",
+      "malformedRow": "Lignes illisibles",
+      "missingIdentifiers": "Éléments sans informations suffisantes"
+    },
+    "ignored": {
+      "rewatchedEpisodes": "Revisionnages d’épisodes (le plus récent est conservé)",
+      "episodeRatings": "Notes d’épisodes",
+      "duplicatePlays": "Entrées en double",
+      "unsupportedEpisodes": "Épisodes de séries (cet export ne contient pas d’identifiants de séries)"
+    },
+    "unresolvedTitlesTitle": "Introuvables",
+    "unresolvedTitlesBody": "Ces titres n’ont pas pu être retrouvés automatiquement. Vous pouvez les ajouter vous-même avec la recherche.",
+    "andMore": "…et {{count}} de plus",
+    "failedChunksTitle_one": "{{count}} lot ne s’est pas terminé",
+    "failedChunksTitle_other": "{{count}} lots ne se sont pas terminés",
+    "failedChunksBody": "Un problème de connexion a interrompu une partie de l’importation. Réessayer n’envoie que la partie manquante.",
+    "retryFailed": "Réessayer les éléments en échec",
+    "errors": {
+      "parseTitle": "Impossible de lire ce fichier",
+      "parse": {
+        "empty": "Aucun fichier n’a été sélectionné.",
+        "too_large": "Ce fichier est trop volumineux pour être importé (150 Mo maximum).",
+        "unreadable_zip": "Ce fichier ZIP est endommagé ou ne peut pas être ouvert.",
+        "unreadable_file": "Impossible d’ouvrir ce fichier. S’il se trouve dans Google Drive ou une autre app cloud, enregistrez-le d’abord sur votre appareil, puis choisissez-le à nouveau.",
+        "no_history": "Cet export ne contient que les informations du compte, pas votre historique. Vérifiez que vous avez choisi l’export complet des données TV Time.",
+        "trakt_export": "Ceci ressemble à un export Trakt. Utilisez plutôt l’importation Trakt dans Intégrations.",
+        "summary_only": "Il s’agit de la page de résumé TV Time. Choisissez plutôt les fichiers CSV ou JSON du même export.",
+        "mixed_formats": "Ces fichiers proviennent d’outils d’export différents. Importez un export à la fois.",
+        "unknown_format": "Ceci ne ressemble pas à un export TV Time. Consultez la liste des fichiers pris en charge ci-dessous."
+      },
+      "importFailedTitle": "Importation interrompue",
+      "importFailedFallback": "Un problème est survenu. Votre progression est enregistrée : réessayez pour continuer.",
+      "cooldown": "Vous pouvez lancer une nouvelle importation TV Time toutes les 6 heures. Réessayez après {{time}}.",
+      "inProgressElsewhere": "Une importation TV Time est déjà en cours sur un autre appareil. Réessayez dans quelques minutes.",
+      "rateLimited": "Trop de requêtes. Patientez un instant puis réessayez.",
+      "tooLarge": "Cet export est plus volumineux que ce que ShowSeek peut importer en une fois.",
+      "premiumRequired": "L’importation TV Time nécessite Premium.",
+      "signInRequired": "Connectez-vous pour importer votre historique TV Time.",
+      "backendUnavailable": "L’importation TV Time n’est pas disponible pour le moment. Réessayez plus tard.",
+      "invalidData": "Une partie de cet export n’a pas pu être lue. Contactez l’assistance."
     }
   },
   "imdbImport": {

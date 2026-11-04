@@ -120,6 +120,11 @@ export function useProfileLogic() {
     router.push('/(tabs)/profile/imdb-import' as any);
   }, [router]);
 
+  const handleTvTimeImport = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)/profile/tvtime-import' as any);
+  }, [router]);
+
   const handleClearCache = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -317,6 +322,7 @@ export function useProfileLogic() {
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,
     handleImdbImport,
+    handleTvTimeImport,
     handleExportData,
     handleClearCache,
     handleDeleteAccount,

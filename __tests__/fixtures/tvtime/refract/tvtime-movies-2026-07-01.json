@@ -1,0 +1,92 @@
+[
+  {
+    "id": {
+      "imdb": "tt1375666",
+      "tvdb": null
+    },
+    "is_watched": true,
+    "title": "Inception",
+    "watched_at": "2018-03-10T20:00:00Z",
+    "year": 2010
+  },
+  {
+    "id": {
+      "imdb": "tt0133093",
+      "tvdb": 169
+    },
+    "is_watched": true,
+    "title": "The Matrix",
+    "watched_at": "2015-06-01T21:30:00Z",
+    "year": 1999
+  },
+  {
+    "id": {
+      "imdb": "tt0816692",
+      "tvdb": null
+    },
+    "is_watched": false,
+    "title": "Interstellar",
+    "watched_at": null,
+    "year": 2014
+  },
+  {
+    "id": {
+      "imdb": "tt6751668",
+      "tvdb": null
+    },
+    "is_watched": true,
+    "title": "Parasite",
+    "watched_at": "2020-02-15T19:00:00Z",
+    "year": 2019
+  },
+  {
+    "id": {
+      "imdb": "tt1396484",
+      "tvdb": 1435
+    },
+    "is_watched": true,
+    "title": "It",
+    "watched_at": "2019-09-10T08:01:29Z",
+    "year": 2017
+  },
+  {
+    "id": {
+      "imdb": "tt17196124",
+      "tvdb": 340491
+    },
+    "is_watched": false,
+    "title": "Grimcutty",
+    "watched_at": null,
+    "year": 2022
+  },
+  {
+    "id": {
+      "imdb": "tt27554389",
+      "tvdb": 341914
+    },
+    "is_watched": true,
+    "title": "Don’t Call it Mystery",
+    "watched_at": "2025-02-11T17:34:58Z",
+    "year": 2023
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": null
+    },
+    "is_watched": true,
+    "title": "Space Sweepers",
+    "watched_at": "2021-02-06T13:00:00Z",
+    "year": 2021
+  },
+  {
+    "id": {
+      "imdb": null,
+      "tvdb": null
+    },
+    "is_watched": true,
+    "title": "The Lion King",
+    "watched_at": "2019-08-01T18:00:00Z",
+    "year": 2019
+  }
+]

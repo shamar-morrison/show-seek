@@ -82,6 +82,7 @@ export default function ProfileScreen() {
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,
     handleImdbImport,
+    handleTvTimeImport,
     handleExportData,
     handleClearCache,
     handleDeleteAccount,
@@ -339,6 +340,7 @@ export default function ProfileScreen() {
             isTraktConnected={isTraktConnected}
             isTraktLoading={isTraktLoading}
             onImdbImport={() => handleGuardedContentAction(handleImdbImport)}
+            onTvTimeImport={() => handleGuardedContentAction(handleTvTimeImport)}
             onTraktPress={() => handleGuardedContentAction(handleTraktPress)}
             isStremioConnected={isStremioConnected}
             onStremioPress={() => handleGuardedContentAction(handleStremioPress)}

@@ -74,6 +74,13 @@ class MockDocRef {
     return new MockDocSnapshot(this, this.backingStore.get(this.path));
   }
 
+  async create(value: Record<string, unknown>) {
+    if (this.backingStore.has(this.path)) {
+      throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 });
+    }
+    this.backingStore.set(this.path, clone(value));
+  }
+
   async set(value: Record<string, unknown>, options?: { merge?: boolean }) {
     const nextValue = options?.merge
       ? deepMerge(this.backingStore.get(this.path) ?? {}, value)
@@ -112,6 +119,20 @@ class MockFirestore {
 
   collection(name: string) {
     return new MockCollectionRef(name, this.backingStore);
+  }
+
+  async runTransaction<T>(callback: (transaction: unknown) => Promise<T>): Promise<T> {
+    const pendingWrites: (() => Promise<void>)[] = [];
+    const result = await callback({
+      get: (ref: MockDocRef) => ref.get(),
+      set: (ref: MockDocRef, value: Record<string, unknown>, options?: { merge?: boolean }) => {
+        pendingWrites.push(() => ref.set(value, options));
+      },
+    });
+    for (const write of pendingWrites) {
+      await write();
+    }
+    return result;
   }
 }
 
@@ -243,12 +264,12 @@ describe('importImdbChunk', () => {
       },
     },
   ])('rejects $name before contacting Firestore or TMDB', async ({ message, payload }) => {
-    await expect(callImportImdbChunk(createAuthenticatedRequest(payload) as any)).rejects.toMatchObject(
-      {
-        code: 'invalid-argument',
-        message,
-      }
-    );
+    await expect(
+      callImportImdbChunk(createAuthenticatedRequest(payload) as any)
+    ).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message,
+    });
 
     expect(firestoreFn).not.toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
@@ -476,9 +497,7 @@ describe('importImdbChunk', () => {
     expect(firstRun.imported.watchedMovies).toBe(1);
     expect(secondRun.imported.watchedMovies).toBe(0);
 
-    expect(
-      getDoc('users/user-1/watched_movies/101/watches/imdb-101-1704067200000')
-    ).toMatchObject({
+    expect(getDoc('users/user-1/watched_movies/101/watches/imdb-101-1704067200000')).toMatchObject({
       movieId: 101,
       watchedAt: {
         _ms: 1_704_067_200_000,
@@ -496,6 +515,41 @@ describe('importImdbChunk', () => {
       },
       name: 'Already Watched',
     });
+  });
+
+  it('replaces an existing movie rating only with a newer one', async () => {
+    seedPremiumUser('user-1');
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('/find/tt0111161')) {
+        return createFetchResponse({
+          movie_results: [{ genre_ids: [18], id: 101, title: 'The Movie' }],
+          person_results: [],
+          tv_episode_results: [],
+          tv_results: [],
+        });
+      }
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+    const rate = (rating: number, ratedAt: number) =>
+      callImportImdbChunk({
+        auth: { token: { firebase: { sign_in_provider: 'password' } }, uid: 'user-1' },
+        data: {
+          entities: [
+            {
+              actions: [{ kind: 'rating', ratedAt, rating, sourceFileName: 'ratings.csv' }],
+              imdbId: 'tt0111161',
+              rawTitleType: 'movie',
+              title: 'The Movie',
+            },
+          ],
+        },
+      } as any);
+
+    expect((await rate(7, 2_000)).imported.ratings).toBe(1);
+    expect((await rate(9, 1_000)).imported.ratings).toBe(0);
+    expect(getDoc('users/user-1/ratings/movie-101')).toMatchObject({ ratedAt: 2_000, rating: 7 });
+    expect((await rate(9, 3_000)).imported.ratings).toBe(1);
+    expect(getDoc('users/user-1/ratings/movie-101')).toMatchObject({ ratedAt: 3_000, rating: 9 });
   });
 
   it('reuses an existing custom list by case-insensitive name match', async () => {
@@ -713,9 +767,7 @@ function deepMerge(
 }
 
 function getDirectDocPaths(collectionPath: string): string[] {
-  return [...store.keys()]
-    .filter((path) => isDirectChildDocPath(collectionPath, path))
-    .sort();
+  return [...store.keys()].filter((path) => isDirectChildDocPath(collectionPath, path)).sort();
 }
 
 function getDoc(path: string): Record<string, unknown> | undefined {

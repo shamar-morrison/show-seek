@@ -1,0 +1,7 @@
+ordering,s_key,name,type,description,is_public,user_id,objects,created_at,lists,list_count
+,collection,,,,,4242,,,[map[created_at:1.70776612e+09 description:<nil> is_public:true name:Fantasy & Sci-Fi order:<nil> posters:[] s_key:795c9313-6977-4a99-a615-e34b1d9425da] map[created_at:1.710781625e+09 description:<nil> is_public:false name:Best of Korea order:<nil> posters:[] s_key:af1a63e1-3e2f-48a1-acc6-a20f3bb606ce]],
+,count,,,,,4242,,,,2
+0,favorite-series,,list,,false,4242,[map[created_at:1.4518512e+09 id:81189 type:series] map[created_at:1.5549192e+09 id:121361 type:series]],2019-07-17 21:01:26,,
+0,favorite-movies,,list,,false,4242,[map[created_at:1.4331942e+09 type:movie uuid:036be7cc-7052-4429-a2b6-417cfe2866ad]],2019-12-05 14:13:22,,
+0,795c9313-6977-4a99-a615-e34b1d9425da,Fantasy & Sci-Fi,list,,true,4242,[map[created_at:1.70776612e+09 id:334824 type:series] map[created_at:1.70776612e+09 id:121361 type:series]],2024-02-12 19:28:40,,
+0,af1a63e1-3e2f-48a1-acc6-a20f3bb606ce,,list,,false,4242,[map[created_at:1.710781625e+09 type:movie uuid:e1b215db-664d-479a-af0e-f89018c5ffd2]],2024-03-18 17:07:05,,

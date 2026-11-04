@@ -1,0 +1,2 @@
+email,password_hash,user_id
+fixture-user@example.invalid,FIXTURE-SECRET-MUST-NOT-BE-READ,4242
