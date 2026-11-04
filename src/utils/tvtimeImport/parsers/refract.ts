@@ -163,7 +163,10 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
     // CSV wins; JSON only adds movies the CSV doesn't have (a same-titled film with other ids is another movie).
     if (row.fromJson && moviesCsv.length > 0) {
       const found = library.findMovie(lookup);
-      if (found && !hasConflictingIds(found, lookup)) continue;
+      if (found && !hasConflictingIds(found, lookup)) {
+        library.movie(lookup); // fills (and indexes) only the ids the CSV row lacked
+        continue;
+      }
     }
     if (row.watched) {
       const watchedAt = parseTvTimeDate(row.watchedAt, now);

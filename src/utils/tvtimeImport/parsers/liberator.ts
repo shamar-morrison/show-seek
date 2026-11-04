@@ -184,8 +184,8 @@ function parseActivityCsv(
     } else if (type === 'episode' && want.shows) {
       // Episode rows carry the episode's TVDB id, not the show's; group by title.
       const show = findShowByTitle(library, toText(row.title));
-      if (!show) {
-        library.skip('missing_identifiers');
+      if (!show || show === 'ambiguous') {
+        library.skip(show ? 'ambiguous_title' : 'missing_identifiers');
         continue;
       }
       if (toRating(Number(row.rating)) !== null) library.ignore('episode_ratings');
@@ -202,12 +202,11 @@ function parseActivityCsv(
   }
 }
 
+/** The one show with this title; two (e.g. a remake) → 'ambiguous', not whichever came first. */
 function findShowByTitle(library: TvTimeLibrary, title: string) {
   if (!title) return undefined;
-  for (const show of library.shows.values()) {
-    if (show.title === title) return show;
-  }
-  return undefined;
+  const matches = [...library.shows.values()].filter((show) => show.title === title);
+  return matches.length > 1 ? 'ambiguous' : matches[0];
 }
 
 /** A favorite/list movie: the matching movie, or a new one when it has ids or a title of its own. */

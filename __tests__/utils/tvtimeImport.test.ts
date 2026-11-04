@@ -177,6 +177,19 @@ describe('TV Time export parsing — edge cases', () => {
     ]);
     // With v2 present the v1 copy is ignored, so the fixture totals stay as expected.
     expect(normalize('gdpr', withV2)).toEqual(EXPECTED.gdpr);
+
+    // A v2 file whose only play is unusable still falls back to v1.
+    const badV2 = file(
+      'tracking-prod-records-v2.csv',
+      'key,s_id,s_no,ep_no,created_at,series_name\n' +
+        'watch-episode-x,259866,99999,1,2016-08-05 16:48:22,Ray Donovan\n'
+    );
+    const fallback = parse([
+      ...looseFiles('gdpr', (name) => name !== 'tracking-prod-records-v2.csv'),
+      badV2,
+    ]);
+    expect(rayDonovan(fallback)).toEqual(rayDonovan(v1Only));
+    expect(fallback.stats.skipped).toMatchObject({ malformed_row: 1 });
   });
 
   it('counts Data Extractor TV rows as unsupported episodes, not unreadable rows', () => {
@@ -315,6 +328,45 @@ describe('TV Time export parsing — references and duplicates', () => {
     expect(result.movies).toHaveLength(2);
     expect(result.movies.some((movie) => movie.favorite)).toBe(false);
     expect(result.stats.skipped).toMatchObject({ ambiguous_title: 1 });
+  });
+
+  it('skips Liberator activity episodes whose title two shows share', () => {
+    const header =
+      'imdb_id,tvdb_id,type,title,season,episode,is_special,is_watched,watched_at,status,is_watchlisted,rating\n';
+    const result = parse([
+      file(
+        'activity_history.csv',
+        header +
+          ',73244,show,The Office,,,false,false,,continuing,false,\n' +
+          ',78107,show,The Office,,,false,false,,continuing,false,\n' +
+          ',1,episode,The Office,1,1,false,true,2016-01-04T21:00:00Z,,false,\n'
+      ),
+    ]);
+
+    expect(result.shows.flatMap((show) => show.plays)).toEqual([]);
+    expect(result.stats.skipped).toMatchObject({ ambiguous_title: 1 });
+  });
+
+  it("fills a Refract CSV movie's missing ids from its JSON row", () => {
+    const json = JSON.stringify([
+      {
+        id: { imdb: 'tt6751668', tvdb: 9 },
+        is_watched: true,
+        title: 'Parasite',
+        watched_at: '2020-02-15T19:00:00Z',
+        year: 2019,
+      },
+    ]);
+    const result = parse([
+      file(
+        'tvtime-movies.csv',
+        MOVIES_HEADER + 'u-1,,,Parasite,2019,,2020-02-15T19:00:00Z,true,0\n'
+      ),
+      file('tvtime-movies.json', json),
+    ]);
+
+    expect(result.movies).toHaveLength(1);
+    expect(result.movies[0]).toMatchObject({ imdbId: 'tt6751668', tvdbId: 9 });
   });
 
   it('never matches a reference to a movie whose ids conflict with it', () => {
@@ -473,6 +525,8 @@ describe('parseTvTimeDate', () => {
     '2016-02-30 21:00:00',
     '2024-01-01 10:75:00',
     '2024-01-01 24:00:00',
+    '2024-01-01T02:00:00+24:00',
+    '2024-01-01T02:00:00+02:60',
     '50663409-12-05 02:20:00',
     '0001-01-01',
     '1985-01-01',

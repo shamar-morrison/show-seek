@@ -102,8 +102,11 @@ export class TvTimeLibrary {
     return draft;
   }
 
-  /** Adds a play; an identical play (same episode and timestamp) is collapsed and counted. */
-  addPlay(show: ShowDraft, play: TvTimeEpisodePlay): void {
+  /**
+   * Adds a play; an identical play (same episode and timestamp) is collapsed and counted.
+   * Returns false only when the play is rejected as malformed.
+   */
+  addPlay(show: ShowDraft, play: TvTimeEpisodePlay): boolean {
     if (
       play.season > MAX_EPISODE_NUMBER ||
       play.episode > MAX_EPISODE_NUMBER ||
@@ -111,15 +114,16 @@ export class TvTimeLibrary {
       play.episode < 0
     ) {
       this.skip('malformed_row');
-      return;
+      return false;
     }
     const key = `${play.season}:${play.episode}:${play.watchedAt}`;
     if (show.playKeys.has(key)) {
       this.ignore('duplicate_plays');
-      return;
+      return true;
     }
     show.playKeys.add(key);
     show.plays.push(play);
+    return true;
   }
 
   findMovie(lookup: MovieLookup): MovieDraft | undefined {

@@ -69,7 +69,10 @@ export function parseTvTimeDate(raw: unknown, now: number): number | null {
   if (zone && zone !== 'Z') {
     const sign = zone.startsWith('-') ? -1 : 1;
     const digits = zone.slice(1).replace(':', '');
-    value -= sign * (Number(digits.slice(0, 2)) * 60 + Number(digits.slice(2))) * 60_000;
+    const offsetHours = Number(digits.slice(0, 2));
+    const offsetMinutes = Number(digits.slice(2));
+    if (offsetHours > 23 || offsetMinutes > 59) return null;
+    value -= sign * (offsetHours * 60 + offsetMinutes) * 60_000;
   }
 
   return value >= MIN_PLAUSIBLE_MS && value <= now + DAY_MS ? value : null;

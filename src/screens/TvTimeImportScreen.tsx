@@ -35,8 +35,8 @@ import {
 } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -83,36 +83,40 @@ export default function TvTimeImportScreen() {
     }
   }, [requireAccount, router]);
 
-  useEffect(() => {
-    if (!user?.uid) return;
-    let cancelled = false;
+  // On every focus, not just mount: coming back from a finished or refused run must
+  // show the new cooldown and resumable state.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.uid) return;
+      let cancelled = false;
 
-    void (async () => {
-      try {
-        const [limits, storedRun] = await Promise.all([
-          tvTimeImportService.getLimitState(user.uid),
-          tvTimeImportService.getStoredRun(user.uid),
-        ]);
-        if (cancelled) return;
-        const resumable = storedRun !== null && storedRun.importId === limits.activeImportId;
-        setLimitState({
-          blockedUntil:
-            !resumable && limits.nextAllowedImportAt && limits.nextAllowedImportAt > Date.now()
-              ? limits.nextAllowedImportAt
-              : null,
-          unfinishedRunFingerprint:
-            storedRun && storedRun.completed.length > 0 ? storedRun.fingerprint : null,
-        });
-      } catch (error) {
-        // The server enforces the limit regardless; this is only an early hint.
-        console.warn('[TvTimeImportScreen] Could not load import limits:', error);
-      }
-    })();
+      void (async () => {
+        try {
+          const [limits, storedRun] = await Promise.all([
+            tvTimeImportService.getLimitState(user.uid),
+            tvTimeImportService.getStoredRun(user.uid),
+          ]);
+          if (cancelled) return;
+          const resumable = storedRun !== null && storedRun.importId === limits.activeImportId;
+          setLimitState({
+            blockedUntil:
+              !resumable && limits.nextAllowedImportAt && limits.nextAllowedImportAt > Date.now()
+                ? limits.nextAllowedImportAt
+                : null,
+            unfinishedRunFingerprint:
+              storedRun && storedRun.completed.length > 0 ? storedRun.fingerprint : null,
+          });
+        } catch (error) {
+          // The server enforces the limit regardless; this is only an early hint.
+          console.warn('[TvTimeImportScreen] Could not load import limits:', error);
+        }
+      })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.uid]);
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.uid])
+  );
 
   // Lift the cooldown notice as soon as it runs out.
   useEffect(() => {

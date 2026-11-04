@@ -59,12 +59,13 @@ export function parseGdprExport(entries: TvTimeFileEntry[], library: TvTimeLibra
       }
       const show = library.show(showId, { title: toText(row.series_name) });
       const tvdbEpisodeId = toPositiveInt(firstNonEmpty(row.ep_id, row.episode_id));
-      library.addPlay(show, {
+      // Only kept plays count, so unusable v2 rows can't suppress the v1 fallback.
+      const kept = library.addPlay(show, {
         ...position,
         ...(tvdbEpisodeId !== null ? { tvdbEpisodeId } : {}),
         watchedAt,
       });
-      v2Plays += 1;
+      if (kept) v2Plays += 1;
     } else if (key.startsWith('user-series-') && showId !== null) {
       library.show(showId, { title: toText(row.series_name) });
       flags.set(showId, {
