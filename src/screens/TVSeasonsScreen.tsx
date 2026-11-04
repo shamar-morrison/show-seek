@@ -164,6 +164,11 @@ export default function TVSeasonsScreen() {
     [tvId, currentTab, router]
   );
 
+  const handleShowTitlePress = useCallback(() => {
+    const path = currentTab ? `/(tabs)/${currentTab}/tv/${tvId}` : `/tv/${tvId}`;
+    router.push(path as any);
+  }, [currentTab, tvId, router]);
+
   const handleMarkWatched = useCallback(
     (
       params: MarkEpisodeWatchedParams,
@@ -1181,9 +1186,17 @@ export default function TVSeasonsScreen() {
           <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {displayShowTitle}
-          </Text>
+          <TouchableOpacity
+            onPress={handleShowTitlePress}
+            activeOpacity={ACTIVE_OPACITY}
+            accessibilityRole="link"
+            accessibilityLabel={displayShowTitle}
+            testID="header-show-title"
+          >
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {displayShowTitle}
+            </Text>
+          </TouchableOpacity>
           <Text style={styles.headerSubtitle}>{t('media.seasonsAndEpisodes')}</Text>
         </View>
         <Pressable

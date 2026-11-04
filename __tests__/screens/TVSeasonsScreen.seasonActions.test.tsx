@@ -19,6 +19,7 @@ let mockNotesData: Array<{
   showId: number;
 }> = [];
 const mockNotePresent = jest.fn().mockResolvedValue(undefined);
+const mockPush = jest.fn();
 
 jest.mock('@tanstack/react-query', () => {
   const actual = jest.requireActual('@tanstack/react-query');
@@ -32,7 +33,7 @@ jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
   useRouter: () => ({
     back: jest.fn(),
-    push: jest.fn(),
+    push: mockPush,
   }),
   useLocalSearchParams: () => ({ id: '101', season: '1' }),
 }));
@@ -248,6 +249,16 @@ describe('TVSeasonsScreen season actions', () => {
       } as any;
     });
   }
+
+  it('navigates to the TV detail screen when the header show title is pressed', () => {
+    mockQueries();
+
+    const screen = renderWithProviders(<TVSeasonsScreen />);
+
+    fireEvent.press(screen.getByTestId('header-show-title'));
+
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/tv/101');
+  });
 
   it('renders the moved season action buttons and opens the season rating modal', async () => {
     mockQueries();
