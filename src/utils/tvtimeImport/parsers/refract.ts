@@ -1,6 +1,6 @@
 import type { TvTimeShowStatus } from '@/functions/src/shared/tvtimeImport';
 import { REFRACT_FILE_PATTERN, type TvTimeFileEntry } from '../files';
-import { addToList, type TvTimeLibrary } from '../library';
+import { addToList, hasConflictingIds, type TvTimeLibrary } from '../library';
 import {
   parseCsv,
   parseJsonArray,
@@ -73,8 +73,10 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
       title: toText(row.title),
     });
     if (!toBool(row.is_watched)) continue;
-    csvEpisodeKeys.add(episodeKey(tvdbId, row.season, row.episode));
-    addPlay(library, show, row.season, row.episode, row.tvdb_id, row.watched_at);
+    // Only rows the CSV could use; a rejected one (e.g. a bad date) leaves JSON to fill in.
+    if (addPlay(library, show, row.season, row.episode, row.tvdb_id, row.watched_at)) {
+      csvEpisodeKeys.add(episodeKey(tvdbId, row.season, row.episode));
+    }
   }
 
   for (const raw of seriesJson.flatMap((entry) => parseJsonArray(entry.text) ?? [])) {
@@ -158,8 +160,11 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
       uuid: row.uuid,
       year: toYear(row.year),
     };
-    // CSV wins; JSON only adds movies the CSV doesn't have.
-    if (row.fromJson && moviesCsv.length > 0 && library.findMovie(lookup)) continue;
+    // CSV wins; JSON only adds movies the CSV doesn't have (a same-titled film with other ids is another movie).
+    if (row.fromJson && moviesCsv.length > 0) {
+      const found = library.findMovie(lookup);
+      if (found && !hasConflictingIds(found, lookup)) continue;
+    }
     if (row.watched) {
       const watchedAt = parseTvTimeDate(row.watchedAt, now);
       if (watchedAt === null) {
@@ -215,7 +220,8 @@ export function parseRefractExport(entries: TvTimeFileEntry[], library: TvTimeLi
         tvdbId: item.tvdb,
         uuid: item.uuid,
       });
-      if (movie) addToList(movie, item.list, movie.addedAt ?? now);
+      if (movie === 'ambiguous') library.skip('ambiguous_title');
+      else if (movie) addToList(movie, item.list, movie.addedAt ?? now);
       else library.skip('missing_identifiers');
     }
   }
@@ -232,17 +238,17 @@ function addPlay(
   episodeRaw: unknown,
   tvdbEpisodeRaw: unknown,
   watchedAtRaw: unknown
-): void {
+): boolean {
   const season = toNonNegativeInt(seasonRaw);
   const episode = toNonNegativeInt(episodeRaw);
   if (season === null || episode === null) {
     library.skip('malformed_row');
-    return;
+    return false;
   }
   const watchedAt = parseTvTimeDate(watchedAtRaw, library.now);
   if (watchedAt === null) {
     library.skip('invalid_date');
-    return;
+    return false;
   }
   const tvdbEpisodeId = toPositiveInt(tvdbEpisodeRaw);
   library.addPlay(show, {
@@ -251,4 +257,5 @@ function addPlay(
     ...(tvdbEpisodeId !== null ? { tvdbEpisodeId } : {}),
     watchedAt,
   });
+  return true;
 }

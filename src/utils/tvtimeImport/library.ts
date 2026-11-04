@@ -131,15 +131,30 @@ export class TvTimeLibrary {
   }
 
   /**
-   * For references that carry only a title (list items, favorites): an id/title+year
-   * match, else the one movie with that title. Two same-titled movies → no match.
+   * For references that often carry only a title (list items, favorites): an id match,
+   * else the one movie with that title (and year, when given) whose ids don't conflict.
+   * Several such movies → 'ambiguous', so the caller doesn't pick one at random.
    */
-  findReferencedMovie(lookup: MovieLookup): MovieDraft | undefined {
-    const found = this.findMovie(lookup);
-    if (found || !lookup.title || lookup.year) return found;
+  findReferencedMovie(lookup: MovieLookup): MovieDraft | 'ambiguous' | undefined {
+    for (const key of movieKeys({ ...lookup, title: null })) {
+      const found = this.movieIndex.get(key);
+      if (found && !hasConflictingIds(found, lookup)) return found;
+    }
+    if (!lookup.title) return undefined;
+
     const title = lookup.title.trim().toLowerCase();
-    const matches = this.movies.filter((movie) => movie.title.trim().toLowerCase() === title);
-    return matches.length === 1 ? matches[0] : undefined;
+    const candidates = new Set(
+      this.movies.filter((movie) => movie.title.trim().toLowerCase() === title)
+    );
+    // Also drafts indexed under this title by an earlier, differently titled row.
+    const indexed = this.movieIndex.get(`title:${title}|${lookup.year ?? ''}`);
+    if (indexed) candidates.add(indexed);
+
+    const matches = [...candidates].filter(
+      (movie) => (!lookup.year || movie.year === lookup.year) && !hasConflictingIds(movie, lookup)
+    );
+    if (matches.length > 1) return 'ambiguous';
+    return matches[0];
   }
 
   /** Gets or creates a movie matched on uuid, then ids, then title+year. */
@@ -190,7 +205,8 @@ export function addToList(
   if (existing === undefined || addedAt < existing) target.lists.set(trimmed, addedAt);
 }
 
-function hasConflictingIds(draft: MovieDraft, lookup: MovieLookup): boolean {
+/** True when both sides have an id of the same kind and they differ: two films, not one. */
+export function hasConflictingIds(draft: MovieDraft, lookup: MovieLookup): boolean {
   const differs = <T>(a: T | null, b: T | null | undefined) => a !== null && !!b && a !== b;
   return (
     differs(draft.imdbId, lookup.imdbId) ||

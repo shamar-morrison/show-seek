@@ -37,6 +37,7 @@ import {
   TVTIME_IMPORT_MAX_PLAYS_PER_CHUNK,
   TVTIME_IMPORT_SESSION_STALE_MS,
 } from '@/functions/src/shared/tvtimeImport';
+import { createImportWriteContext, ensureCustomList } from '@/functions/src/importWrites';
 import {
   claimTvTimeChunkSlot,
   markTvTimeImportFinished,
@@ -716,6 +717,34 @@ describe('importTvTimeChunk — movies', () => {
 
     expect(result.imported.movies).toBe(1);
     expect(getDirectDocPaths('users/user-1/watched_movies/581392/watches')).toHaveLength(1);
+  });
+});
+
+describe('ensureCustomList', () => {
+  it('reuses a same-named list another call created meanwhile, and suffixes a different one', async () => {
+    const db = new MockFirestore(store) as unknown as FirebaseFirestore.Firestore;
+    // Both contexts load before either list exists, like two overlapping calls.
+    const first = await createImportWriteContext(db, 'user-1');
+    const second = await createImportWriteContext(db, 'user-1');
+
+    expect(await ensureCustomList(first, 'Best of Korea')).toEqual({
+      created: true,
+      listId: 'best-of-korea',
+    });
+    expect(await ensureCustomList(second, 'best of korea')).toEqual({
+      created: false,
+      listId: 'best-of-korea',
+    });
+
+    // A different name that normalizes to the same id still gets its own list.
+    seedDoc('users/user-1/lists/drama', { isCustom: true, items: {}, name: 'Drama!' });
+    const third = { ...second, listCache: new Map(), listNameCache: new Map() };
+    expect(await ensureCustomList(third, 'Drama')).toEqual({ created: true, listId: 'drama-1' });
+    expect(getDirectDocPaths('users/user-1/lists')).toEqual([
+      'users/user-1/lists/best-of-korea',
+      'users/user-1/lists/drama',
+      'users/user-1/lists/drama-1',
+    ]);
   });
 });
 

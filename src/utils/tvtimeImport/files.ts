@@ -95,7 +95,7 @@ export function readTvTimeExportFiles(files: PickedTvTimeFile[]): TvTimeFileEntr
 
   const entries: TvTimeFileEntry[] = [];
   const seenNames: string[] = [];
-  // Uncompressed bytes across every picked ZIP, so several archives share one limit.
+  // Decoded bytes across every picked file (ZIP contents and loose files) share one limit.
   const budget = { inflated: 0 };
 
   for (const file of files) {
@@ -103,7 +103,7 @@ export function readTvTimeExportFiles(files: PickedTvTimeFile[]): TvTimeFileEntr
     seenNames.push(name);
 
     if (name.endsWith('.zip') || looksLikeZip(file.bytes)) {
-      entries.push(...readZip(file.bytes, seenNames, budget));
+      readZip(file.bytes, seenNames, budget).forEach((entry) => addEntry(entries, entry));
       continue;
     }
 
@@ -111,10 +111,14 @@ export function readTvTimeExportFiles(files: PickedTvTimeFile[]): TvTimeFileEntr
       continue;
     }
 
+    budget.inflated += file.bytes.byteLength;
+    if (budget.inflated > TVTIME_MAX_EXPORT_BYTES) {
+      throw new TvTimeImportError('too_large');
+    }
     const text = decodeText(file.bytes);
     const canonical = isRelevantTvTimeFile(name) ? name : sniffCsvName(text);
     if (canonical) {
-      entries.push({ name: canonical, text });
+      addEntry(entries, { name: canonical, text });
     }
   }
 
@@ -123,6 +127,16 @@ export function readTvTimeExportFiles(files: PickedTvTimeFile[]): TvTimeFileEntr
   }
 
   return entries;
+}
+
+/**
+ * Drops an exact copy (the same export picked twice, or a ZIP plus a file from it).
+ * Same-named files with different content are all kept; the parsers read every one.
+ */
+function addEntry(entries: TvTimeFileEntry[], entry: TvTimeFileEntry): void {
+  if (!entries.some((other) => other.name === entry.name && other.text === entry.text)) {
+    entries.push(entry);
+  }
 }
 
 /**

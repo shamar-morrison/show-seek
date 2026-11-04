@@ -9,6 +9,7 @@ import {
   parseTvTimeEntries,
   prepareTvTimeImport,
 } from '@/src/utils/tvtimeImport/prepare';
+import { TvTimeLibrary } from '@/src/utils/tvtimeImport/library';
 import { parseTvTimeDate } from '@/src/utils/tvtimeImport/values';
 import { strToU8, zipSync } from 'fflate';
 import { readdirSync, readFileSync } from 'fs';
@@ -223,6 +224,121 @@ describe('TV Time export parsing — edge cases', () => {
     ]);
 
     expect(result.movies.map((movie) => movie.imdbId).sort()).toEqual(['tt0000001', 'tt0000002']);
+  });
+});
+
+describe('TV Time export parsing — references and duplicates', () => {
+  const file = (name: string, text: string): PickedTvTimeFile => ({ bytes: strToU8(text), name });
+  const EPISODES_HEADER =
+    'series_tvdb_id,series_imdb_id,series_uuid,title,season,episode,tvdb_id,is_watched,watched_at,rewatch_count,special\n';
+  const MOVIES_HEADER =
+    'uuid,tvdb_id,imdb_id,title,year,created_at,watched_at,is_watched,rewatch_count\n';
+  const EXTRACTOR_HEADER =
+    'type,media_type,tmdb_id,imdb_id,tvdb_id,title,year,season,episode,watched_at\n';
+
+  it('takes a Refract episode from JSON when its CSV row was unusable', () => {
+    const json = JSON.stringify([
+      {
+        id: { imdb: null, tvdb: 81189 },
+        seasons: [
+          {
+            episodes: [
+              { id: { tvdb: 2 }, is_watched: true, number: 2, watched_at: '2016-01-05T21:00:00Z' },
+            ],
+            number: 1,
+          },
+        ],
+        status: 'continuing',
+        title: 'Breaking Bad',
+      },
+    ]);
+    const result = parse([
+      file(
+        'tvtime-series-episodes.csv',
+        EPISODES_HEADER +
+          '81189,,,Breaking Bad,1,1,1,true,2016-01-04 21:00:00,0,false\n' +
+          '81189,,,Breaking Bad,1,2,2,true,not a date,0,false\n'
+      ),
+      file('tvtime-series.json', json),
+    ]);
+
+    expect(result.shows[0].plays.map((play) => play.episode)).toEqual([1, 2]);
+    expect(result.stats.skipped).toEqual({ invalid_date: 1 });
+  });
+
+  it("keeps a Refract JSON movie that shares a CSV movie's title and year but not its ids", () => {
+    const json = JSON.stringify([
+      {
+        id: { imdb: 'tt0000002', tvdb: null },
+        is_watched: true,
+        title: 'Twin',
+        watched_at: '2021-02-01T00:00:00Z',
+        year: 2020,
+      },
+    ]);
+    const result = parse([
+      file(
+        'tvtime-movies.csv',
+        MOVIES_HEADER + ',,tt0000001,Twin,2020,,2021-01-01T00:00:00Z,true,0\n'
+      ),
+      file('tvtime-movies.json', json),
+    ]);
+
+    expect(result.movies.map((movie) => movie.imdbId).sort()).toEqual(['tt0000001', 'tt0000002']);
+  });
+
+  it('skips a Liberator favorite that only names a title two movies share', () => {
+    const movies = JSON.stringify([
+      {
+        id: { imdb: 'tt0000001', tvdb: null },
+        is_watched: true,
+        title: 'Twin',
+        watched_at: '2021-01-01T00:00:00Z',
+      },
+      {
+        id: { imdb: 'tt0000002', tvdb: null },
+        is_watched: true,
+        title: 'Twin',
+        watched_at: '2021-02-01T00:00:00Z',
+      },
+    ]);
+    const favorites = JSON.stringify({
+      movies: [{ id: { imdb: null, tvdb: null }, title: 'Twin' }],
+      shows: [],
+    });
+    const result = parse([
+      file('shows.json', '[]'),
+      file('movies.json', movies),
+      file('favorites.json', favorites),
+    ]);
+
+    expect(result.movies).toHaveLength(2);
+    expect(result.movies.some((movie) => movie.favorite)).toBe(false);
+    expect(result.stats.skipped).toMatchObject({ ambiguous_title: 1 });
+  });
+
+  it('never matches a reference to a movie whose ids conflict with it', () => {
+    const library = new TvTimeLibrary(NOW);
+    const twin = library.movie({ imdbId: 'tt0000001', title: 'Twin' });
+
+    expect(library.findReferencedMovie({ title: 'Twin' })).toBe(twin);
+    expect(library.findReferencedMovie({ imdbId: 'tt0000001', title: 'Other' })).toBe(twin);
+    expect(library.findReferencedMovie({ imdbId: 'tt0000002', title: 'Twin' })).toBeUndefined();
+  });
+
+  it('drops an exact copy of a picked file and reads same-named files from different exports', () => {
+    const older =
+      EXTRACTOR_HEADER + 'watch,movie,27205,tt1375666,,Inception,2010,,,2018-03-10T20:00:00Z\n';
+    const newer =
+      EXTRACTOR_HEADER + 'watch,movie,603,tt0133093,,The Matrix,1999,,,2019-06-01T21:30:00Z\n';
+    const csv = (text: string) => file('tv-time-export.csv', text);
+
+    const copies = parse([zipOf([csv(older)], 'a.zip'), zipOf([csv(older)], 'b.zip')]);
+    expect(copies.movies).toHaveLength(1);
+    expect(copies.stats.ignored).toEqual({});
+
+    const both = parse([zipOf([csv(older)], 'old.zip'), zipOf([csv(newer)], 'new.zip')]);
+    expect(both.movies.map((movie) => movie.title).sort()).toEqual(['Inception', 'The Matrix']);
   });
 });
 

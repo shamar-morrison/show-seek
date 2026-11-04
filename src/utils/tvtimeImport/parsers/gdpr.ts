@@ -30,11 +30,9 @@ interface SeriesFlags {
  * so everything is read by header name with fallbacks between old and new columns.
  */
 export function parseGdprExport(entries: TvTimeFileEntry[], library: TvTimeLibrary): void {
-  const file = (name: string) => entries.find((entry) => entry.name === name);
-  const rows = (name: string) => {
-    const entry = file(name);
-    return entry ? parseCsv(entry.text) : [];
-  };
+  // Every file with this name: several picked exports may each carry one.
+  const rows = (name: string) =>
+    entries.filter((entry) => entry.name === name).flatMap((entry) => parseCsv(entry.text));
   const { now } = library;
 
   // --- Episodes and per-show flags (v2 is the source of truth) -------------

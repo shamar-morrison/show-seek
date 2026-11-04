@@ -51,29 +51,44 @@ interface LiberatorMovie {
  * activity_history.csv is a fallback when only the CSV was kept.
  */
 export function parseLiberatorExport(entries: TvTimeFileEntry[], library: TvTimeLibrary): void {
-  const text = (name: string) => entries.find((entry) => entry.name === name)?.text;
-  const shows = parseJsonArray(text('shows.json') ?? '') as LiberatorShow[] | null;
-  const movies = parseJsonArray(text('movies.json') ?? '') as LiberatorMovie[] | null;
+  // Every file with this name: several picked exports may each carry one.
+  const texts = (name: string) =>
+    entries.filter((entry) => entry.name === name).map((entry) => entry.text);
+  /** The readable arrays concatenated, or null when no file had one. */
+  const jsonArray = (name: string) => {
+    const arrays = texts(name)
+      .map((text) => parseJsonArray(text))
+      .filter((array): array is unknown[] => array !== null);
+    return arrays.length > 0 ? arrays.flat() : null;
+  };
+  const shows = jsonArray('shows.json') as LiberatorShow[] | null;
+  const movies = jsonArray('movies.json') as LiberatorMovie[] | null;
 
   if (shows) shows.forEach((show) => addShow(library, show));
   if (movies) movies.forEach((movie) => addMovie(library, movie));
   if (!shows || !movies) {
-    const csv = text('activity_history.csv');
-    if (csv) parseActivityCsv(csv, library, { movies: !movies, shows: !shows });
+    for (const csv of texts('activity_history.csv')) {
+      parseActivityCsv(csv, library, { movies: !movies, shows: !shows });
+    }
   }
 
-  const favorites = parseJsonObject(text('favorites.json') ?? '');
-  for (const show of (favorites?.shows as LiberatorShow[] | undefined) ?? []) {
+  const favoriteFiles = texts('favorites.json').map((text) => parseJsonObject(text));
+  const favorites = {
+    movies: favoriteFiles.flatMap((file) => (file?.movies as LiberatorMovie[] | undefined) ?? []),
+    shows: favoriteFiles.flatMap((file) => (file?.shows as LiberatorShow[] | undefined) ?? []),
+  };
+  for (const show of favorites.shows) {
     const tvdbId = toPositiveInt(show.id?.tvdb);
     if (tvdbId !== null) library.show(tvdbId, { title: toText(show.title) }).favorite = true;
   }
-  for (const movie of (favorites?.movies as LiberatorMovie[] | undefined) ?? []) {
+  for (const movie of favorites.movies) {
     const found = referencedMovie(library, movie);
-    if (found) found.favorite = true;
+    if (found === 'ambiguous') library.skip('ambiguous_title');
+    else if (found) found.favorite = true;
     else library.skip('missing_identifiers');
   }
 
-  const lists = parseJsonArray(text('lists.json') ?? '') ?? [];
+  const lists = jsonArray('lists.json') ?? [];
   for (const raw of lists) {
     const list = raw as { name?: string; shows?: LiberatorShow[]; movies?: LiberatorMovie[] };
     const name = toText(list.name);
@@ -90,8 +105,8 @@ export function parseLiberatorExport(entries: TvTimeFileEntry[], library: TvTime
     }
     for (const movie of list.movies ?? []) {
       const found = referencedMovie(library, movie);
-      if (!found) {
-        library.skip('missing_identifiers');
+      if (!found || found === 'ambiguous') {
+        library.skip(found ? 'ambiguous_title' : 'missing_identifiers');
         continue;
       }
       addToList(
@@ -199,6 +214,8 @@ function findShowByTitle(library: TvTimeLibrary, title: string) {
 function referencedMovie(library: TvTimeLibrary, item: LiberatorMovie) {
   const lookup = movieLookup(item);
   const found = library.findReferencedMovie(lookup);
+  // Creating one here would merge into whichever same-titled movie came first.
+  if (found === 'ambiguous') return 'ambiguous';
   if (found) return found;
   if (!lookup.tvdbId && !lookup.imdbId && !lookup.title) return undefined;
   return library.movie({ ...lookup, addedAt: parseTvTimeDate(item.added_at, library.now) });

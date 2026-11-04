@@ -203,6 +203,24 @@ export async function ensureCustomList(
       if (!isAlreadyExistsError(error) || attempt >= MAX_LIST_ID_ATTEMPTS) {
         throw error;
       }
+      // Same name: another call (e.g. a retried chunk still running) just made this list. Reuse it.
+      const existing = await ref.get();
+      const existingData = existing.data();
+      if (
+        existingData &&
+        String(existingData.name ?? '')
+          .trim()
+          .toLowerCase() === normalizedName
+      ) {
+        context.listCache.set(nextId, {
+          data: existingData,
+          id: nextId,
+          name: String(existingData.name),
+          ref,
+        });
+        context.listNameCache.set(normalizedName, nextId);
+        return { created: false, listId: nextId };
+      }
       attempt += 1;
       nextId = `${baseId}-${attempt}`;
     }

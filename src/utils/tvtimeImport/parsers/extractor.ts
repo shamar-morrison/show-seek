@@ -7,10 +7,11 @@ import { parseCsv, parseTvTimeDate, toImdbId, toPositiveInt, toText, toYear } fr
  * episode rows have never been seen with usable ids (Trakt and others skip them too).
  */
 export function parseExtractorExport(entries: TvTimeFileEntry[], library: TvTimeLibrary): void {
-  const entry = entries.find((candidate) => candidate.name === 'tv-time-export.csv');
-  if (!entry) return;
+  const rows = entries
+    .filter((entry) => entry.name === 'tv-time-export.csv')
+    .flatMap((entry) => parseCsv(entry.text));
 
-  for (const row of parseCsv(entry.text)) {
+  for (const row of rows) {
     const mediaType = toText(row.media_type);
     // TV rows (labelled episode/show/series depending on version) have no usable ids.
     if (mediaType && mediaType !== 'movie') {
