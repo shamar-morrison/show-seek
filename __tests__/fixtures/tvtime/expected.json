@@ -1,0 +1,1059 @@
+{
+  "gdpr": {
+    "clientIgnored": {
+      "episode_ratings": 1,
+      "duplicate_plays": 1
+    },
+    "clientSkipped": {
+      "invalid_date": 2,
+      "missing_identifiers": 1
+    },
+    "movies": [
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "Don’t Call it Mystery",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2023,
+        "altTitle": "dont call it mystery"
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "Grimcutty",
+        "tvdbId": null,
+        "watches": 0,
+        "watchlist": true,
+        "year": 2022,
+        "altTitle": "grimcutty"
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": 8,
+        "title": "Inception",
+        "tvdbId": null,
+        "watches": 2,
+        "watchlist": false,
+        "year": 2010,
+        "altTitle": "inception"
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "Interstellar",
+        "tvdbId": null,
+        "watches": 0,
+        "watchlist": true,
+        "year": 2014,
+        "altTitle": "interstellar"
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "It",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2017,
+        "altTitle": "it"
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [
+          "Best of Korea"
+        ],
+        "rating": null,
+        "title": "Parasite",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2019,
+        "altTitle": "parasite"
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "The Lion King",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2019,
+        "altTitle": "the lion king"
+      },
+      {
+        "favorite": true,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "The Matrix",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 1999,
+        "altTitle": "the matrix"
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "승리호",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2021,
+        "altTitle": "space sweepers"
+      }
+    ],
+    "shows": [
+      {
+        "distinctEpisodes": 62,
+        "favorite": true,
+        "imdbId": null,
+        "lists": [],
+        "plays": 63,
+        "rating": 10,
+        "status": "watching",
+        "title": "Breaking Bad",
+        "tvdbId": 81189
+      },
+      {
+        "distinctEpisodes": 10,
+        "favorite": true,
+        "imdbId": null,
+        "lists": [
+          "Fantasy & Sci-Fi"
+        ],
+        "plays": 10,
+        "rating": null,
+        "status": "watching",
+        "title": "Game of Thrones",
+        "tvdbId": 121361
+      },
+      {
+        "distinctEpisodes": 13,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 13,
+        "rating": null,
+        "status": "watching",
+        "title": "Sherlock",
+        "tvdbId": 176941
+      },
+      {
+        "distinctEpisodes": 4,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 4,
+        "rating": null,
+        "status": "dropped",
+        "title": "Ray Donovan",
+        "tvdbId": 259866
+      },
+      {
+        "distinctEpisodes": 27,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 27,
+        "rating": null,
+        "status": "dropped",
+        "title": "The Blacklist",
+        "tvdbId": 266189
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Marvel's Agent Carter",
+        "tvdbId": 281485
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Legion",
+        "tvdbId": 320724
+      },
+      {
+        "distinctEpisodes": 26,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [
+          "Fantasy & Sci-Fi"
+        ],
+        "plays": 26,
+        "rating": 9,
+        "status": "watching",
+        "title": "Dark",
+        "tvdbId": 334824
+      },
+      {
+        "distinctEpisodes": 20,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 22,
+        "rating": null,
+        "status": "watching",
+        "title": "You",
+        "tvdbId": 336924
+      },
+      {
+        "distinctEpisodes": 6,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 6,
+        "rating": null,
+        "status": "watching",
+        "title": "Bodyguard (2018)",
+        "tvdbId": 349310
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Halo",
+        "tvdbId": 366524
+      },
+      {
+        "distinctEpisodes": 3,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 3,
+        "rating": null,
+        "status": "watching",
+        "title": "Mah-e Asal",
+        "tvdbId": 397770
+      },
+      {
+        "distinctEpisodes": 2,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 2,
+        "rating": null,
+        "status": "watching",
+        "title": "Hello, Nice to Meet You. Could You Please Divorce Me?",
+        "tvdbId": 455514
+      },
+      {
+        "distinctEpisodes": 2,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 2,
+        "rating": null,
+        "status": "watching",
+        "title": "",
+        "tvdbId": 999000001
+      }
+    ]
+  },
+  "gdpr-minimal": {
+    "clientIgnored": {
+      "duplicate_plays": 1
+    },
+    "clientSkipped": {
+      "invalid_date": 1,
+      "missing_identifiers": 2
+    },
+    "movies": [],
+    "shows": [
+      {
+        "distinctEpisodes": 62,
+        "favorite": true,
+        "imdbId": null,
+        "lists": [],
+        "plays": 63,
+        "rating": null,
+        "status": "watching",
+        "title": "Breaking Bad",
+        "tvdbId": 81189
+      },
+      {
+        "distinctEpisodes": 10,
+        "favorite": true,
+        "imdbId": null,
+        "lists": [
+          "Fantasy & Sci-Fi"
+        ],
+        "plays": 10,
+        "rating": null,
+        "status": "watching",
+        "title": "Game of Thrones",
+        "tvdbId": 121361
+      },
+      {
+        "distinctEpisodes": 13,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 13,
+        "rating": null,
+        "status": "watching",
+        "title": "Sherlock",
+        "tvdbId": 176941
+      },
+      {
+        "distinctEpisodes": 4,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 4,
+        "rating": null,
+        "status": "dropped",
+        "title": "Ray Donovan",
+        "tvdbId": 259866
+      },
+      {
+        "distinctEpisodes": 27,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 27,
+        "rating": null,
+        "status": "dropped",
+        "title": "The Blacklist",
+        "tvdbId": 266189
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Marvel's Agent Carter",
+        "tvdbId": 281485
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Legion",
+        "tvdbId": 320724
+      },
+      {
+        "distinctEpisodes": 26,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [
+          "Fantasy & Sci-Fi"
+        ],
+        "plays": 26,
+        "rating": null,
+        "status": "watching",
+        "title": "Dark",
+        "tvdbId": 334824
+      },
+      {
+        "distinctEpisodes": 20,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 22,
+        "rating": null,
+        "status": "watching",
+        "title": "You",
+        "tvdbId": 336924
+      },
+      {
+        "distinctEpisodes": 6,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 6,
+        "rating": null,
+        "status": "watching",
+        "title": "Bodyguard (2018)",
+        "tvdbId": 349310
+      },
+      {
+        "distinctEpisodes": 3,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 3,
+        "rating": null,
+        "status": "watching",
+        "title": "Mah-e Asal",
+        "tvdbId": 397770
+      },
+      {
+        "distinctEpisodes": 2,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 2,
+        "rating": null,
+        "status": "watching",
+        "title": "Hello, Nice to Meet You. Could You Please Divorce Me?",
+        "tvdbId": 455514
+      },
+      {
+        "distinctEpisodes": 2,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 2,
+        "rating": null,
+        "status": "watching",
+        "title": "",
+        "tvdbId": 999000001
+      }
+    ]
+  },
+  "refract": {
+    "clientIgnored": {},
+    "clientSkipped": {},
+    "movies": [
+      {
+        "favorite": false,
+        "imdbId": "tt27554389",
+        "lists": [],
+        "rating": null,
+        "title": "Don’t Call it Mystery",
+        "tvdbId": 341914,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2023
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt17196124",
+        "lists": [],
+        "rating": null,
+        "title": "Grimcutty",
+        "tvdbId": 340491,
+        "watches": 0,
+        "watchlist": true,
+        "year": 2022
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt1375666",
+        "lists": [],
+        "rating": null,
+        "title": "Inception",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2010
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt0816692",
+        "lists": [],
+        "rating": null,
+        "title": "Interstellar",
+        "tvdbId": null,
+        "watches": 0,
+        "watchlist": true,
+        "year": 2014
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt1396484",
+        "lists": [],
+        "rating": null,
+        "title": "It",
+        "tvdbId": 1435,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2017
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt6751668",
+        "lists": [
+          "Best of Korea"
+        ],
+        "rating": null,
+        "title": "Parasite",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2019
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "Space Sweepers",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2021
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "The Lion King",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2019
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt0133093",
+        "lists": [],
+        "rating": null,
+        "title": "The Matrix",
+        "tvdbId": 169,
+        "watches": 1,
+        "watchlist": false,
+        "year": 1999
+      }
+    ],
+    "shows": [
+      {
+        "distinctEpisodes": 62,
+        "favorite": false,
+        "imdbId": "tt0903747",
+        "lists": [],
+        "plays": 62,
+        "rating": null,
+        "status": "up_to_date",
+        "title": "Breaking Bad",
+        "tvdbId": 81189
+      },
+      {
+        "distinctEpisodes": 10,
+        "favorite": false,
+        "imdbId": "tt0944947",
+        "lists": [
+          "Fantasy & Sci-Fi"
+        ],
+        "plays": 10,
+        "rating": null,
+        "status": "watching",
+        "title": "Game of Thrones",
+        "tvdbId": 121361
+      },
+      {
+        "distinctEpisodes": 13,
+        "favorite": false,
+        "imdbId": "tt1475582",
+        "lists": [],
+        "plays": 13,
+        "rating": null,
+        "status": "up_to_date",
+        "title": "Sherlock",
+        "tvdbId": 176941
+      },
+      {
+        "distinctEpisodes": 4,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 4,
+        "rating": null,
+        "status": "dropped",
+        "title": "Ray Donovan",
+        "tvdbId": 259866
+      },
+      {
+        "distinctEpisodes": 27,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 27,
+        "rating": null,
+        "status": "dropped",
+        "title": "The Blacklist",
+        "tvdbId": 266189
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Marvel's Agent Carter",
+        "tvdbId": 281485
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Legion",
+        "tvdbId": 320724
+      },
+      {
+        "distinctEpisodes": 26,
+        "favorite": false,
+        "imdbId": "tt5753856",
+        "lists": [
+          "Fantasy & Sci-Fi"
+        ],
+        "plays": 26,
+        "rating": null,
+        "status": "up_to_date",
+        "title": "Dark",
+        "tvdbId": 334824
+      },
+      {
+        "distinctEpisodes": 20,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 20,
+        "rating": null,
+        "status": "watching",
+        "title": "You",
+        "tvdbId": 336924
+      },
+      {
+        "distinctEpisodes": 6,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 6,
+        "rating": null,
+        "status": "up_to_date",
+        "title": "Bodyguard",
+        "tvdbId": 349310
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Halo",
+        "tvdbId": 366524
+      },
+      {
+        "distinctEpisodes": 3,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 3,
+        "rating": null,
+        "status": "watching",
+        "title": "Mah-e Asal",
+        "tvdbId": 397770
+      },
+      {
+        "distinctEpisodes": 2,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 2,
+        "rating": null,
+        "status": "watching",
+        "title": "Hello, Nice to Meet You. Could You Please Divorce Me?",
+        "tvdbId": 455514
+      },
+      {
+        "distinctEpisodes": 2,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 2,
+        "rating": null,
+        "status": "watching",
+        "title": "",
+        "tvdbId": 999000001
+      }
+    ]
+  },
+  "liberator": {
+    "clientIgnored": {
+      "episode_ratings": 1
+    },
+    "clientSkipped": {},
+    "movies": [
+      {
+        "favorite": false,
+        "imdbId": "tt27554389",
+        "lists": [],
+        "rating": null,
+        "title": "Don’t Call it Mystery",
+        "tvdbId": 341914,
+        "watches": 1,
+        "watchlist": false,
+        "year": null
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt17196124",
+        "lists": [],
+        "rating": null,
+        "title": "Grimcutty",
+        "tvdbId": 340491,
+        "watches": 0,
+        "watchlist": true,
+        "year": null
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt1375666",
+        "lists": [],
+        "rating": 8,
+        "title": "Inception",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": null
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt0816692",
+        "lists": [],
+        "rating": null,
+        "title": "Interstellar",
+        "tvdbId": null,
+        "watches": 0,
+        "watchlist": true,
+        "year": null
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt1396484",
+        "lists": [],
+        "rating": null,
+        "title": "It",
+        "tvdbId": 1435,
+        "watches": 1,
+        "watchlist": false,
+        "year": null
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt6751668",
+        "lists": [
+          "Best of Korea"
+        ],
+        "rating": null,
+        "title": "Parasite",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": null
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "Space Sweepers",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": null
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "The Lion King",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": null
+      },
+      {
+        "favorite": true,
+        "imdbId": "tt0133093",
+        "lists": [],
+        "rating": null,
+        "title": "The Matrix",
+        "tvdbId": 169,
+        "watches": 1,
+        "watchlist": false,
+        "year": null
+      }
+    ],
+    "shows": [
+      {
+        "distinctEpisodes": 62,
+        "favorite": true,
+        "imdbId": "tt0903747",
+        "lists": [],
+        "plays": 62,
+        "rating": null,
+        "status": "up_to_date",
+        "title": "Breaking Bad",
+        "tvdbId": 81189
+      },
+      {
+        "distinctEpisodes": 10,
+        "favorite": true,
+        "imdbId": "tt0944947",
+        "lists": [
+          "Fantasy & Sci-Fi"
+        ],
+        "plays": 10,
+        "rating": null,
+        "status": "watching",
+        "title": "Game of Thrones",
+        "tvdbId": 121361
+      },
+      {
+        "distinctEpisodes": 13,
+        "favorite": false,
+        "imdbId": "tt1475582",
+        "lists": [],
+        "plays": 13,
+        "rating": null,
+        "status": "up_to_date",
+        "title": "Sherlock",
+        "tvdbId": 176941
+      },
+      {
+        "distinctEpisodes": 4,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 4,
+        "rating": null,
+        "status": "dropped",
+        "title": "Ray Donovan",
+        "tvdbId": 259866
+      },
+      {
+        "distinctEpisodes": 27,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 27,
+        "rating": null,
+        "status": "dropped",
+        "title": "The Blacklist",
+        "tvdbId": 266189
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Marvel's Agent Carter",
+        "tvdbId": 281485
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Legion",
+        "tvdbId": 320724
+      },
+      {
+        "distinctEpisodes": 26,
+        "favorite": false,
+        "imdbId": "tt5753856",
+        "lists": [
+          "Fantasy & Sci-Fi"
+        ],
+        "plays": 26,
+        "rating": null,
+        "status": "up_to_date",
+        "title": "Dark",
+        "tvdbId": 334824
+      },
+      {
+        "distinctEpisodes": 20,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 20,
+        "rating": null,
+        "status": "watching",
+        "title": "You",
+        "tvdbId": 336924
+      },
+      {
+        "distinctEpisodes": 6,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 6,
+        "rating": null,
+        "status": "up_to_date",
+        "title": "Bodyguard",
+        "tvdbId": 349310
+      },
+      {
+        "distinctEpisodes": 0,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 0,
+        "rating": null,
+        "status": "watchlist",
+        "title": "Halo",
+        "tvdbId": 366524
+      },
+      {
+        "distinctEpisodes": 3,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 3,
+        "rating": null,
+        "status": "watching",
+        "title": "Mah-e Asal",
+        "tvdbId": 397770
+      },
+      {
+        "distinctEpisodes": 2,
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "plays": 2,
+        "rating": null,
+        "status": "watching",
+        "title": "Hello, Nice to Meet You. Could You Please Divorce Me?",
+        "tvdbId": 455514
+      }
+    ]
+  },
+  "extractor": {
+    "clientIgnored": {},
+    "clientSkipped": {},
+    "movies": [
+      {
+        "favorite": false,
+        "imdbId": "tt27554389",
+        "lists": [],
+        "rating": null,
+        "title": "Don’t Call it Mystery",
+        "tvdbId": 341914,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2023,
+        "tmdbId": null
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt1375666",
+        "lists": [],
+        "rating": null,
+        "title": "Inception",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2010,
+        "tmdbId": 27205
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt1396484",
+        "lists": [],
+        "rating": null,
+        "title": "It",
+        "tvdbId": 1435,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2017,
+        "tmdbId": null
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt6751668",
+        "lists": [],
+        "rating": null,
+        "title": "Parasite",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2019,
+        "tmdbId": 496243
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "Space Sweepers",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2021,
+        "tmdbId": null
+      },
+      {
+        "favorite": false,
+        "imdbId": null,
+        "lists": [],
+        "rating": null,
+        "title": "The Lion King",
+        "tvdbId": null,
+        "watches": 1,
+        "watchlist": false,
+        "year": 2019,
+        "tmdbId": null
+      },
+      {
+        "favorite": false,
+        "imdbId": "tt0133093",
+        "lists": [],
+        "rating": null,
+        "title": "The Matrix",
+        "tvdbId": 169,
+        "watches": 1,
+        "watchlist": false,
+        "year": 1999,
+        "tmdbId": 603
+      }
+    ],
+    "shows": []
+  }
+}
