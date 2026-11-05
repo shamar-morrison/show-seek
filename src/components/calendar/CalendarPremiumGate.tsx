@@ -1,4 +1,4 @@
-import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, FONT_SIZE, hexToRGBA, SPACING } from '@/src/constants/theme';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,7 +56,7 @@ export function CalendarPremiumGate() {
       <View style={styles.content}>
         {/* Icon Container */}
         <View style={styles.iconContainer}>
-          <AppIcon icon={Calendar03Icon} size={48} color="#FFD700" />
+          <AppIcon icon={Calendar03Icon} size={48} color={COLORS.premiumGold} />
         </View>
 
         {/* Title */}
@@ -112,12 +112,12 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: hexToRGBA(COLORS.premiumGold, 0.15),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.l,
     borderWidth: 2,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
+    borderColor: hexToRGBA(COLORS.premiumGold, 0.3),
   },
   title: {
     fontSize: FONT_SIZE.xxl,
@@ -136,12 +136,12 @@ const styles = StyleSheet.create({
   },
   button: {
     flexDirection: 'row',
-    backgroundColor: '#FFD700',
+    backgroundColor: COLORS.premiumGold,
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.xl,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#FFD700',
+    shadowColor: COLORS.premiumGold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
