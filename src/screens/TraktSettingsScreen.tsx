@@ -504,7 +504,7 @@ export default function TraktSettingsScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.heroSection}>
             <View style={styles.syncIconsContainer}>
-              <TraktLogo size={65} />
+              <TraktLogo size={52} />
               <AppIcon
                 icon={ArrowRight01Icon}
                 size={24}

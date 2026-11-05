@@ -522,9 +522,9 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   tvTimeIcon: {
-    borderRadius: 16,
-    height: 70,
-    width: 70,
+    borderRadius: 12,
+    height: 52,
+    width: 52,
   },
   syncIconsContainer: {
     alignItems: 'center',
