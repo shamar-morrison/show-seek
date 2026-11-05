@@ -228,11 +228,35 @@ describe('ImdbImportScreen', () => {
     expect(queryByText('Ready to import')).toBeNull();
   });
 
+  it('disables Start Import until files are selected', () => {
+    const { getByTestId, getByText } = renderScreen();
+
+    expect(getByTestId('imdb-import-start').props.accessibilityState.disabled).toBe(true);
+
+    fireEvent.press(getByText('Start Import'));
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('keeps Start Import disabled when the selected files have nothing to import', async () => {
+    mockPrepareFiles.mockReturnValue(emptyPreparedImport);
+
+    const { findByText, getByTestId, getByText } = renderScreen();
+
+    fireEvent.press(getByText('Select CSV Files'));
+    await findByText('Nothing to import');
+
+    expect(getByTestId('imdb-import-start').props.accessibilityState.disabled).toBe(true);
+  });
+
   it('navigates to the dedicated progress screen when starting the import', async () => {
-    const { findByText, getByText } = renderScreen();
+    const { findByText, getByTestId, getByText } = renderScreen();
 
     fireEvent.press(getByText('Select CSV Files'));
     await findByText('Ready to import');
+
+    expect(getByTestId('imdb-import-start').props.accessibilityState.disabled).toBe(false);
+
     fireEvent.press(getByText('Start Import'));
 
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/profile/imdb-import-progress');

@@ -78,6 +78,7 @@ export default function ImdbImportScreen() {
     (preparedImport?.files.length ?? 0) + (preparedImport?.unsupportedFiles.length ?? 0);
   const selectedChunkCount = preparedImport?.chunks.length ?? 0;
   const hasImportableChunks = selectedChunkCount > 0;
+  const canStart = hasImportableChunks && !isPickingFiles;
 
   const handlePickFiles = async () => {
     if (isPickingFiles || isPremiumLoading) {
@@ -176,17 +177,22 @@ export default function ImdbImportScreen() {
               style={[
                 styles.primaryButton,
                 styles.startButton,
-                {
-                  backgroundColor:
-                    hasImportableChunks && !isPickingFiles ? accentColor : COLORS.surfaceLight,
-                },
+                canStart ? { backgroundColor: accentColor } : styles.startButtonDisabled,
               ]}
               onPress={handleStartImport}
               activeOpacity={ACTIVE_OPACITY}
-              disabled={!hasImportableChunks || isPickingFiles}
+              disabled={!canStart}
+              accessibilityState={{ disabled: !canStart }}
+              testID="imdb-import-start"
             >
-              <AppIcon icon={Upload01Icon} size={18} color={COLORS.white} />
-              <Text style={styles.startButtonText}>{t('imdbImport.startImport')}</Text>
+              <AppIcon
+                icon={Upload01Icon}
+                size={18}
+                color={canStart ? COLORS.white : COLORS.textSecondary}
+              />
+              <Text style={[styles.startButtonText, !canStart && styles.startButtonTextDisabled]}>
+                {t('imdbImport.startImport')}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -518,10 +524,18 @@ const styles = StyleSheet.create({
     gap: SPACING.s,
     justifyContent: 'center',
   },
+  // Dimmed so it can't be mistaken for the Select CSV Files button above it.
+  startButtonDisabled: {
+    backgroundColor: COLORS.surfaceLight,
+    opacity: 0.5,
+  },
   startButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
+  },
+  startButtonTextDisabled: {
+    color: COLORS.textSecondary,
   },
   syncIconsContainer: {
     alignItems: 'center',
