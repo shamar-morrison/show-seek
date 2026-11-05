@@ -23,6 +23,15 @@ export default function ProfileLayout() {
           }}
         >
           <Stack.Screen name="index" />
+          <Stack.Screen
+            name="account"
+            options={{
+              headerShown: true,
+              headerTitle: t('settings.account'),
+              headerStyle: { backgroundColor: COLORS.background },
+              headerTintColor: COLORS.text,
+            }}
+          />
           <Stack.Screen name="trakt-settings" />
           <Stack.Screen name="stremio-settings" />
           <Stack.Screen

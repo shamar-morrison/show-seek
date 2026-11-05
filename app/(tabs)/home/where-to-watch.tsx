@@ -457,7 +457,7 @@ export default function WhereToWatchScreen() {
                 <View style={styles.premiumOverlayFallback} />
               )}
               <View style={styles.premiumCard}>
-                <AppIcon icon={CrownIcon} size={26} color={accentColor} />
+                <AppIcon icon={CrownIcon} size={26} color={accentColor} fill={accentColor} />
                 <Text style={styles.premiumTitle}>{t('whereToWatch.upgradeTitle')}</Text>
                 <Text style={styles.premiumDescription}>
                   {t('whereToWatch.upgradeDescription')}

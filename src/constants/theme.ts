@@ -13,6 +13,8 @@ export const COLORS = {
   warningBackground: 'rgba(245, 158, 11, 0.15)',
   warningBorder: 'rgba(245, 158, 11, 0.3)',
   warningText: '#fbbf24',
+  /** Premium membership marker; deliberately independent of the user's accent color. */
+  premiumGold: '#E6B325',
   error: '#E50914',
   white: '#FFFFFF',
   black: '#000000',

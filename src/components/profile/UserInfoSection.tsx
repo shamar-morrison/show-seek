@@ -1,13 +1,17 @@
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
-import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  hexToRGBA,
+  SPACING,
+} from '@/src/constants/theme';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { User } from 'firebase/auth';
-import { AppIcon } from '@/src/components/ui/AppIcon';
-import { CrownIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 export interface UserInfoSectionProps {
   /** Firebase user object */
@@ -16,25 +20,13 @@ export interface UserInfoSectionProps {
   isGuest: boolean;
   /** Whether the user has premium status */
   isPremium: boolean;
-  /** Handler for upgrade button press */
-  onUpgradePress: () => void;
-  /** Handler for sign out button press */
-  onSignOut: () => void;
 }
 
 /**
- * Displays user avatar, display name, email, and premium status.
- * Compact horizontal layout with avatar on left, info on right.
+ * Account screen identity block: avatar, display name, email, and premium status.
  */
-export function UserInfoSection({
-  user,
-  isGuest,
-  isPremium,
-  onUpgradePress,
-  onSignOut,
-}: UserInfoSectionProps) {
+export function UserInfoSection({ user, isGuest, isPremium }: UserInfoSectionProps) {
   const { t } = useTranslation();
-  const { accentColor } = useAccentColor();
   const displayName = isGuest
     ? t('profile.guestUser')
     : resolvePreferredDisplayName(user?.displayName, null, user?.email) || t('profile.user');
@@ -42,113 +34,58 @@ export function UserInfoSection({
 
   return (
     <View style={styles.userSection}>
-      <View style={styles.avatarContainer}>
-        <UserAvatar
-          photoURL={user?.photoURL}
-          displayName={user?.displayName}
-          email={user?.email}
-          size={65}
-          showPremiumBadge={isPremium}
-        />
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={styles.displayName} numberOfLines={1}>
-          {displayName}
+      <UserAvatar
+        photoURL={user?.photoURL}
+        displayName={user?.displayName}
+        email={user?.email}
+        size={96}
+        isGuest={isGuest}
+        showPremiumRing={isPremium}
+      />
+      <Text style={styles.displayName} numberOfLines={1}>
+        {displayName}
+      </Text>
+      {!isGuest && (
+        <Text style={styles.email} numberOfLines={1}>
+          {email}
         </Text>
-        {isGuest ? (
-          <TouchableOpacity
-            style={[styles.signOutButton, { borderColor: accentColor }]}
-            onPress={onSignOut}
-          >
-            <Text style={[styles.signOutButtonText, { color: accentColor }]}>
-              {t('auth.signOut')}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={styles.email} numberOfLines={1}>
-            {email}
-          </Text>
-        )}
-        {!isGuest && !isPremium && (
-          <TouchableOpacity
-            style={[styles.upgradeButton, { backgroundColor: accentColor }]}
-            onPress={onUpgradePress}
-          >
-            <AppIcon icon={CrownIcon} size={12} color={COLORS.white} style={{ marginRight: 6 }} />
-            <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
-          </TouchableOpacity>
-        )}
-        {!isGuest && isPremium && (
-          <View style={styles.premiumStatusContainer}>
-            <Text style={styles.premiumStatusText}>{t('profile.premiumMember')}</Text>
-          </View>
-        )}
-      </View>
+      )}
+      {!isGuest && isPremium && (
+        <View style={styles.premiumStatusContainer}>
+          <Text style={styles.premiumStatusText}>{t('profile.premiumMember')}</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   userSection: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.l,
-  },
-  avatarContainer: {
-    marginRight: SPACING.m,
-  },
-  userInfo: {
-    flex: 1,
+    paddingVertical: SPACING.l,
   },
   displayName: {
-    fontSize: FONT_SIZE.l,
+    fontSize: FONT_SIZE.xl,
     fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
-    marginBottom: 2,
+    marginTop: SPACING.m,
   },
   email: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-  },
-  signOutButton: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.s,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.xs,
-    marginTop: SPACING.s,
-  },
-  signOutButtonText: {
-    fontSize: FONT_SIZE.s,
-    fontFamily: FONT_FAMILY.semiBold,
-  },
-  upgradeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.s,
-    marginTop: SPACING.s,
-  },
-  upgradeButtonText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: FONT_SIZE.s,
+    marginTop: SPACING.xs,
   },
   premiumStatusContainer: {
-    alignSelf: 'flex-start',
     marginTop: SPACING.s,
     paddingHorizontal: SPACING.s,
     paddingVertical: 2,
-    backgroundColor: 'rgba(245, 124, 0, 0.2)',
+    backgroundColor: hexToRGBA(COLORS.premiumGold, 0.15),
     borderRadius: BORDER_RADIUS.s,
     borderWidth: 1,
-    borderColor: COLORS.warning,
+    borderColor: COLORS.premiumGold,
   },
   premiumStatusText: {
-    color: COLORS.warning,
+    color: COLORS.premiumGold,
     fontSize: FONT_SIZE.xs,
     fontFamily: FONT_FAMILY.semiBold,
   },

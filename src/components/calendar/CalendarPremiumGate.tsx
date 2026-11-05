@@ -70,7 +70,7 @@ export function CalendarPremiumGate() {
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           onPress={handleUpgrade}
         >
-          <AppIcon icon={CrownIcon} size={20} color="#000" style={styles.buttonIcon} />
+          <AppIcon icon={CrownIcon} size={20} color="#000" fill="#000" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>{t('calendar.upgradeToPremium')}</Text>
         </Pressable>
       </View>

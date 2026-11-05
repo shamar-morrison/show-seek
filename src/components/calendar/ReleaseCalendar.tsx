@@ -291,7 +291,13 @@ export function ReleaseCalendar({
           style={styles.upgradeShadow}
         />
         <View style={styles.upgradeCard}>
-          <AppIcon icon={CrownIcon} size={30} color={accentColor} style={styles.upgradeIcon} />
+          <AppIcon
+            icon={CrownIcon}
+            size={30}
+            color={accentColor}
+            fill={accentColor}
+            style={styles.upgradeIcon}
+          />
           <Text style={styles.upgradeTitle}>{t('calendar.upgradeForFullExperience')}</Text>
           <Pressable
             testID={buildMediaTestId(activeMediaFilter, 'upgrade-button')}

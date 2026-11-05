@@ -1,13 +1,14 @@
+import { AccountPrompt } from '@/src/components/profile/AccountPrompt';
 import { AppSettingsSection } from '@/src/components/profile/AppSettingsSection';
 import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { ContentSettingsSection, CONTENT_ITEMS } from '@/src/components/profile/ContentSettingsSection';
 import { IntegrationsSection, INTEGRATION_ITEMS } from '@/src/components/profile/IntegrationsSection';
 import { PreferencesSection, PREFERENCE_ITEMS } from '@/src/components/profile/PreferencesSection';
-import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
+import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import { Search01Icon } from '@hugeicons/core-free-icons';
 import {
   ACTIVE_OPACITY,
@@ -44,7 +45,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type ProfileTab = 'preferences' | 'content' | 'integrations' | 'settings';
+type ProfileTab = 'preferences' | 'content' | 'integrations' | 'general';
+
+/** Extends the 40pt header button to the recommended 44pt touch target. */
+const ACCOUNT_BUTTON_HIT_SLOP = 2;
 
 interface TabConfig {
   id: ProfileTab;
@@ -71,9 +75,8 @@ export default function ProfileScreen() {
   const isAccountRequired = useAccountRequired();
   const {
     isPremium,
-    isExporting,
+    isPremiumLoading,
     isSigningOut,
-    isDeletingAccount,
     isClearingCache,
     showWebAppModal,
     handleRateApp,
@@ -83,11 +86,10 @@ export default function ProfileScreen() {
     handleCloseWebAppModal,
     handleImdbImport,
     handleTvTimeImport,
-    handleExportData,
     handleClearCache,
-    handleDeleteAccount,
     handleSignOut,
     handleUpgradePress,
+    handleAccountPress,
     handleLanguagePress,
     handleRegionPress,
     handleColorPress,
@@ -117,7 +119,7 @@ export default function ProfileScreen() {
       { id: 'preferences', label: t('profile.tabs.preferences') },
       { id: 'content', label: t('profile.tabs.content') },
       { id: 'integrations', label: t('profile.tabs.integrations') },
-      { id: 'settings', label: t('profile.tabs.settings') },
+      { id: 'general', label: t('profile.tabs.general') },
     ],
     [t]
   );
@@ -349,22 +351,16 @@ export default function ProfileScreen() {
             registerItemLayout={registerItemLayout}
           />
         );
-      case 'settings':
+      case 'general':
         return (
           <AppSettingsSection
             isGuest={isGuest}
-            isExporting={isExporting}
             isClearingCache={isClearingCache}
-            isSigningOut={isSigningOut}
-            isDeletingAccount={isDeletingAccount}
             onRateApp={handleRateApp}
-            onExportData={handleExportData}
             onClearCache={handleClearCache}
             onWebApp={handleOpenWebApp}
             onAbout={handleAboutPress}
             onDiscord={handleJoinDiscord}
-            onDeleteAccount={handleDeleteAccount}
-            onSignOut={handleSignOut}
             showTitle={false}
           />
         );
@@ -398,22 +394,41 @@ export default function ProfileScreen() {
             >
               <Text style={styles.headerTitle}>{t('profile.title')}</Text>
             </TouchableOpacity>
-            <HeaderIconButton
-              onPress={() => setIsSearchActive(true)}
-              testID="profile-search-button"
-            >
-              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
-            </HeaderIconButton>
+            <View style={styles.headerActions}>
+              <HeaderIconButton
+                onPress={() => setIsSearchActive(true)}
+                testID="profile-search-button"
+              >
+                <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
+              </HeaderIconButton>
+              <HeaderIconButton
+                onPress={handleAccountPress}
+                testID="profile-account-button"
+                accessibilityLabel={t('settings.account')}
+                hitSlop={ACCOUNT_BUTTON_HIT_SLOP}
+              >
+                <UserAvatar
+                  photoURL={user?.photoURL}
+                  displayName={user?.displayName}
+                  email={user?.email}
+                  size={32}
+                  isGuest={isGuest}
+                  showPremiumRing={isPremium}
+                />
+              </HeaderIconButton>
+            </View>
           </View>
         )}
 
-        {/* User Info Section - Fixed at top */}
-        <UserInfoSection
-          user={user}
+        {/* Guest sign-in or free-user upgrade; renders nothing for premium users */}
+        <AccountPrompt
+          style={styles.accountPrompt}
           isGuest={isGuest}
           isPremium={isPremium}
-          onUpgradePress={handleUpgradePress}
-          onSignOut={handleSignOut}
+          isPremiumLoading={isPremiumLoading}
+          isSigningOut={isSigningOut}
+          onSignIn={handleSignOut}
+          onUpgrade={handleUpgradePress}
         />
 
         {/* Tabs */}
@@ -484,6 +499,15 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xxl,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  accountPrompt: {
+    marginHorizontal: SPACING.l,
+    marginTop: SPACING.m,
   },
   tabsContainer: {
     paddingTop: SPACING.m,

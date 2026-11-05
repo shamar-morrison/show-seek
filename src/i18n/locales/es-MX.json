@@ -127,7 +127,7 @@
     "discover": "Descubrir",
     "search": "Buscar",
     "library": "Biblioteca",
-    "profile": "Perfil"
+    "profile": "Configuración"
   },
   "home": {
     "title": "Inicio",
@@ -739,12 +739,12 @@
     "regionScreenNote": "Esto afecta a la información de dónde ver y a las fechas de estreno locales."
   },
   "profile": {
-    "title": "Perfil",
+    "title": "Configuración",
     "tabs": {
       "preferences": "Preferencias",
       "content": "Contenido",
       "integrations": "Integraciones",
-      "settings": "Configuración"
+      "general": "General"
     },
     "categories": {
       "listAndWatchBehavior": "Listas y visionado",
@@ -772,7 +772,7 @@
     "ratingsGiven": "Calificaciones dadas",
     "listsCreated": "Listas creadas",
     "traktIntegration": "Integración con Trakt",
-    "stremioIntegration": "Stremio",
+    "stremioIntegration": "Addon de Stremio",
     "connectTrakt": "Conectar Trakt",
     "disconnectTrakt": "Desconectar Trakt",
     "traktConnected": "Trakt conectado",
@@ -852,6 +852,7 @@
     "updatePreferenceError": "No se pudo actualizar la preferencia. Inténtalo de nuevo.",
     "user": "Usuario",
     "guestUser": "Usuario invitado",
+    "guestSignInPrompt": "Inicia sesión o crea una cuenta",
     "webAppModal": {
       "title": "Abrir versión web",
       "description": "¿Continuar a la app web de ShowSeek?"
@@ -1221,7 +1222,7 @@
     "checkBackLater": "Vuelve más tarde para ver novedades"
   },
   "stremio": {
-    "header": "Stremio",
+    "header": "Addon de Stremio",
     "intro": "Marca como visto en ShowSeek lo que ves en Stremio.",
     "platformNotice": "Necesitas Stremio en una computadora: la app de escritorio o web.stremio.com. Las apps de Android e iOS todavía no son compatibles.",
     "setup": {

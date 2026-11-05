@@ -2,17 +2,17 @@ import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { render } from '@testing-library/react-native';
 import React from 'react';
 
-jest.mock('@/src/context/AccentColorProvider', () => ({
-  useAccentColor: () => ({
-    accentColor: '#E50914',
-  }),
-}));
+const mockUserAvatar = jest.fn((_props: Record<string, unknown>) => null);
 
 jest.mock('@/src/components/ui/UserAvatar', () => ({
-  UserAvatar: () => null,
+  UserAvatar: (props: Record<string, unknown>) => mockUserAvatar(props),
 }));
 
 describe('UserInfoSection', () => {
+  beforeEach(() => {
+    mockUserAvatar.mockClear();
+  });
+
   it('falls back to the email prefix when the auth display name is blank', () => {
     const { getByText } = render(
       <UserInfoSection
@@ -25,8 +25,6 @@ describe('UserInfoSection', () => {
         }
         isGuest={false}
         isPremium={false}
-        onUpgradePress={jest.fn()}
-        onSignOut={jest.fn()}
       />
     );
 
@@ -46,13 +44,37 @@ describe('UserInfoSection', () => {
         }
         isGuest={true}
         isPremium={false}
-        onUpgradePress={jest.fn()}
-        onSignOut={jest.fn()}
       />
     );
 
     expect(getByText('Guest User')).toBeTruthy();
     expect(queryByText('guest.user')).toBeNull();
     expect(queryByText('guest.user@example.com')).toBeNull();
+    expect(mockUserAvatar).toHaveBeenCalledWith(expect.objectContaining({ isGuest: true }));
+  });
+
+  it('shows the premium status and ring for premium members', () => {
+    const { getByText } = render(
+      <UserInfoSection
+        user={{ displayName: 'Kevin', email: 'kevin@example.com', photoURL: null } as any}
+        isGuest={false}
+        isPremium={true}
+      />
+    );
+
+    expect(getByText('Premium Member')).toBeTruthy();
+    expect(mockUserAvatar).toHaveBeenCalledWith(expect.objectContaining({ showPremiumRing: true }));
+  });
+
+  it('hides the premium status for free users', () => {
+    const { queryByText } = render(
+      <UserInfoSection
+        user={{ displayName: 'Kevin', email: 'kevin@example.com', photoURL: null } as any}
+        isGuest={false}
+        isPremium={false}
+      />
+    );
+
+    expect(queryByText('Premium Member')).toBeNull();
   });
 });

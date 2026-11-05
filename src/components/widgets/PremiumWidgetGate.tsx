@@ -1,4 +1,4 @@
-import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
+import { COLORS, FONT_FAMILY, hexToRGBA } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -24,7 +24,7 @@ export function PremiumWidgetGate({ children }: PremiumWidgetGateProps) {
     <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.iconContainer}>
-          <AppIcon icon={CrownIcon} size={48} color="#FFD700" />
+          <AppIcon icon={CrownIcon} size={48} color={COLORS.premiumGold} fill={COLORS.premiumGold} />
         </View>
 
         <Text style={styles.title}>{t('premiumFeature.title')}</Text>
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    backgroundColor: hexToRGBA(COLORS.premiumGold, 0.1),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   },
   button: {
     flexDirection: 'row',
-    backgroundColor: '#FFD700',
+    backgroundColor: COLORS.premiumGold,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 12,

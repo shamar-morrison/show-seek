@@ -127,7 +127,7 @@
     "discover": "Découvrir",
     "search": "Recherche",
     "library": "Bibliothèque",
-    "profile": "Profil"
+    "profile": "Paramètres"
   },
   "home": {
     "title": "Accueil",
@@ -739,12 +739,12 @@
     "regionScreenNote": "Cela affecte les informations de disponibilité et les dates de sortie locales."
   },
   "profile": {
-    "title": "Profil",
+    "title": "Paramètres",
     "tabs": {
       "preferences": "Préférences",
       "content": "Contenu",
       "integrations": "Intégrations",
-      "settings": "Paramètres"
+      "general": "Général"
     },
     "categories": {
       "listAndWatchBehavior": "Listes et suivi",
@@ -772,7 +772,7 @@
     "ratingsGiven": "Notes données",
     "listsCreated": "Listes créées",
     "traktIntegration": "Intégration Trakt",
-    "stremioIntegration": "Stremio",
+    "stremioIntegration": "Addon Stremio",
     "connectTrakt": "Connecter Trakt",
     "disconnectTrakt": "Déconnecter Trakt",
     "traktConnected": "Trakt connecté",
@@ -859,6 +859,7 @@
     "unableToOpenDiscord": "Impossible d’ouvrir Discord.",
     "user": "Utilisateur",
     "guestUser": "Invité",
+    "guestSignInPrompt": "Connectez-vous ou créez un compte",
     "webAppModal": {
       "description": "Continuer vers l’application web ShowSeek ?",
       "title": "Ouvrir l’application web"
@@ -1285,7 +1286,7 @@
     "yearlyPriceFallback": "$30.00"
   },
   "stremio": {
-    "header": "Stremio",
+    "header": "Addon Stremio",
     "intro": "Marquez comme vu dans ShowSeek ce que vous regardez sur Stremio.",
     "platformNotice": "Il vous faut Stremio sur un ordinateur : l'application de bureau ou web.stremio.com. Les applis Android et iOS ne sont pas encore prises en charge.",
     "setup": {

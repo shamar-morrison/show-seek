@@ -127,7 +127,7 @@
     "discover": "Keşfet",
     "search": "Ara",
     "library": "Kitaplık",
-    "profile": "Profil"
+    "profile": "Ayarlar"
   },
   "home": {
     "title": "Ana sayfa",
@@ -733,12 +733,12 @@
     "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler."
   },
   "profile": {
-    "title": "Profil",
+    "title": "Ayarlar",
     "tabs": {
       "preferences": "Tercihler",
       "content": "İçerik",
       "integrations": "Entegrasyonlar",
-      "settings": "Ayarlar"
+      "general": "Genel"
     },
     "categories": {
       "listAndWatchBehavior": "Liste ve İzleme Davranışı",
@@ -766,7 +766,7 @@
     "ratingsGiven": "Verilen puanlar",
     "listsCreated": "Oluşturulan listeler",
     "traktIntegration": "Trakt entegrasyonu",
-    "stremioIntegration": "Stremio",
+    "stremioIntegration": "Stremio Eklentisi",
     "connectTrakt": "Trakt'a bağlan",
     "disconnectTrakt": "Trakt bağlantısını kes",
     "traktConnected": "Trakt bağlı",
@@ -851,6 +851,7 @@
     "unableToOpenDiscord": "Discord açılamadı.",
     "user": "Kullanıcı",
     "guestUser": "Misafir kullanıcı",
+    "guestSignInPrompt": "Giriş yap veya hesap oluştur",
     "webAppModal": {
       "description": "ShowSeek web uygulamasına devam edilsin mi?",
       "title": "Web uygulamasını aç"
@@ -1213,7 +1214,7 @@
     "checkBackLater": "Güncellemeler için daha sonra tekrar bakın"
   },
   "stremio": {
-    "header": "Stremio",
+    "header": "Stremio Eklentisi",
     "intro": "Stremio'da izlediklerinizi ShowSeek'te izlendi olarak işaretleyin.",
     "platformNotice": "Stremio'yu bir bilgisayarda kullanmanız gerekir: masaüstü uygulaması veya web.stremio.com. Android ve iOS uygulamaları henüz desteklenmiyor.",
     "setup": {

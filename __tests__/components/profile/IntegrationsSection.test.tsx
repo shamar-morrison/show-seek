@@ -81,7 +81,7 @@ describe('IntegrationsSection', () => {
     const props = createProps();
     const { getByTestId, getByText } = render(<IntegrationsSection {...props} />);
 
-    expect(getByText('Stremio')).toBeTruthy();
+    expect(getByText('Stremio Add-on')).toBeTruthy();
     expect(getByTestId('integrations-stremio-icon')).toBeTruthy();
     expect(getByTestId('search-item-stremio')).toBeTruthy();
     expect(INTEGRATION_ITEMS).toContainEqual({

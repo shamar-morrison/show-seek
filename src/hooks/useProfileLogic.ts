@@ -270,6 +270,11 @@ export function useProfileLogic() {
     router.push('/premium');
   }, [router]);
 
+  const handleAccountPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)/profile/account' as any);
+  }, [router]);
+
   const handleLanguagePress = useCallback(() => {
     router.push('/(tabs)/profile/language' as any);
   }, [router]);
@@ -307,6 +312,7 @@ export function useProfileLogic() {
     // User
     user,
     isPremium,
+    isPremiumLoading,
 
     // Modal states
     isExporting,
@@ -328,6 +334,7 @@ export function useProfileLogic() {
     handleDeleteAccount,
     handleSignOut,
     handleUpgradePress,
+    handleAccountPress,
     handleLanguagePress,
     handleRegionPress,
     handleColorPress,

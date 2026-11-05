@@ -10,18 +10,12 @@ describe('AppSettingsSection', () => {
     overrides: Partial<AppSettingsSectionProps> = {}
   ): AppSettingsSectionProps => ({
     isGuest: false,
-    isExporting: false,
     isClearingCache: false,
-    isSigningOut: false,
-    isDeletingAccount: false,
     onRateApp: jest.fn(),
-    onExportData: jest.fn(),
     onClearCache: jest.fn(),
     onWebApp: jest.fn(),
     onAbout: jest.fn(),
     onDiscord: jest.fn(),
-    onDeleteAccount: jest.fn(),
-    onSignOut: jest.fn(),
     ...overrides,
   });
 
@@ -56,48 +50,12 @@ describe('AppSettingsSection', () => {
     expect(props.onClearCache).not.toHaveBeenCalled();
   });
 
-  it('calls onSignOut when sign out action is pressed', () => {
-    const props = createProps();
-    const { getByTestId } = render(<AppSettingsSection {...props} />);
+  it.each([false, true])('leaves account actions to the Account screen (guest: %s)', (isGuest) => {
+    const { queryByText } = render(<AppSettingsSection {...createProps({ isGuest })} />);
 
-    fireEvent.press(getByTestId('action-button-sign-out'));
-
-    expect(props.onSignOut).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows delete account action for signed-in users', () => {
-    const props = createProps();
-    const { getByText } = render(<AppSettingsSection {...props} />);
-
-    expect(getByText('Delete Account')).toBeTruthy();
-  });
-
-  it('shows delete account action for guest users', () => {
-    const props = createProps({ isGuest: true });
-    const { getByText } = render(<AppSettingsSection {...props} />);
-
-    expect(getByText('Delete Account')).toBeTruthy();
-  });
-
-  it('calls onDeleteAccount when delete account action is pressed', () => {
-    const props = createProps();
-    const { getByTestId } = render(<AppSettingsSection {...props} />);
-
-    fireEvent.press(getByTestId('action-button-delete-account'));
-
-    expect(props.onDeleteAccount).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows loading state and disables delete account action while deleting', () => {
-    const props = createProps({ isDeletingAccount: true });
-    const { getByText, getByTestId } = render(<AppSettingsSection {...props} />);
-
-    expect(getByText('Deleting Account...')).toBeTruthy();
-    expect(getByTestId('action-button-spinner')).toBeTruthy();
-
-    fireEvent.press(getByTestId('action-button-deleting-account...'));
-
-    expect(props.onDeleteAccount).not.toHaveBeenCalled();
+    expect(queryByText('Export Data')).toBeNull();
+    expect(queryByText('Delete Account')).toBeNull();
+    expect(queryByText('Sign Out')).toBeNull();
   });
 
   it('renders about action button', () => {
@@ -143,23 +101,10 @@ describe('AppSettingsSection', () => {
     expect(props.onDiscord).toHaveBeenCalledTimes(1);
   });
 
-  it('shows signing out state and disables sign out action while signing out', () => {
-    const props = createProps({ isSigningOut: true });
-    const { getByText, getByTestId } = render(<AppSettingsSection {...props} />);
-
-    expect(getByText('Signing Out...')).toBeTruthy();
-    expect(getByTestId('action-button-spinner')).toBeTruthy();
-
-    fireEvent.press(getByTestId('action-button-signing-out...'));
-
-    expect(props.onSignOut).not.toHaveBeenCalled();
-  });
-
-  it('hides export and clear cache actions for guest users', () => {
+  it('hides clear cache action for guest users', () => {
     const props = createProps({ isGuest: true });
     const { queryByText } = render(<AppSettingsSection {...props} />);
 
-    expect(queryByText('Export Data')).toBeNull();
     expect(queryByText('Clear Image Cache')).toBeNull();
   });
 });

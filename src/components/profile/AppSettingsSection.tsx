@@ -3,10 +3,8 @@ import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import {
   Delete02Icon,
   DiscordIcon,
-  Download01Icon,
   // Globe02Icon, // Hidden: ShowSeek web app link disabled
   InformationCircleIcon,
-  Logout01Icon,
   StarIcon,
 } from '@hugeicons/core-free-icons';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -18,18 +16,10 @@ import { ActionButton } from './ActionButton';
 export interface AppSettingsSectionProps {
   /** Whether user is a guest */
   isGuest: boolean;
-  /** Whether export is in progress */
-  isExporting: boolean;
   /** Whether cache clear is in progress */
   isClearingCache: boolean;
-  /** Whether sign out is in progress */
-  isSigningOut: boolean;
-  /** Whether account deletion is in progress */
-  isDeletingAccount: boolean;
   /** Handler for Rate App button */
   onRateApp: () => void;
-  /** Handler for Export Data button */
-  onExportData: () => void;
   /** Handler for Clear Cache button */
   onClearCache: () => void;
   /** Handler for Web App button */
@@ -38,31 +28,22 @@ export interface AppSettingsSectionProps {
   onAbout: () => void;
   /** Handler for Join Discord button */
   onDiscord: () => void;
-  /** Handler for Delete Account button */
-  onDeleteAccount: () => void;
-  /** Handler for Sign Out button */
-  onSignOut: () => void;
   /** Whether to show section title (default: true) */
   showTitle?: boolean;
 }
 
 /**
- * App settings section with app actions such as export, cache management, and sign-out.
+ * General section with app-level actions such as rating and cache management.
+ * Account-level actions (export, delete, sign-out) live on the Account screen.
  */
 export function AppSettingsSection({
   isGuest,
-  isExporting,
   isClearingCache,
-  isSigningOut,
-  isDeletingAccount,
   onRateApp,
-  onExportData,
   onClearCache,
   // onWebApp, // Hidden: ShowSeek web app link disabled
   onAbout,
   onDiscord,
-  onDeleteAccount,
-  onSignOut,
   showTitle = true,
 }: AppSettingsSectionProps) {
   const { t } = useTranslation();
@@ -76,75 +57,22 @@ export function AppSettingsSection({
       )}
       <View style={styles.actionsList}>
         <ActionButton icon={StarIcon} label={t('profile.rateApp')} onPress={onRateApp} />
-        {isGuest ? (
-          <>
-            <ActionButton
-              icon={InformationCircleIcon}
-              label={t('settings.about')}
-              onPress={onAbout}
-            />
-            <ActionButton
-              customIcon={<AppIcon icon={DiscordIcon} size={20} color={COLORS.text} />}
-              label={t('profile.joinDiscord')}
-              onPress={onDiscord}
-            />
-            <ActionButton
-              icon={Delete02Icon}
-              label={isDeletingAccount ? t('profile.deletingAccount') : t('profile.deleteAccount')}
-              onPress={onDeleteAccount}
-              loading={isDeletingAccount}
-              variant="danger"
-            />
-            <ActionButton
-              icon={Logout01Icon}
-              label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
-              onPress={onSignOut}
-              loading={isSigningOut}
-            />
-            {/* Hidden: ShowSeek web app link disabled */}
-            {/* <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} /> */}
-          </>
-        ) : (
-          <>
-            <ActionButton
-              icon={Download01Icon}
-              label={t('profile.exportData')}
-              onPress={onExportData}
-              loading={isExporting}
-            />
-            <ActionButton
-              icon={Delete02Icon}
-              label={t('profile.clearCache')}
-              onPress={onClearCache}
-              loading={isClearingCache}
-            />
-            {/* Hidden: ShowSeek web app link disabled */}
-            {/* <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} /> */}
-            <ActionButton
-              icon={InformationCircleIcon}
-              label={t('settings.about')}
-              onPress={onAbout}
-            />
-            <ActionButton
-              customIcon={<AppIcon icon={DiscordIcon} size={20} color={COLORS.text} />}
-              label={t('profile.joinDiscord')}
-              onPress={onDiscord}
-            />
-            <ActionButton
-              icon={Delete02Icon}
-              label={isDeletingAccount ? t('profile.deletingAccount') : t('profile.deleteAccount')}
-              onPress={onDeleteAccount}
-              loading={isDeletingAccount}
-              variant="danger"
-            />
-            <ActionButton
-              icon={Logout01Icon}
-              label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
-              onPress={onSignOut}
-              loading={isSigningOut}
-            />
-          </>
+        {!isGuest && (
+          <ActionButton
+            icon={Delete02Icon}
+            label={t('profile.clearCache')}
+            onPress={onClearCache}
+            loading={isClearingCache}
+          />
         )}
+        {/* Hidden: ShowSeek web app link disabled */}
+        {/* <ActionButton icon={Globe02Icon} label={t('profile.webApp')} onPress={onWebApp} /> */}
+        <ActionButton icon={InformationCircleIcon} label={t('settings.about')} onPress={onAbout} />
+        <ActionButton
+          customIcon={<AppIcon icon={DiscordIcon} size={20} color={COLORS.text} />}
+          label={t('profile.joinDiscord')}
+          onPress={onDiscord}
+        />
       </View>
     </View>
   );

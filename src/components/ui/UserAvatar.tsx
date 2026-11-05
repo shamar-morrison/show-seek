@@ -3,7 +3,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { getInitials } from '@/src/utils/userUtils';
 import { Image } from 'expo-image';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { CrownIcon } from '@hugeicons/core-free-icons';
+import { CrownIcon, UserIcon } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -18,6 +18,10 @@ export interface UserAvatarProps {
   size?: number;
   /** Show premium crown badge */
   showPremiumBadge?: boolean;
+  /** Show a gold ring outside the avatar bounds, along with the crown badge */
+  showPremiumRing?: boolean;
+  /** Show a generic person icon instead of a photo or initials */
+  isGuest?: boolean;
   /** Background color for initials avatar */
   backgroundColor?: string;
 }
@@ -26,7 +30,11 @@ export interface UserAvatarProps {
  * Reusable user avatar component that displays:
  * - User photo if available
  * - Initials fallback when no photo
- * - Optional premium crown badge
+ * - Generic person icon for guests
+ * - Optional premium crown badge and gold ring
+ *
+ * The ring is drawn outside `size`, so a premium avatar keeps the same photo
+ * size and layout as a regular one.
  */
 export function UserAvatar({
   photoURL,
@@ -34,6 +42,8 @@ export function UserAvatar({
   email,
   size = 80,
   showPremiumBadge = false,
+  showPremiumRing = false,
+  isGuest = false,
   backgroundColor,
 }: UserAvatarProps) {
   const { accentColor } = useAccentColor();
@@ -41,13 +51,22 @@ export function UserAvatar({
   const initials = getInitials(displayName ?? null, email ?? null);
   const borderRadius = size / 2;
   const fontSize = size * 0.4; // Scale font size relative to avatar size
-  const crownSize = Math.max(12, size * 0.15);
-  const badgeSize = Math.max(20, size * 0.25);
+  const badgeSize = Math.max(14, size * 0.3);
+  const crownSize = Math.round(badgeSize * 0.6);
   const badgeOffset = Math.max(-4, -(size * 0.05));
+  const ringWidth = Math.max(2, size * 0.03);
+  const ringOffset = ringWidth + Math.max(1, size * 0.02);
 
   return (
     <View style={[styles.container, { width: size, height: size, borderRadius }]}>
-      {photoURL ? (
+      {isGuest ? (
+        <View
+          style={[styles.guestContainer, { width: size, height: size, borderRadius }]}
+          testID="user-avatar-guest"
+        >
+          <AppIcon icon={UserIcon} size={size * 0.55} color={COLORS.textSecondary} />
+        </View>
+      ) : photoURL ? (
         <Image
           source={{ uri: photoURL }}
           style={[styles.image, { width: size, height: size, borderRadius }]}
@@ -64,8 +83,26 @@ export function UserAvatar({
           <Text style={[styles.initialsText, { fontSize }]}>{initials}</Text>
         </View>
       )}
-      {showPremiumBadge && (
+      {showPremiumRing && (
         <View
+          pointerEvents="none"
+          testID="user-avatar-premium-ring"
+          style={[
+            styles.premiumRing,
+            {
+              top: -ringOffset,
+              left: -ringOffset,
+              right: -ringOffset,
+              bottom: -ringOffset,
+              borderRadius: borderRadius + ringOffset,
+              borderWidth: ringWidth,
+            },
+          ]}
+        />
+      )}
+      {(showPremiumBadge || showPremiumRing) && (
+        <View
+          testID="user-avatar-premium-badge"
           style={[
             styles.premiumBadge,
             {
@@ -77,7 +114,8 @@ export function UserAvatar({
             },
           ]}
         >
-          <AppIcon icon={CrownIcon} size={crownSize} color={COLORS.white} />
+          {/* Filled: the outline's fine detail blurs together at small badge sizes. */}
+          <AppIcon icon={CrownIcon} size={crownSize} color={COLORS.black} fill={COLORS.black} />
         </View>
       )}
     </View>
@@ -99,12 +137,21 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
   },
-  premiumBadge: {
-    position: 'absolute',
-    backgroundColor: COLORS.warning,
+  guestContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  premiumRing: {
+    position: 'absolute',
+    borderColor: COLORS.premiumGold,
+  },
+  premiumBadge: {
+    position: 'absolute',
+    backgroundColor: COLORS.premiumGold,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
     borderColor: COLORS.background,
   },
 });

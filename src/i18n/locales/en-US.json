@@ -127,7 +127,7 @@
     "discover": "Discover",
     "search": "Search",
     "library": "Library",
-    "profile": "Profile"
+    "profile": "Settings"
   },
   "home": {
     "title": "Home",
@@ -739,12 +739,12 @@
     "regionScreenNote": "This affects where to watch information and local release dates."
   },
   "profile": {
-    "title": "Profile",
+    "title": "Settings",
     "tabs": {
       "preferences": "Preferences",
       "content": "Content",
       "integrations": "Integrations",
-      "settings": "Settings"
+      "general": "General"
     },
     "categories": {
       "listAndWatchBehavior": "List & Watch Behavior",
@@ -772,7 +772,7 @@
     "ratingsGiven": "Ratings Given",
     "listsCreated": "Lists Created",
     "traktIntegration": "Trakt Integration",
-    "stremioIntegration": "Stremio",
+    "stremioIntegration": "Stremio Add-on",
     "connectTrakt": "Connect Trakt",
     "disconnectTrakt": "Disconnect Trakt",
     "traktConnected": "Trakt Connected",
@@ -857,6 +857,7 @@
     "unableToOpenDiscord": "Unable to open Discord.",
     "user": "User",
     "guestUser": "Guest User",
+    "guestSignInPrompt": "Sign in or create an account",
     "webAppModal": {
       "description": "Continue to the ShowSeek web app?",
       "title": "Open Web App"
@@ -1221,7 +1222,7 @@
     "checkBackLater": "Check back later for updates"
   },
   "stremio": {
-    "header": "Stremio",
+    "header": "Stremio Add-on",
     "intro": "Mark what you watch in Stremio as watched in ShowSeek.",
     "platformNotice": "You'll need Stremio on a computer: the desktop app or web.stremio.com. The Android and iOS apps aren't supported yet.",
     "setup": {
