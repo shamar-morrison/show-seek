@@ -127,6 +127,7 @@ describe('StremioSettingsScreen', () => {
     const { getByTestId, getByText, queryByTestId } = await renderScreen();
 
     expect(getByTestId('stremio-logo')).toBeTruthy();
+    expect(getByTestId('stremio-showseek-logo')).toBeTruthy();
     expect(getByText('Your link appears here after you create it.')).toBeTruthy();
     expect(queryByTestId('stremio-disconnect-button')).toBeNull();
 

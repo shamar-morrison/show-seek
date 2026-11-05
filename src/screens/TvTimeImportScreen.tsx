@@ -24,7 +24,7 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import type { TvTimeExportFormat } from '@/src/utils/tvtimeImport/prepare';
 import { getTvTimeParseErrorKey } from '@/src/utils/tvtimeImportError';
 import {
-  ArrowRight01Icon,
+  ArrowRight02Icon,
   Bookmark02Icon,
   Clock01Icon,
   File01Icon,
@@ -187,7 +187,7 @@ export default function TvTimeImportScreen() {
               testID="tvtime-import-hero-icon"
             />
             <AppIcon
-              icon={ArrowRight01Icon}
+              icon={ArrowRight02Icon}
               size={24}
               color={COLORS.textSecondary}
               style={styles.arrowIcon}

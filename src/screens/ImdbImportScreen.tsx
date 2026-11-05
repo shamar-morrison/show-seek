@@ -27,7 +27,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   AnalyticsUpIcon,
   ArrowLeftRightIcon,
-  ArrowRight01Icon,
+  ArrowRight02Icon,
   Bookmark02Icon,
   CheckmarkBadge01Icon,
   File01Icon,
@@ -132,7 +132,7 @@ export default function ImdbImportScreen() {
               />
             </View>
             <AppIcon
-              icon={ArrowRight01Icon}
+              icon={ArrowRight02Icon}
               size={24}
               color={COLORS.textSecondary}
               style={styles.arrowIcon}

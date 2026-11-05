@@ -39,6 +39,7 @@ import {
   AlertCircleIcon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  ArrowRight02Icon,
   CheckmarkCircle02Icon,
   CloudDownloadIcon,
   FileZipIcon,
@@ -506,7 +507,7 @@ export default function TraktSettingsScreen() {
             <View style={styles.syncIconsContainer}>
               <TraktLogo size={52} />
               <AppIcon
-                icon={ArrowRight01Icon}
+                icon={ArrowRight02Icon}
                 size={24}
                 color={COLORS.textSecondary}
                 style={styles.arrowIcon}
@@ -989,6 +990,8 @@ const styles = StyleSheet.create({
   },
   arrowIcon: {
     marginHorizontal: SPACING.s,
+    // Optically centers it: the ShowSeek logo has 20pt of empty space inside its circle.
+    transform: [{ translateX: 10 }],
   },
   showSeekIconCircle: {
     width: 70,

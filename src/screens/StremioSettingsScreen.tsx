@@ -22,7 +22,7 @@ import {
   StremioRateLimitedError,
 } from '@/src/services/StremioAddonService';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { ArrowLeft01Icon, InformationCircleIcon } from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, ArrowRight02Icon, InformationCircleIcon } from '@hugeicons/core-free-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as Clipboard from 'expo-clipboard';
@@ -201,12 +201,28 @@ export default function StremioSettingsScreen() {
       {header}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroSection}>
-          <Image
-            source={require('@/assets/images/stremio.png')}
-            contentFit="contain"
-            style={styles.stremioLogo}
-            testID="stremio-logo"
-          />
+          <View style={styles.syncIconsContainer}>
+            <Image
+              source={require('@/assets/images/stremio.png')}
+              contentFit="contain"
+              style={styles.stremioLogo}
+              testID="stremio-logo"
+            />
+            <AppIcon
+              icon={ArrowRight02Icon}
+              size={24}
+              color={COLORS.textSecondary}
+              style={styles.arrowIcon}
+            />
+            <View style={styles.showSeekIconCircle}>
+              <Image
+                source={require('@/assets/images/icon.png')}
+                contentFit="contain"
+                style={styles.showSeekIcon}
+                testID="stremio-showseek-logo"
+              />
+            </View>
+          </View>
           <Text style={styles.heroSubtitle}>{t('stremio.intro')}</Text>
           {hasActiveLink && (
             <View style={styles.statusPill}>
@@ -260,10 +276,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.l,
   },
-  stremioLogo: {
-    width: 64,
-    height: 64,
+  syncIconsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.m,
     marginBottom: SPACING.m,
+  },
+  stremioLogo: {
+    width: 52,
+    height: 52,
+  },
+  arrowIcon: {
+    marginHorizontal: SPACING.s,
+    // Optically centers it: the ShowSeek logo has 20pt of empty space inside its circle.
+    transform: [{ translateX: 10 }],
+  },
+  showSeekIconCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  showSeekIcon: {
+    width: 93,
+    height: 93,
   },
   heroSubtitle: {
     fontSize: FONT_SIZE.m,

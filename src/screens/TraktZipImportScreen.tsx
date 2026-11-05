@@ -28,7 +28,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   AlertCircleIcon,
   ArrowLeft01Icon,
-  ArrowRight01Icon,
+  ArrowRight02Icon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
   CloudUploadIcon,
@@ -203,7 +203,7 @@ export default function TraktZipImportScreen() {
         <View style={styles.syncIconsContainer}>
           <TraktLogo size={52} />
           <AppIcon
-            icon={ArrowRight01Icon}
+            icon={ArrowRight02Icon}
             size={24}
             color={COLORS.textSecondary}
             style={styles.arrowIcon}
@@ -625,6 +625,8 @@ export default function TraktZipImportScreen() {
 const styles = StyleSheet.create({
   arrowIcon: {
     marginHorizontal: SPACING.s,
+    // Optically centers it: the ShowSeek logo has 20pt of empty space inside its circle.
+    transform: [{ translateX: 10 }],
   },
   backButton: {
     padding: SPACING.xs,
