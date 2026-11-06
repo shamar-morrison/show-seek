@@ -1488,6 +1488,7 @@
     "showIdentity": "Show profile info",
     "showIdentityHint": "Appears at the bottom of your card",
     "notePlaceholder": "Add a note",
+    "episodeNumber": "S{{season}} | E{{episode}}",
     "last6Months": "My Last 6 Months",
     "caption": "Check this out on ShowSeek!",
     "captionCopied": "Caption copied to clipboard",

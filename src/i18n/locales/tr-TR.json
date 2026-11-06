@@ -1480,6 +1480,7 @@
     "showIdentity": "Profil bilgilerini göster",
     "showIdentityHint": "Kartının altında görünür",
     "notePlaceholder": "Not ekle",
+    "episodeNumber": "S{{season}} | B{{episode}}",
     "last6Months": "Son 6 ayım",
     "caption": "Buna ShowSeek'te göz at!",
     "captionCopied": "Açıklama panoya kopyalandı",

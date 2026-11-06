@@ -1800,6 +1800,7 @@
     "showIdentity": "Mostrar información del perfil",
     "showIdentityHint": "Aparece en la parte inferior de tu tarjeta",
     "notePlaceholder": "Añade una nota",
+    "episodeNumber": "T{{season}} | E{{episode}}",
     "last6Months": "Mis últimos 6 meses",
     "caption": "¡Mira esto en ShowSeek!",
     "captionCopied": "Texto copiado al portapapeles",

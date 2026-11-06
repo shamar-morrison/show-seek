@@ -1,5 +1,9 @@
 import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
-import { TitleShareCardData } from '@/src/components/shareCard/shareCardTypes';
+import {
+  EpisodeShareCardData,
+  ShareCardData,
+  TitleShareCardData,
+} from '@/src/components/shareCard/shareCardTypes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, configure, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import * as MediaLibrary from 'expo-media-library';
@@ -46,7 +50,7 @@ const movie: TitleShareCardData = {
   userRating: 0,
 };
 
-const renderEditor = async (data: TitleShareCardData = movie) => {
+const renderEditor = async (data: ShareCardData = movie) => {
   const utils = render(<ShareCardEditor visible onClose={jest.fn()} data={data} />);
   await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalled());
   await act(async () => {});
@@ -318,6 +322,19 @@ describe('ShareCardEditor', () => {
       expect(foregroundUri(utils)).toContain('/poster.jpg');
     });
 
+    it.each(['portrait', 'square', 'landscape'])(
+      '%s puts a subtle gold border around the poster',
+      async (format) => {
+        const utils = await renderEditor();
+        selectFormat(utils, format);
+
+        expect(capturedCard(utils).getByTestId('share-card-foreground-frame')).toHaveStyle({
+          borderWidth: 2,
+          borderColor: 'rgba(212, 169, 95, 0.4)',
+        });
+      }
+    );
+
     it('limits genres to two', async () => {
       const utils = await renderEditor();
 
@@ -503,6 +520,123 @@ describe('ShareCardEditor', () => {
       });
 
       expect(cardNote(utils)).toHaveTextContent('\u201CKeep me\u201D');
+    });
+  });
+
+  describe('episode card', () => {
+    const episode: EpisodeShareCardData = {
+      kind: 'episode',
+      showTitle: 'Test Show',
+      episodeTitle: 'The Pilot',
+      seasonNumber: 4,
+      episodeNumber: 9,
+      posterPath: '/poster.jpg',
+      stillPath: '/still.jpg',
+      backdropPath: '/backdrop.jpg',
+      runtimeMinutes: 143,
+      userRating: 0,
+    };
+
+    const selectFormat = (utils: ReturnType<typeof render>, format: string) =>
+      fireEvent.press(utils.getByTestId(`share-card-format-tab-${format}`));
+    const headline = (utils: ReturnType<typeof render>) =>
+      capturedCard(utils).getByTestId('share-card-title');
+    const foregroundUri = (utils: ReturnType<typeof render>) =>
+      capturedCard(utils).getByTestId('share-card-foreground').props.source.uri;
+
+    it.each(['portrait', 'square', 'landscape'])(
+      '%s puts the capitalized show above the episode title and number',
+      async (format) => {
+        const utils = await renderEditor(episode);
+        selectFormat(utils, format);
+
+        const eyebrow = capturedCard(utils).getByTestId('share-card-eyebrow');
+        expect(eyebrow).toHaveTextContent('Test Show');
+        expect(eyebrow).toHaveStyle({ textTransform: 'uppercase' });
+        expect(headline(utils)).toHaveTextContent('The Pilot');
+        expect(capturedCard(utils).getByText('S04 | E9 · 2h 23m')).toBeTruthy();
+      }
+    );
+
+    it('leaves the padding off double-digit seasons', async () => {
+      const utils = await renderEditor({ ...episode, seasonNumber: 12, runtimeMinutes: 45 });
+
+      expect(capturedCard(utils).getByText('S12 | E9 · 45m')).toBeTruthy();
+    });
+
+    it('shows whole hours without minutes', async () => {
+      const utils = await renderEditor({ ...episode, runtimeMinutes: 60 });
+
+      expect(capturedCard(utils).getByText('S04 | E9 · 1h')).toBeTruthy();
+    });
+
+    it('drops the runtime when the episode has none', async () => {
+      const utils = await renderEditor({ ...episode, runtimeMinutes: null });
+
+      expect(capturedCard(utils).getByText('S04 | E9')).toBeTruthy();
+    });
+
+    it('offers no headline switch, since the title and number both show', async () => {
+      const utils = await renderEditor(episode);
+
+      expect(utils.queryByTestId('share-card-episode-headline')).toBeNull();
+    });
+
+    it('has no capitalized line on movies and shows', async () => {
+      const utils = await renderEditor();
+
+      expect(capturedCard(utils).queryByTestId('share-card-eyebrow')).toBeNull();
+    });
+
+    it('shows the episode rating only once rated', async () => {
+      const unrated = await renderEditor(episode);
+      expect(capturedCard(unrated).queryAllByTestId('share-card-stat')).toHaveLength(0);
+      unrated.unmount();
+
+      const rated = await renderEditor({ ...episode, userRating: 9 });
+      expect(capturedCard(rated).getByText('9/10')).toBeTruthy();
+    });
+
+    it('shows the note', async () => {
+      const utils = await renderEditor(episode);
+      fireEvent.changeText(utils.getByTestId('share-card-note-input'), 'What a finale');
+
+      expect(capturedCard(utils).getByTestId('share-card-note')).toHaveTextContent(
+        '\u201CWhat a finale\u201D'
+      );
+    });
+
+    it('uses the poster in portrait and landscape, and the still in square', async () => {
+      const utils = await renderEditor(episode);
+      expect(foregroundUri(utils)).toContain('/poster.jpg');
+
+      selectFormat(utils, 'square');
+      expect(foregroundUri(utils)).toContain('/still.jpg');
+
+      selectFormat(utils, 'landscape');
+      expect(foregroundUri(utils)).toContain('/poster.jpg');
+    });
+
+    it('falls back to the show backdrop when the episode has no still', async () => {
+      const utils = await renderEditor({ ...episode, stillPath: null });
+      selectFormat(utils, 'square');
+
+      expect(foregroundUri(utils)).toContain('/backdrop.jpg');
+    });
+
+    it('captures at the chosen size', async () => {
+      const utils = await renderEditor(episode);
+      selectFormat(utils, 'landscape');
+      settleCaptureImages(utils);
+
+      await act(async () => {
+        fireEvent.press(utils.getByTestId('share-card-save'));
+      });
+
+      expect(captureRef).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ width: 1920, height: 1080 })
+      );
     });
   });
 

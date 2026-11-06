@@ -6,20 +6,18 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 
 import { CardText } from './CardText';
 import { ShareCardFooter } from './ShareCardFooter';
-import { resolveTitleCardImages, TitleCardImages } from './shareCardImages';
-import {
-  SHARE_CARD_BACKGROUND,
-  ShareCardFormat,
-  ShareCardIdentity,
-  TitleShareCardData,
-} from './shareCardTypes';
+import { ShareCardContent } from './shareCardContent';
+import { ShareCardImages } from './shareCardImages';
+import { SHARE_CARD_BACKGROUND, ShareCardFormat, ShareCardIdentity } from './shareCardTypes';
 
 const FALLBACK_GRADIENT = ['#1a1a2e', '#16213e', '#0f3460'] as const;
 const NOTE_COLOR = '#E8E6E1';
+const FOREGROUND_BORDER_COLOR = hexToRGBA('#D4A95F', 0.4);
+const FOREGROUND_BORDER_WIDTH = 2;
 
 const CENTERED_LAYOUT = {
   // The extra top and bottom padding keeps content clear of Instagram's Stories controls.
@@ -30,6 +28,7 @@ const CENTERED_LAYOUT = {
     foregroundWidth: 560,
     foregroundHeight: 840,
     foregroundRadius: 32,
+    eyebrow: 32,
     title: 88,
     titleLineHeight: 100,
     titleLines: 3,
@@ -50,6 +49,7 @@ const CENTERED_LAYOUT = {
     foregroundWidth: 760,
     foregroundHeight: 428,
     foregroundRadius: 28,
+    eyebrow: 26,
     title: 64,
     titleLineHeight: 74,
     titleLines: 2,
@@ -65,9 +65,12 @@ const CENTERED_LAYOUT = {
   },
 } as const;
 
+const LANDSCAPE_POSTER_RADIUS = 32;
+
 const LANDSCAPE_LAYOUT = {
   padding: 80,
   paddingBottom: 72,
+  eyebrow: 30,
   title: 88,
   titleLineHeight: 100,
   titleLines: 3,
@@ -82,22 +85,24 @@ const LANDSCAPE_LAYOUT = {
   sectionGap: 40,
 } as const;
 
-interface TitleShareCardProps {
-  data: TitleShareCardData;
+interface ShareCardLayoutProps {
+  content: ShareCardContent;
+  images: ShareCardImages;
   format: ShareCardFormat;
   identity: ShareCardIdentity | null;
   note?: string | null;
   onImageSettled?: (key: string) => void;
 }
 
-export function TitleShareCard({
-  data,
+/** The layout every card type shares, one arrangement for each size. */
+export function ShareCardLayout({
+  content,
+  images,
   format,
   identity,
   note,
   onImageSettled,
-}: TitleShareCardProps) {
-  const images = resolveTitleCardImages(data, format);
+}: ShareCardLayoutProps) {
   const footer = (
     <ShareCardFooter format={format} identity={identity} onImageSettled={onImageSettled} />
   );
@@ -118,7 +123,7 @@ export function TitleShareCard({
 
       {format === 'landscape' ? (
         <LandscapeContent
-          data={data}
+          content={content}
           images={images}
           note={note}
           footer={footer}
@@ -126,7 +131,7 @@ export function TitleShareCard({
         />
       ) : (
         <CenteredContent
-          data={data}
+          content={content}
           format={format}
           images={images}
           note={note}
@@ -139,15 +144,15 @@ export function TitleShareCard({
 }
 
 interface ContentProps {
-  data: TitleShareCardData;
-  images: TitleCardImages;
+  content: ShareCardContent;
+  images: ShareCardImages;
   note?: string | null;
   footer: React.ReactNode;
   onImageSettled?: (key: string) => void;
 }
 
 function CenteredContent({
-  data,
+  content,
   format,
   images,
   note,
@@ -158,8 +163,8 @@ function CenteredContent({
   const { accentColor } = useAccentColor();
   const layout = CENTERED_LAYOUT[format];
   const { foregroundUrl } = images;
-  const rating = getRatingStat(data, t);
-  const meta = getMeta(data);
+  const rating = getRatingStat(content.userRating, t);
+  const { meta } = content;
   // A poster standing in for a missing backdrop keeps its own shape instead of being cropped.
   const foregroundAspectRatio = images.foregroundIsPosterFallback
     ? 2 / 3
@@ -187,26 +192,25 @@ function CenteredContent({
       >
         <View style={styles.centeredDetails}>
           {foregroundUrl && (
-            <View
-              style={[
-                styles.foregroundShadow,
-                {
-                  height: layout.foregroundHeight,
-                  aspectRatio: foregroundAspectRatio,
-                  borderRadius: layout.foregroundRadius,
-                  marginBottom: layout.sectionGap,
-                },
-              ]}
-              testID="share-card-foreground-frame"
+            <ForegroundImage
+              url={foregroundUrl}
+              radius={layout.foregroundRadius}
+              frameStyle={{
+                height: layout.foregroundHeight,
+                aspectRatio: foregroundAspectRatio,
+                marginBottom: layout.sectionGap,
+              }}
+              onImageSettled={onImageSettled}
+            />
+          )}
+          {!!content.eyebrow && (
+            <CardText
+              style={[styles.eyebrow, styles.centeredText, { fontSize: layout.eyebrow }]}
+              numberOfLines={1}
+              testID="share-card-eyebrow"
             >
-              <Image
-                source={{ uri: foregroundUrl }}
-                style={[styles.fill, { borderRadius: layout.foregroundRadius }]}
-                contentFit="cover"
-                onLoadEnd={() => onImageSettled?.(foregroundUrl)}
-                testID="share-card-foreground"
-              />
-            </View>
+              {content.eyebrow}
+            </CardText>
           )}
           <CardText
             style={[
@@ -217,7 +221,7 @@ function CenteredContent({
             numberOfLines={layout.titleLines}
             testID="share-card-title"
           >
-            {data.title}
+            {content.headline}
           </CardText>
           {!!meta && (
             <CardText
@@ -260,13 +264,13 @@ function CenteredContent({
   );
 }
 
-function LandscapeContent({ data, images, note, footer, onImageSettled }: ContentProps) {
+function LandscapeContent({ content, images, note, footer, onImageSettled }: ContentProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const layout = LANDSCAPE_LAYOUT;
   const { foregroundUrl } = images;
-  const meta = getMeta(data);
-  const rating = getRatingStat(data, t);
+  const { meta } = content;
+  const rating = getRatingStat(content.userRating, t);
 
   return (
     <>
@@ -281,22 +285,30 @@ function LandscapeContent({ data, images, note, footer, onImageSettled }: Conten
         ]}
       >
         {foregroundUrl && (
-          <Image
-            source={{ uri: foregroundUrl }}
-            style={styles.landscapePoster}
-            contentFit="cover"
-            onLoadEnd={() => onImageSettled?.(foregroundUrl)}
-            testID="share-card-foreground"
+          <ForegroundImage
+            url={foregroundUrl}
+            radius={LANDSCAPE_POSTER_RADIUS}
+            frameStyle={styles.landscapePoster}
+            onImageSettled={onImageSettled}
           />
         )}
         <View style={styles.landscapeColumn}>
           <View style={styles.landscapeDetails}>
+            {!!content.eyebrow && (
+              <CardText
+                style={[styles.eyebrow, { fontSize: layout.eyebrow }]}
+                numberOfLines={1}
+                testID="share-card-eyebrow"
+              >
+                {content.eyebrow}
+              </CardText>
+            )}
             <CardText
               style={[styles.title, { fontSize: layout.title, lineHeight: layout.titleLineHeight }]}
               numberOfLines={layout.titleLines}
               testID="share-card-title"
             >
-              {data.title}
+              {content.headline}
             </CardText>
             {!!meta && (
               <CardText style={[styles.meta, { fontSize: layout.meta }]} numberOfLines={1}>
@@ -329,6 +341,30 @@ function LandscapeContent({ data, images, note, footer, onImageSettled }: Conten
         </View>
       </View>
     </>
+  );
+}
+
+interface ForegroundImageProps {
+  url: string;
+  radius: number;
+  frameStyle: ViewStyle;
+  onImageSettled?: (key: string) => void;
+}
+
+function ForegroundImage({ url, radius, frameStyle, onImageSettled }: ForegroundImageProps) {
+  return (
+    <View
+      style={[styles.foregroundFrame, { borderRadius: radius, ...frameStyle }]}
+      testID="share-card-foreground-frame"
+    >
+      <Image
+        source={{ uri: url }}
+        style={[styles.fill, { borderRadius: radius - FOREGROUND_BORDER_WIDTH }]}
+        contentFit="cover"
+        onLoadEnd={() => onImageSettled?.(url)}
+        testID="share-card-foreground"
+      />
+    </View>
   );
 }
 
@@ -398,14 +434,10 @@ function StatPill({ stat, accentColor, valueSize, labelSize, style }: StatPillPr
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-function getMeta(data: TitleShareCardData) {
-  return [data.releaseYear, data.genres.slice(0, 2).join(', ')].filter(Boolean).join(' • ');
-}
+function getRatingStat(userRating: number, t: Translate): Stat | null {
+  if (userRating <= 0) return null;
 
-function getRatingStat(data: TitleShareCardData, t: Translate): Stat | null {
-  if (data.userRating <= 0) return null;
-
-  const rating = Number.isInteger(data.userRating) ? data.userRating : data.userRating.toFixed(1);
+  const rating = Number.isInteger(userRating) ? userRating : userRating.toFixed(1);
   return {
     icon: StarIcon,
     value: `${rating}/10`,
@@ -431,7 +463,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  foregroundShadow: {
+  foregroundFrame: {
+    borderWidth: FOREGROUND_BORDER_WIDTH,
+    borderColor: FOREGROUND_BORDER_COLOR,
     // Full size unless the text below it would otherwise push the card's content off screen.
     flexShrink: 1,
     backgroundColor: COLORS.surface,
@@ -455,7 +489,6 @@ const styles = StyleSheet.create({
   landscapePoster: {
     width: 620,
     height: '100%',
-    borderRadius: 32,
   },
   landscapeColumn: {
     flex: 1,
@@ -467,6 +500,13 @@ const styles = StyleSheet.create({
   },
   landscapeStat: {
     alignSelf: 'flex-start',
+  },
+  eyebrow: {
+    fontFamily: FONT_FAMILY.semiBold,
+    color: COLORS.textSecondary,
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    marginBottom: 16,
   },
   title: {
     fontFamily: FONT_FAMILY.bold,

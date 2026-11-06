@@ -1,15 +1,10 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import {
-  ShareCardData,
-  ShareCardFormat,
-  ShareCardIdentity,
-  TitleShareCardData,
-} from './shareCardTypes';
+import { ShareCardData, ShareCardFormat, ShareCardIdentity } from './shareCardTypes';
 
 /** Tracking key for the bundled logo, which has no URL of its own. */
 export const SHARE_CARD_LOGO_KEY = 'share-card-logo';
 
-export interface TitleCardImages {
+export interface ShareCardImages {
   /** Blurred behind everything else. */
   backgroundUrl: string | null;
   /** Sharp image with rounded corners. */
@@ -18,12 +13,16 @@ export interface TitleCardImages {
   foregroundIsPosterFallback: boolean;
 }
 
-export function resolveTitleCardImages(
-  data: TitleShareCardData,
+export function resolveShareCardImages(
+  data: ShareCardData,
   format: ShareCardFormat
-): TitleCardImages {
+): ShareCardImages {
   const poster = getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.large);
-  const backdrop = getImageUrl(data.backdropPath, TMDB_IMAGE_SIZES.backdrop.large);
+  // An episode's own still suits its card better than the show's backdrop.
+  const backdrop = getImageUrl(
+    (data.kind === 'episode' ? data.stillPath : null) ?? data.backdropPath,
+    TMDB_IMAGE_SIZES.backdrop.large
+  );
 
   switch (format) {
     case 'portrait':
@@ -53,7 +52,7 @@ export function getShareCardImageKeys(
   format: ShareCardFormat,
   identity: ShareCardIdentity | null
 ): string[] {
-  const { backgroundUrl, foregroundUrl } = resolveTitleCardImages(data, format);
+  const { backgroundUrl, foregroundUrl } = resolveShareCardImages(data, format);
 
   return [
     ...new Set(

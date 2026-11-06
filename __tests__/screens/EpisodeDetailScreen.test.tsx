@@ -132,6 +132,12 @@ const setMockQueries = (episodeOverrides: Partial<typeof mockEpisode> = {}) => {
   });
 };
 
+const mockShareCardEditor = jest.fn((_props: unknown) => null);
+jest.mock('@/src/components/shareCard/ShareCardEditor', () => ({
+  __esModule: true,
+  default: (props: unknown) => mockShareCardEditor(props),
+}));
+
 jest.mock('expo-router', () => {
   const React = require('react');
   const Stack = ({ children }: { children: React.ReactNode }) =>
@@ -494,6 +500,29 @@ describe('EpisodeDetailScreen', () => {
         })
       );
     });
+  });
+
+  it('opens the share card editor with the episode from the action row', () => {
+    const { getByTestId } = render(<EpisodeDetailScreen />);
+    expect(mockShareCardEditor).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('episode-share-card-action'));
+
+    expect(mockShareCardEditor).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        visible: true,
+        data: expect.objectContaining({
+          kind: 'episode',
+          showTitle: mockTvShow.name,
+          episodeTitle: mockEpisode.name,
+          seasonNumber: 1,
+          episodeNumber: 2,
+          stillPath: mockEpisode.still_path,
+          runtimeMinutes: mockEpisode.runtime,
+          userRating: expect.any(Number),
+        }),
+      })
+    );
   });
 
   it('alerts and opens a blank note editor when preload fails for a new note', async () => {

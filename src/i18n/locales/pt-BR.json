@@ -1818,6 +1818,7 @@
     "showIdentity": "Mostrar informações do perfil",
     "showIdentityHint": "Aparece na parte inferior do seu cartão",
     "notePlaceholder": "Adicionar uma nota",
+    "episodeNumber": "T{{season}} | E{{episode}}",
     "last6Months": "Meus últimos 6 meses",
     "caption": "Confira isso no ShowSeek!",
     "captionCopied": "Legenda copiada para a área de transferência",

@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
+import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CrewSection } from '@/src/components/detail/CrewSection';
 import { useDetailStyles } from '@/src/components/detail/detailStyles';
@@ -64,6 +65,7 @@ import {
   Calendar03Icon,
   Clock01Icon,
   FavouriteIcon,
+  Image01Icon,
   NoteDoneIcon,
   PlayIcon,
   StarIcon,
@@ -108,6 +110,7 @@ export default function EpisodeDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [shareCardEditorVisible, setShareCardEditorVisible] = useState(false);
   const noteSheetRef = useRef<NoteModalRef>(null);
   const toastRef = React.useRef<ToastRef>(null);
   const {
@@ -651,6 +654,20 @@ export default function EpisodeDetailScreen() {
                   )}
                 </View>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={() => setShareCardEditorVisible(true)}
+                disabled={!tvShow}
+                activeOpacity={ACTIVE_OPACITY}
+                accessibilityRole="button"
+                accessibilityLabel={t('shareCard.title')}
+                testID="episode-share-card-action"
+              >
+                <View style={styles.iconButton}>
+                  <AppIcon icon={Image01Icon} size={24} color={COLORS.text} />
+                </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.primaryActions}>
@@ -812,6 +829,26 @@ export default function EpisodeDetailScreen() {
         />
       )}
       <NoteModal ref={noteSheetRef} />
+
+      {/* Lazy load ShareCardEditor - only mount when needed */}
+      {shareCardEditorVisible && tvShow && (
+        <ShareCardEditor
+          visible={shareCardEditorVisible}
+          onClose={() => setShareCardEditorVisible(false)}
+          data={{
+            kind: 'episode',
+            showTitle: displayShowTitle,
+            episodeTitle: episode.name,
+            seasonNumber,
+            episodeNumber,
+            posterPath: resolvedShowPosterPath,
+            stillPath: episode.still_path,
+            backdropPath: tvShow.backdrop_path,
+            runtimeMinutes: episode.runtime ?? null,
+            userRating,
+          }}
+        />
+      )}
       <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
       <Toast ref={toastRef} />
     </SafeAreaView>

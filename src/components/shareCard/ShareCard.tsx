@@ -1,7 +1,10 @@
 import React, { forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { TitleShareCard } from './TitleShareCard';
+import { ShareCardLayout } from './ShareCardLayout';
+import { getShareCardContent } from './shareCardContent';
+import { resolveShareCardImages } from './shareCardImages';
 import {
   SHARE_CARD_BACKGROUND,
   SHARE_CARD_DIMENSIONS,
@@ -20,25 +23,30 @@ interface ShareCardProps {
 
 /** Renders a card at its full export size. Callers scale it down to preview it. */
 export const ShareCard = forwardRef<View, ShareCardProps>(
-  ({ data, format, identity, note, onImageSettled }, ref) => (
-    <View
-      ref={ref}
-      collapsable={false}
-      style={{
-        ...SHARE_CARD_DIMENSIONS[format],
-        backgroundColor: SHARE_CARD_BACKGROUND,
-        overflow: 'hidden',
-      }}
-    >
-      <TitleShareCard
-        data={data}
-        format={format}
-        identity={identity}
-        note={note}
-        onImageSettled={onImageSettled}
-      />
-    </View>
-  )
+  ({ data, format, identity, note, onImageSettled }, ref) => {
+    const { t } = useTranslation();
+
+    return (
+      <View
+        ref={ref}
+        collapsable={false}
+        style={{
+          ...SHARE_CARD_DIMENSIONS[format],
+          backgroundColor: SHARE_CARD_BACKGROUND,
+          overflow: 'hidden',
+        }}
+      >
+        <ShareCardLayout
+          content={getShareCardContent(data, t)}
+          images={resolveShareCardImages(data, format)}
+          format={format}
+          identity={identity}
+          note={note}
+          onImageSettled={onImageSettled}
+        />
+      </View>
+    );
+  }
 );
 
 ShareCard.displayName = 'ShareCard';

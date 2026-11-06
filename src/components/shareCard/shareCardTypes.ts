@@ -29,7 +29,22 @@ export interface TitleShareCardData {
   userRating: number;
 }
 
-export type ShareCardData = TitleShareCardData;
+export interface EpisodeShareCardData {
+  kind: 'episode';
+  showTitle: string;
+  episodeTitle: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  posterPath: string | null;
+  stillPath: string | null;
+  backdropPath: string | null;
+  /** This episode's own length, not the season's. */
+  runtimeMinutes: number | null;
+  /** 0 when the user has not rated the episode. */
+  userRating: number;
+}
+
+export type ShareCardData = TitleShareCardData | EpisodeShareCardData;
 
 /** Who the card credits. Deliberately has no email: cards are posted publicly. */
 export interface ShareCardIdentity {
