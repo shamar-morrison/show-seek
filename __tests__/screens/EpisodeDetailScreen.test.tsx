@@ -132,11 +132,10 @@ const setMockQueries = (episodeOverrides: Partial<typeof mockEpisode> = {}) => {
   });
 };
 
-const mockShareCardEditor = jest.fn((_props: unknown) => null);
+const mockOpenShareCard = jest.fn();
 let mockSeasonProgress: { watchedCount: number; progressTotalCount: number } | null = null;
-jest.mock('@/src/components/shareCard/ShareCardEditor', () => ({
-  __esModule: true,
-  default: (props: unknown) => mockShareCardEditor(props),
+jest.mock('@/src/hooks/useOpenShareCard', () => ({
+  useOpenShareCard: () => mockOpenShareCard,
 }));
 
 jest.mock('expo-router', () => {
@@ -508,27 +507,22 @@ describe('EpisodeDetailScreen', () => {
 
   it('opens the share card editor with the episode from the action row', () => {
     const { getByTestId } = render(<EpisodeDetailScreen />);
-    expect(mockShareCardEditor).not.toHaveBeenCalled();
+    expect(mockOpenShareCard).not.toHaveBeenCalled();
 
     fireEvent.press(getByTestId('episode-share-card-action'));
 
-    expect(mockShareCardEditor).toHaveBeenLastCalledWith(
+    expect(mockOpenShareCard).toHaveBeenLastCalledWith([
       expect.objectContaining({
-        visible: true,
-        cards: [
-          expect.objectContaining({
-            kind: 'episode',
-            showTitle: mockTvShow.name,
-            episodeTitle: mockEpisode.name,
-            seasonNumber: 1,
-            episodeNumber: 2,
-            stillPath: mockEpisode.still_path,
-            runtimeMinutes: mockEpisode.runtime,
-            userRating: expect.any(Number),
-          }),
-        ],
-      })
-    );
+        kind: 'episode',
+        showTitle: mockTvShow.name,
+        episodeTitle: mockEpisode.name,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        stillPath: mockEpisode.still_path,
+        runtimeMinutes: mockEpisode.runtime,
+        userRating: expect.any(Number),
+      }),
+    ]);
   });
 
   it('also offers the progress card once the season has been started', () => {
@@ -537,20 +531,16 @@ describe('EpisodeDetailScreen', () => {
 
     fireEvent.press(getByTestId('episode-share-card-action'));
 
-    expect(mockShareCardEditor).toHaveBeenLastCalledWith(
+    expect(mockOpenShareCard).toHaveBeenLastCalledWith([
+      expect.objectContaining({ kind: 'episode' }),
       expect.objectContaining({
-        cards: [
-          expect.objectContaining({ kind: 'episode' }),
-          expect.objectContaining({
-            kind: 'progress',
-            showTitle: mockTvShow.name,
-            watchedCount: 3,
-            totalCount: 10,
-            userRating: 7,
-          }),
-        ],
-      })
-    );
+        kind: 'progress',
+        showTitle: mockTvShow.name,
+        watchedCount: 3,
+        totalCount: 10,
+        userRating: 7,
+      }),
+    ]);
   });
 
   it('does not offer the progress card when nothing in the season is watched', () => {
@@ -559,7 +549,7 @@ describe('EpisodeDetailScreen', () => {
 
     fireEvent.press(getByTestId('episode-share-card-action'));
 
-    const { cards } = mockShareCardEditor.mock.lastCall![0] as { cards: { kind: string }[] };
+    const [cards] = mockOpenShareCard.mock.lastCall as [{ kind: string }[]];
     expect(cards.map((card) => card.kind)).toEqual(['episode']);
   });
 

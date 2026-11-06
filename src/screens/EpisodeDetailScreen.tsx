@@ -1,5 +1,4 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Episode, type Video } from '@/src/api/tmdb';
-import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import type { ShareCardData } from '@/src/components/shareCard/shareCardTypes';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CrewSection } from '@/src/components/detail/CrewSection';
@@ -9,6 +8,7 @@ import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesS
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import ListActionsModal from '@/src/components/ListActionsModal';
+import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
 import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingButton from '@/src/components/RatingButton';
@@ -114,7 +114,7 @@ export default function EpisodeDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
-  const [shareCardEditorVisible, setShareCardEditorVisible] = useState(false);
+  const openShareCard = useOpenShareCard();
   const noteSheetRef = useRef<NoteModalRef>(null);
   const toastRef = React.useRef<ToastRef>(null);
   const {
@@ -698,7 +698,7 @@ export default function EpisodeDetailScreen() {
 
               <TouchableOpacity
                 style={styles.actionButtonWrapper}
-                onPress={() => setShareCardEditorVisible(true)}
+                onPress={() => openShareCard(shareCards)}
                 disabled={!tvShow}
                 activeOpacity={ACTIVE_OPACITY}
                 accessibilityRole="button"
@@ -870,15 +870,6 @@ export default function EpisodeDetailScreen() {
         />
       )}
       <NoteModal ref={noteSheetRef} />
-
-      {/* Lazy load ShareCardEditor - only mount when needed */}
-      {shareCardEditorVisible && tvShow && (
-        <ShareCardEditor
-          visible={shareCardEditorVisible}
-          onClose={() => setShareCardEditorVisible(false)}
-          cards={shareCards}
-        />
-      )}
       <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
       <Toast ref={toastRef} />
     </SafeAreaView>

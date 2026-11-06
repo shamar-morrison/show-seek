@@ -8,7 +8,6 @@ import {
 } from '@/src/components/tv/SeasonItem';
 import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
 import RatingModal from '@/src/components/RatingModal';
-import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import NoteModal, { type NoteModalRef } from '@/src/components/NotesModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
@@ -16,6 +15,7 @@ import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAuth } from '@/src/context/auth';
 import { getMediaNoteQueryKey, useCanCreateNote, useNotes } from '@/src/hooks/useNotes';
@@ -138,7 +138,7 @@ export default function TVSeasonsScreen() {
   const canCreateNote = useCanCreateNote();
   const noteSheetRef = useRef<NoteModalRef | null>(null);
   const [openingNoteSeasonNumber, setOpeningNoteSeasonNumber] = useState<number | null>(null);
-  const [shareCardSeasonNumber, setShareCardSeasonNumber] = useState<number | null>(null);
+  const openShareCard = useOpenShareCard();
 
   // Progressive render: defer heavy content until navigation animation completes
   const { isReady } = useProgressiveRender();
@@ -765,10 +765,37 @@ export default function TVSeasonsScreen() {
     };
   }, [targetSeasonNumber, hasScrolledToSeason, targetSeasonIndex, seasonRows.length]);
 
-  const shareCardSeason = seasons.find((item) => item.season_number === shareCardSeasonNumber);
-  const shareCardSeasonProgress = shareCardSeason
-    ? seasonProgressBySeasonNumber.get(shareCardSeason.season_number)
-    : undefined;
+  const handleOpenSeasonShareCard = useCallback(
+    (seasonData: SeasonWithEpisodes) => {
+      const progress = seasonProgressBySeasonNumber.get(seasonData.season_number);
+      if (!progress) return;
+
+      openShareCard([
+        {
+          kind: 'progress',
+          showTitle: displayShowTitle,
+          seasonTitle:
+            seasonData.name || t('media.seasonNumber', { number: seasonData.season_number }),
+          seasonYear: seasonData.air_date?.split('-')[0] ?? '',
+          watchedCount: progress.watchedCount,
+          totalCount: progress.progressTotalCount,
+          userRating: seasonRatingsById.get(`season-${tvId}-${seasonData.season_number}`) || 0,
+          posterPath: seasonData.poster_path ?? showPosterPath,
+          backdropPath: show?.backdrop_path ?? null,
+        },
+      ]);
+    },
+    [
+      displayShowTitle,
+      openShareCard,
+      seasonProgressBySeasonNumber,
+      seasonRatingsById,
+      show?.backdrop_path,
+      showPosterPath,
+      t,
+      tvId,
+    ]
+  );
 
   const renderRow = useCallback(
     ({ item }: ListRenderItemInfo<TVSeasonsListRow>) => {
@@ -1015,7 +1042,7 @@ export default function TVSeasonsScreen() {
               {hasSeasonProgress && (
                 <TouchableOpacity
                   style={styles.seasonActionButton}
-                  onPress={() => setShareCardSeasonNumber(seasonData.season_number)}
+                  onPress={() => handleOpenSeasonShareCard(seasonData)}
                   activeOpacity={ACTIVE_OPACITY}
                   accessibilityRole="button"
                   accessibilityLabel={t('shareCard.title')}
@@ -1134,6 +1161,7 @@ export default function TVSeasonsScreen() {
     },
     [
       accentColor,
+      handleOpenSeasonShareCard,
       tvId,
       showName,
       showPosterPath,
@@ -1301,28 +1329,6 @@ export default function TVSeasonsScreen() {
         />
       ) : null}
       <NoteModal ref={noteSheetRef} />
-      {shareCardSeason && shareCardSeasonProgress && (
-        <ShareCardEditor
-          visible
-          onClose={() => setShareCardSeasonNumber(null)}
-          cards={[
-            {
-              kind: 'progress',
-              showTitle: displayShowTitle,
-              seasonTitle:
-                shareCardSeason.name ||
-                t('media.seasonNumber', { number: shareCardSeason.season_number }),
-              seasonYear: shareCardSeason.air_date?.split('-')[0] ?? '',
-              watchedCount: shareCardSeasonProgress.watchedCount,
-              totalCount: shareCardSeasonProgress.progressTotalCount,
-              userRating:
-                seasonRatingsById.get(`season-${tvId}-${shareCardSeason.season_number}`) || 0,
-              posterPath: shareCardSeason.poster_path ?? showPosterPath,
-              backdropPath: show?.backdrop_path ?? null,
-            },
-          ]}
-        />
-      )}
     </View>
   );
 }

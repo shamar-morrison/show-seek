@@ -9,13 +9,19 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 
 import { CardText } from './CardText';
-import { ShareCardFooter } from './ShareCardFooter';
+import { ShareCardFooter, ShareCardIdentityRow } from './ShareCardFooter';
 import { ShareCardContent } from './shareCardContent';
 import { ShareCardImages } from './shareCardImages';
-import { SHARE_CARD_BACKGROUND, ShareCardFormat, ShareCardIdentity } from './shareCardTypes';
+import {
+  SHARE_CARD_BACKGROUND,
+  ShareCardFormat,
+  ShareCardIdentity,
+  ShareCardStyle,
+} from './shareCardTypes';
 
 const FALLBACK_GRADIENT = ['#1a1a2e', '#16213e', '#0f3460'] as const;
 const NOTE_COLOR = '#E8E6E1';
+const PROFILE_TOP_SCALE = 1.2;
 
 const CENTERED_LAYOUT = {
   // The extra top and bottom padding keeps content clear of Instagram's Stories controls.
@@ -48,7 +54,7 @@ const CENTERED_LAYOUT = {
   square: {
     paddingHorizontal: 64,
     paddingTop: 56,
-    paddingBottom: 56,
+    paddingBottom: 88,
     statsGap: 32,
     footerGap: 40,
     foregroundWidth: 760,
@@ -78,6 +84,8 @@ const LANDSCAPE_POSTER_RADIUS = 32;
 const LANDSCAPE_LAYOUT = {
   padding: 80,
   paddingBottom: 72,
+  // Lifts the footer so the website line under the logo ends level with the poster.
+  footerInset: 28,
   eyebrow: 30,
   title: 88,
   titleLineHeight: 100,
@@ -95,10 +103,81 @@ const LANDSCAPE_LAYOUT = {
   sectionGap: 40,
 } as const;
 
+const CINEMATIC_LAYOUT = {
+  // heroHeight reaches behind the shortest possible text, so the art never stops above the fade.
+  portrait: {
+    heroHeight: 1620,
+    fadeHeight: 360,
+    paddingHorizontal: 72,
+    paddingBottom: 104,
+    eyebrow: 32,
+    title: 88,
+    titleLineHeight: 100,
+    titleLines: 3,
+    meta: 40,
+    note: 38,
+    noteLineHeight: 52,
+    noteLines: 4,
+    noteMarginTop: 48,
+    pillValue: 56,
+    pillLabel: 32,
+    pillPadding: 32,
+    progressHeight: 16,
+    progressLabel: 40,
+    sectionGap: 40,
+    footerGap: 72,
+  },
+  square: {
+    heroHeight: 860,
+    fadeHeight: 220,
+    paddingHorizontal: 64,
+    paddingBottom: 56,
+    eyebrow: 26,
+    title: 64,
+    titleLineHeight: 74,
+    titleLines: 2,
+    meta: 32,
+    note: 30,
+    noteLineHeight: 40,
+    noteLines: 3,
+    noteMarginTop: 28,
+    pillValue: 40,
+    pillLabel: 26,
+    pillPadding: 20,
+    progressHeight: 12,
+    progressLabel: 30,
+    sectionGap: 24,
+    footerGap: 40,
+  },
+  landscape: {
+    heroHeight: 1080,
+    fadeHeight: 240,
+    paddingHorizontal: 80,
+    paddingBottom: 72,
+    eyebrow: 30,
+    title: 88,
+    titleLineHeight: 100,
+    titleLines: 3,
+    meta: 38,
+    note: 36,
+    noteLineHeight: 48,
+    noteLines: 3,
+    noteMarginTop: 40,
+    pillValue: 52,
+    pillLabel: 30,
+    pillPadding: 28,
+    progressHeight: 14,
+    progressLabel: 36,
+    sectionGap: 32,
+    footerGap: 40,
+  },
+} as const;
+
 interface ShareCardLayoutProps {
   content: ShareCardContent;
   images: ShareCardImages;
   format: ShareCardFormat;
+  cardStyle: ShareCardStyle;
   identity: ShareCardIdentity | null;
   note?: string | null;
   onImageSettled?: (key: string) => void;
@@ -109,13 +188,41 @@ export function ShareCardLayout({
   content,
   images,
   format,
+  cardStyle,
   identity,
   note,
   onImageSettled,
 }: ShareCardLayoutProps) {
+  if (cardStyle === 'cinematic') {
+    return (
+      <CinematicContent
+        content={content}
+        images={images}
+        format={format}
+        identity={identity}
+        note={note}
+        onImageSettled={onImageSettled}
+      />
+    );
+  }
+
+  const profileOnTop = cardStyle === 'profileTop' && !!identity;
   const footer = (
-    <ShareCardFooter format={format} identity={identity} onImageSettled={onImageSettled} />
+    <ShareCardFooter
+      format={format}
+      identity={profileOnTop ? null : identity}
+      onImageSettled={onImageSettled}
+    />
   );
+  const header = profileOnTop ? (
+    <ShareCardIdentityRow
+      format={format}
+      identity={identity}
+      centered={format !== 'landscape'}
+      scale={PROFILE_TOP_SCALE}
+      onImageSettled={onImageSettled}
+    />
+  ) : null;
 
   return (
     <View style={styles.container}>
@@ -136,6 +243,7 @@ export function ShareCardLayout({
           content={content}
           images={images}
           note={note}
+          header={header}
           footer={footer}
           onImageSettled={onImageSettled}
         />
@@ -145,6 +253,7 @@ export function ShareCardLayout({
           format={format}
           images={images}
           note={note}
+          header={header}
           footer={footer}
           onImageSettled={onImageSettled}
         />
@@ -157,6 +266,7 @@ interface ContentProps {
   content: ShareCardContent;
   images: ShareCardImages;
   note?: string | null;
+  header: React.ReactNode;
   footer: React.ReactNode;
   onImageSettled?: (key: string) => void;
 }
@@ -166,6 +276,7 @@ function CenteredContent({
   format,
   images,
   note,
+  header,
   footer,
   onImageSettled,
 }: ContentProps & { format: 'portrait' | 'square' }) {
@@ -200,6 +311,7 @@ function CenteredContent({
           },
         ]}
       >
+        {header && <View style={{ marginBottom: layout.sectionGap }}>{header}</View>}
         <View style={styles.centeredDetails}>
           {images.fanUrls.length > 0 && (
             <PosterFan
@@ -291,7 +403,7 @@ function CenteredContent({
   );
 }
 
-function LandscapeContent({ content, images, note, footer, onImageSettled }: ContentProps) {
+function LandscapeContent({ content, images, note, header, footer, onImageSettled }: ContentProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const layout = LANDSCAPE_LAYOUT;
@@ -327,7 +439,8 @@ function LandscapeContent({ content, images, note, footer, onImageSettled }: Con
             onImageSettled={onImageSettled}
           />
         )}
-        <View style={styles.landscapeColumn}>
+        <View style={[styles.landscapeColumn, { paddingBottom: layout.footerInset }]}>
+          {header}
           <View style={styles.landscapeDetails}>
             {!!content.eyebrow && (
               <CardText
@@ -408,6 +521,122 @@ function ForegroundImage({ url, radius, frameStyle, onImageSettled }: Foreground
         onLoadEnd={() => onImageSettled?.(url)}
         testID="share-card-foreground"
       />
+    </View>
+  );
+}
+
+interface CinematicContentProps {
+  content: ShareCardContent;
+  images: ShareCardImages;
+  format: ShareCardFormat;
+  identity: ShareCardIdentity | null;
+  note?: string | null;
+  onImageSettled?: (key: string) => void;
+}
+
+/** Sharp art filling the card, fading into a dark area that holds left-aligned text. */
+function CinematicContent({
+  content,
+  images,
+  format,
+  identity,
+  note,
+  onImageSettled,
+}: CinematicContentProps) {
+  const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
+  const layout = CINEMATIC_LAYOUT[format];
+  const { heroUrl } = images;
+  const rating = getRatingStat(content.userRating, t);
+
+  return (
+    <View style={styles.container}>
+      <View style={[styles.hero, { height: layout.heroHeight }]}>
+        {heroUrl ? (
+          <Image
+            source={{ uri: heroUrl }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            contentPosition="top"
+            onLoadEnd={() => onImageSettled?.(heroUrl)}
+            testID="share-card-hero"
+          />
+        ) : (
+          <LinearGradient colors={[...FALLBACK_GRADIENT]} style={StyleSheet.absoluteFill} />
+        )}
+      </View>
+
+      <View style={styles.cinematicContent}>
+        {/* Sits directly above the text, so the art always runs right down to it. */}
+        <LinearGradient
+          colors={[hexToRGBA(SHARE_CARD_BACKGROUND, 0), SHARE_CARD_BACKGROUND]}
+          style={{ height: layout.fadeHeight }}
+        />
+        <View
+          style={[
+            styles.cinematicText,
+            {
+              paddingHorizontal: layout.paddingHorizontal,
+              paddingBottom: layout.paddingBottom,
+            },
+          ]}
+        >
+          {!!content.eyebrow && (
+            <CardText
+              style={[styles.eyebrow, { fontSize: layout.eyebrow }]}
+              numberOfLines={1}
+              testID="share-card-eyebrow"
+            >
+              {content.eyebrow}
+            </CardText>
+          )}
+          <CardText
+            style={[styles.title, { fontSize: layout.title, lineHeight: layout.titleLineHeight }]}
+            numberOfLines={layout.titleLines}
+            testID="share-card-title"
+          >
+            {content.headline}
+          </CardText>
+          {!!content.meta && (
+            <CardText style={[styles.meta, { fontSize: layout.meta }]} numberOfLines={1}>
+              {content.meta}
+            </CardText>
+          )}
+          {!!note && (
+            <NoteText
+              note={note}
+              fontSize={layout.note}
+              lineHeight={layout.noteLineHeight}
+              numberOfLines={layout.noteLines}
+              marginTop={layout.noteMarginTop}
+            />
+          )}
+          {rating && (
+            <StatPill
+              stat={rating}
+              accentColor={accentColor}
+              valueSize={layout.pillValue}
+              labelSize={layout.pillLabel}
+              style={[
+                styles.landscapeStat,
+                { marginTop: layout.sectionGap, padding: layout.pillPadding },
+              ]}
+            />
+          )}
+          {content.progress && (
+            <ProgressMeter
+              {...content.progress}
+              accentColor={accentColor}
+              height={layout.progressHeight}
+              labelSize={layout.progressLabel}
+              marginTop={layout.sectionGap}
+            />
+          )}
+          <View style={{ marginTop: layout.footerGap }}>
+            <ShareCardFooter format={format} identity={identity} onImageSettled={onImageSettled} />
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
@@ -616,6 +845,19 @@ const styles = StyleSheet.create({
   },
   centeredStat: {
     alignItems: 'center',
+  },
+  hero: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  cinematicContent: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  cinematicText: {
+    backgroundColor: SHARE_CARD_BACKGROUND,
   },
   landscapeContent: {
     flex: 1,

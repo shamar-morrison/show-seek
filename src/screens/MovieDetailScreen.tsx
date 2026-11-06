@@ -10,6 +10,7 @@ import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import ListActionsModal from '@/src/components/ListActionsModal';
+import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
 import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
@@ -25,7 +26,6 @@ import MarkAsWatchedModal from '@/src/components/MarkAsWatchedModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderModal from '@/src/components/ReminderModal';
-import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
@@ -238,7 +238,7 @@ export default function MovieDetailScreen() {
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [watchedModalVisible, setWatchedModalVisible] = useState(false);
-  const [shareCardEditorVisible, setShareCardEditorVisible] = useState(false);
+  const openShareCard = useOpenShareCard();
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
@@ -850,7 +850,19 @@ export default function MovieDetailScreen() {
             onReminder={canShowReminder(displayReleaseDate) ? handleReminderPress : undefined}
             onNote={handleNotePress}
             onTrailer={handleTrailerPress}
-            onShareCard={() => setShareCardEditorVisible(true)}
+            onShareCard={() =>
+              openShareCard([
+                {
+                  kind: 'title',
+                  title: displayMovieTitle,
+                  posterPath: resolvedMoviePosterPath,
+                  backdropPath: movie.backdrop_path,
+                  releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',
+                  genres: movie.genres?.map((g) => g.name) || [],
+                  userRating,
+                },
+              ])
+            }
             isInAnyList={isInAnyList}
             isLoadingLists={isLoadingLists}
             listIcon={listIcon}
@@ -1136,24 +1148,6 @@ export default function MovieDetailScreen() {
             onClearAll={handleClearWatches}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
-          {/* Lazy load ShareCardEditor - only mount when needed */}
-          {shareCardEditorVisible && (
-            <ShareCardEditor
-              visible={shareCardEditorVisible}
-              onClose={() => setShareCardEditorVisible(false)}
-              cards={[
-                {
-                  kind: 'title',
-                  title: displayMovieTitle,
-                  posterPath: resolvedMoviePosterPath,
-                  backdropPath: movie.backdrop_path,
-                  releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',
-                  genres: movie.genres?.map((g) => g.name) || [],
-                  userRating,
-                },
-              ]}
-            />
-          )}
         </>
       )}
       <Toast ref={toastRef} />

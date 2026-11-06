@@ -147,10 +147,9 @@ jest.mock('@/src/components/RatingModal', () => {
   };
 });
 
-const mockShareCardEditor = jest.fn((_props: unknown) => null);
-jest.mock('@/src/components/shareCard/ShareCardEditor', () => ({
-  __esModule: true,
-  default: (props: unknown) => mockShareCardEditor(props),
+const mockOpenShareCard = jest.fn();
+jest.mock('@/src/hooks/useOpenShareCard', () => ({
+  useOpenShareCard: () => mockOpenShareCard,
 }));
 
 jest.mock('@/src/components/ui/LoadingModal', () => () => null);
@@ -282,27 +281,23 @@ describe('TVSeasonsScreen season actions', () => {
     mockQueries();
 
     const screen = renderWithProviders(<TVSeasonsScreen />);
-    expect(mockShareCardEditor).not.toHaveBeenCalled();
+    expect(mockOpenShareCard).not.toHaveBeenCalled();
 
     act(() => {
       screen.getByTestId('season-share-card-button-1').props.onPress();
     });
 
-    expect(mockShareCardEditor).toHaveBeenLastCalledWith(
+    expect(mockOpenShareCard).toHaveBeenLastCalledWith([
       expect.objectContaining({
-        cards: [
-          expect.objectContaining({
-            kind: 'progress',
-            showTitle: baseShow.name,
-            seasonTitle: 'Season 1',
-            seasonYear: '2020',
-            watchedCount: 1,
-            totalCount: 1,
-            posterPath: '/season1.jpg',
-          }),
-        ],
-      })
-    );
+        kind: 'progress',
+        showTitle: baseShow.name,
+        seasonTitle: 'Season 1',
+        seasonYear: '2020',
+        watchedCount: 1,
+        totalCount: 1,
+        posterPath: '/season1.jpg',
+      }),
+    ]);
     mockEpisodeTracking = null;
   });
 
@@ -365,11 +360,9 @@ describe('TVSeasonsScreen season actions', () => {
       screen.getByTestId('season-share-card-button-1').props.onPress();
     });
 
-    expect(mockShareCardEditor).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        cards: [expect.objectContaining({ kind: 'progress', userRating: 8.5 })],
-      })
-    );
+    expect(mockOpenShareCard).toHaveBeenLastCalledWith([
+      expect.objectContaining({ kind: 'progress', userRating: 8.5 }),
+    ]);
     mockEpisodeTracking = null;
     mockRatingsData = [];
   });

@@ -7,7 +7,6 @@ import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
-import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
@@ -19,7 +18,7 @@ import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { SPACING } from '@/src/constants/theme';
-import { useListShareCard } from '@/src/hooks/useListShareCard';
+import { useListShareCardAction } from '@/src/hooks/useListShareCard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
@@ -241,7 +240,7 @@ export default function WatchStatusDetailScreen() {
     [router]
   );
 
-  const { shareCardAction, shareCard, closeShareCard } = useListShareCard(listTitle, displayItems);
+  const shareCardAction = useListShareCardAction(listTitle, displayItems);
 
   const listActions = useMemo(
     () => [
@@ -457,7 +456,6 @@ export default function WatchStatusDetailScreen() {
 
       <Toast ref={toastRef} />
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
-      {shareCard && <ShareCardEditor visible cards={[shareCard]} onClose={closeShareCard} />}
 
       <ShuffleModal
         visible={shuffleModalVisible}

@@ -15,6 +15,19 @@ import { Keyboard, Platform } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
 jest.mock('@hugeicons/react-native', () => ({ HugeiconsIcon: () => null }));
+jest.mock('react-native-gesture-handler', () => {
+  const { Pressable, View } = require('react-native');
+  return { GestureHandlerRootView: View, Pressable };
+});
+jest.mock('@lodev09/react-native-true-sheet', () => {
+  const React = require('react');
+  const TrueSheet = React.forwardRef(({ children }: { children: React.ReactNode }, ref: any) => {
+    React.useImperativeHandle(ref, () => ({ present: jest.fn(), dismiss: jest.fn() }));
+    return children;
+  });
+  TrueSheet.displayName = 'TrueSheet';
+  return { TrueSheet };
+});
 jest.mock('expo-image', () => ({ Image: 'Image' }));
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve()) }));
 jest.mock('expo-sharing', () => ({
@@ -53,7 +66,7 @@ const movie: TitleShareCardData = {
 };
 
 const renderEditor = async (data: ShareCardData = movie) => {
-  const utils = render(<ShareCardEditor visible onClose={jest.fn()} cards={[data]} />);
+  const utils = render(<ShareCardEditor cards={[data]} />);
   await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalled());
   await act(async () => {});
   return utils;
@@ -102,7 +115,7 @@ describe('ShareCardEditor', () => {
   it('allows capture after the timeout when an image never finishes', async () => {
     jest.useFakeTimers();
     try {
-      const utils = render(<ShareCardEditor visible onClose={jest.fn()} cards={[movie]} />);
+      const utils = render(<ShareCardEditor cards={[movie]} />);
       await act(async () => {
         await jest.advanceTimersByTimeAsync(5999);
       });
@@ -144,9 +157,8 @@ describe('ShareCardEditor', () => {
     expect(isDisabled(utils, 'share-card-share')).toBe(true);
   });
 
-  it('stays open after sharing so another size can be exported', async () => {
-    const onClose = jest.fn();
-    const utils = render(<ShareCardEditor visible onClose={onClose} cards={[movie]} />);
+  it('stays on the screen after sharing so another size can be exported', async () => {
+    const utils = render(<ShareCardEditor cards={[movie]} />);
     await act(async () => {});
     settleCaptureImages(utils);
 
@@ -158,7 +170,7 @@ describe('ShareCardEditor', () => {
       'file:///card.png',
       expect.objectContaining({ mimeType: 'image/png' })
     );
-    expect(onClose).not.toHaveBeenCalled();
+    expect(utils.getByTestId('share-card-share')).toBeTruthy();
   });
 
   it('does not capture when the gallery permission is denied', async () => {
@@ -419,7 +431,7 @@ describe('ShareCardEditor', () => {
       expect(utils.queryByTestId('share-card-share')).toBeNull();
 
       const [event, onHide] = (Keyboard.addListener as jest.Mock).mock.calls.at(-1);
-      expect(event).toBe('keyboardDidHide');
+      expect(event).toBe('keyboardWillHide');
       act(() => onHide());
 
       expect(utils.getByTestId('share-card-share')).toBeTruthy();
@@ -478,25 +490,20 @@ describe('ShareCardEditor', () => {
 
         expect(bottomPadding(utils)).toBe(before);
       });
-
-      it('does not let the keyboard avoiding view adjust the layout', async () => {
-        const utils = await renderEditor();
-        const avoider = utils.UNSAFE_getByType(
-          'KeyboardAvoidingView' as unknown as React.ComponentType
-        );
-
-        expect(avoider.props.behavior).toBeUndefined();
-      });
     });
 
-    it('uses padding keyboard avoidance on iOS and no manual keyboard listener', async () => {
+    it('moves with the keyboard as it opens on iOS, using the same padding', async () => {
       const utils = await renderEditor();
-      const avoider = utils.UNSAFE_getByType(
-        'KeyboardAvoidingView' as unknown as React.ComponentType
+      fireEvent(utils.getByTestId('share-card-screen'), 'layout', {
+        nativeEvent: { layout: { height: 800 } },
+      });
+      const [, onShow] = (Keyboard.addListener as jest.Mock).mock.calls.find(
+        ([event]) => event === 'keyboardWillShow'
       );
 
-      expect(avoider.props.behavior).toBe('padding');
-      expect(Keyboard.addListener).not.toHaveBeenCalledWith('keyboardDidShow', expect.anything());
+      act(() => onShow({ endCoordinates: { screenY: 500 } }));
+
+      expect(utils.getByTestId('share-card-screen').props.style[1].paddingBottom).toBe(308);
     });
 
     it('keeps the note after sharing', async () => {
@@ -801,6 +808,150 @@ describe('ShareCardEditor', () => {
     });
   });
 
+  describe('card styles', () => {
+    const rated: TitleShareCardData = { ...movie, userRating: 8 };
+
+    const pickStyle = (utils: ReturnType<typeof render>, style: string) => {
+      fireEvent.press(utils.getByTestId('share-card-style-button'));
+      fireEvent.press(utils.getByTestId(`share-card-style-option-${style}`));
+    };
+    const footer = (utils: ReturnType<typeof render>) =>
+      within(capturedCard(utils).getByTestId('share-card-footer'));
+
+    it('starts on classic, with the profile in the footer', async () => {
+      const utils = await renderEditor(rated);
+
+      expect(utils.getByText('Classic')).toBeTruthy();
+      expect(footer(utils).getByText('Sam Rivera')).toBeTruthy();
+      expect(capturedCard(utils).getByTestId('share-card-foreground')).toBeTruthy();
+    });
+
+    it('only renders the style previews once the sheet is opened', async () => {
+      const utils = await renderEditor(rated);
+      expect(utils.queryByTestId('share-card-style-option-classic')).toBeNull();
+
+      fireEvent.press(utils.getByTestId('share-card-style-button'));
+
+      ['classic', 'profileTop', 'cinematic'].forEach((style) => {
+        expect(utils.getByTestId(`share-card-style-option-${style}`)).toBeTruthy();
+      });
+    });
+
+    it.each(['portrait', 'square', 'landscape'])(
+      '%s moves the profile out of the footer for profile on top',
+      async (format) => {
+        const utils = await renderEditor(rated);
+        fireEvent.press(utils.getByTestId(`share-card-format-tab-${format}`));
+
+        pickStyle(utils, 'profileTop');
+
+        expect(capturedCard(utils).getByText('Sam Rivera')).toBeTruthy();
+        expect(footer(utils).queryByText('Sam Rivera')).toBeNull();
+        expect(footer(utils).getByText('ShowSeek')).toBeTruthy();
+        expect(capturedCard(utils).getByTestId('share-card-foreground')).toBeTruthy();
+      }
+    );
+
+    it('falls back cleanly when the profile on top style has no profile to show', async () => {
+      const utils = await renderEditor(rated);
+      pickStyle(utils, 'profileTop');
+
+      fireEvent(utils.getByTestId('preference-switch'), 'valueChange', false);
+
+      expect(capturedCard(utils).queryByTestId('share-card-identity')).toBeNull();
+      expect(footer(utils).getByText('ShowSeek')).toBeTruthy();
+    });
+
+    it.each([
+      ['portrait', '/poster.jpg'],
+      ['square', '/backdrop.jpg'],
+      ['landscape', '/backdrop.jpg'],
+    ])('%s fills cinematic with sharp art', async (format, image) => {
+      const utils = await renderEditor(rated);
+      fireEvent.press(utils.getByTestId(`share-card-format-tab-${format}`));
+
+      pickStyle(utils, 'cinematic');
+
+      const hero = capturedCard(utils).getByTestId('share-card-hero');
+      expect(hero.props.source.uri).toContain(image);
+      expect(hero.props.blurRadius).toBeUndefined();
+      expect(capturedCard(utils).queryByTestId('share-card-foreground')).toBeNull();
+      expect(capturedCard(utils).getByText('8/10')).toBeTruthy();
+      expect(footer(utils).getByText('Sam Rivera')).toBeTruthy();
+    });
+
+    it('still shows every card type in cinematic', async () => {
+      const list: ListShareCardData = {
+        kind: 'list',
+        listName: 'Comfort Shows',
+        itemCount: 3,
+        posterPaths: ['/one.jpg', '/two.jpg', '/three.jpg'],
+      };
+      const utils = await renderEditor(list);
+
+      pickStyle(utils, 'cinematic');
+
+      expect(capturedCard(utils).getByTestId('share-card-hero').props.source.uri).toContain(
+        '/one.jpg'
+      );
+      expect(capturedCard(utils).queryByTestId('share-card-fan')).toBeNull();
+      expect(capturedCard(utils).getByText('Comfort Shows')).toBeTruthy();
+    });
+
+    it('still renders in cinematic with no art', async () => {
+      const utils = await renderEditor({ ...rated, posterPath: null, backdropPath: null });
+
+      pickStyle(utils, 'cinematic');
+
+      expect(capturedCard(utils).queryByTestId('share-card-hero')).toBeNull();
+      expect(capturedCard(utils).getByTestId('share-card-title')).toBeTruthy();
+    });
+
+    it('waits for the new images after switching style', async () => {
+      const utils = await renderEditor(rated);
+      settleCaptureImages(utils);
+      expect(isDisabled(utils, 'share-card-share')).toBe(false);
+
+      pickStyle(utils, 'cinematic');
+
+      expect(isDisabled(utils, 'share-card-share')).toBe(true);
+      settleCaptureImages(utils);
+      expect(isDisabled(utils, 'share-card-share')).toBe(false);
+    });
+
+    it('remembers the style for next time', async () => {
+      const utils = await renderEditor(rated);
+      pickStyle(utils, 'cinematic');
+      await waitFor(async () =>
+        expect(JSON.parse((await AsyncStorage.getItem('shareCardPreferences'))!)).toEqual(
+          expect.objectContaining({ style: 'cinematic' })
+        )
+      );
+      utils.unmount();
+
+      const reopened = await renderEditor(rated);
+
+      expect(capturedCard(reopened).getByTestId('share-card-hero')).toBeTruthy();
+    });
+
+    it('ignores an unknown saved style', async () => {
+      await AsyncStorage.setItem('shareCardPreferences', JSON.stringify({ style: 'retired' }));
+
+      const utils = await renderEditor(rated);
+
+      expect(capturedCard(utils).queryByTestId('share-card-hero')).toBeNull();
+      expect(utils.getByText('Classic')).toBeTruthy();
+    });
+
+    it('hides the style button while typing a note', async () => {
+      const utils = await renderEditor(rated);
+
+      fireEvent(utils.getByTestId('share-card-note-input'), 'focus');
+
+      expect(utils.queryByTestId('share-card-style-button')).toBeNull();
+    });
+  });
+
   describe('card picker', () => {
     const episodeCard: EpisodeShareCardData = {
       kind: 'episode',
@@ -827,9 +978,7 @@ describe('ShareCardEditor', () => {
     };
 
     const renderBoth = async () => {
-      const utils = render(
-        <ShareCardEditor visible onClose={jest.fn()} cards={[episodeCard, progressCard]} />
-      );
+      const utils = render(<ShareCardEditor cards={[episodeCard, progressCard]} />);
       await act(async () => {});
       return utils;
     };

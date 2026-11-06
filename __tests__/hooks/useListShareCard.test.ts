@@ -1,8 +1,13 @@
-import { useListShareCard } from '@/src/hooks/useListShareCard';
+import { useListShareCardAction } from '@/src/hooks/useListShareCard';
 import type { ListMediaItem } from '@/src/services/ListService';
-import { act, renderHook } from '@testing-library/react-native';
+import { renderHook } from '@testing-library/react-native';
+
+const mockOpenShareCard = jest.fn();
 
 jest.mock('@hugeicons/core-free-icons', () => ({ Image01Icon: 'image-icon' }));
+jest.mock('@/src/hooks/useOpenShareCard', () => ({
+  useOpenShareCard: () => mockOpenShareCard,
+}));
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
     resolvePosterPath: (_type: string, id: number, path: string | null) =>
@@ -20,51 +25,42 @@ const item = (id: number, poster_path: string | null): ListMediaItem => ({
   addedAt: id,
 });
 
-describe('useListShareCard', () => {
-  it('stays closed until the action is pressed', () => {
-    const { result } = renderHook(() => useListShareCard('My List', [item(1, '/a.jpg')]));
-    expect(result.current.shareCard).toBeNull();
+const pressAction = (items: ListMediaItem[]) => {
+  const { result } = renderHook(() => useListShareCardAction('My List', items));
+  result.current.onPress();
+  return mockOpenShareCard.mock.lastCall![0][0];
+};
 
-    act(() => result.current.shareCardAction.onPress());
-
-    expect(result.current.shareCard).toEqual({
+describe('useListShareCardAction', () => {
+  it('opens the list card when pressed', () => {
+    expect(pressAction([item(1, '/a.jpg')])).toEqual({
       kind: 'list',
       listName: 'My List',
       itemCount: 1,
       posterPaths: ['/a.jpg'],
     });
-
-    act(() => result.current.closeShareCard());
-    expect(result.current.shareCard).toBeNull();
   });
 
   it('is disabled for an empty list', () => {
-    const { result } = renderHook(() => useListShareCard('My List', []));
+    const { result } = renderHook(() => useListShareCardAction('My List', []));
 
-    expect(result.current.shareCardAction.disabled).toBe(true);
+    expect(result.current.disabled).toBe(true);
   });
 
   it('uses the first three available posters in order, but counts every item', () => {
-    const items = [
+    const card = pressAction([
       item(1, '/a.jpg'),
       item(2, null),
       item(3, '/b.jpg'),
       item(4, '/c.jpg'),
       item(5, '/d.jpg'),
-    ];
-    const { result } = renderHook(() => useListShareCard('My List', items));
+    ]);
 
-    act(() => result.current.shareCardAction.onPress());
-
-    expect(result.current.shareCard?.posterPaths).toEqual(['/a.jpg', '/b.jpg', '/c.jpg']);
-    expect(result.current.shareCard?.itemCount).toBe(5);
+    expect(card.posterPaths).toEqual(['/a.jpg', '/b.jpg', '/c.jpg']);
+    expect(card.itemCount).toBe(5);
   });
 
   it('respects custom posters', () => {
-    const { result } = renderHook(() => useListShareCard('My List', [item(99, '/original.jpg')]));
-
-    act(() => result.current.shareCardAction.onPress());
-
-    expect(result.current.shareCard?.posterPaths).toEqual(['/custom.jpg']);
+    expect(pressAction([item(99, '/original.jpg')]).posterPaths).toEqual(['/custom.jpg']);
   });
 });

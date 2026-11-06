@@ -6,6 +6,14 @@ export const SHARE_CARD_FORMAT_KEYS: readonly ShareCardFormat[] = [
   'landscape',
 ];
 
+export type ShareCardStyle = 'classic' | 'profileTop' | 'cinematic';
+
+export const SHARE_CARD_STYLE_KEYS: readonly ShareCardStyle[] = [
+  'classic',
+  'profileTop',
+  'cinematic',
+];
+
 /** Exported image size in pixels. Each card lays itself out at these dimensions. */
 export const SHARE_CARD_DIMENSIONS: Record<ShareCardFormat, { width: number; height: number }> = {
   portrait: { width: 1080, height: 1920 },

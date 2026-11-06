@@ -11,6 +11,7 @@ import {
   ShareCardData,
   ShareCardFormat,
   ShareCardIdentity,
+  ShareCardStyle,
 } from './shareCardTypes';
 
 interface ShareCardProps {
@@ -18,12 +19,13 @@ interface ShareCardProps {
   format: ShareCardFormat;
   identity: ShareCardIdentity | null;
   note?: string | null;
+  cardStyle?: ShareCardStyle;
   onImageSettled?: (key: string) => void;
 }
 
 /** Renders a card at its full export size. Callers scale it down to preview it. */
 export const ShareCard = forwardRef<View, ShareCardProps>(
-  ({ data, format, identity, note, onImageSettled }, ref) => {
+  ({ data, format, identity, note, cardStyle = 'classic', onImageSettled }, ref) => {
     const { t } = useTranslation();
 
     return (
@@ -38,8 +40,9 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
       >
         <ShareCardLayout
           content={getShareCardContent(data, t)}
-          images={resolveShareCardImages(data, format)}
+          images={resolveShareCardImages(data, format, cardStyle)}
           format={format}
+          cardStyle={cardStyle}
           identity={identity}
           note={note}
           onImageSettled={onImageSettled}

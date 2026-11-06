@@ -190,9 +190,8 @@ jest.mock('@/src/components/AddToListModal', () => {
   };
 });
 
-jest.mock('@/src/components/shareCard/ShareCardEditor', () => ({
-  __esModule: true,
-  default: () => null,
+jest.mock('@/src/hooks/useOpenShareCard', () => ({
+  useOpenShareCard: () => jest.fn(),
 }));
 
 jest.mock('@/src/hooks/usePosterOverrides', () => ({

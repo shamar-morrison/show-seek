@@ -1,4 +1,9 @@
-import { SHARE_CARD_FORMAT_KEYS, ShareCardFormat } from '@/src/components/shareCard/shareCardTypes';
+import {
+  SHARE_CARD_FORMAT_KEYS,
+  SHARE_CARD_STYLE_KEYS,
+  ShareCardFormat,
+  ShareCardStyle,
+} from '@/src/components/shareCard/shareCardTypes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -7,11 +12,13 @@ const STORAGE_KEY = 'shareCardPreferences';
 export interface ShareCardPreferences {
   format: ShareCardFormat;
   showIdentity: boolean;
+  style: ShareCardStyle;
 }
 
 const DEFAULT_PREFERENCES: ShareCardPreferences = {
   format: 'portrait',
   showIdentity: true,
+  style: 'classic',
 };
 
 function parsePreferences(raw: string | null): ShareCardPreferences {
@@ -27,6 +34,9 @@ function parsePreferences(raw: string | null): ShareCardPreferences {
         typeof parsed?.showIdentity === 'boolean'
           ? parsed.showIdentity
           : DEFAULT_PREFERENCES.showIdentity,
+      style: SHARE_CARD_STYLE_KEYS.includes(parsed?.style)
+        ? parsed.style
+        : DEFAULT_PREFERENCES.style,
     };
   } catch {
     return DEFAULT_PREFERENCES;

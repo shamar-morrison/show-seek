@@ -27,33 +27,63 @@ interface ShareCardFooterProps {
   onImageSettled?: (key: string) => void;
 }
 
+interface ShareCardIdentityRowProps {
+  format: ShareCardFormat;
+  identity: ShareCardIdentity;
+  /** Centers the row instead of filling the space beside the brand. */
+  centered?: boolean;
+  /** Enlarges the avatar and name relative to their footer size. */
+  scale?: number;
+  onImageSettled?: (key: string) => void;
+}
+
+export function ShareCardIdentityRow({
+  format,
+  identity,
+  centered = false,
+  scale = 1,
+  onImageSettled,
+}: ShareCardIdentityRowProps) {
+  const sizes = FOOTER_SIZES[format];
+  const avatarSize = Math.round(sizes.avatar * scale);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const { photoUrl, displayName } = identity;
+
+  return (
+    <View
+      style={[styles.identity, centered && styles.identityCentered]}
+      testID="share-card-identity"
+    >
+      {photoUrl && !photoFailed ? (
+        <Image
+          source={{ uri: photoUrl }}
+          style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+          contentFit="cover"
+          onError={() => setPhotoFailed(true)}
+          onLoadEnd={() => onImageSettled?.(photoUrl)}
+        />
+      ) : (
+        <UserAvatar displayName={displayName} size={avatarSize} />
+      )}
+      {displayName && (
+        <CardText
+          style={[styles.name, { fontSize: Math.round(sizes.name * scale) }]}
+          numberOfLines={1}
+        >
+          {displayName}
+        </CardText>
+      )}
+    </View>
+  );
+}
+
 export function ShareCardFooter({ format, identity, onImageSettled }: ShareCardFooterProps) {
   const sizes = FOOTER_SIZES[format];
-  const [photoFailed, setPhotoFailed] = useState(false);
-  const photoUrl = identity?.photoUrl ?? null;
-  const showPhoto = !!photoUrl && !photoFailed;
 
   return (
     <View style={[styles.footer, !identity && styles.footerBrandOnly]} testID="share-card-footer">
       {identity && (
-        <View style={styles.identity} testID="share-card-identity">
-          {showPhoto ? (
-            <Image
-              source={{ uri: photoUrl }}
-              style={{ width: sizes.avatar, height: sizes.avatar, borderRadius: sizes.avatar / 2 }}
-              contentFit="cover"
-              onError={() => setPhotoFailed(true)}
-              onLoadEnd={() => onImageSettled?.(photoUrl)}
-            />
-          ) : (
-            <UserAvatar displayName={identity.displayName} size={sizes.avatar} />
-          )}
-          {identity.displayName && (
-            <CardText style={[styles.name, { fontSize: sizes.name }]} numberOfLines={1}>
-              {identity.displayName}
-            </CardText>
-          )}
-        </View>
+        <ShareCardIdentityRow format={format} identity={identity} onImageSettled={onImageSettled} />
       )}
 
       <View style={styles.brand}>
@@ -93,6 +123,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 24,
+  },
+  identityCentered: {
+    flex: 0,
+    justifyContent: 'center',
   },
   name: {
     flexShrink: 1,

@@ -1,5 +1,10 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { ShareCardData, ShareCardFormat, ShareCardIdentity } from './shareCardTypes';
+import {
+  ShareCardData,
+  ShareCardFormat,
+  ShareCardIdentity,
+  ShareCardStyle,
+} from './shareCardTypes';
 
 /** Tracking key for the bundled logo, which has no URL of its own. */
 export const SHARE_CARD_LOGO_KEY = 'share-card-logo';
@@ -13,12 +18,40 @@ export interface ShareCardImages {
   foregroundIsPosterFallback: boolean;
   /** Several overlapping posters, shown in place of the foreground image. */
   fanUrls: string[];
+  /** Sharp, full-width art behind the cinematic style. It replaces the other images. */
+  heroUrl: string | null;
+}
+
+/** Portrait stretches its art across the card, so it needs more detail than a framed poster. */
+function resolveHeroUrl(data: ShareCardData, format: ShareCardFormat): string | null {
+  if (data.kind === 'list') {
+    return getImageUrl(data.posterPaths[0] ?? null, TMDB_IMAGE_SIZES.poster.original);
+  }
+
+  const poster = getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.original);
+  const backdrop = getImageUrl(
+    (data.kind === 'episode' ? data.stillPath : null) ?? data.backdropPath,
+    TMDB_IMAGE_SIZES.backdrop.original
+  );
+
+  return format === 'portrait' ? (poster ?? backdrop) : (backdrop ?? poster);
 }
 
 export function resolveShareCardImages(
   data: ShareCardData,
-  format: ShareCardFormat
+  format: ShareCardFormat,
+  style: ShareCardStyle = 'classic'
 ): ShareCardImages {
+  if (style === 'cinematic') {
+    return {
+      backgroundUrl: null,
+      foregroundUrl: null,
+      foregroundIsPosterFallback: false,
+      fanUrls: [],
+      heroUrl: resolveHeroUrl(data, format),
+    };
+  }
+
   if (data.kind === 'list') {
     const urls = data.posterPaths
       .map((path) => getImageUrl(path, TMDB_IMAGE_SIZES.poster.large))
@@ -29,6 +62,7 @@ export function resolveShareCardImages(
       foregroundUrl: urls.length === 1 ? urls[0] : null,
       foregroundIsPosterFallback: false,
       fanUrls: urls.length > 1 ? urls : [],
+      heroUrl: null,
     };
   }
 
@@ -46,6 +80,7 @@ export function resolveShareCardImages(
         foregroundUrl: poster,
         foregroundIsPosterFallback: false,
         fanUrls: [],
+        heroUrl: null,
       };
     case 'square':
       return {
@@ -53,6 +88,7 @@ export function resolveShareCardImages(
         foregroundUrl: backdrop ?? poster,
         foregroundIsPosterFallback: !backdrop && !!poster,
         fanUrls: [],
+        heroUrl: null,
       };
     case 'landscape':
       return {
@@ -60,6 +96,7 @@ export function resolveShareCardImages(
         foregroundUrl: poster,
         foregroundIsPosterFallback: false,
         fanUrls: [],
+        heroUrl: null,
       };
   }
 }
@@ -68,15 +105,25 @@ export function resolveShareCardImages(
 export function getShareCardImageKeys(
   data: ShareCardData,
   format: ShareCardFormat,
-  identity: ShareCardIdentity | null
+  identity: ShareCardIdentity | null,
+  style: ShareCardStyle = 'classic'
 ): string[] {
-  const { backgroundUrl, foregroundUrl, fanUrls } = resolveShareCardImages(data, format);
+  const { backgroundUrl, foregroundUrl, fanUrls, heroUrl } = resolveShareCardImages(
+    data,
+    format,
+    style
+  );
 
   return [
     ...new Set(
-      [SHARE_CARD_LOGO_KEY, backgroundUrl, foregroundUrl, ...fanUrls, identity?.photoUrl].filter(
-        (key): key is string => !!key
-      )
+      [
+        SHARE_CARD_LOGO_KEY,
+        backgroundUrl,
+        foregroundUrl,
+        heroUrl,
+        ...fanUrls,
+        identity?.photoUrl,
+      ].filter((key): key is string => !!key)
     ),
   ];
 }
