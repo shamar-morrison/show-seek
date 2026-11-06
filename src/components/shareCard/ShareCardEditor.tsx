@@ -264,7 +264,13 @@ export default function ShareCardEditor({ cards }: ShareCardEditorProps) {
         )}
       </Pressable>
 
-      <View style={styles.controls}>
+      {/* Changing the card mid-export would capture it at the wrong size, and changing it before
+          the saved preferences load would have that read overwrite the choice. */}
+      <View
+        style={styles.controls}
+        pointerEvents={isBusy || !isLoaded ? 'none' : 'auto'}
+        testID="share-card-controls"
+      >
         <Pressable
           style={styles.noteField}
           onPress={() => noteInputRef.current?.focus()}

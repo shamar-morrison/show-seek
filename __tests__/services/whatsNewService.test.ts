@@ -4,8 +4,14 @@ import {
   shouldShowWhatsNew,
   WHATS_NEW_LAST_SEEN_KEY,
 } from '@/src/services/whatsNewService';
-import { CURRENT_WHATS_NEW } from '@/src/constants/whatsNew';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+let mockAnnouncement: { id: string; sections: never[] } | null = null;
+jest.mock('@/src/constants/whatsNew', () => ({
+  get CURRENT_WHATS_NEW() {
+    return mockAnnouncement;
+  },
+}));
 
 const setDev = (value: boolean) => {
   (global as unknown as { __DEV__: boolean }).__DEV__ = value;
@@ -16,6 +22,7 @@ describe('whatsNewService', () => {
     await AsyncStorage.clear();
     delete process.env.EXPO_PUBLIC_FORCE_WHATS_NEW;
     setDev(true);
+    mockAnnouncement = { id: 'current', sections: [] };
   });
 
   afterAll(() => {
@@ -52,10 +59,16 @@ describe('whatsNewService', () => {
     await markCurrentWhatsNewSeen();
     await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
 
-    await expect(AsyncStorage.getItem(WHATS_NEW_LAST_SEEN_KEY)).resolves.toBe(
-      CURRENT_WHATS_NEW?.id
-    );
-    await expect(shouldShowWhatsNew(CURRENT_WHATS_NEW!.id)).resolves.toBe(false);
+    await expect(AsyncStorage.getItem(WHATS_NEW_LAST_SEEN_KEY)).resolves.toBe('current');
+    await expect(shouldShowWhatsNew('current')).resolves.toBe(false);
+  });
+
+  it('saves nothing at onboarding when there is no announcement', async () => {
+    mockAnnouncement = null;
+
+    await markCurrentWhatsNewSeen();
+
+    await expect(AsyncStorage.getItem(WHATS_NEW_LAST_SEEN_KEY)).resolves.toBeNull();
   });
 
   it('does not show when storage cannot be read', async () => {

@@ -28,10 +28,14 @@ export function useListShareCardAction(listName: string, items: ListMediaItem[])
             kind: 'list',
             listName,
             itemCount: items.length,
-            posterPaths: items
-              .map((item) => resolvePosterPath(item.media_type, item.id, item.poster_path))
-              .filter((path): path is string => !!path)
-              .slice(0, FAN_POSTER_COUNT),
+            // Different items can share a custom poster, and the fan should show distinct ones.
+            posterPaths: [
+              ...new Set(
+                items
+                  .map((item) => resolvePosterPath(item.media_type, item.id, item.poster_path))
+                  .filter((path): path is string => !!path)
+              ),
+            ].slice(0, FAN_POSTER_COUNT),
           },
         ]),
       disabled: items.length === 0,

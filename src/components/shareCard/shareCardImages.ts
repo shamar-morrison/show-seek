@@ -9,6 +9,12 @@ import {
 /** Tracking key for the bundled logo, which has no URL of its own. */
 export const SHARE_CARD_LOGO_KEY = 'share-card-logo';
 
+/**
+ * The background often uses the same URL as a sharper image on top, but each view loads on its own,
+ * so it needs its own key or the first to finish would count for both.
+ */
+export const getBackgroundImageKey = (url: string) => `background:${url}`;
+
 export interface ShareCardImages {
   /** Blurred behind everything else. */
   backgroundUrl: string | null;
@@ -118,7 +124,7 @@ export function getShareCardImageKeys(
     ...new Set(
       [
         SHARE_CARD_LOGO_KEY,
-        backgroundUrl,
+        backgroundUrl && getBackgroundImageKey(backgroundUrl),
         foregroundUrl,
         heroUrl,
         ...fanUrls,

@@ -6,6 +6,7 @@ import React from 'react';
 import { Alert } from 'react-native';
 
 const mockBack = jest.fn();
+let mockBlur: (() => void) | undefined;
 const mockRefreshProfile = jest.fn();
 const mockAuth = {
   user: null as unknown,
@@ -17,6 +18,13 @@ jest.mock('@hugeicons/react-native', () => ({ HugeiconsIcon: () => null }));
 jest.mock('expo-image', () => ({ Image: 'Image' }));
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack }),
+  useFocusEffect: (effect: () => () => void) => {
+    const { useEffect } = require('react');
+    useEffect(() => {
+      mockBlur = effect();
+      return mockBlur;
+    }, [effect]);
+  },
   Redirect: ({ href }: { href: string }) => {
     const { Text } = require('react-native');
     return <Text testID="redirect">{href}</Text>;
@@ -88,6 +96,30 @@ describe('EditProfileScreen', () => {
     fireEvent.changeText(utils.getByTestId('edit-profile-name'), '  Sam Rivera ');
 
     expect(isDisabled(utils, 'edit-profile-save')).toBe(true);
+  });
+
+  it('does not navigate if the user left while the save was running', async () => {
+    let finishSave!: () => void;
+    (updateUserProfile as jest.Mock).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (finishSave = resolve))
+    );
+    mockBack.mockClear();
+    const utils = render(<EditProfileScreen />);
+    fireEvent.changeText(utils.getByTestId('edit-profile-name'), 'Sam R');
+    await act(async () => {
+      fireEvent.press(utils.getByTestId('edit-profile-save'));
+    });
+
+    mockBlur?.();
+    await act(async () => finishSave());
+
+    expect(mockRefreshProfile).toHaveBeenCalled();
+    expect(mockBack).not.toHaveBeenCalled();
+    // Coming back to the still-mounted editor should not leave it stuck on saving.
+    expect(utils.getByTestId('edit-profile-name').props.editable).not.toBe(false);
+    expect(
+      utils.queryByTestId('edit-profile-change-photo')?.props.accessibilityState?.disabled
+    ).not.toBe(true);
   });
 
   it('saves a trimmed name, refreshes the app and goes back', async () => {

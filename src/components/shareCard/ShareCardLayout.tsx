@@ -11,7 +11,7 @@ import { StyleSheet, View, ViewStyle } from 'react-native';
 import { CardText } from './CardText';
 import { ShareCardFooter, ShareCardIdentityRow } from './ShareCardFooter';
 import { ShareCardContent } from './shareCardContent';
-import { ShareCardImages } from './shareCardImages';
+import { getBackgroundImageKey, ShareCardImages } from './shareCardImages';
 import {
   SHARE_CARD_BACKGROUND,
   ShareCardFormat,
@@ -90,6 +90,8 @@ const LANDSCAPE_LAYOUT = {
   title: 88,
   titleLineHeight: 100,
   titleLines: 3,
+  // A note takes the room a third title line would need, or the details reach the footer.
+  titleLinesWithNote: 2,
   meta: 38,
   note: 36,
   noteLineHeight: 48,
@@ -232,7 +234,7 @@ export function ShareCardLayout({
           style={StyleSheet.absoluteFill}
           contentFit="cover"
           blurRadius={40}
-          onLoadEnd={() => onImageSettled?.(images.backgroundUrl!)}
+          onLoadEnd={() => onImageSettled?.(getBackgroundImageKey(images.backgroundUrl!))}
         />
       ) : (
         <LinearGradient colors={[...FALLBACK_GRADIENT]} style={StyleSheet.absoluteFill} />
@@ -453,7 +455,7 @@ function LandscapeContent({ content, images, note, header, footer, onImageSettle
             )}
             <CardText
               style={[styles.title, { fontSize: layout.title, lineHeight: layout.titleLineHeight }]}
-              numberOfLines={layout.titleLines}
+              numberOfLines={note ? layout.titleLinesWithNote : layout.titleLines}
               testID="share-card-title"
             >
               {content.headline}

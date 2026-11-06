@@ -1,4 +1,3 @@
-import { CURRENT_WHATS_NEW } from '@/src/constants/whatsNew';
 import { WHATS_NEW_LAST_SEEN_KEY } from '@/src/services/whatsNewService';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +13,9 @@ let mockCurrentUser: any = null;
 const mockUnsubscribe = jest.fn();
 
 // Mock firebase/auth
+jest.mock('@/src/constants/whatsNew', () => ({
+  CURRENT_WHATS_NEW: { id: 'test-announcement', sections: [] },
+}));
 jest.mock('firebase/auth', () => ({
   onAuthStateChanged: jest.fn((auth, callback) => {
     capturedAuthCallback = callback;
@@ -97,6 +99,24 @@ describe('AuthProvider', () => {
       });
 
       expect(result.current.user).toBe(mockUser);
+      warn.mockRestore();
+    });
+
+    it('still shows the new profile when saving it for the next app start fails', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const { result } = await signIn();
+      // Mirrors Firebase, which assigns the copy before it writes to persistence.
+      const copy = { uid: 'user-1', displayName: 'New Name' };
+      (updateCurrentUser as jest.Mock).mockImplementationOnce(async () => {
+        mockCurrentUser = copy;
+        throw new Error('storage full');
+      });
+
+      await act(async () => {
+        await result.current.refreshProfile();
+      });
+
+      expect(result.current.user).toBe(copy);
       warn.mockRestore();
     });
 
@@ -616,7 +636,7 @@ describe('AuthProvider', () => {
       // New users already have everything in the current What's New announcement.
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(
         WHATS_NEW_LAST_SEEN_KEY,
-        CURRENT_WHATS_NEW?.id
+        'test-announcement'
       );
     });
 

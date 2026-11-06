@@ -105,11 +105,79 @@ describe('ShareCardEditor', () => {
     expect(isDisabled(utils, 'share-card-save')).toBe(false);
   });
 
-  it('counts a failed image as settled so sharing is not blocked', async () => {
-    const utils = await renderEditor({ ...movie, backdropPath: null, posterPath: null });
-    settleCaptureImages(utils);
+  it('counts a failed image as settled and falls back to the avatar', async () => {
+    const photoUrl = 'https://example.com/me.jpg';
+    mockAuth.user = { displayName: 'Sam Rivera', photoURL: photoUrl, email: 'sam@example.com' };
+    const utils = await renderEditor();
+    const photo = () => captureImages(utils).find((image) => image.props.source?.uri === photoUrl);
 
+    // expo-image reports a failure through onError, then onLoadEnd.
+    act(() => {
+      const failed = photo()!;
+      captureImages(utils).forEach((image) => {
+        if (image === failed) image.props.onError();
+        image.props.onLoadEnd();
+      });
+    });
+
+    expect(photo()).toBeUndefined();
     expect(isDisabled(utils, 'share-card-share')).toBe(false);
+  });
+
+  it('waits for both views when the background and foreground share an image', async () => {
+    await AsyncStorage.setItem('shareCardPreferences', JSON.stringify({ format: 'square' }));
+    const utils = await renderEditor();
+    const foreground = capturedCard(utils).UNSAFE_getByProps({ testID: 'share-card-foreground' });
+
+    act(() => {
+      captureImages(utils)
+        .filter((image) => image.props.testID !== 'share-card-foreground')
+        .forEach((image) => image.props.onLoadEnd());
+    });
+    expect(isDisabled(utils, 'share-card-share')).toBe(true);
+
+    act(() => foreground.props.onLoadEnd());
+    expect(isDisabled(utils, 'share-card-share')).toBe(false);
+  });
+
+  it('locks the controls while an export is running', async () => {
+    let finishCheck!: (available: boolean) => void;
+    (Sharing.isAvailableAsync as jest.Mock).mockImplementationOnce(
+      () => new Promise<boolean>((resolve) => (finishCheck = resolve))
+    );
+    const utils = await renderEditor();
+    settleCaptureImages(utils);
+    expect(utils.getByTestId('share-card-controls').props.pointerEvents).toBe('auto');
+
+    fireEvent.press(utils.getByTestId('share-card-share'));
+    expect(utils.getByTestId('share-card-controls').props.pointerEvents).toBe('none');
+
+    await act(async () => finishCheck(false));
+    expect(utils.getByTestId('share-card-controls').props.pointerEvents).toBe('auto');
+  });
+
+  it('locks the controls until the saved preferences have loaded', async () => {
+    let finishRead!: (value: string | null) => void;
+    (AsyncStorage.getItem as jest.Mock).mockImplementationOnce(
+      () => new Promise<string | null>((resolve) => (finishRead = resolve))
+    );
+    const utils = render(<ShareCardEditor cards={[movie]} />);
+    expect(utils.getByTestId('share-card-controls').props.pointerEvents).toBe('none');
+
+    await act(async () => finishRead(null));
+    expect(utils.getByTestId('share-card-controls').props.pointerEvents).toBe('auto');
+  });
+
+  it('gives a landscape title one less line when there is a note, to keep clear of the footer', async () => {
+    await AsyncStorage.setItem('shareCardPreferences', JSON.stringify({ format: 'landscape' }));
+    const utils = await renderEditor();
+    const titleLines = () =>
+      capturedCard(utils).getByTestId('share-card-title').props.numberOfLines;
+    expect(titleLines()).toBe(3);
+
+    fireEvent.changeText(utils.getByTestId('share-card-note-input'), 'Worth every minute');
+
+    expect(titleLines()).toBe(2);
   });
 
   it('allows capture after the timeout when an image never finishes', async () => {

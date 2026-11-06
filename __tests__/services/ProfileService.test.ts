@@ -153,6 +153,22 @@ describe('updateUserProfile', () => {
     expect(deleteObject).not.toHaveBeenCalled();
   });
 
+  it('does not wait forever on the document write while offline', async () => {
+    jest.useFakeTimers();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      (setDoc as jest.Mock).mockImplementationOnce(() => new Promise(() => {}));
+      const save = updateUserProfile(user, { displayName: 'New', photo: { type: 'keep' } });
+
+      await jest.advanceTimersByTimeAsync(10000);
+
+      await expect(save).resolves.toBeUndefined();
+    } finally {
+      warn.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
   it('still succeeds when the document write or photo cleanup fails', async () => {
     (setDoc as jest.Mock).mockRejectedValueOnce(new Error('offline'));
     (listAll as jest.Mock).mockRejectedValueOnce(new Error('offline'));

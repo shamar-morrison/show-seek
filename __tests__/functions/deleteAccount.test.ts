@@ -113,12 +113,23 @@ describe('deleteAccountHandler', () => {
   });
 
   it("deletes the user's Storage files, and only theirs, before their other data", async () => {
-    await deleteAccountHandler({ auth: { uid: 'user-1' } });
+    let finishStorage!: () => void;
+    mockDeleteFiles.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (finishStorage = resolve))
+    );
+
+    const deletion = deleteAccountHandler({ auth: { uid: 'user-1' } });
+    await new Promise((resolve) => setImmediate(resolve));
 
     expect(mockDeleteFiles).toHaveBeenCalledWith({ prefix: 'users/user-1/' });
-    expect(mockDeleteFiles.mock.invocationCallOrder[0]).toBeLessThan(
-      mockRecursiveDelete.mock.invocationCallOrder[0]
-    );
+    expect(mockRecursiveDelete).not.toHaveBeenCalled();
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+
+    finishStorage();
+    await deletion;
+
+    expect(mockRecursiveDelete).toHaveBeenCalled();
+    expect(mockDeleteUser).toHaveBeenCalled();
   });
 
   it('keeps the account so deletion can be retried when Storage cleanup fails', async () => {

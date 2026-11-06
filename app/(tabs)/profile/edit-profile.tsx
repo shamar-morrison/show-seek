@@ -16,8 +16,8 @@ import {
 } from '@/src/services/ProfileService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as ImagePicker from 'expo-image-picker';
-import { Redirect, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -41,6 +41,16 @@ export default function EditProfileScreen() {
   const [name, setName] = useState(user?.displayName ?? '');
   const [photo, setPhoto] = useState<ProfilePhotoChange>({ type: 'keep' });
   const [isSaving, setIsSaving] = useState(false);
+  const isFocusedRef = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      isFocusedRef.current = true;
+      return () => {
+        isFocusedRef.current = false;
+      };
+    }, [])
+  );
 
   if (!user || isGuest) {
     return <Redirect href="/(tabs)/profile/account" />;
@@ -79,7 +89,14 @@ export default function EditProfileScreen() {
     try {
       await updateUserProfile(user, { displayName: trimmedName, photo });
       await refreshProfile();
-      router.back();
+
+      // A save can outlast the screen, and going back then would pop wherever the user went next.
+      if (isFocusedRef.current) {
+        router.back();
+      } else {
+        setPhoto({ type: 'keep' });
+        setIsSaving(false);
+      }
     } catch (error) {
       console.error('[EditProfile] Failed to save the profile:', error);
       Alert.alert(t('common.error'), t('profile.profileUpdateFailed'));

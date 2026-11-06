@@ -60,6 +60,17 @@ describe('useListShareCardAction', () => {
     expect(card.itemCount).toBe(5);
   });
 
+  it('skips repeated posters, so the fan still shows three different ones', () => {
+    const card = pressAction([
+      item(1, '/a.jpg'),
+      item(2, '/a.jpg'),
+      item(3, '/b.jpg'),
+      item(4, '/c.jpg'),
+    ]);
+
+    expect(card.posterPaths).toEqual(['/a.jpg', '/b.jpg', '/c.jpg']);
+  });
+
   it('respects custom posters', () => {
     expect(pressAction([item(99, '/original.jpg')]).posterPaths).toEqual(['/custom.jpg']);
   });

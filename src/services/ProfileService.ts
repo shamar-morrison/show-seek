@@ -1,5 +1,6 @@
 import { db, storage } from '@/src/firebase/config';
 import { mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { updateProfile, User } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -68,11 +69,18 @@ export async function updateUserProfile(
   await updateProfile(user, { displayName, photoURL });
 
   const updates = { displayName, photoURL: photoURL ?? null };
+  // Firestore holds this promise open while offline, and the Auth profile has already changed.
+  const timeout = createTimeoutWithCleanup();
   try {
-    await setDoc(doc(db, 'users', user.uid), updates, { merge: true });
+    await Promise.race([
+      setDoc(doc(db, 'users', user.uid), updates, { merge: true }),
+      timeout.promise,
+    ]);
     mergeUserDocumentCache(user.uid, updates);
   } catch (error) {
     console.warn('[ProfileService] Failed to update the user document:', error);
+  } finally {
+    timeout.cancel();
   }
 
   if (photo.type !== 'keep') {

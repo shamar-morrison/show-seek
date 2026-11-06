@@ -38,10 +38,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     try {
       await updateCurrentUser(auth, currentUser);
-      setUser(auth.currentUser);
     } catch (error) {
-      // The profile itself is already saved and will show correctly after the next app start.
+      // The profile itself is already saved. Only saving it for the next app start can have failed.
       console.warn('[Auth] Failed to refresh the current user:', error);
+    } finally {
+      setUser(auth.currentUser);
     }
   }, []);
 
