@@ -284,7 +284,7 @@ jest.mock('@/src/hooks/usePersonFavoriteSheet', () => ({
     known_for_department: person.known_for_department ?? '',
   }),
 }));
-jest.mock('@/src/components/ShareCardModal', () => () => null);
+jest.mock('@/src/components/shareCard/ShareCardEditor', () => () => null);
 jest.mock('@/src/components/TVReminderModal', () => () => null);
 jest.mock('@/src/components/ImageLightbox', () => () => null);
 jest.mock('@/src/components/VideoPlayerModal', () => () => null);

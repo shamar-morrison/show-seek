@@ -26,7 +26,7 @@ import type { Review } from '@/src/components/detail/types';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
-import ShareCardModal from '@/src/components/ShareCardModal';
+import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import TVReminderModal from '@/src/components/TVReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
@@ -104,7 +104,7 @@ export default function TVDetailScreen() {
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadTraktReviews, setShouldLoadTraktReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
-  const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
+  const [shareCardEditorVisible, setShareCardEditorVisible] = useState(false);
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
@@ -531,7 +531,7 @@ export default function TVDetailScreen() {
             }
             onNote={handleNotePress}
             onTrailer={handleTrailerPress}
-            onShareCard={() => setShareCardModalVisible(true)}
+            onShareCard={() => setShareCardEditorVisible(true)}
             isInAnyList={isInAnyList}
             isLoadingLists={isLoadingLists}
             listIcon={listIcon}
@@ -809,14 +809,13 @@ export default function TVDetailScreen() {
           />
           <NoteModal ref={noteSheetRef} />
           <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
-          {/* Lazy load ShareCardModal - only mount when needed */}
-          {shareCardModalVisible && (
-            <ShareCardModal
-              visible={shareCardModalVisible}
-              onClose={() => setShareCardModalVisible(false)}
-              mediaData={{
-                id: show.id,
-                type: 'tv',
+          {/* Lazy load ShareCardEditor - only mount when needed */}
+          {shareCardEditorVisible && (
+            <ShareCardEditor
+              visible={shareCardEditorVisible}
+              onClose={() => setShareCardEditorVisible(false)}
+              data={{
+                kind: 'title',
                 title: displayShowTitle,
                 posterPath: resolvedShowPosterPath,
                 backdropPath: show.backdrop_path,
@@ -824,7 +823,6 @@ export default function TVDetailScreen() {
                 genres: show.genres?.map((g) => g.name) || [],
                 userRating,
               }}
-              onShowToast={(message) => toastRef.current?.show(message)}
             />
           )}
         </>

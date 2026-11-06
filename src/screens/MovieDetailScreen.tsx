@@ -24,7 +24,7 @@ import MarkAsWatchedModal from '@/src/components/MarkAsWatchedModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderModal from '@/src/components/ReminderModal';
-import ShareCardModal from '@/src/components/ShareCardModal';
+import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
@@ -237,7 +237,7 @@ export default function MovieDetailScreen() {
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [watchedModalVisible, setWatchedModalVisible] = useState(false);
-  const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
+  const [shareCardEditorVisible, setShareCardEditorVisible] = useState(false);
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
@@ -849,7 +849,7 @@ export default function MovieDetailScreen() {
             onReminder={canShowReminder(displayReleaseDate) ? handleReminderPress : undefined}
             onNote={handleNotePress}
             onTrailer={handleTrailerPress}
-            onShareCard={() => setShareCardModalVisible(true)}
+            onShareCard={() => setShareCardEditorVisible(true)}
             isInAnyList={isInAnyList}
             isLoadingLists={isLoadingLists}
             listIcon={listIcon}
@@ -1130,14 +1130,13 @@ export default function MovieDetailScreen() {
             onClearAll={handleClearWatches}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
-          {/* Lazy load ShareCardModal - only mount when needed */}
-          {shareCardModalVisible && (
-            <ShareCardModal
-              visible={shareCardModalVisible}
-              onClose={() => setShareCardModalVisible(false)}
-              mediaData={{
-                id: movie.id,
-                type: 'movie',
+          {/* Lazy load ShareCardEditor - only mount when needed */}
+          {shareCardEditorVisible && (
+            <ShareCardEditor
+              visible={shareCardEditorVisible}
+              onClose={() => setShareCardEditorVisible(false)}
+              data={{
+                kind: 'title',
                 title: displayMovieTitle,
                 posterPath: resolvedMoviePosterPath,
                 backdropPath: movie.backdrop_path,
@@ -1145,7 +1144,6 @@ export default function MovieDetailScreen() {
                 genres: movie.genres?.map((g) => g.name) || [],
                 userRating,
               }}
-              onShowToast={(message) => toastRef.current?.show(message)}
             />
           )}
         </>

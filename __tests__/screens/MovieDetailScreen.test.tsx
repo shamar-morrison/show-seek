@@ -220,7 +220,7 @@ jest.mock('@/src/components/NotesModal', () => {
 });
 jest.mock('@/src/components/RatingModal', () => () => null);
 jest.mock('@/src/components/ReminderModal', () => () => null);
-jest.mock('@/src/components/ShareCardModal', () => () => null);
+jest.mock('@/src/components/shareCard/ShareCardEditor', () => () => null);
 jest.mock('@/src/components/ImageLightbox', () => () => null);
 jest.mock('@/src/components/VideoPlayerModal', () => () => null);
 jest.mock('@/src/components/UserRating', () => () => null);

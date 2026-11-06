@@ -162,6 +162,8 @@ export function MediaActionButtons({
               style={styles.actionButtonTouchable}
               activeOpacity={ACTIVE_OPACITY}
               onPress={onShareCard}
+              accessibilityRole="button"
+              accessibilityLabel={t('shareCard.title')}
             >
               <AppIcon icon={Image01Icon} size={24} color={COLORS.white} />
             </TouchableOpacity>

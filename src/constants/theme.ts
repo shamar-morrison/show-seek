@@ -65,6 +65,7 @@ export const FONT_FAMILY = {
   medium: 'Inter_500Medium',
   semiBold: 'Inter_600SemiBold',
   bold: 'Inter_700Bold',
+  boldItalic: 'Inter_700Bold_Italic',
 } as const;
 
 /** Maps a `fontWeight` value to its Inter family (800/900 capped at bold). */

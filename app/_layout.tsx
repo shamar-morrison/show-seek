@@ -58,6 +58,7 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
+  Inter_700Bold_Italic,
   useFonts,
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
@@ -277,6 +278,7 @@ function ResolvedRootLayoutNav({
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    Inter_700Bold_Italic,
   });
   const fontsReady = fontsLoaded || !!fontError;
 
