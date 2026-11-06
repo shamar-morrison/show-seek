@@ -53,6 +53,13 @@ let mockTmdbPages: any[] = [];
 let latestMediaItem: any = null;
 let mockProgressiveReady = true;
 
+const mockUseInAppReview = jest.fn();
+const mockUseWhatsNew = jest.fn(() => ({
+  announcement: null as { id: string; sections: never[] } | null,
+  shouldShow: false as boolean | null,
+  markSeen: jest.fn(),
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -167,10 +174,26 @@ jest.mock('@/src/hooks/useLists', () => ({
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
     overrides: {},
-    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
-      fallbackPosterPath,
+    resolvePosterPath: (
+      _mediaType: 'movie' | 'tv',
+      _mediaId: number,
+      fallbackPosterPath: string | null
+    ) => fallbackPosterPath,
   }),
 }));
+
+jest.mock('@/src/hooks/useWhatsNew', () => ({
+  useWhatsNew: () => mockUseWhatsNew(),
+}));
+
+jest.mock('@/src/hooks/useInAppReview', () => ({
+  useInAppReview: (...args: unknown[]) => mockUseInAppReview(...args),
+}));
+
+jest.mock('@/src/components/WhatsNewSheet', () => {
+  const { Text } = require('react-native');
+  return { WhatsNewSheet: () => <Text testID="whats-new-sheet" /> };
+});
 
 jest.mock('@/src/hooks/useProgressiveRender', () => ({
   useProgressiveRender: () => ({ isReady: mockProgressiveReady }),
@@ -484,7 +507,9 @@ describe('HomeScreen long press add-to-list', () => {
   });
 
   it('shows a warning when preferences hide all items in a home TMDB section', () => {
-    mockPreferencesState.homeScreenLists = [{ id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' }];
+    mockPreferencesState.homeScreenLists = [
+      { id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' },
+    ];
     mockPreferencesState.preferences = {
       homeScreenLists: [{ id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' }],
       hideUnreleasedContent: true,
@@ -529,7 +554,9 @@ describe('HomeScreen long press add-to-list', () => {
   });
 
   it('shows an empty-state message when a home TMDB section has no results', () => {
-    mockPreferencesState.homeScreenLists = [{ id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' }];
+    mockPreferencesState.homeScreenLists = [
+      { id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' },
+    ];
     mockPreferencesState.preferences = {
       homeScreenLists: [{ id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' }],
       showOriginalTitles: false,
@@ -587,5 +614,40 @@ describe('HomeScreen long press add-to-list', () => {
     expect(getAllByTestId('home-list-section-skeleton')).toHaveLength(4);
     expect(queryByText('Trending Pick')).toBeNull();
     expect(queryByText('Trending Movies')).toBeNull();
+  });
+
+  describe("What's New", () => {
+    const whatsNewState = (shouldShow: boolean | null) => ({
+      announcement: shouldShow ? { id: 'test', sections: [] } : null,
+      shouldShow,
+      markSeen: jest.fn(),
+    });
+
+    it('shows the sheet and holds the review prompt when there is an announcement', () => {
+      mockUseWhatsNew.mockReturnValueOnce(whatsNewState(true));
+
+      const { getByTestId } = render(<HomeScreen />);
+
+      expect(getByTestId('whats-new-sheet')).toBeTruthy();
+      expect(mockUseInAppReview).toHaveBeenCalledWith(false);
+    });
+
+    it('holds the review prompt while it is still checking', () => {
+      mockUseWhatsNew.mockReturnValueOnce(whatsNewState(null));
+
+      const { queryByTestId } = render(<HomeScreen />);
+
+      expect(queryByTestId('whats-new-sheet')).toBeNull();
+      expect(mockUseInAppReview).toHaveBeenCalledWith(false);
+    });
+
+    it('leaves the review prompt alone when there is nothing to show', () => {
+      mockUseWhatsNew.mockReturnValueOnce(whatsNewState(false));
+
+      const { queryByTestId } = render(<HomeScreen />);
+
+      expect(queryByTestId('whats-new-sheet')).toBeNull();
+      expect(mockUseInAppReview).toHaveBeenCalledWith(true);
+    });
   });
 });

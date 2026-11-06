@@ -1661,6 +1661,25 @@
     "failedToSave": "Échec de l'enregistrement dans la galerie",
     "sharingNotAvailable": "Le partage n'est pas disponible sur cet appareil"
   },
+  "whatsNew": {
+    "title": "Quoi de neuf sur ShowSeek ?",
+    "shareCards": {
+      "title": "Nouvelles cartes de partage",
+      "description": "Partagez des cartes pour les films, séries, épisodes, la progression d'une saison et vos listes. Choisissez un format et un style, ajoutez une note, puis partagez ou enregistrez."
+    },
+    "editProfile": {
+      "title": "Modifiez votre profil",
+      "description": "Vous avez un compte ? Vous pouvez désormais changer votre nom et votre photo depuis votre profil."
+    },
+    "tvTimeImport": {
+      "title": "Importez depuis TV Time",
+      "description": "Vous quittez TV Time ? Avec Premium, emportez votre historique, vos notes, vos favoris, vos titres à voir et vos listes. Rendez-vous dans Paramètres > Intégrations."
+    },
+    "stremioAddon": {
+      "title": "Addon Stremio",
+      "description": "Marquez comme vu dans ShowSeek ce que vous regardez sur Stremio. Il vous faut un compte et Stremio sur un ordinateur. Rendez-vous dans Paramètres > Intégrations."
+    }
+  },
   "share": {
     "message": "{{title}} - Découvrez ceci sur TMDB ! {{url}}",
     "linkCopied": "Lien copié dans le presse-papiers",

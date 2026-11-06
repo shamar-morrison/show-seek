@@ -598,7 +598,10 @@
       "devNotificationInSeconds": "{{count}} saniye içinde bildirim",
       "devTestInSeconds": "{{count}} saniye içinde test",
       "episode": {
-        "onAirDay": { "label": "Yayın günü", "description": "Bölüm yayınlandığında bana bildir" },
+        "onAirDay": {
+          "label": "Yayın günü",
+          "description": "Bölüm yayınlandığında bana bildir"
+        },
         "oneDayBefore": {
           "label": "1 gün önce",
           "description": "Yayınlanmadan 1 gün önce bana bildir"
@@ -635,7 +638,10 @@
     },
     "todayEpisodePastTimes": "Bugün yayınlanıyor, ancak tüm hatırlatıcı zamanları geçti.",
     "todaySeasonPremierePastTimes": "Bugün prömiyer yapıyor, ancak tüm hatırlatıcı zamanları geçti.",
-    "tvFrequency": { "everyEpisode": "Her bölüm", "seasonPremieres": "Sezon prömiyerleri" },
+    "tvFrequency": {
+      "everyEpisode": "Her bölüm",
+      "seasonPremieres": "Sezon prömiyerleri"
+    },
     "updateReminder": "Hatırlatıcıyı güncelle",
     "warningSomeTimesPassed": "Bazı hatırlatıcı zamanları zaten geçti."
   },
@@ -1083,7 +1089,9 @@
       "unresolvedImdbId": "Çözümlenmemiş IMDb kimlikli satırlar",
       "unsupportedTmdbResult": "Desteklenmeyen TMDB eşleşmeli satırlar"
     },
-    "ignored": { "itemNotes": "IMDb öğe notları" }
+    "ignored": {
+      "itemNotes": "IMDb öğe notları"
+    }
   },
   "guestAccess": {
     "body": "Bunu yapmak için bir hesaba ihtiyacınız var. Lütfen giriş yapın.",
@@ -1506,6 +1514,25 @@
     "failedToSave": "Galeriye kaydedilemedi",
     "sharingNotAvailable": "Paylaşım bu cihazda kullanılamıyor"
   },
+  "whatsNew": {
+    "title": "ShowSeek'te neler yeni?",
+    "shareCards": {
+      "title": "Yeni paylaşım kartları",
+      "description": "Filmler, diziler, bölümler, sezon ilerlemesi ve listeleriniz için kartlar paylaşın. Bir boyut ve stil seçin, not ekleyin, ardından paylaşın veya kaydedin."
+    },
+    "editProfile": {
+      "title": "Profilinizi güncelleyin",
+      "description": "Hesabınız var mı? Artık adınızı ve fotoğrafınızı profilinizden değiştirebilirsiniz."
+    },
+    "tvTimeImport": {
+      "title": "TV Time'dan içe aktarın",
+      "description": "TV Time'dan mı geçiyorsunuz? Premium ile izleme geçmişinizi, puanlarınızı, favorilerinizi, izleme listenizi ve listelerinizi getirin. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
+    },
+    "stremioAddon": {
+      "title": "Stremio Eklentisi",
+      "description": "Stremio'da izlediklerinizi ShowSeek'te izlendi olarak işaretleyin. Bir hesap ve bilgisayarda Stremio gerekir. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
+    }
+  },
   "share": {
     "message": "{{title}} - Buna TMDB'de göz at! {{url}}",
     "linkCopied": "Bağlantı panoya kopyalandı",
@@ -1668,7 +1695,11 @@
     "empty": "Henüz yapılandırılmış araç takımı yok.",
     "addNew": "Yeni araç takımı ekle",
     "info": "Araç takımlarını burada yapılandırın, ardından \"ShowSeek\" araç takımını eklemek için Android ana ekranınıza uzun basın.",
-    "size": { "small": "Küçük", "medium": "Orta", "large": "Büyük" },
+    "size": {
+      "small": "Küçük",
+      "medium": "Orta",
+      "large": "Büyük"
+    },
     "preview": {
       "upcomingMovies": "En fazla {{count}} yaklaşan film yayını gösterir.",
       "upcomingTV": "En fazla {{count}} yaklaşan dizi yayını gösterir.",
@@ -1713,9 +1744,17 @@
     "stopTrackingConfirm": "{{name}} koleksiyonunu takip etmeyi bırakmak istediğinizden emin misiniz?",
     "stopTrackingTitle": "Takip bırakılsın mı?"
   },
-  "credits": { "failedToLoad": "Katkı bilgileri yüklenemedi" },
-  "datePicker": { "month": "Ay", "selectMonthYear": "Ay ve yıl seç", "year": "Yıl" },
-  "episodeDetail": { "failedToLoad": "Bölüm ayrıntıları yüklenemedi" },
+  "credits": {
+    "failedToLoad": "Katkı bilgileri yüklenemedi"
+  },
+  "datePicker": {
+    "month": "Ay",
+    "selectMonthYear": "Ay ve yıl seç",
+    "year": "Yıl"
+  },
+  "episodeDetail": {
+    "failedToLoad": "Bölüm ayrıntıları yüklenemedi"
+  },
   "filters": {
     "anyRating": "Tüm puanlar",
     "mediaType": "Medya türü",
@@ -1857,7 +1896,9 @@
       }
     }
   },
-  "reviews": { "tapToRevealSpoiler": "Sürprizi görmek için dokun" },
+  "reviews": {
+    "tapToRevealSpoiler": "Sürprizi görmek için dokun"
+  },
   "shuffle": {
     "noImage": "Görsel yok",
     "shuffling": "Karıştırılıyor...",
@@ -1919,8 +1960,13 @@
     "watched": "İzlendi",
     "watchTime": "İzleme Süresi"
   },
-  "tvDetail": { "failedToLoad": "Dizi ayrıntıları yüklenemedi" },
-  "tvSeasons": { "failedToLoadSeasons": "Sezonlar yüklenemedi", "rateSeason": "Puanla" },
+  "tvDetail": {
+    "failedToLoad": "Dizi ayrıntıları yüklenemedi"
+  },
+  "tvSeasons": {
+    "failedToLoadSeasons": "Sezonlar yüklenemedi",
+    "rateSeason": "Puanla"
+  },
   "whereToWatch": {
     "title": "Nereden izlenir",
     "intro": "Şu anda izlenebilecekleri görmek için listelerinizden birini ve bir yayın hizmetini seçin.",
@@ -1988,11 +2034,29 @@
     "results": "{{mood}} seçimleri",
     "noResults": "Bu ruh hali için eşleşme yok",
     "tryAnother": "Farklı bir ruh hali dene",
-    "cozy": { "name": "Sıcacık", "description": "Sıcak ve samimi" },
-    "mindBending": { "name": "Zihin açıcı", "description": "Şaşırtıcı dönüşler" },
-    "adrenaline": { "name": "Adrenalin", "description": "Aksiyon dolu heyecan" },
-    "heartbreaking": { "name": "Yürek burkan", "description": "Duygusal yolculuklar" },
-    "spooky": { "name": "Ürpertici", "description": "Doğaüstü ürpertiler" },
-    "whimsical": { "name": "Masalsı", "description": "Sihirli maceralar" }
+    "cozy": {
+      "name": "Sıcacık",
+      "description": "Sıcak ve samimi"
+    },
+    "mindBending": {
+      "name": "Zihin açıcı",
+      "description": "Şaşırtıcı dönüşler"
+    },
+    "adrenaline": {
+      "name": "Adrenalin",
+      "description": "Aksiyon dolu heyecan"
+    },
+    "heartbreaking": {
+      "name": "Yürek burkan",
+      "description": "Duygusal yolculuklar"
+    },
+    "spooky": {
+      "name": "Ürpertici",
+      "description": "Doğaüstü ürpertiler"
+    },
+    "whimsical": {
+      "name": "Masalsı",
+      "description": "Sihirli maceralar"
+    }
   }
 }

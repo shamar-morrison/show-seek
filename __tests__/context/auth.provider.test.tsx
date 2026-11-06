@@ -1,3 +1,5 @@
+import { CURRENT_WHATS_NEW } from '@/src/constants/whatsNew';
+import { WHATS_NEW_LAST_SEEN_KEY } from '@/src/services/whatsNewService';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, signOut as firebaseSignOut, updateCurrentUser } from 'firebase/auth';
@@ -611,6 +613,11 @@ describe('AuthProvider', () => {
 
       expect(result.current.hasCompletedOnboarding).toBe(true);
       expect(AsyncStorage.setItem).toHaveBeenCalledWith('hasCompletedOnboarding', 'true');
+      // New users already have everything in the current What's New announcement.
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        WHATS_NEW_LAST_SEEN_KEY,
+        CURRENT_WHATS_NEW?.id
+      );
     });
 
     it('should handle AsyncStorage read errors gracefully', async () => {

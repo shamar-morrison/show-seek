@@ -8,6 +8,7 @@ import HomeScreenCustomizationModal, {
 import { HomeListSectionSkeleton } from '@/src/components/skeletons/HomeListSectionSkeleton';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import { WhatsNewSheet } from '@/src/components/WhatsNewSheet';
 import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
@@ -17,6 +18,7 @@ import { useInAppReview } from '@/src/hooks/useInAppReview';
 import { useLists } from '@/src/hooks/useLists';
 import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
+import { useWhatsNew } from '@/src/hooks/useWhatsNew';
 import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import {
@@ -57,8 +59,11 @@ export default function HomeScreen() {
   const isAccountRequired = useAccountRequired();
   const { isReady } = useProgressiveRender();
 
-  // In-app review prompt: checks eligibility on Home tab focus with a short delay
-  useInAppReview();
+  const whatsNew = useWhatsNew();
+
+  // In-app review prompt: checks eligibility on Home tab focus with a short delay.
+  // Skipped for any session showing What's New, so a launch is only interrupted once.
+  useInAppReview(whatsNew.shouldShow === false);
   const { isPremium } = usePremium();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -280,6 +285,9 @@ export default function HomeScreen() {
           onShowToast={handleShowToast}
           onDismiss={() => setSelectedMediaItem(null)}
         />
+      )}
+      {whatsNew.announcement && (
+        <WhatsNewSheet announcement={whatsNew.announcement} onDismiss={whatsNew.markSeen} />
       )}
       <Toast ref={toastRef} />
     </SafeAreaView>

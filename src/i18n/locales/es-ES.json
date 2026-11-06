@@ -1826,6 +1826,25 @@
     "failedToSave": "No se pudo guardar en la galería",
     "sharingNotAvailable": "Compartir no está disponible en este dispositivo"
   },
+  "whatsNew": {
+    "title": "¿Qué hay de nuevo en ShowSeek?",
+    "shareCards": {
+      "title": "Nuevas tarjetas para compartir",
+      "description": "Comparte tarjetas de películas, series, episodios, progreso de temporada y tus listas. Elige un tamaño y un estilo, añade una nota y compártela o guárdala."
+    },
+    "editProfile": {
+      "title": "Actualiza tu perfil",
+      "description": "¿Tienes una cuenta? Ahora puedes cambiar tu nombre y tu foto desde tu perfil."
+    },
+    "tvTimeImport": {
+      "title": "Importa desde TV Time",
+      "description": "¿Vienes de TV Time? Con Premium, trae tu historial, valoraciones, favoritos, pendientes y listas. Lo encontrarás en Ajustes > Integraciones."
+    },
+    "stremioAddon": {
+      "title": "Addon de Stremio",
+      "description": "Marca como visto en ShowSeek lo que ves en Stremio. Necesitas una cuenta y Stremio en un ordenador. Lo encontrarás en Ajustes > Integraciones."
+    }
+  },
   "share": {
     "message": "{{title}} - ¡Mira esto en TMDB! {{url}}",
     "linkCopied": "Enlace copiado al portapapeles",

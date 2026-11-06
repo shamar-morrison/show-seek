@@ -1,6 +1,7 @@
 import { auth, db } from '@/src/firebase/config';
 import { signOutGoogle } from '@/src/firebase/auth';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
+import { markCurrentWhatsNewSeen } from '@/src/services/whatsNewService';
 import {
   getPersonalOnboardingCacheKey,
   persistPersonalOnboardingCache,
@@ -284,6 +285,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   };
 
   const completeOnboarding = async () => {
+    await markCurrentWhatsNewSeen();
     await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
     setHasCompletedOnboarding(true);
   };
