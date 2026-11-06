@@ -626,7 +626,12 @@ export default function TVDetailScreen() {
           {hasWatchProviders(watchProviders) && <SectionSeparator />}
 
           {/* Cast */}
-          <CastSection cast={cast} onCastPress={handleCastPress} onCastLongPress={handlePersonLongPress} onViewAll={handleCastViewAll} />
+          <CastSection
+            cast={cast}
+            onCastPress={handleCastPress}
+            onCastLongPress={handlePersonLongPress}
+            onViewAll={handleCastViewAll}
+          />
 
           {cast.length > 0 && <SectionSeparator />}
 
@@ -814,15 +819,17 @@ export default function TVDetailScreen() {
             <ShareCardEditor
               visible={shareCardEditorVisible}
               onClose={() => setShareCardEditorVisible(false)}
-              data={{
-                kind: 'title',
-                title: displayShowTitle,
-                posterPath: resolvedShowPosterPath,
-                backdropPath: show.backdrop_path,
-                releaseYear: show.first_air_date?.split('-')[0] || '',
-                genres: show.genres?.map((g) => g.name) || [],
-                userRating,
-              }}
+              cards={[
+                {
+                  kind: 'title',
+                  title: displayShowTitle,
+                  posterPath: resolvedShowPosterPath,
+                  backdropPath: show.backdrop_path,
+                  releaseYear: show.first_air_date?.split('-')[0] || '',
+                  genres: show.genres?.map((g) => g.name) || [],
+                  userRating,
+                },
+              ]}
             />
           )}
         </>

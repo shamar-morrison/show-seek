@@ -1,6 +1,7 @@
 import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import {
   EpisodeShareCardData,
+  ProgressShareCardData,
   ShareCardData,
   TitleShareCardData,
 } from '@/src/components/shareCard/shareCardTypes';
@@ -51,7 +52,7 @@ const movie: TitleShareCardData = {
 };
 
 const renderEditor = async (data: ShareCardData = movie) => {
-  const utils = render(<ShareCardEditor visible onClose={jest.fn()} data={data} />);
+  const utils = render(<ShareCardEditor visible onClose={jest.fn()} cards={[data]} />);
   await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalled());
   await act(async () => {});
   return utils;
@@ -100,7 +101,7 @@ describe('ShareCardEditor', () => {
   it('allows capture after the timeout when an image never finishes', async () => {
     jest.useFakeTimers();
     try {
-      const utils = render(<ShareCardEditor visible onClose={jest.fn()} data={movie} />);
+      const utils = render(<ShareCardEditor visible onClose={jest.fn()} cards={[movie]} />);
       await act(async () => {
         await jest.advanceTimersByTimeAsync(5999);
       });
@@ -144,7 +145,7 @@ describe('ShareCardEditor', () => {
 
   it('stays open after sharing so another size can be exported', async () => {
     const onClose = jest.fn();
-    const utils = render(<ShareCardEditor visible onClose={onClose} data={movie} />);
+    const utils = render(<ShareCardEditor visible onClose={onClose} cards={[movie]} />);
     await act(async () => {});
     settleCaptureImages(utils);
 
@@ -321,19 +322,6 @@ describe('ShareCardEditor', () => {
       expect(blurredUri(utils)).toContain('/backdrop.jpg');
       expect(foregroundUri(utils)).toContain('/poster.jpg');
     });
-
-    it.each(['portrait', 'square', 'landscape'])(
-      '%s puts a subtle gold border around the poster',
-      async (format) => {
-        const utils = await renderEditor();
-        selectFormat(utils, format);
-
-        expect(capturedCard(utils).getByTestId('share-card-foreground-frame')).toHaveStyle({
-          borderWidth: 2,
-          borderColor: 'rgba(212, 169, 95, 0.4)',
-        });
-      }
-    );
 
     it('limits genres to two', async () => {
       const utils = await renderEditor();
@@ -636,6 +624,154 @@ describe('ShareCardEditor', () => {
       expect(captureRef).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ width: 1920, height: 1080 })
+      );
+    });
+  });
+
+  describe('progress card', () => {
+    const progress: ProgressShareCardData = {
+      kind: 'progress',
+      showTitle: 'Test Show',
+      seasonTitle: 'Season 4',
+      seasonYear: '2022',
+      watchedCount: 8,
+      totalCount: 9,
+      userRating: 0,
+      posterPath: '/season-poster.jpg',
+      backdropPath: '/backdrop.jpg',
+    };
+
+    const selectFormat = (utils: ReturnType<typeof render>, format: string) =>
+      fireEvent.press(utils.getByTestId(`share-card-format-tab-${format}`));
+    const fill = (utils: ReturnType<typeof render>) =>
+      capturedCard(utils).getByTestId('share-card-progress-fill');
+
+    it.each(['portrait', 'square', 'landscape'])(
+      '%s shows the show, season, year and progress',
+      async (format) => {
+        const utils = await renderEditor(progress);
+        selectFormat(utils, format);
+
+        expect(capturedCard(utils).getByTestId('share-card-eyebrow')).toHaveTextContent(
+          'Test Show'
+        );
+        expect(capturedCard(utils).getByTestId('share-card-title')).toHaveTextContent('Season 4');
+        expect(capturedCard(utils).getByText('2022')).toBeTruthy();
+        expect(capturedCard(utils).getByText('8/9')).toBeTruthy();
+        expect(fill(utils)).toHaveStyle({ width: `${(8 / 9) * 100}%` });
+      }
+    );
+
+    it('shows the season rating only once rated', async () => {
+      const unrated = await renderEditor(progress);
+      expect(capturedCard(unrated).queryAllByTestId('share-card-stat')).toHaveLength(0);
+      unrated.unmount();
+
+      const rated = await renderEditor({ ...progress, userRating: 8.5 });
+      expect(capturedCard(rated).getByText('8.5/10')).toBeTruthy();
+      expect(capturedCard(rated).getByText('8/9')).toBeTruthy();
+    });
+
+    it('fills the bar for a finished season', async () => {
+      const utils = await renderEditor({ ...progress, watchedCount: 9 });
+
+      expect(fill(utils)).toHaveStyle({ width: '100%' });
+    });
+
+    it('never overfills or divides by zero', async () => {
+      const over = await renderEditor({ ...progress, watchedCount: 12 });
+      expect(fill(over)).toHaveStyle({ width: '100%' });
+      over.unmount();
+
+      const empty = await renderEditor({ ...progress, watchedCount: 0, totalCount: 0 });
+      expect(fill(empty)).toHaveStyle({ width: '0%' });
+    });
+
+    it('shows no progress bar on other cards', async () => {
+      const utils = await renderEditor();
+
+      expect(capturedCard(utils).queryByTestId('share-card-progress')).toBeNull();
+    });
+
+    it('supports the note', async () => {
+      const utils = await renderEditor(progress);
+      fireEvent.changeText(utils.getByTestId('share-card-note-input'), 'Almost done');
+
+      expect(capturedCard(utils).getByTestId('share-card-note')).toHaveTextContent(
+        '\u201CAlmost done\u201D'
+      );
+    });
+  });
+
+  describe('card picker', () => {
+    const episodeCard: EpisodeShareCardData = {
+      kind: 'episode',
+      showTitle: 'Test Show',
+      episodeTitle: 'The Pilot',
+      seasonNumber: 1,
+      episodeNumber: 1,
+      posterPath: '/poster.jpg',
+      stillPath: '/still.jpg',
+      backdropPath: '/backdrop.jpg',
+      runtimeMinutes: 45,
+      userRating: 0,
+    };
+    const progressCard: ProgressShareCardData = {
+      kind: 'progress',
+      showTitle: 'Test Show',
+      seasonTitle: 'Season 1',
+      seasonYear: '2020',
+      watchedCount: 1,
+      totalCount: 8,
+      userRating: 0,
+      posterPath: '/poster.jpg',
+      backdropPath: '/backdrop.jpg',
+    };
+
+    const renderBoth = async () => {
+      const utils = render(
+        <ShareCardEditor visible onClose={jest.fn()} cards={[episodeCard, progressCard]} />
+      );
+      await act(async () => {});
+      return utils;
+    };
+
+    it('is hidden when there is only one card', async () => {
+      const utils = await renderEditor();
+
+      expect(utils.queryByTestId('share-card-kind')).toBeNull();
+    });
+
+    it('opens on the first card and switches to the other', async () => {
+      const utils = await renderBoth();
+      expect(capturedCard(utils).getByTestId('share-card-title')).toHaveTextContent('The Pilot');
+
+      fireEvent.press(utils.getByTestId('share-card-kind-tab-progress'));
+
+      expect(capturedCard(utils).getByTestId('share-card-title')).toHaveTextContent('Season 1');
+      expect(
+        within(utils.getByTestId('share-card-kind-tab-progress')).getByText('Progress')
+      ).toBeTruthy();
+    });
+
+    it('waits for images again after switching', async () => {
+      const utils = await renderBoth();
+      settleCaptureImages(utils);
+      expect(isDisabled(utils, 'share-card-share')).toBe(false);
+
+      fireEvent.press(utils.getByTestId('share-card-kind-tab-progress'));
+
+      expect(isDisabled(utils, 'share-card-share')).toBe(true);
+    });
+
+    it('keeps the note when switching', async () => {
+      const utils = await renderBoth();
+      fireEvent.changeText(utils.getByTestId('share-card-note-input'), 'Hooked');
+
+      fireEvent.press(utils.getByTestId('share-card-kind-tab-progress'));
+
+      expect(capturedCard(utils).getByTestId('share-card-note')).toHaveTextContent(
+        '\u201CHooked\u201D'
       );
     });
   });

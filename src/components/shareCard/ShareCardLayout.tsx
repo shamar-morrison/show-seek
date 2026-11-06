@@ -16,8 +16,6 @@ import { SHARE_CARD_BACKGROUND, ShareCardFormat, ShareCardIdentity } from './sha
 
 const FALLBACK_GRADIENT = ['#1a1a2e', '#16213e', '#0f3460'] as const;
 const NOTE_COLOR = '#E8E6E1';
-const FOREGROUND_BORDER_COLOR = hexToRGBA('#D4A95F', 0.4);
-const FOREGROUND_BORDER_WIDTH = 2;
 
 const CENTERED_LAYOUT = {
   // The extra top and bottom padding keeps content clear of Instagram's Stories controls.
@@ -40,6 +38,8 @@ const CENTERED_LAYOUT = {
     pillValue: 56,
     pillLabel: 32,
     pillPadding: 32,
+    progressHeight: 16,
+    progressLabel: 40,
     sectionGap: 40,
   },
   square: {
@@ -61,6 +61,8 @@ const CENTERED_LAYOUT = {
     pillValue: 40,
     pillLabel: 26,
     pillPadding: 20,
+    progressHeight: 12,
+    progressLabel: 30,
     sectionGap: 24,
   },
 } as const;
@@ -82,6 +84,8 @@ const LANDSCAPE_LAYOUT = {
   pillValue: 52,
   pillLabel: 30,
   pillPadding: 28,
+  progressHeight: 14,
+  progressLabel: 36,
   sectionGap: 40,
 } as const;
 
@@ -257,6 +261,15 @@ function CenteredContent({
               ]}
             />
           )}
+          {content.progress && (
+            <ProgressMeter
+              {...content.progress}
+              accentColor={accentColor}
+              height={layout.progressHeight}
+              labelSize={layout.progressLabel}
+              marginTop={layout.sectionGap}
+            />
+          )}
         </View>
         <View style={{ marginTop: layout.sectionGap }}>{footer}</View>
       </View>
@@ -336,6 +349,15 @@ function LandscapeContent({ content, images, note, footer, onImageSettled }: Con
                 ]}
               />
             )}
+            {content.progress && (
+              <ProgressMeter
+                {...content.progress}
+                accentColor={accentColor}
+                height={layout.progressHeight}
+                labelSize={layout.progressLabel}
+                marginTop={layout.sectionGap}
+              />
+            )}
           </View>
           {footer}
         </View>
@@ -359,7 +381,7 @@ function ForegroundImage({ url, radius, frameStyle, onImageSettled }: Foreground
     >
       <Image
         source={{ uri: url }}
-        style={[styles.fill, { borderRadius: radius - FOREGROUND_BORDER_WIDTH }]}
+        style={[styles.fill, { borderRadius: radius }]}
         contentFit="cover"
         onLoadEnd={() => onImageSettled?.(url)}
         testID="share-card-foreground"
@@ -432,6 +454,46 @@ function StatPill({ stat, accentColor, valueSize, labelSize, style }: StatPillPr
   );
 }
 
+interface ProgressMeterProps {
+  current: number;
+  total: number;
+  accentColor: string;
+  height: number;
+  labelSize: number;
+  marginTop: number;
+}
+
+function ProgressMeter({
+  current,
+  total,
+  accentColor,
+  height,
+  labelSize,
+  marginTop,
+}: ProgressMeterProps) {
+  const percentage = total > 0 ? Math.min((current / total) * 100, 100) : 0;
+  const radius = height / 2;
+
+  return (
+    <View style={[styles.progress, { marginTop }]} testID="share-card-progress">
+      <View style={[styles.progressTrack, { height, borderRadius: radius }]}>
+        <View
+          style={{
+            width: `${percentage}%`,
+            height: '100%',
+            borderRadius: radius,
+            backgroundColor: accentColor,
+          }}
+          testID="share-card-progress-fill"
+        />
+      </View>
+      <CardText style={[styles.progressLabel, { fontSize: labelSize }]}>
+        {`${current}/${total}`}
+      </CardText>
+    </View>
+  );
+}
+
 type Translate = ReturnType<typeof useTranslation>['t'];
 
 function getRatingStat(userRating: number, t: Translate): Stat | null {
@@ -464,8 +526,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   foregroundFrame: {
-    borderWidth: FOREGROUND_BORDER_WIDTH,
-    borderColor: FOREGROUND_BORDER_COLOR,
     // Full size unless the text below it would otherwise push the card's content off screen.
     flexShrink: 1,
     backgroundColor: COLORS.surface,
@@ -536,6 +596,21 @@ const styles = StyleSheet.create({
   statValue: {
     flexShrink: 1,
     fontFamily: FONT_FAMILY.bold,
+    color: COLORS.white,
+  },
+  progress: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  progressTrack: {
+    flex: 1,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  progressLabel: {
+    fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
   },
   statLabel: {

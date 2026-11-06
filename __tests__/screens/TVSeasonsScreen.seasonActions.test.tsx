@@ -103,8 +103,10 @@ jest.mock('@/src/hooks/useRatings', () => ({
   useRatings: () => ({ data: mockRatingsData }),
 }));
 
+let mockEpisodeTracking: { episodes: Record<string, object> } | null = null;
+
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
-  useShowEpisodeTracking: () => ({ data: null }),
+  useShowEpisodeTracking: () => ({ data: mockEpisodeTracking }),
   useMarkEpisodeWatched: () => ({
     mutate: jest.fn(),
     isPending: false,
@@ -144,6 +146,12 @@ jest.mock('@/src/components/RatingModal', () => {
     return visible ? <Text testID="season-rating-modal">{seasonData?.seasonName}</Text> : null;
   };
 });
+
+const mockShareCardEditor = jest.fn((_props: unknown) => null);
+jest.mock('@/src/components/shareCard/ShareCardEditor', () => ({
+  __esModule: true,
+  default: (props: unknown) => mockShareCardEditor(props),
+}));
 
 jest.mock('@/src/components/ui/LoadingModal', () => () => null);
 
@@ -260,6 +268,44 @@ describe('TVSeasonsScreen season actions', () => {
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/tv/101');
   });
 
+  it('does not offer a progress card for a season with nothing watched', () => {
+    mockEpisodeTracking = null;
+    mockQueries();
+
+    const screen = renderWithProviders(<TVSeasonsScreen />);
+
+    expect(screen.queryByTestId('season-share-card-button-1')).toBeNull();
+  });
+
+  it('opens a progress card for a season that has been started', () => {
+    mockEpisodeTracking = { episodes: { '1_1': { seasonNumber: 1, episodeNumber: 1 } } };
+    mockQueries();
+
+    const screen = renderWithProviders(<TVSeasonsScreen />);
+    expect(mockShareCardEditor).not.toHaveBeenCalled();
+
+    act(() => {
+      screen.getByTestId('season-share-card-button-1').props.onPress();
+    });
+
+    expect(mockShareCardEditor).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        cards: [
+          expect.objectContaining({
+            kind: 'progress',
+            showTitle: baseShow.name,
+            seasonTitle: 'Season 1',
+            seasonYear: '2020',
+            watchedCount: 1,
+            totalCount: 1,
+            posterPath: '/season1.jpg',
+          }),
+        ],
+      })
+    );
+    mockEpisodeTracking = null;
+  });
+
   it('renders the moved season action buttons and opens the season rating modal', async () => {
     mockQueries();
 
@@ -289,6 +335,43 @@ describe('TVSeasonsScreen season actions', () => {
     const screen = renderWithProviders(<TVSeasonsScreen />);
 
     expect(screen.getByTestId('season-rate-button-1')).toBeTruthy();
+  });
+
+  it('uses icons with spoken labels instead of text on the season actions', () => {
+    mockRatingsData = [];
+    mockQueries();
+
+    const screen = renderWithProviders(<TVSeasonsScreen />);
+
+    // The header has its own show-wide Mark All button with the same label.
+    expect(screen.getByTestId('season-mark-all-button-1')).toHaveProp(
+      'accessibilityLabel',
+      'Mark all'
+    );
+    expect(screen.getByLabelText('Rate')).toBeTruthy();
+    expect(screen.getByLabelText('Add Note')).toBeTruthy();
+    expect(screen.queryByText('Mark all')).toBeNull();
+    expect(screen.queryByText('Rate')).toBeNull();
+    expect(screen.queryByText('Add Note')).toBeNull();
+  });
+
+  it('passes the season rating to the progress card when there is one', () => {
+    mockEpisodeTracking = { episodes: { '1_1': { seasonNumber: 1, episodeNumber: 1 } } };
+    mockRatingsData = [{ id: 'season-101-1', mediaType: 'season', rating: 8.5 }];
+    mockQueries();
+
+    const screen = renderWithProviders(<TVSeasonsScreen />);
+    act(() => {
+      screen.getByTestId('season-share-card-button-1').props.onPress();
+    });
+
+    expect(mockShareCardEditor).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        cards: [expect.objectContaining({ kind: 'progress', userRating: 8.5 })],
+      })
+    );
+    mockEpisodeTracking = null;
+    mockRatingsData = [];
   });
 
   it('shows the saved season rating as text after the season has been rated', () => {
@@ -356,6 +439,6 @@ describe('TVSeasonsScreen season actions', () => {
     const screen = renderWithProviders(<TVSeasonsScreen />);
 
     expect(screen.getByTestId('season-note-button-1')).toBeTruthy();
-    expect(screen.getByText('Edit Note')).toBeTruthy();
+    expect(screen.getByLabelText('Edit Note')).toBeTruthy();
   });
 });

@@ -7,7 +7,8 @@ import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton';
-import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
+import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
+import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import ListActionsModal from '@/src/components/ListActionsModal';
 import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
@@ -919,7 +920,12 @@ export default function MovieDetailScreen() {
           {hasWatchProviders(watchProviders) && <SectionSeparator />}
 
           {/* Cast */}
-          <CastSection cast={cast} onCastPress={handleCastPress} onCastLongPress={handlePersonLongPress} onViewAll={handleCastViewAll} />
+          <CastSection
+            cast={cast}
+            onCastPress={handleCastPress}
+            onCastLongPress={handlePersonLongPress}
+            onViewAll={handleCastViewAll}
+          />
 
           {cast.length > 0 && <SectionSeparator />}
 
@@ -1135,15 +1141,17 @@ export default function MovieDetailScreen() {
             <ShareCardEditor
               visible={shareCardEditorVisible}
               onClose={() => setShareCardEditorVisible(false)}
-              data={{
-                kind: 'title',
-                title: displayMovieTitle,
-                posterPath: resolvedMoviePosterPath,
-                backdropPath: movie.backdrop_path,
-                releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',
-                genres: movie.genres?.map((g) => g.name) || [],
-                userRating,
-              }}
+              cards={[
+                {
+                  kind: 'title',
+                  title: displayMovieTitle,
+                  posterPath: resolvedMoviePosterPath,
+                  backdropPath: movie.backdrop_path,
+                  releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',
+                  genres: movie.genres?.map((g) => g.name) || [],
+                  userRating,
+                },
+              ]}
             />
           )}
         </>

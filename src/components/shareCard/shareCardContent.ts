@@ -10,6 +10,7 @@ export interface ShareCardContent {
   meta: string;
   /** 0 when the user has not rated it. */
   userRating: number;
+  progress?: { current: number; total: number };
 }
 
 function formatRuntime(minutes: number, t: TFunction): string {
@@ -35,6 +36,16 @@ export function getShareCardContent(data: ShareCardData, t: TFunction): ShareCar
         ? `${episodeNumber} · ${formatRuntime(data.runtimeMinutes, t)}`
         : episodeNumber,
       userRating: data.userRating,
+    };
+  }
+
+  if (data.kind === 'progress') {
+    return {
+      eyebrow: data.showTitle,
+      headline: data.seasonTitle,
+      meta: data.seasonYear,
+      userRating: data.userRating,
+      progress: { current: data.watchedCount, total: data.totalCount },
     };
   }
 

@@ -133,6 +133,7 @@ const setMockQueries = (episodeOverrides: Partial<typeof mockEpisode> = {}) => {
 };
 
 const mockShareCardEditor = jest.fn((_props: unknown) => null);
+let mockSeasonProgress: { watchedCount: number; progressTotalCount: number } | null = null;
 jest.mock('@/src/components/shareCard/ShareCardEditor', () => ({
   __esModule: true,
   default: (props: unknown) => mockShareCardEditor(props),
@@ -240,6 +241,7 @@ jest.mock('@/src/hooks/useAnimatedScrollHeader', () => ({
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   useShowEpisodeTracking: () => ({ data: null }),
   useIsEpisodeWatched: () => ({ isWatched: mockIsWatched }),
+  useSeasonProgress: () => ({ progress: mockSeasonProgress }),
   useMarkEpisodeWatched: () => ({ mutate: mockMarkEpisodeWatchedMutate, isPending: false }),
   useMarkEpisodeUnwatched: () => ({ mutate: mockMarkEpisodeUnwatchedMutate, isPending: false }),
 }));
@@ -277,6 +279,7 @@ jest.mock('@/src/hooks/useProgressiveRender', () => ({
 
 jest.mock('@/src/hooks/useRatings', () => ({
   useEpisodeRating: () => ({ userRating: 0, isLoading: false }),
+  useSeasonRating: () => ({ userRating: 7, isLoading: false }),
 }));
 
 jest.mock('@/src/components/NotesModal', () => {
@@ -387,6 +390,7 @@ describe('EpisodeDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockIsWatched = false;
+    mockSeasonProgress = null;
     mockPreferences = {
       showOriginalTitles: false,
       allowUnreleasedEpisodeWatches: false,
@@ -511,18 +515,52 @@ describe('EpisodeDetailScreen', () => {
     expect(mockShareCardEditor).toHaveBeenLastCalledWith(
       expect.objectContaining({
         visible: true,
-        data: expect.objectContaining({
-          kind: 'episode',
-          showTitle: mockTvShow.name,
-          episodeTitle: mockEpisode.name,
-          seasonNumber: 1,
-          episodeNumber: 2,
-          stillPath: mockEpisode.still_path,
-          runtimeMinutes: mockEpisode.runtime,
-          userRating: expect.any(Number),
-        }),
+        cards: [
+          expect.objectContaining({
+            kind: 'episode',
+            showTitle: mockTvShow.name,
+            episodeTitle: mockEpisode.name,
+            seasonNumber: 1,
+            episodeNumber: 2,
+            stillPath: mockEpisode.still_path,
+            runtimeMinutes: mockEpisode.runtime,
+            userRating: expect.any(Number),
+          }),
+        ],
       })
     );
+  });
+
+  it('also offers the progress card once the season has been started', () => {
+    mockSeasonProgress = { watchedCount: 3, progressTotalCount: 10 };
+    const { getByTestId } = render(<EpisodeDetailScreen />);
+
+    fireEvent.press(getByTestId('episode-share-card-action'));
+
+    expect(mockShareCardEditor).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        cards: [
+          expect.objectContaining({ kind: 'episode' }),
+          expect.objectContaining({
+            kind: 'progress',
+            showTitle: mockTvShow.name,
+            watchedCount: 3,
+            totalCount: 10,
+            userRating: 7,
+          }),
+        ],
+      })
+    );
+  });
+
+  it('does not offer the progress card when nothing in the season is watched', () => {
+    mockSeasonProgress = { watchedCount: 0, progressTotalCount: 10 };
+    const { getByTestId } = render(<EpisodeDetailScreen />);
+
+    fireEvent.press(getByTestId('episode-share-card-action'));
+
+    const { cards } = mockShareCardEditor.mock.lastCall![0] as { cards: { kind: string }[] };
+    expect(cards.map((card) => card.kind)).toEqual(['episode']);
   });
 
   it('alerts and opens a blank note editor when preload fails for a new note', async () => {

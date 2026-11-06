@@ -44,7 +44,20 @@ export interface EpisodeShareCardData {
   userRating: number;
 }
 
-export type ShareCardData = TitleShareCardData | EpisodeShareCardData;
+export interface ProgressShareCardData {
+  kind: 'progress';
+  showTitle: string;
+  seasonTitle: string;
+  seasonYear: string;
+  watchedCount: number;
+  totalCount: number;
+  /** 0 when the user has not rated the season. */
+  userRating: number;
+  posterPath: string | null;
+  backdropPath: string | null;
+}
+
+export type ShareCardData = TitleShareCardData | EpisodeShareCardData | ProgressShareCardData;
 
 /** Who the card credits. Deliberately has no email: cards are posted publicly. */
 export interface ShareCardIdentity {

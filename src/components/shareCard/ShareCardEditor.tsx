@@ -55,15 +55,19 @@ type BusyAction = 'sharing' | 'saving' | null;
 interface ShareCardEditorProps {
   visible: boolean;
   onClose: () => void;
-  data: ShareCardData;
+  /** The cards this screen can share. The first opens by default; more adds a picker. */
+  cards: ShareCardData[];
 }
 
-export default function ShareCardEditor({ visible, onClose, data }: ShareCardEditorProps) {
+export default function ShareCardEditor({ visible, onClose, cards }: ShareCardEditorProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const { user, isGuest } = useAuth();
   const insets = useSafeAreaInsets();
   const { format, showIdentity, isLoaded, updatePreferences } = useShareCardPreferences();
+
+  const [activeKind, setActiveKind] = useState(cards[0].kind);
+  const data = cards.find((card) => card.kind === activeKind) ?? cards[0];
 
   const cardRef = useRef<View>(null);
   const toastRef = useRef<ToastRef>(null);
@@ -108,7 +112,7 @@ export default function ShareCardEditor({ visible, onClose, data }: ShareCardEdi
 
   const imageKeys = getShareCardImageKeys(data, format, identity);
   // Remounting per configuration makes every image report its load again.
-  const captureKey = `${format}|${imageKeys.join('|')}`;
+  const captureKey = `${data.kind}|${format}|${imageKeys.join('|')}`;
   const { isReady: imagesReady, markSettled } = useImagesSettled(imageKeys, captureKey);
 
   const canCapture = isLoaded && imagesReady;
@@ -180,6 +184,11 @@ export default function ShareCardEditor({ visible, onClose, data }: ShareCardEdi
     const { width, height } = event.nativeEvent.layout;
     setStageSize({ width, height });
   }, []);
+
+  const cardOptions = cards.map((card) => ({
+    key: card.kind,
+    label: t(`shareCard.card_${card.kind}`),
+  }));
 
   const formatOptions = SHARE_CARD_FORMAT_KEYS.map((key) => ({
     key,
@@ -298,6 +307,14 @@ export default function ShareCardEditor({ visible, onClose, data }: ShareCardEdi
             {/* Hidden while typing so the card stays visible above the keyboard. */}
             {!isEditingNote && (
               <>
+                {cards.length > 1 && (
+                  <SegmentedControl
+                    options={cardOptions}
+                    activeKey={data.kind}
+                    onChange={(key: ShareCardData['kind']) => setActiveKind(key)}
+                    testID="share-card-kind"
+                  />
+                )}
                 <SegmentedControl
                   options={formatOptions}
                   activeKey={format}
