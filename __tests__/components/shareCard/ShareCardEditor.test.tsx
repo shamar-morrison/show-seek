@@ -1,6 +1,7 @@
 import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import {
   EpisodeShareCardData,
+  ListShareCardData,
   ProgressShareCardData,
   ShareCardData,
   TitleShareCardData,
@@ -700,6 +701,103 @@ describe('ShareCardEditor', () => {
       expect(capturedCard(utils).getByTestId('share-card-note')).toHaveTextContent(
         '\u201CAlmost done\u201D'
       );
+    });
+  });
+
+  describe('list card', () => {
+    const list: ListShareCardData = {
+      kind: 'list',
+      listName: 'Comfort Shows',
+      itemCount: 24,
+      posterPaths: ['/one.jpg', '/two.jpg', '/three.jpg'],
+    };
+
+    const selectFormat = (utils: ReturnType<typeof render>, format: string) =>
+      fireEvent.press(utils.getByTestId(`share-card-format-tab-${format}`));
+    const fanPosters = (utils: ReturnType<typeof render>) =>
+      capturedCard(utils).queryAllByTestId('share-card-fan-poster');
+    const posterUris = (utils: ReturnType<typeof render>) =>
+      fanPosters(utils).map((poster) => poster.findByType('Image' as never).props.source.uri);
+
+    it.each(['portrait', 'square', 'landscape'])(
+      '%s shows the list name, count and a fan of posters',
+      async (format) => {
+        const utils = await renderEditor(list);
+        selectFormat(utils, format);
+
+        expect(capturedCard(utils).getByTestId('share-card-title')).toHaveTextContent(
+          'Comfort Shows'
+        );
+        expect(capturedCard(utils).getByText('24 items')).toBeTruthy();
+        expect(fanPosters(utils)).toHaveLength(3);
+        expect(capturedCard(utils).queryByTestId('share-card-foreground')).toBeNull();
+      }
+    );
+
+    it('draws the first poster last so it sits in front', async () => {
+      const utils = await renderEditor(list);
+
+      expect(posterUris(utils).at(-1)).toContain('/one.jpg');
+    });
+
+    it('uses a singular count for one item', async () => {
+      const utils = await renderEditor({ ...list, itemCount: 1, posterPaths: ['/one.jpg'] });
+
+      expect(capturedCard(utils).getByText('1 item')).toBeTruthy();
+    });
+
+    it('shows one poster normally instead of a fan', async () => {
+      const utils = await renderEditor({ ...list, itemCount: 1, posterPaths: ['/one.jpg'] });
+
+      expect(capturedCard(utils).queryByTestId('share-card-fan')).toBeNull();
+      expect(capturedCard(utils).getByTestId('share-card-foreground').props.source.uri).toContain(
+        '/one.jpg'
+      );
+    });
+
+    it('fans out two posters', async () => {
+      const utils = await renderEditor({
+        ...list,
+        itemCount: 2,
+        posterPaths: ['/one.jpg', '/two.jpg'],
+      });
+
+      expect(fanPosters(utils)).toHaveLength(2);
+    });
+
+    it('still renders with no posters at all', async () => {
+      const utils = await renderEditor({ ...list, itemCount: 2, posterPaths: [] });
+
+      expect(capturedCard(utils).queryByTestId('share-card-fan')).toBeNull();
+      expect(capturedCard(utils).queryByTestId('share-card-foreground')).toBeNull();
+      expect(capturedCard(utils).getByTestId('share-card-title')).toHaveTextContent(
+        'Comfort Shows'
+      );
+    });
+
+    it('waits for every fanned poster before capture', async () => {
+      const utils = await renderEditor(list);
+      const images = captureImages(utils);
+      const lastPoster = images.find((image) => image.props.source?.uri?.includes('/three.jpg'))!;
+
+      act(() => {
+        images.filter((image) => image !== lastPoster).forEach((image) => image.props.onLoadEnd());
+      });
+      expect(isDisabled(utils, 'share-card-share')).toBe(true);
+
+      act(() => lastPoster.props.onLoadEnd());
+      expect(isDisabled(utils, 'share-card-share')).toBe(false);
+    });
+
+    it('supports the note and hiding the profile', async () => {
+      const utils = await renderEditor(list);
+      fireEvent.changeText(utils.getByTestId('share-card-note-input'), 'My favorites');
+      fireEvent(utils.getByTestId('preference-switch'), 'valueChange', false);
+
+      expect(capturedCard(utils).getByTestId('share-card-note')).toHaveTextContent(
+        '\u201CMy favorites\u201D'
+      );
+      expect(capturedCard(utils).queryByTestId('share-card-identity')).toBeNull();
     });
   });
 

@@ -57,7 +57,19 @@ export interface ProgressShareCardData {
   backdropPath: string | null;
 }
 
-export type ShareCardData = TitleShareCardData | EpisodeShareCardData | ProgressShareCardData;
+export interface ListShareCardData {
+  kind: 'list';
+  listName: string;
+  itemCount: number;
+  /** The posters to show, first one in front. */
+  posterPaths: string[];
+}
+
+export type ShareCardData =
+  | TitleShareCardData
+  | EpisodeShareCardData
+  | ProgressShareCardData
+  | ListShareCardData;
 
 /** Who the card credits. Deliberately has no email: cards are posted publicly. */
 export interface ShareCardIdentity {

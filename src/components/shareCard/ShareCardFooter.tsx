@@ -10,6 +10,7 @@ import { ShareCardFormat, ShareCardIdentity } from './shareCardTypes';
 
 const SHOWSEEK_URL = 'show-seek.app';
 const URL_COLOR = '#B5B3AE';
+const URL_GAP = 4;
 
 const FOOTER_SIZES: Record<
   ShareCardFormat,
@@ -65,7 +66,13 @@ export function ShareCardFooter({ format, identity, onImageSettled }: ShareCardF
           />
           <CardText style={[styles.wordmark, { fontSize: sizes.wordmark }]}>ShowSeek</CardText>
         </View>
-        <CardText style={[styles.url, { fontSize: sizes.url }]}>{SHOWSEEK_URL}</CardText>
+        {/* Hangs below the logo row so the logo stays level with the user's name. */}
+        <CardText
+          style={[styles.url, { fontSize: sizes.url, top: sizes.logo + URL_GAP }]}
+          numberOfLines={1}
+        >
+          {SHOWSEEK_URL}
+        </CardText>
       </View>
     </View>
   );
@@ -94,7 +101,6 @@ const styles = StyleSheet.create({
   },
   brand: {
     alignItems: 'flex-end',
-    gap: 4,
   },
   logoRow: {
     flexDirection: 'row',
@@ -106,6 +112,8 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   url: {
+    position: 'absolute',
+    right: 0,
     fontFamily: FONT_FAMILY.regular,
     color: URL_COLOR,
   },

@@ -49,6 +49,14 @@ export function getShareCardContent(data: ShareCardData, t: TFunction): ShareCar
     };
   }
 
+  if (data.kind === 'list') {
+    return {
+      headline: data.listName,
+      meta: `${data.itemCount} ${t('common.item', { count: data.itemCount })}`,
+      userRating: 0,
+    };
+  }
+
   return {
     headline: data.title,
     meta: [data.releaseYear, data.genres.slice(0, 2).join(', ')].filter(Boolean).join(' • '),

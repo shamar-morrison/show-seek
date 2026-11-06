@@ -22,10 +22,13 @@ const CENTERED_LAYOUT = {
   portrait: {
     paddingHorizontal: 72,
     paddingTop: 120,
-    paddingBottom: 160,
+    paddingBottom: 104,
+    statsGap: 64,
+    footerGap: 72,
     foregroundWidth: 560,
     foregroundHeight: 840,
     foregroundRadius: 32,
+    fanHeight: 720,
     eyebrow: 32,
     title: 88,
     titleLineHeight: 100,
@@ -46,9 +49,12 @@ const CENTERED_LAYOUT = {
     paddingHorizontal: 64,
     paddingTop: 56,
     paddingBottom: 56,
+    statsGap: 32,
+    footerGap: 40,
     foregroundWidth: 760,
     foregroundHeight: 428,
     foregroundRadius: 28,
+    fanHeight: 428,
     eyebrow: 26,
     title: 64,
     titleLineHeight: 74,
@@ -195,6 +201,14 @@ function CenteredContent({
         ]}
       >
         <View style={styles.centeredDetails}>
+          {images.fanUrls.length > 0 && (
+            <PosterFan
+              urls={images.fanUrls}
+              radius={layout.foregroundRadius}
+              frameStyle={{ height: layout.fanHeight, marginBottom: layout.sectionGap }}
+              onImageSettled={onImageSettled}
+            />
+          )}
           {foregroundUrl && (
             <ForegroundImage
               url={foregroundUrl}
@@ -254,7 +268,7 @@ function CenteredContent({
               style={[
                 styles.centeredStat,
                 {
-                  marginTop: layout.sectionGap,
+                  marginTop: layout.statsGap,
                   paddingVertical: layout.pillPadding,
                   paddingHorizontal: layout.pillPadding * 2,
                 },
@@ -267,11 +281,11 @@ function CenteredContent({
               accentColor={accentColor}
               height={layout.progressHeight}
               labelSize={layout.progressLabel}
-              marginTop={layout.sectionGap}
+              marginTop={rating ? layout.sectionGap : layout.statsGap}
             />
           )}
         </View>
-        <View style={{ marginTop: layout.sectionGap }}>{footer}</View>
+        <View style={{ marginTop: layout.footerGap }}>{footer}</View>
       </View>
     </>
   );
@@ -297,6 +311,14 @@ function LandscapeContent({ content, images, note, footer, onImageSettled }: Con
           { padding: layout.padding, paddingBottom: layout.paddingBottom },
         ]}
       >
+        {images.fanUrls.length > 0 && (
+          <PosterFan
+            urls={images.fanUrls}
+            radius={LANDSCAPE_POSTER_RADIUS}
+            frameStyle={styles.landscapeFan}
+            onImageSettled={onImageSettled}
+          />
+        )}
         {foregroundUrl && (
           <ForegroundImage
             url={foregroundUrl}
@@ -386,6 +408,60 @@ function ForegroundImage({ url, radius, frameStyle, onImageSettled }: Foreground
         onLoadEnd={() => onImageSettled?.(url)}
         testID="share-card-foreground"
       />
+    </View>
+  );
+}
+
+/** Wide enough that the front poster keeps a poster's shape at these positions. */
+const FAN_ASPECT_RATIO = 1.3;
+
+/** Where each poster sits, listed front to back. */
+const FAN_POSITIONS: Record<number, ViewStyle[]> = {
+  2: [
+    { left: '40%', top: 0, width: '52%', height: '100%' },
+    { left: '8%', top: '6%', width: '46%', height: '88%' },
+  ],
+  3: [
+    { left: '24%', top: 0, width: '52%', height: '100%' },
+    { left: 0, top: '11%', width: '40%', height: '78%' },
+    { left: '60%', top: '11%', width: '40%', height: '78%' },
+  ],
+};
+
+interface PosterFanProps {
+  urls: string[];
+  radius: number;
+  frameStyle: ViewStyle;
+  onImageSettled?: (key: string) => void;
+}
+
+function PosterFan({ urls, radius, frameStyle, onImageSettled }: PosterFanProps) {
+  const positions = FAN_POSITIONS[urls.length] ?? FAN_POSITIONS[3];
+  const posters = urls.slice(0, positions.length).map((url, index) => ({
+    url,
+    position: positions[index],
+  }));
+
+  return (
+    <View
+      style={[styles.fan, { aspectRatio: FAN_ASPECT_RATIO, ...frameStyle }]}
+      testID="share-card-fan"
+    >
+      {/* Drawn back to front, since later views sit on top. */}
+      {[...posters].reverse().map(({ url, position }) => (
+        <View
+          key={url}
+          style={[styles.fanPoster, { borderRadius: radius, ...position }]}
+          testID="share-card-fan-poster"
+        >
+          <Image
+            source={{ uri: url }}
+            style={[styles.fill, { borderRadius: radius }]}
+            contentFit="cover"
+            onLoadEnd={() => onImageSettled?.(url)}
+          />
+        </View>
+      ))}
     </View>
   );
 }
@@ -545,6 +621,23 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     gap: 72,
+  },
+  fan: {
+    // Full size unless the text below it would otherwise push the card's content off screen.
+    flexShrink: 1,
+  },
+  fanPoster: {
+    position: 'absolute',
+    backgroundColor: COLORS.surface,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 20,
+  },
+  landscapeFan: {
+    width: 620,
+    alignSelf: 'center',
   },
   landscapePoster: {
     width: 620,

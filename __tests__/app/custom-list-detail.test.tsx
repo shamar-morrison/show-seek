@@ -159,7 +159,9 @@ jest.mock('@shopify/flash-list', () => ({
     return React.createElement(
       View,
       { testID: 'flash-list' },
-      (!props.data || props.data.length === 0) && props.ListEmptyComponent ? props.ListEmptyComponent : null
+      (!props.data || props.data.length === 0) && props.ListEmptyComponent
+        ? props.ListEmptyComponent
+        : null
     );
   },
 }));
@@ -187,6 +189,17 @@ jest.mock('@/src/components/AddToListModal', () => {
     default: React.forwardRef(() => null),
   };
 });
+
+jest.mock('@/src/components/shareCard/ShareCardEditor', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    resolvePosterPath: (_type: string, _id: number, path: string | null) => path,
+  }),
+}));
 
 jest.mock('@/src/components/ListActionsModal', () => {
   const React = require('react');

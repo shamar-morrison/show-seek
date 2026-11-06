@@ -11,12 +11,27 @@ export interface ShareCardImages {
   foregroundUrl: string | null;
   /** True when a format that wants a backdrop has to use the poster instead. */
   foregroundIsPosterFallback: boolean;
+  /** Several overlapping posters, shown in place of the foreground image. */
+  fanUrls: string[];
 }
 
 export function resolveShareCardImages(
   data: ShareCardData,
   format: ShareCardFormat
 ): ShareCardImages {
+  if (data.kind === 'list') {
+    const urls = data.posterPaths
+      .map((path) => getImageUrl(path, TMDB_IMAGE_SIZES.poster.large))
+      .filter((url): url is string => !!url);
+
+    return {
+      backgroundUrl: urls[0] ?? null,
+      foregroundUrl: urls.length === 1 ? urls[0] : null,
+      foregroundIsPosterFallback: false,
+      fanUrls: urls.length > 1 ? urls : [],
+    };
+  }
+
   const poster = getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.large);
   // An episode's own still suits its card better than the show's backdrop.
   const backdrop = getImageUrl(
@@ -30,18 +45,21 @@ export function resolveShareCardImages(
         backgroundUrl: poster ?? backdrop,
         foregroundUrl: poster,
         foregroundIsPosterFallback: false,
+        fanUrls: [],
       };
     case 'square':
       return {
         backgroundUrl: backdrop ?? poster,
         foregroundUrl: backdrop ?? poster,
         foregroundIsPosterFallback: !backdrop && !!poster,
+        fanUrls: [],
       };
     case 'landscape':
       return {
         backgroundUrl: backdrop ?? poster,
         foregroundUrl: poster,
         foregroundIsPosterFallback: false,
+        fanUrls: [],
       };
   }
 }
@@ -52,11 +70,11 @@ export function getShareCardImageKeys(
   format: ShareCardFormat,
   identity: ShareCardIdentity | null
 ): string[] {
-  const { backgroundUrl, foregroundUrl } = resolveShareCardImages(data, format);
+  const { backgroundUrl, foregroundUrl, fanUrls } = resolveShareCardImages(data, format);
 
   return [
     ...new Set(
-      [SHARE_CARD_LOGO_KEY, backgroundUrl, foregroundUrl, identity?.photoUrl].filter(
+      [SHARE_CARD_LOGO_KEY, backgroundUrl, foregroundUrl, ...fanUrls, identity?.photoUrl].filter(
         (key): key is string => !!key
       )
     ),
