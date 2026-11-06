@@ -30,6 +30,19 @@ service firebase.storage {
         ];
     }
 
+    // Helper function to validate profile photo constraints (size <= 5MB and an image)
+    function isValidProfilePhotoUpload() {
+      return request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Profile photos - guests cannot upload them
+    match /users/{userId}/profile/{fileName} {
+      allow read: if isOwner(userId);
+      allow create, update: if canWriteUserData(userId) && isValidProfilePhotoUpload();
+      allow delete: if canWriteUserData(userId);
+    }
+
     // Trakt import zip archives - each user can only read/write their own import archives
     match /users/{userId}/imports/{fileName} {
       allow read: if isOwner(userId);

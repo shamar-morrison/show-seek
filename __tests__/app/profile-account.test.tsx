@@ -15,6 +15,11 @@ const mockLogic = {
   handleUpgradePress: jest.fn(),
 };
 
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
 jest.mock('expo-image', () => ({
   Image: 'Image',
 }));
@@ -49,6 +54,21 @@ describe('AccountScreen', () => {
     expect(getByText('Export Data')).toBeTruthy();
     expect(getByText('Delete Account')).toBeTruthy();
     expect(getByText('Sign Out')).toBeTruthy();
+  });
+
+  it('opens the edit profile screen for signed-in users', () => {
+    const { getByTestId } = render(<AccountScreen />);
+
+    fireEvent.press(getByTestId('action-button-edit-profile'));
+
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/profile/edit-profile');
+  });
+
+  it('does not offer profile editing to guests', () => {
+    mockAuth.isGuest = true;
+    const { queryByTestId } = render(<AccountScreen />);
+
+    expect(queryByTestId('action-button-edit-profile')).toBeNull();
   });
 
   it('wires each account action to its handler', () => {

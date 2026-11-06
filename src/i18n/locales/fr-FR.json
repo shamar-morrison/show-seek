@@ -739,6 +739,12 @@
     "regionScreenNote": "Cela affecte les informations de disponibilité et les dates de sortie locales."
   },
   "profile": {
+    "displayNameLabel": "Nom d'affichage",
+    "changePhoto": "Changer la photo",
+    "addPhoto": "Ajouter une photo",
+    "removePhoto": "Supprimer la photo",
+    "profileUpdateFailed": "Impossible de mettre à jour votre profil. Veuillez réessayer.",
+    "photoPickFailed": "Impossible d'ouvrir vos photos. Veuillez réessayer.",
     "title": "Paramètres",
     "tabs": {
       "preferences": "Préférences",

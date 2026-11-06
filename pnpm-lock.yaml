@@ -87,6 +87,12 @@ dependencies:
   expo-image:
     specifier: ~3.0.10
     version: 3.0.10(expo@54.0.25)(react-native-web@0.21.0)(react-native@0.81.5)(react@19.1.0)
+  expo-image-manipulator:
+    specifier: ~14.0.8
+    version: 14.0.8(expo@54.0.25)
+  expo-image-picker:
+    specifier: ~17.0.11
+    version: 17.0.11(expo@54.0.25)
   expo-keep-awake:
     specifier: ~15.0.8
     version: 15.0.8(expo@54.0.25)(react@19.1.0)
@@ -7346,6 +7352,32 @@ packages:
       expo: '*'
     dependencies:
       expo: 54.0.25(@babel/core@7.25.2)(@expo/metro-runtime@6.1.2)(expo-router@6.0.19)(react-native-webview@14.0.1)(react-native@0.81.5)(react@19.1.0)
+    dev: false
+
+  /expo-image-loader@6.0.0(expo@54.0.25):
+    resolution: {integrity: sha512-nKs/xnOGw6ACb4g26xceBD57FKLFkSwEUTDXEDF3Gtcu3MqF3ZIYd3YM+sSb1/z9AKV1dYT7rMSGVNgsveXLIQ==}
+    peerDependencies:
+      expo: '*'
+    dependencies:
+      expo: 54.0.25(@babel/core@7.25.2)(@expo/metro-runtime@6.1.2)(expo-router@6.0.19)(react-native-webview@14.0.1)(react-native@0.81.5)(react@19.1.0)
+    dev: false
+
+  /expo-image-manipulator@14.0.8(expo@54.0.25):
+    resolution: {integrity: sha512-sXsXjm7rIxLWZe0j2A41J/Ph53PpFJRdyzJ3EQ/qetxLUvS2m3K1sP5xy37px43qCf0l79N/i6XgFgenFV36/Q==}
+    peerDependencies:
+      expo: '*'
+    dependencies:
+      expo: 54.0.25(@babel/core@7.25.2)(@expo/metro-runtime@6.1.2)(expo-router@6.0.19)(react-native-webview@14.0.1)(react-native@0.81.5)(react@19.1.0)
+      expo-image-loader: 6.0.0(expo@54.0.25)
+    dev: false
+
+  /expo-image-picker@17.0.11(expo@54.0.25):
+    resolution: {integrity: sha512-/apkoyukDvsCHHb9fzP+F34A1uQqSzUtYH/2P/xJACNEwq+mwEXjXvVU8bzlJq6ih0Qo1+tpVivIa7B9kYSwOQ==}
+    peerDependencies:
+      expo: '*'
+    dependencies:
+      expo: 54.0.25(@babel/core@7.25.2)(@expo/metro-runtime@6.1.2)(expo-router@6.0.19)(react-native-webview@14.0.1)(react-native@0.81.5)(react@19.1.0)
+      expo-image-loader: 6.0.0(expo@54.0.25)
     dev: false
 
   /expo-image@3.0.10(expo@54.0.25)(react-native-web@0.21.0)(react-native@0.81.5)(react@19.1.0):

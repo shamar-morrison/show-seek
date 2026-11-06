@@ -1,4 +1,5 @@
 const mockDeleteUser = jest.fn();
+const mockDeleteFiles = jest.fn();
 const firestoreFn: jest.Mock = jest.fn();
 
 jest.mock(
@@ -9,6 +10,9 @@ jest.mock(
       deleteUser: mockDeleteUser,
     })),
     firestore: firestoreFn,
+    storage: jest.fn(() => ({
+      bucket: () => ({ deleteFiles: mockDeleteFiles }),
+    })),
   }),
   { virtual: true }
 );
@@ -38,6 +42,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 
   mockDeleteUser.mockResolvedValue(undefined);
+  mockDeleteFiles.mockResolvedValue(undefined);
   mockRecursiveDelete.mockResolvedValue(undefined);
   mockBulkWriterClose.mockResolvedValue(undefined);
   mockRevenueCatWhereGet.mockResolvedValue({
@@ -102,6 +107,26 @@ describe('deleteAccountHandler', () => {
     await expect(deleteAccountHandler({ auth: undefined })).rejects.toMatchObject({
       code: 'unauthenticated',
     });
+
+    expect(mockRecursiveDelete).not.toHaveBeenCalled();
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+  });
+
+  it("deletes the user's Storage files, and only theirs, before their other data", async () => {
+    await deleteAccountHandler({ auth: { uid: 'user-1' } });
+
+    expect(mockDeleteFiles).toHaveBeenCalledWith({ prefix: 'users/user-1/' });
+    expect(mockDeleteFiles.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRecursiveDelete.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('keeps the account so deletion can be retried when Storage cleanup fails', async () => {
+    mockDeleteFiles.mockRejectedValue(new Error('storage unavailable'));
+
+    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).rejects.toThrow(
+      'storage unavailable'
+    );
 
     expect(mockRecursiveDelete).not.toHaveBeenCalled();
     expect(mockDeleteUser).not.toHaveBeenCalled();
@@ -245,12 +270,16 @@ describe('deleteAccountHandler', () => {
     expect(mockBulkWriterDelete).toHaveBeenCalledWith(first);
     expect(mockBulkWriterDelete).toHaveBeenCalledWith(second);
     expect(mockBulkWriterClose).toHaveBeenCalledTimes(2);
-    expect(mockBulkWriterClose.mock.invocationCallOrder[1]).toBeLessThan(mockDeleteUser.mock.invocationCallOrder[0]);
+    expect(mockBulkWriterClose.mock.invocationCallOrder[1]).toBeLessThan(
+      mockDeleteUser.mock.invocationCallOrder[0]
+    );
   });
 
   it('stops before Auth deletion if Stremio token cleanup fails', async () => {
     mockStremioTokensGet.mockRejectedValueOnce(new Error('cleanup failed'));
-    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).rejects.toThrow('cleanup failed');
+    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).rejects.toThrow(
+      'cleanup failed'
+    );
     expect(mockDeleteUser).not.toHaveBeenCalled();
   });
 
@@ -262,9 +291,7 @@ describe('deleteAccountHandler', () => {
       exists: true,
     });
 
-    const error = await deleteAccountHandler({ auth: { uid: 'user-1' } }).catch(
-      (err) => err
-    );
+    const error = await deleteAccountHandler({ auth: { uid: 'user-1' } }).catch((err) => err);
 
     expect(error).toMatchObject({
       code: 'failed-precondition',
@@ -280,12 +307,10 @@ describe('deleteAccountHandler', () => {
       exists: true,
     });
 
-    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).rejects.toMatchObject(
-      {
-        code: 'failed-precondition',
-        details: { reason: POLAR_SUBSCRIPTION_ACTIVE_REASON },
-      }
-    );
+    await expect(deleteAccountHandler({ auth: { uid: 'user-1' } })).rejects.toMatchObject({
+      code: 'failed-precondition',
+      details: { reason: POLAR_SUBSCRIPTION_ACTIVE_REASON },
+    });
 
     expect(mockRecursiveDelete).not.toHaveBeenCalled();
     expect(mockDeleteUser).not.toHaveBeenCalled();

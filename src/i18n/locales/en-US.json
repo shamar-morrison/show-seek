@@ -739,6 +739,12 @@
     "regionScreenNote": "This affects where to watch information and local release dates."
   },
   "profile": {
+    "displayNameLabel": "Display name",
+    "changePhoto": "Change photo",
+    "addPhoto": "Add photo",
+    "removePhoto": "Remove photo",
+    "profileUpdateFailed": "Couldn't update your profile. Please try again.",
+    "photoPickFailed": "Couldn't open your photos. Please try again.",
     "title": "Settings",
     "tabs": {
       "preferences": "Preferences",

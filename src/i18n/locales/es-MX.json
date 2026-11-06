@@ -739,6 +739,12 @@
     "regionScreenNote": "Esto afecta a la información de dónde ver y a las fechas de estreno locales."
   },
   "profile": {
+    "displayNameLabel": "Nombre visible",
+    "changePhoto": "Cambiar foto",
+    "addPhoto": "Agregar foto",
+    "removePhoto": "Eliminar foto",
+    "profileUpdateFailed": "No se pudo actualizar tu perfil. Inténtalo de nuevo.",
+    "photoPickFailed": "No se pudieron abrir tus fotos. Inténtalo de nuevo.",
     "title": "Configuración",
     "tabs": {
       "preferences": "Preferencias",

@@ -7,9 +7,14 @@ import {
 } from '@/src/utils/personalOnboardingCache';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import {
+  User,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateCurrentUser,
+} from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,6 +27,22 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     boolean | null
   >(null);
   const signOutInFlight = useRef<Promise<void> | null>(null);
+
+  // updateProfile changes the existing User object in place, so anything memoized on `user`
+  // (including everything the React Compiler memoizes) would keep showing the old name and
+  // photo. Replacing it with a copy gives consumers a new object to react to.
+  const refreshProfile = useCallback(async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    try {
+      await updateCurrentUser(auth, currentUser);
+      setUser(auth.currentUser);
+    } catch (error) {
+      // The profile itself is already saved and will show correctly after the next app start.
+      console.warn('[Auth] Failed to refresh the current user:', error);
+    }
+  }, []);
 
   const persistUserId = (userId: string) => {
     AsyncStorage.setItem('userId', userId).catch((error) => {
@@ -301,6 +322,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     completeOnboarding,
     completePersonalOnboarding,
     resetSession,
+    refreshProfile,
     signOut,
   };
 });

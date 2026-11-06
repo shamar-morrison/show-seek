@@ -733,6 +733,12 @@
     "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler."
   },
   "profile": {
+    "displayNameLabel": "Görünen ad",
+    "changePhoto": "Fotoğrafı değiştir",
+    "addPhoto": "Fotoğraf ekle",
+    "removePhoto": "Fotoğrafı kaldır",
+    "profileUpdateFailed": "Profilin güncellenemedi. Lütfen tekrar dene.",
+    "photoPickFailed": "Fotoğrafların açılamadı. Lütfen tekrar dene.",
     "title": "Ayarlar",
     "tabs": {
       "preferences": "Tercihler",
