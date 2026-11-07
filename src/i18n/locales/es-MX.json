@@ -1804,7 +1804,6 @@
     "square": "Cuadrado",
     "landscape": "Horizontal",
     "showIdentity": "Mostrar información del perfil",
-    "showIdentityHint": "Aparece en la parte inferior de tu tarjeta",
     "notePlaceholder": "Agrega una nota",
     "episodeNumber": "T{{season}} | E{{episode}}",
     "card_title": "Título",

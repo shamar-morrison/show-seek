@@ -16,7 +16,7 @@ export interface PreferenceItemProps {
   /** Label text for the preference */
   label: string;
   /** Subtitle/description text */
-  subtitle: string;
+  subtitle?: string;
   /** Current toggle value */
   value: boolean;
   /** Callback when value changes */
@@ -82,9 +82,11 @@ export function PreferenceItem({
           </Text>
           {isLocked && <PremiumBadge />}
         </View>
-        <Text style={[styles.preferenceSubtitle, isLocked && styles.preferenceSubtitleLocked]}>
-          {subtitle}
-        </Text>
+        {!!subtitle && (
+          <Text style={[styles.preferenceSubtitle, isLocked && styles.preferenceSubtitleLocked]}>
+            {subtitle}
+          </Text>
+        )}
       </View>
       {!isLocked && (
         <View style={styles.switchContainer}>

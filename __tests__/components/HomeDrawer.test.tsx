@@ -113,6 +113,15 @@ describe('HomeDrawer sign out flow', () => {
     alertSpy.mockRestore();
   });
 
+  it('opens the account screen from the profile section, with Settings underneath', () => {
+    const { getByTestId } = render(<HomeDrawer visible onClose={mockOnClose} />);
+
+    fireEvent.press(getByTestId('home-drawer-profile'));
+
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/profile/account', { withAnchor: true });
+  });
+
   it('navigates to where-to-watch from the drawer card', () => {
     const { getByText } = render(<HomeDrawer visible onClose={mockOnClose} />);
 

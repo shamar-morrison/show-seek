@@ -1639,7 +1639,6 @@
     "square": "Carré",
     "landscape": "Paysage",
     "showIdentity": "Afficher les infos du profil",
-    "showIdentityHint": "Apparaît en bas de votre carte",
     "notePlaceholder": "Ajouter une note",
     "episodeNumber": "S{{season}} | E{{episode}}",
     "card_title": "Titre",

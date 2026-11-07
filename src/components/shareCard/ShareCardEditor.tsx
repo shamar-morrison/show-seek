@@ -335,7 +335,6 @@ export default function ShareCardEditor({ cards }: ShareCardEditorProps) {
             {availableIdentity && (
               <PreferenceItem
                 label={t('shareCard.showIdentity')}
-                subtitle={t('shareCard.showIdentityHint')}
                 value={showIdentity}
                 onValueChange={(value) => updatePreferences({ showIdentity: value })}
               />

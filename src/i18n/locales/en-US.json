@@ -1492,7 +1492,6 @@
     "square": "Square",
     "landscape": "Landscape",
     "showIdentity": "Show profile info",
-    "showIdentityHint": "Appears at the bottom of your card",
     "notePlaceholder": "Add a note",
     "episodeNumber": "S{{season}} | E{{episode}}",
     "card_title": "Title",
