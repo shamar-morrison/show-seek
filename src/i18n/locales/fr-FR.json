@@ -739,6 +739,12 @@
     "regionScreenNote": "Cela affecte les informations de disponibilité et les dates de sortie locales."
   },
   "profile": {
+    "displayNameLabel": "Nom d'affichage",
+    "changePhoto": "Changer la photo",
+    "addPhoto": "Ajouter une photo",
+    "removePhoto": "Supprimer la photo",
+    "profileUpdateFailed": "Impossible de mettre à jour votre profil. Veuillez réessayer.",
+    "photoPickFailed": "Impossible d'ouvrir vos photos. Veuillez réessayer.",
     "title": "Paramètres",
     "tabs": {
       "preferences": "Préférences",
@@ -1626,12 +1632,23 @@
   },
   "shareCard": {
     "title": "Carte de partage",
-    "share": "Partager vers...",
-    "save": "Enregistrer dans la galerie",
-    "generating": "Génération...",
-    "preview": "Aperçu",
+    "share": "Partager",
+    "save": "Enregistrer",
     "myRating": "Ma note",
-    "rateIt": "Notez-le sur ShowSeek !",
+    "portrait": "Portrait",
+    "square": "Carré",
+    "landscape": "Paysage",
+    "showIdentity": "Afficher les infos du profil",
+    "notePlaceholder": "Ajouter une note",
+    "episodeNumber": "S{{season}} | E{{episode}}",
+    "card_title": "Titre",
+    "card_episode": "Épisode",
+    "card_progress": "Progression",
+    "styleLabel": "Style",
+    "styleSheetTitle": "Style de la carte",
+    "style_classic": "Classique",
+    "style_profileTop": "Profil en haut",
+    "style_cinematic": "Cinéma",
     "last6Months": "Mes 6 derniers mois",
     "caption": "Découvrez ceci sur ShowSeek !",
     "captionCopied": "Légende copiée dans le presse-papiers",
@@ -1642,6 +1659,25 @@
     "failedToShare": "Échec du partage",
     "failedToSave": "Échec de l'enregistrement dans la galerie",
     "sharingNotAvailable": "Le partage n'est pas disponible sur cet appareil"
+  },
+  "whatsNew": {
+    "title": "Quoi de neuf sur ShowSeek ?",
+    "shareCards": {
+      "title": "Nouvelles cartes de partage",
+      "description": "Partagez des cartes pour les films, séries, épisodes, la progression d'une saison et vos listes. Choisissez un format et un style, ajoutez une note, puis partagez ou enregistrez."
+    },
+    "editProfile": {
+      "title": "Modifiez votre profil",
+      "description": "Vous avez un compte ? Vous pouvez désormais changer votre nom et votre photo depuis votre profil."
+    },
+    "tvTimeImport": {
+      "title": "Importez depuis TV Time",
+      "description": "Vous quittez TV Time ? Avec Premium, emportez votre historique, vos notes, vos favoris, vos titres à voir et vos listes. Rendez-vous dans Paramètres > Intégrations."
+    },
+    "stremioAddon": {
+      "title": "Addon Stremio",
+      "description": "Marquez comme vu dans ShowSeek ce que vous regardez sur Stremio. Il vous faut un compte et Stremio sur un ordinateur. Rendez-vous dans Paramètres > Intégrations."
+    }
   },
   "share": {
     "message": "{{title}} - Découvrez ceci sur TMDB ! {{url}}",

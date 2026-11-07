@@ -158,6 +158,10 @@ jest.mock('@/src/context/auth', () => ({
 
 jest.mock('@/src/components/NotesModal', () => () => null);
 
+jest.mock('@/src/hooks/useOpenShareCard', () => ({
+  useOpenShareCard: () => jest.fn(),
+}));
+
 jest.mock('@/src/components/ui/LoadingModal', () => {
   return function LoadingModalMock({
     visible,
@@ -617,4 +621,3 @@ describe('TVSeasonsScreen bulk-action deferral', () => {
     });
   });
 });
-

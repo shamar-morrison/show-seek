@@ -13,14 +13,12 @@ import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAuth } from '@/src/context/auth';
-import {
-  getMediaNoteQueryKey,
-  useCanCreateNote,
-  useNotes,
-} from '@/src/hooks/useNotes';
+import { getMediaNoteQueryKey, useCanCreateNote, useNotes } from '@/src/hooks/useNotes';
 import {
   type MarkAllEpisodesUnwatchedParams,
   type MarkAllEpisodesWatchedParams,
@@ -56,7 +54,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { ArrowLeft01Icon, StarIcon, Tick02Icon } from '@hugeicons/core-free-icons';
+import {
+  ArrowLeft01Icon,
+  Image01Icon,
+  Note01Icon,
+  NoteDoneIcon,
+  StarIcon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
@@ -69,6 +74,7 @@ type OptimisticBulkAction = { action: 'mark' | 'unmark'; seasonNumber: number } 
 
 export default function TVSeasonsScreen() {
   const styles = useSeasonScreenStyles();
+  const { accentColor } = useAccentColor();
   const { id, season } = useLocalSearchParams();
   const router = useRouter();
   const { t } = useTranslation();
@@ -132,6 +138,7 @@ export default function TVSeasonsScreen() {
   const canCreateNote = useCanCreateNote();
   const noteSheetRef = useRef<NoteModalRef | null>(null);
   const [openingNoteSeasonNumber, setOpeningNoteSeasonNumber] = useState<number | null>(null);
+  const openShareCard = useOpenShareCard();
 
   // Progressive render: defer heavy content until navigation animation completes
   const { isReady } = useProgressiveRender();
@@ -758,6 +765,38 @@ export default function TVSeasonsScreen() {
     };
   }, [targetSeasonNumber, hasScrolledToSeason, targetSeasonIndex, seasonRows.length]);
 
+  const handleOpenSeasonShareCard = useCallback(
+    (seasonData: SeasonWithEpisodes) => {
+      const progress = seasonProgressBySeasonNumber.get(seasonData.season_number);
+      if (!progress) return;
+
+      openShareCard([
+        {
+          kind: 'progress',
+          showTitle: displayShowTitle,
+          seasonTitle:
+            seasonData.name || t('media.seasonNumber', { number: seasonData.season_number }),
+          seasonYear: seasonData.air_date?.split('-')[0] ?? '',
+          watchedCount: progress.watchedCount,
+          totalCount: progress.progressTotalCount,
+          userRating: seasonRatingsById.get(`season-${tvId}-${seasonData.season_number}`) || 0,
+          posterPath: seasonData.poster_path ?? showPosterPath,
+          backdropPath: show?.backdrop_path ?? null,
+        },
+      ]);
+    },
+    [
+      displayShowTitle,
+      openShareCard,
+      seasonProgressBySeasonNumber,
+      seasonRatingsById,
+      show?.backdrop_path,
+      showPosterPath,
+      t,
+      tvId,
+    ]
+  );
+
   const renderRow = useCallback(
     ({ item }: ListRenderItemInfo<TVSeasonsListRow>) => {
       if (item.type === 'season-header') {
@@ -818,6 +857,8 @@ export default function TVSeasonsScreen() {
           });
         const hasBulkMarkableEpisodes = markableEpisodes.length > 0;
         const hasWatchedEpisodesToUnmark = watchedSeasonEpisodes.length > 0;
+        const hasSeasonProgress =
+          (seasonProgressBySeasonNumber.get(seasonData.season_number)?.watchedCount ?? 0) > 0;
         const shouldOfferUnmarkAll =
           (markableEpisodes.length === 0 && hasWatchedEpisodesToUnmark) ||
           allMarkableEpisodesWatched;
@@ -835,8 +876,7 @@ export default function TVSeasonsScreen() {
         const seasonDocId = `season-${tvId}-${seasonData.season_number}`;
         const seasonUserRating = seasonRatingsById.get(seasonDocId) || 0;
         const hasSeasonNote = seasonNotesByNumber.has(seasonData.season_number);
-        const isOpeningSeasonNote =
-          openingNoteSeasonNumber === seasonData.season_number;
+        const isOpeningSeasonNote = openingNoteSeasonNumber === seasonData.season_number;
         const displaySeasonUserRating = Number.isInteger(seasonUserRating)
           ? seasonUserRating.toString()
           : seasonUserRating.toFixed(1);
@@ -921,11 +961,16 @@ export default function TVSeasonsScreen() {
                 <TouchableOpacity
                   style={[
                     styles.seasonActionButton,
+                    shouldOfferUnmarkAll && styles.seasonActionButtonActive,
                     isBulkActionPending && styles.seasonActionButtonDisabled,
                   ]}
                   onPress={handleMarkAllPress}
                   disabled={isBulkActionPending}
                   activeOpacity={ACTIVE_OPACITY}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    shouldOfferUnmarkAll ? t('watched.unmarkAll') : t('watched.markAll')
+                  }
                   testID={`season-mark-all-button-${seasonData.season_number}`}
                 >
                   {isBulkActionPending ? (
@@ -935,14 +980,11 @@ export default function TVSeasonsScreen() {
                       testID={`season-mark-all-spinner-${seasonData.season_number}`}
                     />
                   ) : (
-                    <Text
-                      style={[
-                        styles.seasonActionButtonText,
-                        styles.seasonActionButtonTextSmall,
-                      ]}
-                    >
-                      {shouldOfferUnmarkAll ? t('watched.unmarkAll') : t('watched.markAll')}
-                    </Text>
+                    <AppIcon
+                      icon={Tick02Icon}
+                      size={24}
+                      color={shouldOfferUnmarkAll ? accentColor : COLORS.white}
+                    />
                   )}
                 </TouchableOpacity>
               ) : null}
@@ -950,25 +992,27 @@ export default function TVSeasonsScreen() {
                 style={[
                   styles.seasonActionButton,
                   seasonUserRating > 0 && styles.seasonActionButtonActive,
-                  !shouldShowMarkAllButton && { flex: 0, alignSelf: 'flex-start', minWidth: 140 },
                 ]}
                 onPress={() => handleOpenSeasonRating(seasonData)}
                 activeOpacity={ACTIVE_OPACITY}
+                accessibilityRole="button"
+                accessibilityLabel={t('tvSeasons.rateSeason')}
                 testID={`season-rate-button-${seasonData.season_number}`}
               >
                 <View style={styles.seasonActionButtonContent}>
+                  <AppIcon
+                    icon={StarIcon}
+                    size={24}
+                    color={seasonUserRating > 0 ? accentColor : COLORS.white}
+                    fill={seasonUserRating > 0 ? accentColor : 'transparent'}
+                  />
                   {seasonUserRating > 0 && (
-                    <AppIcon icon={StarIcon} size={12} color={COLORS.warning} fill={COLORS.warning} />
+                    <Text
+                      style={[styles.seasonActionButtonText, styles.seasonActionButtonTextActive]}
+                    >
+                      {displaySeasonUserRating}
+                    </Text>
                   )}
-                  <Text
-                    style={[
-                      styles.seasonActionButtonText,
-                      styles.seasonActionButtonTextSmall,
-                      seasonUserRating > 0 && styles.seasonActionButtonTextActive,
-                    ]}
-                  >
-                    {seasonUserRating > 0 ? displaySeasonUserRating : t('tvSeasons.rateSeason')}
-                  </Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
@@ -979,6 +1023,8 @@ export default function TVSeasonsScreen() {
                 onPress={() => handleOpenSeasonNote(seasonData)}
                 disabled={isOpeningSeasonNote}
                 activeOpacity={ACTIVE_OPACITY}
+                accessibilityRole="button"
+                accessibilityLabel={hasSeasonNote ? t('notes.editNote') : t('notes.addNote')}
                 testID={`season-note-button-${seasonData.season_number}`}
               >
                 {isOpeningSeasonNote ? (
@@ -987,18 +1033,24 @@ export default function TVSeasonsScreen() {
                     color={COLORS.white}
                     testID={`season-note-spinner-${seasonData.season_number}`}
                   />
+                ) : hasSeasonNote ? (
+                  <AppIcon icon={NoteDoneIcon} size={24} color={accentColor} />
                 ) : (
-                  <Text
-                    style={[
-                      styles.seasonActionButtonText,
-                      styles.seasonActionButtonTextSmall,
-                      hasSeasonNote && styles.seasonActionButtonTextActive,
-                    ]}
-                  >
-                    {hasSeasonNote ? t('notes.editNote') : t('notes.addNote')}
-                  </Text>
+                  <AppIcon icon={Note01Icon} size={24} color={COLORS.white} />
                 )}
               </TouchableOpacity>
+              {hasSeasonProgress && (
+                <TouchableOpacity
+                  style={styles.seasonActionButton}
+                  onPress={() => handleOpenSeasonShareCard(seasonData)}
+                  activeOpacity={ACTIVE_OPACITY}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('shareCard.title')}
+                  testID={`season-share-card-button-${seasonData.season_number}`}
+                >
+                  <AppIcon icon={Image01Icon} size={24} color={COLORS.white} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         );
@@ -1108,6 +1160,8 @@ export default function TVSeasonsScreen() {
       );
     },
     [
+      accentColor,
+      handleOpenSeasonShareCard,
       tvId,
       showName,
       showPosterPath,

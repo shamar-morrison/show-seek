@@ -32,6 +32,15 @@ export default function ProfileLayout() {
               headerTintColor: COLORS.text,
             }}
           />
+          <Stack.Screen
+            name="edit-profile"
+            options={{
+              headerShown: true,
+              headerTitle: t('profile.editProfile'),
+              headerStyle: { backgroundColor: COLORS.background },
+              headerTintColor: COLORS.text,
+            }}
+          />
           <Stack.Screen name="trakt-settings" />
           <Stack.Screen name="stremio-settings" />
           <Stack.Screen

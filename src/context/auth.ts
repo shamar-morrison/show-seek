@@ -1,15 +1,21 @@
 import { auth, db } from '@/src/firebase/config';
 import { signOutGoogle } from '@/src/firebase/auth';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
+import { markCurrentWhatsNewSeen } from '@/src/services/whatsNewService';
 import {
   getPersonalOnboardingCacheKey,
   persistPersonalOnboardingCache,
 } from '@/src/utils/personalOnboardingCache';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import {
+  User,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateCurrentUser,
+} from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,6 +28,23 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     boolean | null
   >(null);
   const signOutInFlight = useRef<Promise<void> | null>(null);
+
+  // updateProfile changes the existing User object in place, so anything memoized on `user`
+  // (including everything the React Compiler memoizes) would keep showing the old name and
+  // photo. Replacing it with a copy gives consumers a new object to react to.
+  const refreshProfile = useCallback(async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    try {
+      await updateCurrentUser(auth, currentUser);
+    } catch (error) {
+      // The profile itself is already saved. Only saving it for the next app start can have failed.
+      console.warn('[Auth] Failed to refresh the current user:', error);
+    } finally {
+      setUser(auth.currentUser);
+    }
+  }, []);
 
   const persistUserId = (userId: string) => {
     AsyncStorage.setItem('userId', userId).catch((error) => {
@@ -263,6 +286,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   };
 
   const completeOnboarding = async () => {
+    await markCurrentWhatsNewSeen();
     await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
     setHasCompletedOnboarding(true);
   };
@@ -301,6 +325,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     completeOnboarding,
     completePersonalOnboarding,
     resetSession,
+    refreshProfile,
     signOut,
   };
 });

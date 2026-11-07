@@ -168,8 +168,11 @@ jest.mock('@/src/hooks/useNotificationPermissions', () => ({
 
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
-    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
-      fallbackPosterPath,
+    resolvePosterPath: (
+      _mediaType: 'movie' | 'tv',
+      _mediaId: number,
+      fallbackPosterPath: string | null
+    ) => fallbackPosterPath,
   }),
 }));
 
@@ -284,7 +287,9 @@ jest.mock('@/src/hooks/usePersonFavoriteSheet', () => ({
     known_for_department: person.known_for_department ?? '',
   }),
 }));
-jest.mock('@/src/components/ShareCardModal', () => () => null);
+jest.mock('@/src/hooks/useOpenShareCard', () => ({
+  useOpenShareCard: () => jest.fn(),
+}));
 jest.mock('@/src/components/TVReminderModal', () => () => null);
 jest.mock('@/src/components/ImageLightbox', () => () => null);
 jest.mock('@/src/components/VideoPlayerModal', () => () => null);
@@ -325,7 +330,8 @@ jest.mock('@/src/components/ui/SectionSeparator', () => ({
 jest.mock('@/src/components/ui/AppErrorState', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  const AppErrorState = ({ message }: { message: string }) => React.createElement(Text, null, message);
+  const AppErrorState = ({ message }: { message: string }) =>
+    React.createElement(Text, null, message);
   AppErrorState.displayName = 'AppErrorState';
   return AppErrorState;
 });
@@ -439,7 +445,12 @@ describe('TVDetailScreen', () => {
       }
 
       if (subKey === 'credits') {
-        return { data: { cast: [], crew: [] }, isLoading: false, isError: false, refetch: jest.fn() };
+        return {
+          data: { cast: [], crew: [] },
+          isLoading: false,
+          isError: false,
+          refetch: jest.fn(),
+        };
       }
 
       if (subKey === 'videos') {
@@ -538,7 +549,6 @@ describe('TVDetailScreen', () => {
   });
 
   it('alerts and does not open the note editor when a persisted note fails to load', async () => {
-
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockUseMediaNoteValue = {
       note: null,
@@ -594,7 +604,11 @@ describe('TVDetailScreen', () => {
     });
 
     it('renders the up next card above the seasons for a Returning Series show', () => {
-      setShowState({ status: 'Returning Series', seasons: regularSeasons, next_episode_to_air: nextEpisode });
+      setShowState({
+        status: 'Returning Series',
+        seasons: regularSeasons,
+        next_episode_to_air: nextEpisode,
+      });
 
       render(<TVDetailScreen />);
 
@@ -604,7 +618,11 @@ describe('TVDetailScreen', () => {
     });
 
     it('navigates to the episode details screen when the up next episode is pressed', () => {
-      setShowState({ status: 'In Production', seasons: regularSeasons, next_episode_to_air: nextEpisode });
+      setShowState({
+        status: 'In Production',
+        seasons: regularSeasons,
+        next_episode_to_air: nextEpisode,
+      });
 
       render(<TVDetailScreen />);
 
@@ -687,11 +705,7 @@ describe('TVDetailScreen', () => {
 
     it('includes season 0 (specials) when fetching per-season details, while the button still excludes them from counts', async () => {
       const originalSeasons = mockShow.seasons;
-      mockShow.seasons = [
-        { season_number: 0 },
-        { season_number: 1 },
-        { season_number: 2 },
-      ] as any;
+      mockShow.seasons = [{ season_number: 0 }, { season_number: 1 }, { season_number: 2 }] as any;
       mockAllSeasons = [
         {
           season_number: 0,
@@ -908,9 +922,7 @@ describe('TVDetailScreen', () => {
         });
 
         expect(mockMarkShowAllUnwatchedMutate).toHaveBeenCalledTimes(1);
-        expect(
-          mockMarkShowAllUnwatchedMutate.mock.calls[0][0].episodesToUnmark
-        ).toHaveLength(3);
+        expect(mockMarkShowAllUnwatchedMutate.mock.calls[0][0].episodesToUnmark).toHaveLength(3);
 
         alertSpy.mockRestore();
       });

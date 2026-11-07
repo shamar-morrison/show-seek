@@ -739,6 +739,12 @@
     "regionScreenNote": "Isso afeta onde assistir e datas de lançamento locais."
   },
   "profile": {
+    "displayNameLabel": "Nome de exibição",
+    "changePhoto": "Alterar foto",
+    "addPhoto": "Adicionar foto",
+    "removePhoto": "Remover foto",
+    "profileUpdateFailed": "Não foi possível atualizar seu perfil. Tente novamente.",
+    "photoPickFailed": "Não foi possível abrir suas fotos. Tente novamente.",
     "title": "Configurações",
     "tabs": {
       "preferences": "Preferências",
@@ -1809,12 +1815,23 @@
   },
   "shareCard": {
     "title": "Cartão para compartilhar",
-    "share": "Compartilhar para...",
-    "save": "Salvar na galeria",
-    "generating": "Gerando...",
-    "preview": "Prévia",
+    "share": "Compartilhar",
+    "save": "Salvar",
     "myRating": "Minha avaliação",
-    "rateIt": "Avalie no ShowSeek!",
+    "portrait": "Vertical",
+    "square": "Quadrado",
+    "landscape": "Horizontal",
+    "showIdentity": "Mostrar informações do perfil",
+    "notePlaceholder": "Adicionar uma nota",
+    "episodeNumber": "T{{season}} | E{{episode}}",
+    "card_title": "Título",
+    "card_episode": "Episódio",
+    "card_progress": "Progresso",
+    "styleLabel": "Estilo",
+    "styleSheetTitle": "Estilo do cartão",
+    "style_classic": "Clássico",
+    "style_profileTop": "Perfil no topo",
+    "style_cinematic": "Cinemático",
     "last6Months": "Meus últimos 6 meses",
     "caption": "Confira isso no ShowSeek!",
     "captionCopied": "Legenda copiada para a área de transferência",
@@ -1825,6 +1842,25 @@
     "failedToShare": "Falha ao compartilhar",
     "failedToSave": "Falha ao salvar na galeria",
     "sharingNotAvailable": "O compartilhamento não está disponível neste dispositivo"
+  },
+  "whatsNew": {
+    "title": "O que há de novo no ShowSeek?",
+    "shareCards": {
+      "title": "Novos cartões para compartilhar",
+      "description": "Compartilhe cartões de filmes, séries, episódios, progresso da temporada e suas listas. Escolha um tamanho e um estilo, adicione uma nota e compartilhe ou salve."
+    },
+    "editProfile": {
+      "title": "Atualize seu perfil",
+      "description": "Tem uma conta? Agora você pode alterar seu nome e sua foto no seu perfil."
+    },
+    "tvTimeImport": {
+      "title": "Importe do TV Time",
+      "description": "Vindo do TV Time? Com o Premium, traga seu histórico, avaliações, favoritos, títulos para assistir e listas. Você encontra isso em Configurações > Integrações."
+    },
+    "stremioAddon": {
+      "title": "Addon do Stremio",
+      "description": "Marque como assistido no ShowSeek o que você assiste no Stremio. Você precisa de uma conta e do Stremio em um computador. Você encontra isso em Configurações > Integrações."
+    }
   },
   "shuffle": {
     "noImage": "Sem imagem",

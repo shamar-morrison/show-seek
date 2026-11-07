@@ -7,8 +7,10 @@ import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton';
-import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
+import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
+import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import ListActionsModal from '@/src/components/ListActionsModal';
+import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
 import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
@@ -24,7 +26,6 @@ import MarkAsWatchedModal from '@/src/components/MarkAsWatchedModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderModal from '@/src/components/ReminderModal';
-import ShareCardModal from '@/src/components/ShareCardModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
@@ -237,7 +238,7 @@ export default function MovieDetailScreen() {
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [watchedModalVisible, setWatchedModalVisible] = useState(false);
-  const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
+  const openShareCard = useOpenShareCard();
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
@@ -849,7 +850,19 @@ export default function MovieDetailScreen() {
             onReminder={canShowReminder(displayReleaseDate) ? handleReminderPress : undefined}
             onNote={handleNotePress}
             onTrailer={handleTrailerPress}
-            onShareCard={() => setShareCardModalVisible(true)}
+            onShareCard={() =>
+              openShareCard([
+                {
+                  kind: 'title',
+                  title: displayMovieTitle,
+                  posterPath: resolvedMoviePosterPath,
+                  backdropPath: movie.backdrop_path,
+                  releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',
+                  genres: movie.genres?.map((g) => g.name) || [],
+                  userRating,
+                },
+              ])
+            }
             isInAnyList={isInAnyList}
             isLoadingLists={isLoadingLists}
             listIcon={listIcon}
@@ -919,7 +932,12 @@ export default function MovieDetailScreen() {
           {hasWatchProviders(watchProviders) && <SectionSeparator />}
 
           {/* Cast */}
-          <CastSection cast={cast} onCastPress={handleCastPress} onCastLongPress={handlePersonLongPress} onViewAll={handleCastViewAll} />
+          <CastSection
+            cast={cast}
+            onCastPress={handleCastPress}
+            onCastLongPress={handlePersonLongPress}
+            onViewAll={handleCastViewAll}
+          />
 
           {cast.length > 0 && <SectionSeparator />}
 
@@ -1130,24 +1148,6 @@ export default function MovieDetailScreen() {
             onClearAll={handleClearWatches}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
-          {/* Lazy load ShareCardModal - only mount when needed */}
-          {shareCardModalVisible && (
-            <ShareCardModal
-              visible={shareCardModalVisible}
-              onClose={() => setShareCardModalVisible(false)}
-              mediaData={{
-                id: movie.id,
-                type: 'movie',
-                title: displayMovieTitle,
-                posterPath: resolvedMoviePosterPath,
-                backdropPath: movie.backdrop_path,
-                releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',
-                genres: movie.genres?.map((g) => g.name) || [],
-                userRating,
-              }}
-              onShowToast={(message) => toastRef.current?.show(message)}
-            />
-          )}
         </>
       )}
       <Toast ref={toastRef} />

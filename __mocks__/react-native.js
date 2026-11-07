@@ -125,6 +125,10 @@ module.exports = {
   },
   SafeAreaView: 'SafeAreaView',
   KeyboardAvoidingView: 'KeyboardAvoidingView',
+  Keyboard: {
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
+    dismiss: jest.fn(),
+  },
   useWindowDimensions: () => ({ width: 375, height: 812 }),
   useColorScheme: () => 'dark',
 };

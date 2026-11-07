@@ -154,8 +154,11 @@ jest.mock('@/src/hooks/useNotificationPermissions', () => ({
 
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
-    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
-      fallbackPosterPath,
+    resolvePosterPath: (
+      _mediaType: 'movie' | 'tv',
+      _mediaId: number,
+      fallbackPosterPath: string | null
+    ) => fallbackPosterPath,
   }),
 }));
 
@@ -220,7 +223,9 @@ jest.mock('@/src/components/NotesModal', () => {
 });
 jest.mock('@/src/components/RatingModal', () => () => null);
 jest.mock('@/src/components/ReminderModal', () => () => null);
-jest.mock('@/src/components/ShareCardModal', () => () => null);
+jest.mock('@/src/hooks/useOpenShareCard', () => ({
+  useOpenShareCard: () => jest.fn(),
+}));
 jest.mock('@/src/components/ImageLightbox', () => () => null);
 jest.mock('@/src/components/VideoPlayerModal', () => () => null);
 jest.mock('@/src/components/UserRating', () => () => null);
@@ -272,7 +277,8 @@ jest.mock('@/src/components/ui/ShareButton', () => ({
 jest.mock('@/src/components/ui/AppErrorState', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  const AppErrorState = ({ message }: { message: string }) => React.createElement(Text, null, message);
+  const AppErrorState = ({ message }: { message: string }) =>
+    React.createElement(Text, null, message);
   AppErrorState.displayName = 'AppErrorState';
   return AppErrorState;
 });
@@ -378,7 +384,12 @@ describe('MovieDetailScreen', () => {
       }
 
       if (subKey === 'credits') {
-        return { data: { cast: [], crew: [] }, isLoading: false, isError: false, refetch: jest.fn() };
+        return {
+          data: { cast: [], crew: [] },
+          isLoading: false,
+          isError: false,
+          refetch: jest.fn(),
+        };
       }
 
       if (subKey === 'videos') {

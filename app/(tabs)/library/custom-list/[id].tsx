@@ -18,6 +18,7 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { COLORS, SPACING } from '@/src/constants/theme';
+import { useListShareCardAction } from '@/src/hooks/useListShareCard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
@@ -288,6 +289,8 @@ export default function CustomListDetailScreen() {
     [router]
   );
 
+  const shareCardAction = useListShareCardAction(list?.name ?? '', displayItems);
+
   const listActions = useMemo(
     () => [
       {
@@ -308,6 +311,7 @@ export default function CustomListDetailScreen() {
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
       }),
+      shareCardAction,
       {
         id: 'rename',
         icon: PencilEdit01Icon,
@@ -322,7 +326,15 @@ export default function CustomListDetailScreen() {
         color: COLORS.error,
       },
     ],
-    [canShuffle, hasActiveFilterState, hasActiveSort, handleRenameList, handleDeleteList, t]
+    [
+      canShuffle,
+      hasActiveFilterState,
+      hasActiveSort,
+      handleRenameList,
+      handleDeleteList,
+      shareCardAction,
+      t,
+    ]
   );
 
   const filterEmptyState = useMemo(

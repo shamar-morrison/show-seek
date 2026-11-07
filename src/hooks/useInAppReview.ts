@@ -1,7 +1,4 @@
-import {
-  forceRequestReview,
-  requestReviewIfEligible,
-} from '@/src/services/reviewPromptService';
+import { forceRequestReview, requestReviewIfEligible } from '@/src/services/reviewPromptService';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef } from 'react';
 
@@ -15,14 +12,16 @@ const REVIEW_PROMPT_DELAY_MS = 2500;
  * - If `__DEV__` AND `EXPO_PUBLIC_FORCE_REVIEW_PROMPT === 'true'`, bypasses all
  *   eligibility checks and force-triggers the prompt.
  * - Fire-and-forget: no return value, no UI.
+ *
+ * @param enabled Waits while false, for when something else is using this launch.
  */
-export function useInAppReview(): void {
+export function useInAppReview(enabled = true): void {
   const hasAttemptedRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
       // Only attempt once per app session to avoid repeated checks on every tab switch
-      if (hasAttemptedRef.current) {
+      if (!enabled || hasAttemptedRef.current) {
         return;
       }
 
@@ -49,6 +48,6 @@ export function useInAppReview(): void {
       return () => {
         clearTimeout(timer);
       };
-    }, [])
+    }, [enabled])
   );
 }

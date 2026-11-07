@@ -739,6 +739,12 @@
     "regionScreenNote": "This affects where to watch information and local release dates."
   },
   "profile": {
+    "displayNameLabel": "Display name",
+    "changePhoto": "Change photo",
+    "addPhoto": "Add photo",
+    "removePhoto": "Remove photo",
+    "profileUpdateFailed": "Couldn't update your profile. Please try again.",
+    "photoPickFailed": "Couldn't open your photos. Please try again.",
     "title": "Settings",
     "tabs": {
       "preferences": "Preferences",
@@ -1479,12 +1485,23 @@
   },
   "shareCard": {
     "title": "Share Card",
-    "share": "Share to...",
-    "save": "Save to Gallery",
-    "generating": "Generating...",
-    "preview": "Preview",
+    "share": "Share",
+    "save": "Save",
     "myRating": "My Rating",
-    "rateIt": "Rate it on ShowSeek!",
+    "portrait": "Portrait",
+    "square": "Square",
+    "landscape": "Landscape",
+    "showIdentity": "Show profile info",
+    "notePlaceholder": "Add a note",
+    "episodeNumber": "S{{season}} | E{{episode}}",
+    "card_title": "Title",
+    "card_episode": "Episode",
+    "card_progress": "Progress",
+    "styleLabel": "Style",
+    "styleSheetTitle": "Card style",
+    "style_classic": "Classic",
+    "style_profileTop": "Profile on top",
+    "style_cinematic": "Cinematic",
     "last6Months": "My Last 6 Months",
     "caption": "Check this out on ShowSeek!",
     "captionCopied": "Caption copied to clipboard",
@@ -1495,6 +1512,25 @@
     "failedToShare": "Failed to share",
     "failedToSave": "Failed to save to gallery",
     "sharingNotAvailable": "Sharing is not available on this device"
+  },
+  "whatsNew": {
+    "title": "What's New in ShowSeek?",
+    "shareCards": {
+      "title": "New share cards",
+      "description": "Share cards for movies, shows, episodes, season progress and your lists. Pick a size and style, add a note, then share or save."
+    },
+    "editProfile": {
+      "title": "Update your profile",
+      "description": "Have an account? You can now change your display name and photo from your profile."
+    },
+    "tvTimeImport": {
+      "title": "Import from TV Time",
+      "description": "Moving from TV Time? With Premium, bring your watch history, ratings, favorites, watchlist and lists with you. Find it in Settings > Integrations."
+    },
+    "stremioAddon": {
+      "title": "Stremio Add-on",
+      "description": "Mark what you watch in Stremio as watched in ShowSeek. You'll need an account and Stremio on a computer. Find it in Settings > Integrations."
+    }
   },
   "share": {
     "message": "{{title}} - Check this out on TMDB! {{url}}",

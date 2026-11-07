@@ -106,6 +106,13 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
     onClose();
   };
 
+  const handleProfilePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+    // This screen is in another tab. Anchoring it keeps Settings underneath for the back button.
+    router.push('/(tabs)/profile/account', { withAnchor: true });
+  };
+
   const handleForYouPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
@@ -166,7 +173,13 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
           ]}
         >
           {/* User Profile Section */}
-          <View style={styles.userSection}>
+          <Pressable
+            style={({ pressed }) => [styles.userSection, pressed && styles.navigationCardPressed]}
+            onPress={handleProfilePress}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.account')}
+            testID="home-drawer-profile"
+          >
             <UserAvatar
               photoURL={user?.photoURL}
               displayName={user?.displayName}
@@ -184,7 +197,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
                 </Text>
               )}
             </View>
-          </View>
+          </Pressable>
 
           <Divider style={styles.divider} />
 

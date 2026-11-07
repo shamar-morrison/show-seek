@@ -17,6 +17,7 @@ import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { DEFAULT_LIST_IDS } from '@/src/constants/lists';
 import { SPACING } from '@/src/constants/theme';
+import { useListShareCardAction } from '@/src/hooks/useListShareCard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
@@ -202,6 +203,8 @@ export default function FavoritesScreen() {
     setSortState(newSortState);
   };
 
+  const shareCardAction = useListShareCardAction(t('library.favoritesSection'), displayItems);
+
   const listActions = useMemo(
     () => [
       {
@@ -215,8 +218,9 @@ export default function FavoritesScreen() {
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
       }),
+      shareCardAction,
     ],
-    [hasActiveFilterState, hasActiveSort, t]
+    [hasActiveFilterState, hasActiveSort, shareCardAction, t]
   );
 
   // Track if initial mount to avoid scrolling on first render

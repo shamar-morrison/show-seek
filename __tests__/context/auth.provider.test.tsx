@@ -1,6 +1,7 @@
+import { WHATS_NEW_LAST_SEEN_KEY } from '@/src/services/whatsNewService';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut as firebaseSignOut, updateCurrentUser } from 'firebase/auth';
 import { getDoc, setDoc } from 'firebase/firestore';
 import React from 'react';
 import { signOutGoogle } from '@/src/firebase/auth';
@@ -12,12 +13,16 @@ let mockCurrentUser: any = null;
 const mockUnsubscribe = jest.fn();
 
 // Mock firebase/auth
+jest.mock('@/src/constants/whatsNew', () => ({
+  CURRENT_WHATS_NEW: { id: 'test-announcement', sections: [] },
+}));
 jest.mock('firebase/auth', () => ({
   onAuthStateChanged: jest.fn((auth, callback) => {
     capturedAuthCallback = callback;
     return mockUnsubscribe;
   }),
   signOut: jest.fn(),
+  updateCurrentUser: jest.fn(),
 }));
 
 jest.mock('@/src/firebase/auth', () => ({
@@ -53,6 +58,78 @@ describe('AuthProvider', () => {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <AuthProvider>{children}</AuthProvider>
   );
+
+  describe('refreshProfile', () => {
+    const signIn = async () => {
+      const mockUser = { uid: 'user-1', displayName: 'Old Name' };
+      mockCurrentUser = mockUser;
+      const hook = renderHook(() => useAuth(), { wrapper });
+      await act(async () => {
+        capturedAuthCallback?.(mockUser);
+      });
+      return { ...hook, mockUser };
+    };
+
+    it('exposes a new user object so memoized consumers pick up the change', async () => {
+      const { result, mockUser } = await signIn();
+      expect(result.current.user).toBe(mockUser);
+
+      // Mirrors Firebase, which swaps auth.currentUser for a copy of the user.
+      const copy = { uid: 'user-1', displayName: 'New Name' };
+      (updateCurrentUser as jest.Mock).mockImplementationOnce(async () => {
+        mockCurrentUser = copy;
+      });
+
+      await act(async () => {
+        await result.current.refreshProfile();
+      });
+
+      expect(updateCurrentUser).toHaveBeenCalledWith(expect.anything(), mockUser);
+      expect(result.current.user).toBe(copy);
+      expect(result.current.user).not.toBe(mockUser);
+    });
+
+    it('keeps the current user and does not throw when the refresh fails', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const { result, mockUser } = await signIn();
+      (updateCurrentUser as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+
+      await act(async () => {
+        await expect(result.current.refreshProfile()).resolves.toBeUndefined();
+      });
+
+      expect(result.current.user).toBe(mockUser);
+      warn.mockRestore();
+    });
+
+    it('still shows the new profile when saving it for the next app start fails', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const { result } = await signIn();
+      // Mirrors Firebase, which assigns the copy before it writes to persistence.
+      const copy = { uid: 'user-1', displayName: 'New Name' };
+      (updateCurrentUser as jest.Mock).mockImplementationOnce(async () => {
+        mockCurrentUser = copy;
+        throw new Error('storage full');
+      });
+
+      await act(async () => {
+        await result.current.refreshProfile();
+      });
+
+      expect(result.current.user).toBe(copy);
+      warn.mockRestore();
+    });
+
+    it('does nothing when signed out', async () => {
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        await result.current.refreshProfile();
+      });
+
+      expect(updateCurrentUser).not.toHaveBeenCalled();
+    });
+  });
 
   describe('auth state subscription', () => {
     it('should update user state when onAuthStateChanged fires with user', async () => {
@@ -556,6 +633,11 @@ describe('AuthProvider', () => {
 
       expect(result.current.hasCompletedOnboarding).toBe(true);
       expect(AsyncStorage.setItem).toHaveBeenCalledWith('hasCompletedOnboarding', 'true');
+      // New users already have everything in the current What's New announcement.
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        WHATS_NEW_LAST_SEEN_KEY,
+        'test-announcement'
+      );
     });
 
     it('should handle AsyncStorage read errors gracefully', async () => {

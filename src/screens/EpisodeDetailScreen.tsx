@@ -1,4 +1,5 @@
-import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Episode, type Video } from '@/src/api/tmdb';
+import type { ShareCardData } from '@/src/components/shareCard/shareCardTypes';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CrewSection } from '@/src/components/detail/CrewSection';
 import { useDetailStyles } from '@/src/components/detail/detailStyles';
@@ -7,6 +8,7 @@ import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesS
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import ListActionsModal from '@/src/components/ListActionsModal';
+import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
 import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingButton from '@/src/components/RatingButton';
@@ -39,6 +41,7 @@ import {
   useIsEpisodeWatched,
   useMarkEpisodeUnwatched,
   useMarkEpisodeWatched,
+  useSeasonProgress,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
 import { useIsEpisodeFavorited, useToggleFavoriteEpisode } from '@/src/hooks/useFavoriteEpisodes';
@@ -48,7 +51,7 @@ import { useNotePress } from '@/src/hooks/useNotePress';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
-import { useEpisodeRating } from '@/src/hooks/useRatings';
+import { useEpisodeRating, useSeasonRating } from '@/src/hooks/useRatings';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { parseEpisodeRouteParams } from '@/src/utils/episodeRouteParams';
@@ -64,6 +67,7 @@ import {
   Calendar03Icon,
   Clock01Icon,
   FavouriteIcon,
+  Image01Icon,
   NoteDoneIcon,
   PlayIcon,
   StarIcon,
@@ -82,6 +86,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const EMPTY_EPISODES: Episode[] = [];
 
 export default function EpisodeDetailScreen() {
   const detailStyles = useDetailStyles();
@@ -108,6 +114,7 @@ export default function EpisodeDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const openShareCard = useOpenShareCard();
   const noteSheetRef = useRef<NoteModalRef>(null);
   const toastRef = React.useRef<ToastRef>(null);
   const {
@@ -128,6 +135,8 @@ export default function EpisodeDetailScreen() {
     seasonNumber,
     episodeNumber
   );
+
+  const { userRating: seasonUserRating } = useSeasonRating(tvId, seasonNumber);
 
   const { data: episodeTracking } = useShowEpisodeTracking(tvId);
   const { isWatched } = useIsEpisodeWatched(tvId, seasonNumber, episodeNumber);
@@ -207,6 +216,12 @@ export default function EpisodeDetailScreen() {
     : '';
   const episode = episodeDetailsQuery.data;
   const season = seasonQuery.data;
+  const { progress: seasonProgress } = useSeasonProgress(
+    tvId,
+    seasonNumber,
+    season?.episodes ?? EMPTY_EPISODES,
+    !!preferences?.allowUnreleasedEpisodeWatches
+  );
   const credits = episodeCreditsQuery.data;
   const videos = episodeVideosQuery.data || [];
   const images = episodeImagesQuery.data;
@@ -485,6 +500,35 @@ export default function EpisodeDetailScreen() {
   const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.large);
   const headerSubtitle = t('media.seasonEpisode', { season: seasonNumber, episode: episodeNumber });
   const isNoteActionLoading = isLoadingNote || isOpeningNote;
+  const shareCards: ShareCardData[] = [
+    {
+      kind: 'episode',
+      showTitle: displayShowTitle,
+      episodeTitle: episode.name,
+      seasonNumber,
+      episodeNumber,
+      posterPath: resolvedShowPosterPath,
+      stillPath: episode.still_path,
+      backdropPath: tvShow?.backdrop_path ?? null,
+      runtimeMinutes: episode.runtime ?? null,
+      userRating,
+    },
+    ...(seasonProgress && seasonProgress.watchedCount > 0
+      ? [
+          {
+            kind: 'progress' as const,
+            showTitle: displayShowTitle,
+            seasonTitle: season?.name || t('media.seasonNumber', { number: seasonNumber }),
+            seasonYear: season?.air_date?.split('-')[0] ?? '',
+            watchedCount: seasonProgress.watchedCount,
+            totalCount: seasonProgress.progressTotalCount,
+            userRating: seasonUserRating,
+            posterPath: season?.poster_path ?? resolvedShowPosterPath,
+            backdropPath: tvShow?.backdrop_path ?? null,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['top']}>
@@ -649,6 +693,20 @@ export default function EpisodeDetailScreen() {
                   ) : (
                     <AppIcon icon={Note01Icon} size={24} color={COLORS.text} />
                   )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={() => openShareCard(shareCards)}
+                disabled={!tvShow}
+                activeOpacity={ACTIVE_OPACITY}
+                accessibilityRole="button"
+                accessibilityLabel={t('shareCard.title')}
+                testID="episode-share-card-action"
+              >
+                <View style={styles.iconButton}>
+                  <AppIcon icon={Image01Icon} size={24} color={COLORS.text} />
                 </View>
               </TouchableOpacity>
             </View>

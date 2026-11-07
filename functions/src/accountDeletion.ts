@@ -109,6 +109,10 @@ async function deleteFirestoreUserTree(userId: string): Promise<void> {
   await deleteStremioAddonTokensForUser(userId);
 }
 
+async function deleteStorageFilesForUser(userId: string): Promise<void> {
+  await admin.storage().bucket().deleteFiles({ prefix: `users/${userId}/` });
+}
+
 async function deleteAuthUserIfPresent(userId: string): Promise<void> {
   try {
     await admin.auth().deleteUser(userId);
@@ -144,6 +148,8 @@ export async function deleteAccountHandler(
   // Polar event can re-create an orphan users/{uid} stub. A pre-written durable marker (can outlive a
   // failed deletion and block premium writes for a live user) and Auth-first ordering (breaks retry on
   // tree-delete failure) were both rejected.
+  // Storage goes first: a failure here leaves the account intact, so the user can safely retry.
+  await deleteStorageFilesForUser(userId);
   await deleteFirestoreUserTree(userId);
   await deleteAuthUserIfPresent(userId);
 

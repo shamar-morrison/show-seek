@@ -18,6 +18,7 @@ import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { SPACING } from '@/src/constants/theme';
+import { useListShareCardAction } from '@/src/hooks/useListShareCard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
@@ -239,6 +240,8 @@ export default function WatchStatusDetailScreen() {
     [router]
   );
 
+  const shareCardAction = useListShareCardAction(listTitle, displayItems);
+
   const listActions = useMemo(
     () => [
       {
@@ -259,8 +262,9 @@ export default function WatchStatusDetailScreen() {
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
       }),
+      shareCardAction,
     ],
-    [canShuffle, hasActiveFilterState, hasActiveSort, t]
+    [canShuffle, hasActiveFilterState, hasActiveSort, shareCardAction, t]
   );
 
   const filterEmptyState = useMemo(

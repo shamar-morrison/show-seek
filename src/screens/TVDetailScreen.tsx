@@ -8,6 +8,7 @@ import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsS
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import ListActionsModal from '@/src/components/ListActionsModal';
+import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
 import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
@@ -26,7 +27,6 @@ import type { Review } from '@/src/components/detail/types';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
-import ShareCardModal from '@/src/components/ShareCardModal';
 import TVReminderModal from '@/src/components/TVReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
@@ -104,7 +104,7 @@ export default function TVDetailScreen() {
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadTraktReviews, setShouldLoadTraktReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
-  const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
+  const openShareCard = useOpenShareCard();
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
@@ -531,7 +531,19 @@ export default function TVDetailScreen() {
             }
             onNote={handleNotePress}
             onTrailer={handleTrailerPress}
-            onShareCard={() => setShareCardModalVisible(true)}
+            onShareCard={() =>
+              openShareCard([
+                {
+                  kind: 'title',
+                  title: displayShowTitle,
+                  posterPath: resolvedShowPosterPath,
+                  backdropPath: show.backdrop_path,
+                  releaseYear: show.first_air_date?.split('-')[0] || '',
+                  genres: show.genres?.map((g) => g.name) || [],
+                  userRating,
+                },
+              ])
+            }
             isInAnyList={isInAnyList}
             isLoadingLists={isLoadingLists}
             listIcon={listIcon}
@@ -626,7 +638,12 @@ export default function TVDetailScreen() {
           {hasWatchProviders(watchProviders) && <SectionSeparator />}
 
           {/* Cast */}
-          <CastSection cast={cast} onCastPress={handleCastPress} onCastLongPress={handlePersonLongPress} onViewAll={handleCastViewAll} />
+          <CastSection
+            cast={cast}
+            onCastPress={handleCastPress}
+            onCastLongPress={handlePersonLongPress}
+            onViewAll={handleCastViewAll}
+          />
 
           {cast.length > 0 && <SectionSeparator />}
 
@@ -809,24 +826,6 @@ export default function TVDetailScreen() {
           />
           <NoteModal ref={noteSheetRef} />
           <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
-          {/* Lazy load ShareCardModal - only mount when needed */}
-          {shareCardModalVisible && (
-            <ShareCardModal
-              visible={shareCardModalVisible}
-              onClose={() => setShareCardModalVisible(false)}
-              mediaData={{
-                id: show.id,
-                type: 'tv',
-                title: displayShowTitle,
-                posterPath: resolvedShowPosterPath,
-                backdropPath: show.backdrop_path,
-                releaseYear: show.first_air_date?.split('-')[0] || '',
-                genres: show.genres?.map((g) => g.name) || [],
-                userRating,
-              }}
-              onShowToast={(message) => toastRef.current?.show(message)}
-            />
-          )}
         </>
       )}
       <Toast ref={toastRef} />
