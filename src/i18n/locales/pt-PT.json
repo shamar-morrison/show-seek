@@ -1518,7 +1518,8 @@
     "premiumTitle": "Acompanhe o seu calendário de lançamentos",
     "premiumDescription": "Nunca mais perca a estreia de uma temporada, episódio ou filme. \n Receba uma cronologia personalizada com todos os seus próximos filmes e séries.",
     "updatingEpisodes": "A atualizar episódios de TV...",
-    "maxSources": "Podes selecionar até 6 listas"
+    "maxSources": "Podes selecionar até 6 listas",
+    "searchPlaceholder": "Pesquisar estreias..."
   },
   "authGuards": {
     "addFavoritePeople": "Inicie sessão para adicionar pessoas aos favoritos",

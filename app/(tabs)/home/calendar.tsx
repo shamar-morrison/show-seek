@@ -2,6 +2,7 @@ import { CalendarSortModal } from '@/src/components/calendar/CalendarSortModal';
 import { CalendarSourceFilterModal } from '@/src/components/calendar/CalendarSourceFilterModal';
 import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { ReleaseCalendarSkeleton } from '@/src/components/calendar/ReleaseCalendarSkeleton';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import {
@@ -12,8 +13,9 @@ import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { filterCustomLists } from '@/src/constants/lists';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useLists } from '@/src/hooks/useLists';
-import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
+import { UpcomingRelease, useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import {
@@ -28,15 +30,27 @@ import {
   isDefaultCalendarSourceSelection,
   sanitizeCalendarSources,
 } from '@/src/utils/calendarViewModel';
+import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { ArrowUpDownIcon, Calendar03Icon, SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
+import {
+  ArrowUpDownIcon,
+  Calendar03Icon,
+  Search01Icon,
+  SlidersHorizontalIcon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Rebuilding the calendar presentations is not free on big calendars, so wait
+// for a short typing pause before filtering.
+const SEARCH_DEBOUNCE_MS = 150;
+
+const getReleaseSearchText = (release: UpcomingRelease) => release.title;
 
 export default function CalendarScreen() {
   const navigation = useNavigation();
@@ -183,10 +197,71 @@ export default function CalendarScreen() {
   );
   const hasActiveSort = sortMode !== 'soonest';
 
+  const handleGoToLibrary = useCallback(() => {
+    router.push({ pathname: '/(tabs)/library' });
+  }, [router]);
+
+  const handleResetFilters = useCallback(() => {
+    setMediaFilter('all');
+    setSelectedSources([...CALENDAR_SOURCE_FILTERS]);
+  }, []);
+
+  const sourceFilteredReleases = useMemo(
+    () =>
+      filterUpcomingReleases(allReleases, {
+        mediaFilter: 'all',
+        selectedSources,
+      }),
+    [allReleases, selectedSources]
+  );
+
+  // Search is a premium feature: free users only see a 3-item preview.
+  const {
+    searchQuery,
+    debouncedQuery,
+    isSearchActive,
+    filteredItems: searchedReleases,
+    activateSearch,
+    deactivateSearch,
+    setSearchQuery,
+  } = useHeaderSearch({
+    items: sourceFilteredReleases,
+    getSearchableText: getReleaseSearchText,
+    debounceMs: SEARCH_DEBOUNCE_MS,
+  });
+  const isSearchEnabled = isPremium;
+  const isSearching = isSearchEnabled && debouncedQuery.trim().length > 0;
+  const displayedReleases = isSearchEnabled ? searchedReleases : sourceFilteredReleases;
+
+  useEffect(() => {
+    if (!isSearchEnabled && isSearchActive) {
+      deactivateSearch();
+    }
+  }, [deactivateSearch, isSearchActive, isSearchEnabled]);
+
   useLayoutEffect(() => {
+    if (isSearchEnabled && isSearchActive) {
+      navigation.setOptions(
+        getSearchHeaderOptions({
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          onClose: deactivateSearch,
+          placeholder: t('calendar.searchPlaceholder'),
+        })
+      );
+      return;
+    }
+
     navigation.setOptions({
+      header: undefined,
+      headerTitle: undefined,
       headerRight: () => (
         <View style={styles.headerButtons}>
+          {isSearchEnabled ? (
+            <HeaderIconButton testID="calendar-search-button" onPress={activateSearch}>
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
+            </HeaderIconButton>
+          ) : null}
           <HeaderIconButton
             testID="calendar-source-filter-button"
             onPress={() => setSourceModalVisible(true)}
@@ -212,25 +287,19 @@ export default function CalendarScreen() {
         </View>
       ),
     });
-  }, [hasActiveSort, hasActiveSourceFilters, iconBadgeStyles, navigation]);
-
-  const handleGoToLibrary = useCallback(() => {
-    router.push({ pathname: '/(tabs)/library' });
-  }, [router]);
-
-  const handleResetFilters = useCallback(() => {
-    setMediaFilter('all');
-    setSelectedSources([...CALENDAR_SOURCE_FILTERS]);
-  }, []);
-
-  const sourceFilteredReleases = useMemo(
-    () =>
-      filterUpcomingReleases(allReleases, {
-        mediaFilter: 'all',
-        selectedSources,
-      }),
-    [allReleases, selectedSources]
-  );
+  }, [
+    activateSearch,
+    deactivateSearch,
+    hasActiveSort,
+    hasActiveSourceFilters,
+    iconBadgeStyles,
+    isSearchActive,
+    isSearchEnabled,
+    navigation,
+    searchQuery,
+    setSearchQuery,
+    t,
+  ]);
 
   const presentationLabels = useMemo(
     () => ({
@@ -249,13 +318,13 @@ export default function CalendarScreen() {
   const presentations = useMemo(
     () =>
       buildCalendarPresentations({
-        releases: sourceFilteredReleases,
+        releases: displayedReleases,
         sortMode,
         previewLimit,
         locale: i18n.language,
         labels: presentationLabels,
       }),
-    [i18n.language, presentationLabels, previewLimit, sortMode, sourceFilteredReleases]
+    [displayedReleases, i18n.language, presentationLabels, previewLimit, sortMode]
   );
 
   const activePresentation = presentations[mediaFilter];
@@ -306,6 +375,22 @@ export default function CalendarScreen() {
           <Text style={styles.primaryButtonText}>{t('calendar.goToWatchlist')}</Text>
         </Pressable>
       </View>
+    );
+  } else if (isSearching && activePresentation.totalContentCount === 0) {
+    content = (
+      <>
+        <View style={styles.segmentedControlContainer}>
+          <SegmentedControl
+            options={mediaOptions}
+            activeKey={mediaFilter}
+            onChange={setMediaFilter}
+            testID="calendar-media-filter"
+          />
+        </View>
+        <View style={styles.searchEmptyContainer} testID="calendar-search-empty">
+          <SearchEmptyState />
+        </View>
+      </>
     );
   } else if (activePresentation.totalContentCount === 0) {
     content = (
@@ -385,6 +470,9 @@ const styles = StyleSheet.create({
   },
   segmentedControlContainer: {
     padding: SPACING.m,
+  },
+  searchEmptyContainer: {
+    flex: 1,
   },
   emptyContainer: {
     flex: 1,

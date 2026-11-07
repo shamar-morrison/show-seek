@@ -1677,7 +1677,8 @@
     "premiumDescription": "Bir sezonu, bölümü veya film yayınını bir daha asla kaçırmayın. \n Yaklaşan tüm film ve dizileriniz için kişisel bir zaman çizelgesi edinin.",
     "updatingEpisodes": "Dizi bölümleri güncelleniyor...",
     "upgradeForFullExperience": "Tam deneyim için yükseltin",
-    "upgradeToPremium": "Premium'a yükselt"
+    "upgradeToPremium": "Premium'a yükselt",
+    "searchPlaceholder": "Çıkışlarda ara..."
   },
   "widgets": {
     "widgetType": "Araç takımı türü",

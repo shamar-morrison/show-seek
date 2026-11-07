@@ -1518,7 +1518,8 @@
     "updatingEpisodes": "Atualizando episódios de TV...",
     "upgradeForFullExperience": "Atualize para ter a experiência completa",
     "upgradeToPremium": "Atualizar para Premium",
-    "maxSources": "Você pode selecionar até 6 listas"
+    "maxSources": "Você pode selecionar até 6 listas",
+    "searchPlaceholder": "Buscar lançamentos..."
   },
   "authGuards": {
     "addFavoritePeople": "Entre para adicionar pessoas favoritas",

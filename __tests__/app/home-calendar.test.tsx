@@ -173,6 +173,7 @@ jest.mock('@/src/components/ui/InlineUpdatingIndicator', () => ({
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 jest.mock('expo-router', () => ({
@@ -253,6 +254,52 @@ describe('CalendarScreen', () => {
         previewLimit: undefined,
       })
     );
+  });
+
+  it('does not offer search to free users', async () => {
+    await renderCalendarAndWait();
+
+    const header = renderLatestHeader();
+    expect(header.queryByTestId('calendar-search-button')).toBeNull();
+    expect(header.getByTestId('calendar-sort-button')).toBeTruthy();
+  });
+
+  it('lets premium users search releases by title from the header', async () => {
+    mockPremiumState.isPremium = true;
+    await renderCalendarAndWait();
+
+    const header = renderLatestHeader();
+    fireEvent.press(header.getByTestId('calendar-search-button'));
+
+    const latestOptions = mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1]?.[0];
+    expect(latestOptions.header).toEqual(expect.any(Function));
+    const searchHeader = render(latestOptions.header());
+    fireEvent.changeText(searchHeader.getByPlaceholderText('Search releases...'), 'release 4');
+
+    await waitFor(() =>
+      expect(mockReleaseCalendar).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          presentations: expect.objectContaining({
+            all: expect.objectContaining({ totalContentCount: 1 }),
+            tv: expect.objectContaining({ totalContentCount: 0 }),
+          }),
+        })
+      )
+    );
+  });
+
+  it('shows a search empty state when nothing matches', async () => {
+    mockPremiumState.isPremium = true;
+    const screen = await renderCalendarAndWait();
+
+    fireEvent.press(renderLatestHeader().getByTestId('calendar-search-button'));
+    const latestOptions = mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1]?.[0];
+    const searchHeader = render(latestOptions.header());
+    fireEvent.changeText(searchHeader.getByPlaceholderText('Search releases...'), 'zzz');
+
+    expect(await screen.findByTestId('calendar-search-empty')).toBeTruthy();
+    expect(screen.getByText('No results found')).toBeTruthy();
+    expect(screen.queryByText('Clear Filters')).toBeNull();
   });
 
   it('passes refresh props to the release calendar', async () => {
