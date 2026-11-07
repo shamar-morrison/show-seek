@@ -860,20 +860,20 @@ export const tmdbApi = {
     return data;
   },
 
-  getMovieWatchProviders: async (id: number) => {
+  getMovieWatchProviders: async (id: number, region: string = currentRegion) => {
     const data = await tmdbRequest(() =>
       tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(
         `/movie/${id}/watch/providers`
       )
     );
-    return data.results[currentRegion] || null;
+    return data.results[region] || null;
   },
 
-  getTVWatchProviders: async (id: number) => {
+  getTVWatchProviders: async (id: number, region: string = currentRegion) => {
     const data = await tmdbRequest(() =>
       tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(`/tv/${id}/watch/providers`)
     );
-    return data.results[currentRegion] || null;
+    return data.results[region] || null;
   },
 
   getMovieReviews: async (id: number, page: number = 1) => {

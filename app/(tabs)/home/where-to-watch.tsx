@@ -1,4 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, WatchProvider } from '@/src/api/tmdb';
+import { MediaGrid } from '@/src/components/library/MediaGrid';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
@@ -16,10 +18,12 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useLists } from '@/src/hooks/useLists';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { useWatchProviderEnrichment } from '@/src/hooks/useWatchProviderEnrichment';
-import { UserList } from '@/src/services/ListService';
+import { ListMediaItem, UserList } from '@/src/services/ListService';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -31,6 +35,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   ArrowDown01Icon,
   Cancel01Icon,
+  Search01Icon,
   CrownIcon,
   Menu01Icon,
   Tick02Icon,
@@ -51,6 +56,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PROVIDER_LIST_GC_TIME = 1000 * 60 * 60 * 24 * 30; // 30 days
+const VIEW_MODE_STORAGE_KEY = 'whereToWatchViewMode';
 
 const DEFAULT_LIST_LABEL_KEYS: Record<string, string> = {
   watchlist: 'lists.shouldWatch',
@@ -63,6 +69,12 @@ const DEFAULT_LIST_LABEL_KEYS: Record<string, string> = {
 const triggerLightHaptic = () => {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 };
+
+const noop = () => {};
+
+const resultKeyExtractor = (item: ListMediaItem) => `${item.media_type}-${item.id}`;
+
+const getSearchableText = (item: ListMediaItem) => item.title || item.name || '';
 
 function getDisplayListName(
   list: UserList,
@@ -163,17 +175,9 @@ export default function WhereToWatchScreen() {
     const counts = new Map<number, number>();
 
     selectedListItems.forEach((item) => {
-      const providerKey = `${item.media_type}-${item.id}`;
-      const providers = providerMap.get(providerKey)?.flatrate || [];
-      const seenForItem = new Set<number>();
-
-      providers.forEach((provider) => {
-        if (seenForItem.has(provider.provider_id)) {
-          return;
-        }
-
-        seenForItem.add(provider.provider_id);
-        counts.set(provider.provider_id, (counts.get(provider.provider_id) || 0) + 1);
+      // Provider IDs are already unique per title.
+      providerMap.get(`${item.media_type}-${item.id}`)?.forEach((providerId) => {
+        counts.set(providerId, (counts.get(providerId) || 0) + 1);
       });
     });
 
@@ -195,16 +199,42 @@ export default function WhereToWatchScreen() {
       return [];
     }
 
-    return selectedListItems.filter((item) => {
-      const providerKey = `${item.media_type}-${item.id}`;
-      const providers = providerMap.get(providerKey);
-      return (
-        providers?.flatrate?.some(
-          (provider) => provider.provider_id === selectedService.provider_id
-        ) ?? false
-      );
-    });
+    return selectedListItems.filter(
+      (item) =>
+        providerMap.get(`${item.media_type}-${item.id}`)?.includes(selectedService.provider_id) ??
+        false
+    );
   }, [providerMap, selectedListItems, selectedService]);
+
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: displayItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: filteredItems,
+    getSearchableText,
+  });
+
+  const searchState = useMemo(
+    () => ({
+      isActive: isSearchActive,
+      query: searchQuery,
+      onQueryChange: setSearchQuery,
+      onClose: deactivateSearch,
+      placeholder: t('library.searchListPlaceholder'),
+    }),
+    [deactivateSearch, isSearchActive, searchQuery, setSearchQuery, t]
+  );
+
+  const { viewMode, isLoadingPreference } = useViewModeToggle({
+    storageKey: VIEW_MODE_STORAGE_KEY,
+    showSortButton: false,
+    searchButton: filteredItems.length > 0 ? searchButton : undefined,
+    searchState,
+  });
 
   const hasProviderFetchError = movieProvidersQuery.isError || tvProvidersQuery.isError;
   const isProviderFetchLoading = movieProvidersQuery.isLoading || tvProvidersQuery.isLoading;
@@ -286,7 +316,7 @@ export default function WhereToWatchScreen() {
   }, []);
 
   const handleResultPress = useCallback(
-    (item: (typeof selectedListItems)[number]) => {
+    (item: ListMediaItem) => {
       triggerLightHaptic();
       if (item.media_type === 'movie') {
         router.push({
@@ -312,8 +342,17 @@ export default function WhereToWatchScreen() {
   const selectedServiceLogo = getImageUrl(selectedService?.logo_path || null, '/w92');
   const showPremiumOverlay = !isPremium && !!selectedList;
 
+  const searchEmptyState = useMemo(
+    () => ({
+      icon: Search01Icon,
+      title: t('common.noResults'),
+      description: t('search.adjustSearch'),
+    }),
+    [t]
+  );
+
   const renderResultItem = useCallback(
-    ({ item }: { item: (typeof selectedListItems)[number] }) => {
+    ({ item }: { item: ListMediaItem }) => {
       const posterPath = resolvePosterPath(item.media_type, item.id, item.poster_path);
 
       return (
@@ -439,11 +478,23 @@ export default function WhereToWatchScreen() {
                 region,
               })}
             />
+          ) : isLoadingPreference ? null : displayItems.length === 0 ? (
+            <SearchEmptyState />
+          ) : viewMode === 'grid' ? (
+            <MediaGrid
+              key="grid"
+              items={displayItems}
+              isLoading={false}
+              emptyState={searchEmptyState}
+              onItemPress={handleResultPress}
+              onItemLongPress={noop}
+            />
           ) : (
             <FlashList
-              data={filteredItems}
+              key="list"
+              data={displayItems}
               renderItem={renderResultItem}
-              keyExtractor={(item) => `${item.media_type}-${item.id}`}
+              keyExtractor={resultKeyExtractor}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.resultsListContent}
             />

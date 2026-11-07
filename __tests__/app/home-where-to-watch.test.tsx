@@ -1,4 +1,5 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 jest.mock('react-native', () => {
@@ -66,20 +67,11 @@ const mockListsState = {
 };
 
 const mockEnrichmentState = {
-  providerMap: new Map<string, any>([
-    [
-      'movie-101',
-      {
-        flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 }],
-        rent: [{ provider_id: 2, provider_name: 'Apple TV', logo_path: '/apple.png', display_priority: 2 }],
-      },
-    ],
-    [
-      'tv-202',
-      {
-        buy: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 }],
-      },
-    ],
+  providerMap: new Map<string, number[]>([
+    // Only flatrate providers count: movie-101 streams on Netflix (rent-only
+    // Apple TV is excluded) and tv-202 is buy-only on Netflix.
+    ['movie-101', [8]],
+    ['tv-202', []],
   ]),
   isLoadingEnrichment: false,
   enrichmentProgress: 1,
@@ -108,9 +100,14 @@ const mockTvProvidersQueryState = {
   error: null as Error | null,
 };
 
+const mockSetOptions = jest.fn();
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: (...args: unknown[]) => mockPush(...args),
+  }),
+  useNavigation: () => ({
+    setOptions: (...args: unknown[]) => mockSetOptions(...args),
   }),
 }));
 
@@ -177,6 +174,7 @@ jest.mock('expo-blur', () => ({
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 jest.mock('@tanstack/react-query', () => ({
@@ -200,10 +198,12 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 
 import WhereToWatchScreen from '@/app/(tabs)/home/where-to-watch';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 
 describe('WhereToWatchScreen', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    await AsyncStorage.clear();
     mockRefetchLists.mockReset();
     mockRequireAccount.mockReset();
     mockAuthState.user = { uid: 'user-1', isAnonymous: false };
@@ -249,20 +249,9 @@ describe('WhereToWatchScreen', () => {
     mockTvProvidersQueryState.isError = false;
     mockTvProvidersQueryState.error = null;
     mockEnrichmentState.isLoadingEnrichment = false;
-    mockEnrichmentState.providerMap = new Map<string, any>([
-      [
-        'movie-101',
-        {
-          flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 }],
-          rent: [{ provider_id: 2, provider_name: 'Apple TV', logo_path: '/apple.png', display_priority: 2 }],
-        },
-      ],
-      [
-        'tv-202',
-        {
-          buy: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 }],
-        },
-      ],
+    mockEnrichmentState.providerMap = new Map<string, number[]>([
+      ['movie-101', [8]],
+      ['tv-202', []],
     ]);
   });
 
@@ -377,6 +366,61 @@ describe('WhereToWatchScreen', () => {
     });
 
     expect(queryByText('Show B')).toBeNull();
+  });
+
+  const selectListAndNetflix = (utils: ReturnType<typeof render>) => {
+    fireEvent.press(utils.getByTestId('where-to-watch-list-selector'));
+    fireEvent.press(utils.getByTestId('where-to-watch-list-option-watchlist'));
+    fireEvent.press(utils.getByTestId('where-to-watch-service-selector'));
+    fireEvent.press(utils.getByTestId('where-to-watch-service-option-8'));
+  };
+
+  const getLastHeaderOptions = (key: 'headerRight' | 'header') => {
+    const call = [...mockSetOptions.mock.calls].reverse().find(([options]) => !!options[key]);
+    return call?.[0][key] as (() => React.ReactElement) | undefined;
+  };
+
+  it('shows the list layout when the saved view mode is list', async () => {
+    await AsyncStorage.setItem('whereToWatchViewMode', 'list');
+
+    const utils = render(<WhereToWatchScreen />);
+    selectListAndNetflix(utils);
+
+    // The list card renders a media-type badge; the grid card does not.
+    expect(await utils.findByText('Movie')).toBeTruthy();
+    expect(utils.getByText('Movie A')).toBeTruthy();
+  });
+
+  it('uses the grid layout by default', async () => {
+    const utils = render(<WhereToWatchScreen />);
+    selectListAndNetflix(utils);
+
+    expect(await utils.findByText('Movie A')).toBeTruthy();
+    expect(utils.queryByText('Movie')).toBeNull();
+  });
+
+  it('filters results through the header search', async () => {
+    const utils = render(<WhereToWatchScreen />);
+    selectListAndNetflix(utils);
+    await utils.findByText('Movie A');
+
+    const headerRight = getLastHeaderOptions('headerRight');
+    expect(headerRight).toBeDefined();
+    const headerButtons = render(headerRight!());
+    // Search is the first header button, before the view toggle.
+    act(() => {
+      headerButtons.UNSAFE_getAllByType(HeaderIconButton)[0].props.onPress();
+    });
+
+    const header = getLastHeaderOptions('header');
+    expect(header).toBeDefined();
+    const searchHeader = render(header!());
+    fireEvent.changeText(searchHeader.getByPlaceholderText('Search list...'), 'zzz');
+
+    await waitFor(() => {
+      expect(utils.getByText('No results found')).toBeTruthy();
+    });
+    expect(utils.queryByText('Movie A')).toBeNull();
   });
 
   it('shows premium overlay for free users and routes to premium on CTA press', () => {

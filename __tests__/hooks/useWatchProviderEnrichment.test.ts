@@ -1,15 +1,12 @@
-import { renderHook } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-const mockUseQueries = jest.fn();
 const mockGetMovieWatchProviders = jest.fn();
 const mockGetTVWatchProviders = jest.fn();
-
-jest.mock('@tanstack/react-query', () => ({
-  useQueries: (...args: unknown[]) => mockUseQueries(...args),
-}));
+const mockRegion = { region: 'US' };
 
 jest.mock('@/src/context/RegionProvider', () => ({
-  useRegion: () => ({ region: 'US' }),
+  useRegion: () => mockRegion,
 }));
 
 jest.mock('@/src/api/tmdb', () => ({
@@ -19,12 +16,16 @@ jest.mock('@/src/api/tmdb', () => ({
   },
 }));
 
-jest.mock('@/src/utils/rateLimitedQuery', () => ({
-  createRateLimitedQueryFn: (fn: () => Promise<unknown>) => fn,
-}));
-
 import { useWatchProviderEnrichment } from '@/src/hooks/useWatchProviderEnrichment';
 import { ListMediaItem } from '@/src/services/ListService';
+import {
+  flushWatchProviderCache,
+  getCachedWatchProviders,
+  loadWatchProviderCache,
+  resetWatchProviderCacheForTests,
+  setCachedWatchProviders,
+  WATCH_PROVIDER_CACHE_TTL_MS,
+} from '@/src/services/watchProviderCache';
 
 function createListItem(overrides: Partial<ListMediaItem>): ListMediaItem {
   return {
@@ -39,163 +40,147 @@ function createListItem(overrides: Partial<ListMediaItem>): ListMediaItem {
   };
 }
 
+const provider = (id: number) => ({
+  provider_id: id,
+  provider_name: `Provider ${id}`,
+  logo_path: null,
+  display_priority: 1,
+});
+
 describe('useWatchProviderEnrichment', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    mockRegion.region = 'US';
+    resetWatchProviderCacheForTests();
+    await AsyncStorage.clear();
   });
 
-  it('deduplicates by media type + id and uses region-aware query keys', async () => {
-    let capturedQueries: any[] = [];
-    mockUseQueries.mockImplementation(({ queries }) => {
-      capturedQueries = queries;
-      return queries.map(() => ({
-        data: undefined,
-        isSuccess: false,
-        isError: false,
-        isLoading: false,
-      }));
+  it('deduplicates titles, keeps movie and tv ids apart, and returns flatrate provider ids only', async () => {
+    mockGetMovieWatchProviders.mockResolvedValue({
+      flatrate: [provider(8), provider(8), provider(337)],
+      rent: [provider(2)],
     });
-
-    mockGetMovieWatchProviders.mockResolvedValue(null);
-    mockGetTVWatchProviders.mockResolvedValue(null);
+    mockGetTVWatchProviders.mockResolvedValue({ buy: [provider(8)] });
 
     const items = [
       createListItem({ id: 10, media_type: 'movie' }),
-      createListItem({ id: 10, media_type: 'movie', title: 'Duplicate Movie' }),
-      createListItem({ id: 20, media_type: 'tv', name: 'Show 20' }),
-      createListItem({ id: 20, media_type: 'tv', title: 'Duplicate TV', name: 'Show 20 Again' }),
-    ];
-
-    renderHook(() => useWatchProviderEnrichment(items, true));
-
-    expect(capturedQueries).toHaveLength(2);
-    expect(capturedQueries[0].queryKey).toEqual(['watch-providers', 'US', 'movie', 10]);
-    expect(capturedQueries[1].queryKey).toEqual(['watch-providers', 'US', 'tv', 20]);
-    expect(capturedQueries[0].enabled).toBe(true);
-    expect(capturedQueries[1].enabled).toBe(true);
-
-    await capturedQueries[0].queryFn();
-    await capturedQueries[1].queryFn();
-
-    expect(mockGetMovieWatchProviders).toHaveBeenCalledWith(10);
-    expect(mockGetTVWatchProviders).toHaveBeenCalledWith(20);
-  });
-
-  it('returns map entries and full progress when queries complete with success or error', () => {
-    mockUseQueries.mockReturnValue([
-      {
-        data: { flatrate: [] },
-        isSuccess: true,
-        isError: false,
-        isLoading: false,
-      },
-      {
-        data: null,
-        isSuccess: true,
-        isError: false,
-        isLoading: false,
-      },
-      {
-        data: undefined,
-        isSuccess: false,
-        isError: true,
-        isLoading: false,
-      },
-    ]);
-
-    const items = [
-      createListItem({ id: 1, media_type: 'movie' }),
-      createListItem({ id: 2, media_type: 'tv' }),
-      createListItem({ id: 3, media_type: 'movie' }),
+      createListItem({ id: 10, media_type: 'movie', title: 'Duplicate' }),
+      createListItem({ id: 10, media_type: 'tv', name: 'Show 10' }),
     ];
 
     const { result } = renderHook(() => useWatchProviderEnrichment(items, true));
-
-    expect(result.current.providerMap.get('movie-1')).toEqual({ flatrate: [] });
-    expect(result.current.providerMap.get('tv-2')).toBeNull();
-    expect(result.current.providerMap.get('movie-3')).toBeNull();
-    expect(result.current.enrichmentProgress).toBe(1);
-    expect(result.current.isLoadingEnrichment).toBe(false);
-  });
-
-  it('keeps separate map entries when movie and tv share the same numeric id', () => {
-    mockUseQueries.mockReturnValue([
-      {
-        data: { flatrate: [{ provider_id: 8 }] },
-        isSuccess: true,
-        isError: false,
-        isLoading: false,
-      },
-      {
-        data: { flatrate: [{ provider_id: 9 }] },
-        isSuccess: true,
-        isError: false,
-        isLoading: false,
-      },
-    ]);
-
-    const items = [
-      createListItem({ id: 100, media_type: 'movie' }),
-      createListItem({ id: 100, media_type: 'tv', name: 'Show 100' }),
-    ];
-
-    const { result } = renderHook(() => useWatchProviderEnrichment(items, true));
-
-    expect(result.current.providerMap.get('movie-100')).toEqual({ flatrate: [{ provider_id: 8 }] });
-    expect(result.current.providerMap.get('tv-100')).toEqual({ flatrate: [{ provider_id: 9 }] });
-    expect(result.current.providerMap.size).toBe(2);
-    expect(result.current.enrichmentProgress).toBe(1);
-    expect(result.current.isLoadingEnrichment).toBe(false);
-  });
-
-  it('reports loading when any query is still loading', () => {
-    mockUseQueries.mockReturnValue([
-      {
-        data: undefined,
-        isSuccess: false,
-        isError: false,
-        isLoading: true,
-      },
-      {
-        data: undefined,
-        isSuccess: false,
-        isError: false,
-        isLoading: false,
-      },
-    ]);
-
-    const items = [
-      createListItem({ id: 1, media_type: 'movie' }),
-      createListItem({ id: 2, media_type: 'tv' }),
-    ];
-
-    const { result } = renderHook(() => useWatchProviderEnrichment(items, true));
-
     expect(result.current.isLoadingEnrichment).toBe(true);
-    expect(result.current.enrichmentProgress).toBe(0);
+
+    await waitFor(() => expect(result.current.isLoadingEnrichment).toBe(false));
+
+    expect(mockGetMovieWatchProviders).toHaveBeenCalledTimes(1);
+    expect(mockGetMovieWatchProviders).toHaveBeenCalledWith(10, 'US');
+    expect(mockGetTVWatchProviders).toHaveBeenCalledWith(10, 'US');
+    expect(result.current.providerMap.get('movie-10')).toEqual([8, 337]);
+    expect(result.current.providerMap.get('tv-10')).toEqual([]);
+    expect(result.current.enrichmentProgress).toBe(1);
   });
 
-  it('forces loading state off when disabled', () => {
-    let capturedQueries: any[] = [];
-    mockUseQueries.mockImplementation(({ queries }) => {
-      capturedQueries = queries;
-      return queries.map(() => ({
-        data: undefined,
-        isSuccess: false,
-        isError: false,
-        isLoading: true,
-      }));
+  it('saves results to the device cache and skips the network next time', async () => {
+    mockGetMovieWatchProviders.mockResolvedValue({ flatrate: [provider(8)] });
+    const items = [createListItem({ id: 1 })];
+
+    const first = renderHook(() => useWatchProviderEnrichment(items, true));
+    await waitFor(() => expect(first.result.current.isLoadingEnrichment).toBe(false));
+    first.unmount();
+    await flushWatchProviderCache('US');
+
+    // Simulate an app restart: memory is empty, storage is not.
+    resetWatchProviderCacheForTests();
+    mockGetMovieWatchProviders.mockClear();
+
+    const second = renderHook(() => useWatchProviderEnrichment(items, true));
+    await waitFor(() => expect(second.result.current.isLoadingEnrichment).toBe(false));
+
+    expect(second.result.current.providerMap.get('movie-1')).toEqual([8]);
+    expect(mockGetMovieWatchProviders).not.toHaveBeenCalled();
+  });
+
+  it('shows stale cached data without loading and refreshes it in the background', async () => {
+    await loadWatchProviderCache('US');
+    setCachedWatchProviders('US', 'movie-1', [8], Date.now() - WATCH_PROVIDER_CACHE_TTL_MS - 1);
+    mockGetMovieWatchProviders.mockResolvedValue({ flatrate: [provider(9)] });
+
+    const items = [createListItem({ id: 1 })];
+    const { result } = renderHook(() => useWatchProviderEnrichment(items, true));
+
+    await waitFor(() => expect(result.current.providerMap.get('movie-1')).toEqual([8]));
+    expect(result.current.isLoadingEnrichment).toBe(false);
+
+    await waitFor(() => expect(result.current.providerMap.get('movie-1')).toEqual([9]), {
+      timeout: 3000,
     });
+    expect(getCachedWatchProviders('US', 'movie-1')?.providerIds).toEqual([9]);
+  });
 
-    const items = [
-      createListItem({ id: 1, media_type: 'movie' }),
-      createListItem({ id: 2, media_type: 'tv' }),
-    ];
+  it('treats failed lookups as no providers without caching them', async () => {
+    mockGetMovieWatchProviders.mockRejectedValue(new Error('network'));
 
+    const items = [createListItem({ id: 1 })];
+    const { result } = renderHook(() => useWatchProviderEnrichment(items, true));
+
+    await waitFor(() => expect(result.current.isLoadingEnrichment).toBe(false));
+    expect(result.current.providerMap.get('movie-1')).toEqual([]);
+    expect(getCachedWatchProviders('US', 'movie-1')).toBeUndefined();
+  });
+
+  it('retries after a 429 response', async () => {
+    mockGetMovieWatchProviders
+      .mockRejectedValueOnce(Object.assign(new Error('rate limited'), { status: 429 }))
+      .mockResolvedValueOnce({ flatrate: [provider(8)] });
+
+    const items = [createListItem({ id: 1 })];
+    const { result } = renderHook(() => useWatchProviderEnrichment(items, true));
+
+    await waitFor(() => expect(result.current.isLoadingEnrichment).toBe(false), {
+      timeout: 4000,
+    });
+    expect(mockGetMovieWatchProviders).toHaveBeenCalledTimes(2);
+    expect(result.current.providerMap.get('movie-1')).toEqual([8]);
+  });
+
+  it('does nothing while disabled', async () => {
+    const items = [createListItem({ id: 1 })];
     const { result } = renderHook(() => useWatchProviderEnrichment(items, false));
 
-    expect(capturedQueries[0].enabled).toBe(false);
-    expect(capturedQueries[1].enabled).toBe(false);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     expect(result.current.isLoadingEnrichment).toBe(false);
+    expect(result.current.providerMap.size).toBe(0);
+    expect(mockGetMovieWatchProviders).not.toHaveBeenCalled();
+  });
+
+  it('reports loading immediately when switching to a different list', async () => {
+    mockGetMovieWatchProviders.mockResolvedValue({ flatrate: [provider(8)] });
+    const listA = [createListItem({ id: 1 })];
+    const listB = [createListItem({ id: 2 })];
+
+    const { result, rerender } = renderHook(
+      ({ items }: { items: ListMediaItem[] }) => useWatchProviderEnrichment(items, true),
+      { initialProps: { items: listA } }
+    );
+    await waitFor(() => expect(result.current.isLoadingEnrichment).toBe(false));
+
+    let resolveB: (value: unknown) => void = () => {};
+    mockGetMovieWatchProviders.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveB = resolve;
+      })
+    );
+    rerender({ items: listB });
+    expect(result.current.isLoadingEnrichment).toBe(true);
+
+    await act(async () => {
+      resolveB({ flatrate: [provider(337)] });
+    });
+    await waitFor(() => expect(result.current.isLoadingEnrichment).toBe(false));
+    expect(result.current.providerMap.get('movie-2')).toEqual([337]);
   });
 });
