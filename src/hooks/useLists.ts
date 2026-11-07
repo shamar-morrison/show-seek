@@ -14,7 +14,7 @@ import {
   hasListItemInMap,
 } from '@/src/utils/listItemKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { tmdbApi } from '../api/tmdb';
+import { calendarTvQueryOptions } from '@/src/services/calendarEnrichment';
 import { useAuth } from '../context/auth';
 import { usePremium } from '../context/PremiumContext';
 import {
@@ -30,9 +30,6 @@ import {
   areHomeScreenSelectionsEqual,
   normalizeHomeScreenSelections,
 } from '../utils/homeScreenSelections';
-
-// Stale time for TV show details prefetch (same as useUpcomingReleases)
-const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
 
 const getMediaMembershipKey = (mediaItem: Pick<ListMediaItem, 'id' | 'media_type'>) =>
   `${mediaItem.id}-${mediaItem.media_type}`;
@@ -262,11 +259,7 @@ export const useAddToList = () => {
 
       // Only prefetch for TV shows - movies already have release_date in the list item
       if (mediaItem.media_type === 'tv') {
-        queryClient.prefetchQuery({
-          queryKey: ['tv', mediaItem.id, 'calendar-enrichment'],
-          queryFn: () => tmdbApi.getTVShowDetails(mediaItem.id),
-          staleTime: TV_DETAILS_STALE_TIME,
-        });
+        void queryClient.prefetchQuery(calendarTvQueryOptions(mediaItem.id));
       }
 
       if (userId && context?.skippedListOptimisticUpdate) {

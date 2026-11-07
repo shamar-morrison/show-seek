@@ -61,9 +61,6 @@ jest.mock('@/src/api/tmdb', () => ({
   getImageUrl: () => null,
   TMDB_IMAGE_SIZES: { poster: {}, backdrop: {} },
 }));
-jest.mock('@/src/utils/rateLimitedQuery', () => ({
-  createRateLimitedQueryFn: (fn: () => Promise<unknown>) => fn,
-}));
 
 jest.mock('@/src/components/calendar/ReleaseCalendar', () => ({
   ReleaseCalendar: () => {
@@ -105,30 +102,35 @@ jest.mock('expo-router', () => ({
 }));
 
 import CalendarScreen from '@/app/(tabs)/home/calendar';
+import {
+  calendarEnrichmentCache,
+  calendarSeasonQueryKey,
+  calendarTvQueryKey,
+} from '@/src/services/calendarEnrichment';
 
 const SHOW_IDS = [101, 102, 103];
-const SEASON_KEY = (id: number) => ['tv', id, 'season', 1, 'calendar'];
-const DETAILS_KEY = (id: number) => ['tv', id, 'calendar-enrichment'];
+const SEASON_KEY = (id: number) => calendarSeasonQueryKey(id, 1);
+const DETAILS_KEY = (id: number) => calendarTvQueryKey(id);
 
 const buildStaleDetails = (id: number) => ({
-  id,
+  k: 'tv' as const,
   name: `Show ${id}`,
-  poster_path: null,
-  backdrop_path: null,
   status: 'Returning Series',
-  seasons: [{ season_number: 1, episode_count: 8, air_date: '2020-01-01' }],
-  next_episode_to_air: null,
-  genres: [],
+  backdropPath: null,
+  seasonToFetch: 1,
+  nextEpisode: null,
 });
 
 // No future episodes in the stale cache: by itself it yields zero releases.
 const STALE_SEASON = {
-  episodes: [{ season_number: 1, episode_number: 1, name: 'Old', air_date: '2020-01-01' }],
+  k: 'season' as const,
+  episodes: [{ seasonNumber: 1, episodeNumber: 1, name: 'Old', airDate: '2020-01-01' }],
 };
 
 describe('CalendarScreen enrichment background-refetch gate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    calendarEnrichmentCache.resetForTests();
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(['custom-list-1']));
     // Keep the in-flight refetch pending for the whole assertion window.
     mockGetTVShowDetails.mockImplementation(() => new Promise(() => {}));

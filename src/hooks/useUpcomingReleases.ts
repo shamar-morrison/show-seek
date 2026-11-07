@@ -1,15 +1,24 @@
-import { Episode, MovieDetails, tmdbApi, TVShowDetails } from '@/src/api/tmdb';
+import { Reminder } from '@/src/types/reminder';
 import { formatMonthYear } from '@/src/components/CustomDatePicker/utils';
 import { isDefaultList } from '@/src/constants/lists';
 import { useAuth } from '@/src/context/auth';
 import { useRegion } from '@/src/context/RegionProvider';
+import {
+  CALENDAR_MOVIE_LOOKBACK_MS,
+  calendarEnrichmentCache,
+  calendarMovieQueryOptions,
+  calendarSeasonQueryOptions,
+  calendarTvQueryOptions,
+  CalendarEpisode,
+  CalendarMovieSummary,
+  CalendarSeasonSummary,
+  CalendarTvSummary,
+  isCalendarEnrichmentQueryKey,
+} from '@/src/services/calendarEnrichment';
 import { ListMediaItem } from '@/src/services/ListService';
-import { Reminder } from '@/src/types/reminder';
 import { parseTmdbDate } from '@/src/utils/dateUtils';
-import { getRegionalReleaseDate } from '@/src/utils/mediaUtils';
-import { createRateLimitedQueryFn } from '@/src/utils/rateLimitedQuery';
-import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useQueries, useQueryClient, UseQueryResult } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLists } from './useLists';
 import { useReminders } from './useReminders';
 
@@ -56,45 +65,51 @@ export interface UseUpcomingReleasesResult {
   error: Error | null;
 }
 
-// Keep calendar enrichment fresh for 30 minutes and retained for 60 minutes
-const CALENDAR_ENRICHMENT_STALE_TIME = 1000 * 60 * 30;
-const CALENDAR_ENRICHMENT_GC_TIME = 1000 * 60 * 60;
 // Maximum episodes to show per show
 const MAX_EPISODES_PER_SHOW = 5;
 
-// Active statuses that indicate a show might have new episodes
-const ACTIVE_STATUSES = ['Returning Series', 'In Production'];
+// Default lists whose items appear on the calendar (custom lists are always included).
+const TRACKED_DEFAULT_LIST_IDS = new Set(['watchlist', 'favorites', 'currently-watching']);
 
-/**
- * Extract unique TV show IDs from list items that need enrichment
- */
-function extractTVShowIds(items: ListMediaItem[]): number[] {
-  const tvIds = new Set<number>();
-  items.forEach((item) => {
-    if (item.media_type === 'tv') {
-      tvIds.add(item.id);
-    }
-  });
-  return Array.from(tvIds);
+interface TrackedTitle {
+  item: ListMediaItem;
+  sourceLists: string[];
+}
+
+interface CombinedSummaries<K, T> {
+  byKey: Map<K, T>;
+  isLoading: boolean;
+  isFetching: boolean;
+  error: Error | null;
 }
 
 /**
- * Extract unique Movie IDs from list items that need enrichment
+ * Folds useQueries results into one value. Used as a stable `combine`, React Query
+ * caches the output, so `byKey` keeps its identity until a result actually changes.
+ * That keeps everything derived from it (releases, presentations, the list) from
+ * rebuilding on unrelated re-renders such as opening search or a modal.
  */
-function extractMovieIds(items: ListMediaItem[]): number[] {
-  const movieIds = new Set<number>();
-  items.forEach((item) => {
-    if (item.media_type === 'movie') {
-      movieIds.add(item.id);
+function combineSummaries<K, T>(
+  results: UseQueryResult<T>[],
+  keys: readonly K[]
+): CombinedSummaries<K, T> {
+  const byKey = new Map<K, T>();
+  let isLoading = false;
+  let isFetching = false;
+  let error: Error | null = null;
+
+  results.forEach((result, index) => {
+    if (result.data !== undefined && index < keys.length) {
+      byKey.set(keys[index], result.data);
     }
+    isLoading ||= result.isLoading;
+    isFetching ||= result.isFetching;
+    error ??= (result.error as Error | null) ?? null;
   });
-  return Array.from(movieIds);
+
+  return { byKey, isLoading, isFetching, error };
 }
 
-/**
- * Parse a date string safely, returning null if invalid.
- * Uses parseTmdbDate to ensure consistent local date parsing (avoids timezone shifts).
- */
 function parseDate(dateStr: string | undefined | null): Date | null {
   if (!dateStr) return null;
   try {
@@ -104,63 +119,46 @@ function parseDate(dateStr: string | undefined | null): Date | null {
   }
 }
 
-/**
- * Get the start of today (midnight) in local timezone
- */
 function getStartOfToday(): Date {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-/**
- * Determine which season number to fetch for a TV show
- */
-function getSeasonToFetch(details: TVShowDetails): number | null {
-  // Priority 1: Use season from next_episode_to_air
-  if (details.next_episode_to_air?.season_number) {
-    return details.next_episode_to_air.season_number;
-  }
-
-  // Priority 2: For active shows, use the last season
-  if (ACTIVE_STATUSES.includes(details.status) && details.seasons?.length > 0) {
-    // Filter out specials (season 0) and get the highest season number
-    const regularSeasons = details.seasons.filter((s) => s.season_number > 0);
-    if (regularSeasons.length > 0) {
-      return Math.max(...regularSeasons.map((s) => s.season_number));
-    }
-  }
-
-  return null;
-}
-
-/**
- * Interface for season fetch request
- */
-interface SeasonFetchRequest {
-  showId: number;
-  seasonNumber: number;
-  showTitle: string;
-  posterPath: string | null;
-  backdropPath: string | null;
-  sourceLists: string[];
-}
-
-function isCalendarEnrichmentQueryKey(queryKey: readonly unknown[]): boolean {
-  return (
-    (((queryKey[0] === 'tv' || queryKey[0] === 'movie') &&
-      queryKey[2] === 'calendar-enrichment') ||
-      (queryKey[0] === 'tv' && queryKey[2] === 'season' && queryKey[4] === 'calendar'))
-  );
+function toTvRelease(
+  showId: number,
+  title: string,
+  posterPath: string | null,
+  backdropPath: string | null,
+  episode: CalendarEpisode,
+  releaseDate: Date,
+  sourceLists: string[]
+): UpcomingRelease {
+  return {
+    id: showId,
+    mediaType: 'tv',
+    title,
+    posterPath,
+    backdropPath,
+    releaseDate,
+    nextEpisode: {
+      seasonNumber: episode.seasonNumber,
+      episodeNumber: episode.episodeNumber,
+      episodeName: episode.name,
+    },
+    isReminder: false,
+    sourceLists,
+    uniqueKey: `tv-${showId}-s${episode.seasonNumber}-e${episode.episodeNumber}`,
+  };
 }
 
 /**
  * Hook that provides upcoming releases from user's tracked content
- * (Watchlist, Favorites, Watching, and Reminders) for the Release Calendar.
+ * (Watchlist, Favorites, Watching, custom lists, and Reminders) for the Release Calendar.
  *
- * For TV shows, fetches full season details to show all upcoming episodes
- * (up to 5 per show) instead of just the next episode.
- * 
- * For Movies, fetches full movie details to get region-specific release dates.
+ * TV shows load a summary (status, next episode, which season to read) and then that
+ * season's episodes (up to 5 upcoming per show). Movies load their region-specific
+ * release date. Summaries are cached on device, so launches render immediately and
+ * only stale titles refresh in the background.
  */
 export function useUpcomingReleases(): UseUpcomingReleasesResult {
   const { user } = useAuth();
@@ -170,348 +168,276 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
   const { data: lists, isLoading: isLoadingLists } = useLists();
   const { data: reminders, isLoading: isLoadingReminders } = useReminders();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCacheReady, setIsCacheReady] = useState(() => calendarEnrichmentCache.isLoaded());
 
   const isAuthenticated = !!userId;
 
-  // Extract items from the default tracked lists plus the user's custom lists
-  const listItems = useMemo(() => {
-    if (!lists || !isAuthenticated) return [];
-    const items: (ListMediaItem & { sourceList: string })[] = [];
+  useEffect(() => {
+    if (isCacheReady) {
+      return;
+    }
+    let isActive = true;
+    void calendarEnrichmentCache.load().then(() => {
+      if (isActive) {
+        setIsCacheReady(true);
+      }
+    });
+    return () => {
+      isActive = false;
+    };
+  }, [isCacheReady]);
 
-    // Include watchlist, favorites, and currently-watching (for ongoing series)
-    const trackedListIds = ['watchlist', 'favorites', 'currently-watching'];
+  // Write pending cache updates when leaving the calendar.
+  useEffect(() => () => void calendarEnrichmentCache.flush(), []);
+
+  // One entry per title, with every tracked list it appears in.
+  const { trackedMovies, trackedShows } = useMemo(() => {
+    const movies = new Map<number, TrackedTitle>();
+    const shows = new Map<number, TrackedTitle>();
+    if (!lists || !isAuthenticated) {
+      return { trackedMovies: movies, trackedShows: shows };
+    }
 
     lists.forEach((list) => {
-      const isTrackedDefault = trackedListIds.includes(list.id);
-      const isCustomList = !isDefaultList(list.id);
-      if (isTrackedDefault || isCustomList) {
-        Object.values(list.items || {}).forEach((item) => {
-          items.push({ ...item, sourceList: list.id });
-        });
+      if (!TRACKED_DEFAULT_LIST_IDS.has(list.id) && isDefaultList(list.id)) {
+        return;
       }
+      Object.values(list.items || {}).forEach((item) => {
+        const titles = item.media_type === 'movie' ? movies : shows;
+        const existing = titles.get(item.id);
+        if (!existing) {
+          titles.set(item.id, { item, sourceLists: [list.id] });
+        } else if (!existing.sourceLists.includes(list.id)) {
+          existing.sourceLists.push(list.id);
+        }
+      });
     });
 
-    return items;
+    return { trackedMovies: movies, trackedShows: shows };
   }, [lists, isAuthenticated]);
 
-  // Get IDs that need enrichment
-  const tvShowIds = useMemo(() => extractTVShowIds(listItems), [listItems]);
-  const movieIds = useMemo(() => extractMovieIds(listItems), [listItems]);
+  const showIds = useMemo(() => Array.from(trackedShows.keys()), [trackedShows]);
 
-  // LEVEL 1a: Fetch TV show details in parallel
-  const tvDetailsQueries = useQueries({
-    queries: tvShowIds.map((id) => ({
-      queryKey: ['tv', id, 'calendar-enrichment'],
-      queryFn: createRateLimitedQueryFn(() => tmdbApi.getTVShowDetails(id)),
-      staleTime: CALENDAR_ENRICHMENT_STALE_TIME,
-      gcTime: CALENDAR_ENRICHMENT_GC_TIME,
-      enabled: isAuthenticated && tvShowIds.length > 0,
-    })),
-  });
-
-  // LEVEL 1b: Fetch Movie details in parallel (for region-specific dates)
-  const movieDetailsQueries = useQueries({
-    queries: movieIds.map((id) => ({
-      queryKey: ['movie', id, 'calendar-enrichment'],
-      queryFn: createRateLimitedQueryFn(() => tmdbApi.getMovieDetails(id)),
-      staleTime: CALENDAR_ENRICHMENT_STALE_TIME,
-      gcTime: CALENDAR_ENRICHMENT_GC_TIME,
-      enabled: isAuthenticated && movieIds.length > 0,
-    })),
-  });
-
-  // Create lookup maps
-  const tvDetailsMap = useMemo(() => {
-    const map = new Map<number, TVShowDetails>();
-    tvDetailsQueries.forEach((query, index) => {
-      if (query.data) {
-        map.set(tvShowIds[index], query.data);
+  // Movies released over a year ago can't be upcoming in any region; skip them.
+  const movieIds = useMemo(() => {
+    const cutoff = getStartOfToday().getTime() - CALENDAR_MOVIE_LOOKBACK_MS;
+    const ids: number[] = [];
+    trackedMovies.forEach(({ item }, id) => {
+      const listedDate = parseDate(item.release_date);
+      if (!listedDate || listedDate.getTime() >= cutoff) {
+        ids.push(id);
       }
     });
-    return map;
-  }, [tvDetailsQueries, tvShowIds]);
+    return ids;
+  }, [trackedMovies]);
 
-  const movieDetailsMap = useMemo(() => {
-    const map = new Map<number, MovieDetails>();
-    movieDetailsQueries.forEach((query, index) => {
-      if (query.data) {
-        map.set(movieIds[index], query.data);
+  // Queries are only built once the device cache is loaded, so they pick it up
+  // as initial data. Memoized so re-renders don't rebuild one config per title.
+  const queriesEnabled = isAuthenticated && isCacheReady;
+
+  const tvQueries = useMemo(
+    () => (queriesEnabled ? showIds.map((id) => calendarTvQueryOptions(id)) : []),
+    [queriesEnabled, showIds]
+  );
+  const combineTv = useCallback(
+    (results: UseQueryResult<CalendarTvSummary>[]) => combineSummaries(results, showIds),
+    [showIds]
+  );
+  const tv = useQueries({ queries: tvQueries, combine: combineTv });
+
+  const movieQueries = useMemo(
+    () => (queriesEnabled ? movieIds.map((id) => calendarMovieQueryOptions(id, region)) : []),
+    [movieIds, queriesEnabled, region]
+  );
+  const combineMovies = useCallback(
+    (results: UseQueryResult<CalendarMovieSummary>[]) => combineSummaries(results, movieIds),
+    [movieIds]
+  );
+  const movies = useQueries({ queries: movieQueries, combine: combineMovies });
+
+  // Seasons to load: one per show that can still have upcoming episodes.
+  const seasonRequests = useMemo(() => {
+    const requests: { showId: number; seasonNumber: number }[] = [];
+    tv.byKey.forEach((summary, showId) => {
+      if (summary.seasonToFetch !== null) {
+        requests.push({ showId, seasonNumber: summary.seasonToFetch });
       }
     });
-    return map;
-  }, [movieDetailsQueries, movieIds]);
-
-  // Determine which seasons need to be fetched
-  const seasonFetchRequests = useMemo(() => {
-    const requests: SeasonFetchRequest[] = [];
-    const seenShowIds = new Set<number>();
-
-    listItems.forEach((item) => {
-      if (item.media_type !== 'tv' || seenShowIds.has(item.id)) return;
-
-      const details = tvDetailsMap.get(item.id);
-      if (!details) return;
-
-      const seasonNumber = getSeasonToFetch(details);
-      if (seasonNumber === null) return;
-
-      // Collect source lists for this show
-      const sourceLists = listItems
-        .filter((i) => i.id === item.id && i.media_type === 'tv')
-        .map((i) => i.sourceList);
-
-      requests.push({
-        showId: item.id,
-        seasonNumber,
-        showTitle: details.name,
-        posterPath: item.poster_path,
-        backdropPath: details.backdrop_path,
-        sourceLists: [...new Set(sourceLists)],
-      });
-
-      seenShowIds.add(item.id);
-    });
-
     return requests;
-  }, [listItems, tvDetailsMap]);
+  }, [tv.byKey]);
 
-  // LEVEL 2: Fetch season details for shows that need episode data
-  const seasonQueries = useQueries({
-    queries: seasonFetchRequests.map(({ showId, seasonNumber }) => ({
-      queryKey: ['tv', showId, 'season', seasonNumber, 'calendar'],
-      queryFn: createRateLimitedQueryFn(() => tmdbApi.getSeasonDetails(showId, seasonNumber)),
-      staleTime: CALENDAR_ENRICHMENT_STALE_TIME,
-      gcTime: CALENDAR_ENRICHMENT_GC_TIME,
-      enabled: isAuthenticated && seasonFetchRequests.length > 0,
-    })),
-  });
+  const seasonShowIds = useMemo(
+    () => seasonRequests.map((request) => request.showId),
+    [seasonRequests]
+  );
+  const seasonQueries = useMemo(
+    () =>
+      queriesEnabled
+        ? seasonRequests.map(({ showId, seasonNumber }) =>
+            calendarSeasonQueryOptions(showId, seasonNumber)
+          )
+        : [],
+    [queriesEnabled, seasonRequests]
+  );
+  const combineSeasons = useCallback(
+    (results: UseQueryResult<CalendarSeasonSummary>[]) => combineSummaries(results, seasonShowIds),
+    [seasonShowIds]
+  );
+  const seasons = useQueries({ queries: seasonQueries, combine: combineSeasons });
 
-  // Create a map of showId -> season data with episodes
-  const seasonDataMap = useMemo(() => {
-    const map = new Map<number, { episodes: Episode[]; request: SeasonFetchRequest }>();
-    seasonQueries.forEach((query, index) => {
-      if (query.data) {
-        const request = seasonFetchRequests[index];
-        map.set(request.showId, {
-          episodes: query.data.episodes || [],
-          request,
-        });
-      }
-    });
-    return map;
-  }, [seasonQueries, seasonFetchRequests]);
-
-  const isLoadingDetails =
-    tvDetailsQueries.some((q) => q.isLoading) || movieDetailsQueries.some((q) => q.isLoading);
-  const isLoadingSeasons = seasonQueries.some((q) => q.isLoading);
-  const isLoadingEnrichment = isLoadingDetails || isLoadingSeasons;
+  const isLoadingEnrichment = tv.isLoading || movies.isLoading || seasons.isLoading;
   // Unlike isLoadingEnrichment (query.isLoading === isPending && isFetching),
   // this stays true while an already-cached, stale query revalidates in the
   // background (status 'success', isFetching true, isLoading false). Consumers
   // use it to avoid treating "still revalidating" as "settled and empty".
   const isEnrichmentFetching =
-    isLoadingDetails ||
-    isLoadingSeasons ||
-    tvDetailsQueries.some((q) => q.isFetching) ||
-    movieDetailsQueries.some((q) => q.isFetching) ||
-    seasonQueries.some((q) => q.isFetching);
+    isLoadingEnrichment || tv.isFetching || movies.isFetching || seasons.isFetching;
 
-  // Build the unified releases list
   const allReleases = useMemo(() => {
     if (!isAuthenticated) return [];
 
     const today = getStartOfToday();
-    const releases: UpcomingRelease[] = [];
-    const seenKeys = new Set<string>(); // To dedupe by unique key
+    const releasesByKey = new Map<string, UpcomingRelease>();
 
-    // Process movies from list items
-    listItems.forEach((item) => {
-      if (item.media_type !== 'movie') return;
-
-      // Try to get region-specific date from enrichment details first
-      const movieDetails = movieDetailsMap.get(item.id);
-      const regionalDateStr = movieDetails ? getRegionalReleaseDate(movieDetails, region) : null;
-      
-      // Fallback to item date if regional unavailable
-      const releaseDate = parseDate(regionalDateStr || item.release_date);
-
+    trackedMovies.forEach(({ item, sourceLists }, id) => {
+      const summary = movies.byKey.get(id);
+      // Fall back to the list item's date when there is no regional date.
+      const releaseDate = parseDate(summary?.releaseDate || item.release_date);
       if (!releaseDate || releaseDate < today) return;
 
-      const uniqueKey = `movie-${item.id}`;
-      const existingIndex = releases.findIndex((r) => r.uniqueKey === uniqueKey);
+      const uniqueKey = `movie-${id}`;
+      releasesByKey.set(uniqueKey, {
+        id,
+        mediaType: 'movie',
+        title: item.title,
+        posterPath: item.poster_path,
+        backdropPath: summary?.backdropPath ?? null,
+        releaseDate,
+        isReminder: false,
+        sourceLists: [...sourceLists],
+        uniqueKey,
+      });
+    });
 
-      if (existingIndex >= 0) {
-        // Add to source lists if not already present
-        if (!releases[existingIndex].sourceLists.includes(item.sourceList)) {
-          releases[existingIndex].sourceLists.push(item.sourceList);
+    trackedShows.forEach(({ item, sourceLists }, showId) => {
+      const summary = tv.byKey.get(showId);
+      if (!summary) return;
+
+      const title = summary.name;
+      const backdropPath = summary.backdropPath;
+      const season = seasons.byKey.get(showId);
+
+      if (season) {
+        let added = 0;
+        for (const episode of season.episodes) {
+          if (added >= MAX_EPISODES_PER_SHOW) break;
+          const airDate = parseDate(episode.airDate);
+          if (!airDate || airDate < today) continue;
+
+          const release = toTvRelease(
+            showId,
+            title,
+            item.poster_path,
+            backdropPath,
+            episode,
+            airDate,
+            [...sourceLists]
+          );
+          if (!releasesByKey.has(release.uniqueKey)) {
+            releasesByKey.set(release.uniqueKey, release);
+            added += 1;
+          }
         }
-      } else {
-        releases.push({
-          id: item.id,
-          mediaType: 'movie',
-          title: item.title,
-          posterPath: item.poster_path,
-          backdropPath: movieDetails?.backdrop_path || null,
-          releaseDate,
-          isReminder: false,
-          sourceLists: [item.sourceList],
-          uniqueKey,
-        });
-        seenKeys.add(uniqueKey);
+        return;
+      }
+
+      // No season data yet: fall back to the show's next episode.
+      const nextEpisode = summary.nextEpisode;
+      const airDate = parseDate(nextEpisode?.airDate);
+      if (!nextEpisode || !airDate || airDate < today) return;
+
+      const release = toTvRelease(
+        showId,
+        item.name || item.title || title,
+        item.poster_path,
+        backdropPath,
+        nextEpisode,
+        airDate,
+        [...sourceLists]
+      );
+      if (!releasesByKey.has(release.uniqueKey)) {
+        releasesByKey.set(release.uniqueKey, release);
       }
     });
 
-    // Process TV shows with full season episode data
-    seasonDataMap.forEach(({ episodes, request }) => {
-      // Filter future episodes and limit to MAX_EPISODES_PER_SHOW
-      const futureEpisodes = episodes
-        .filter((ep) => {
-          const airDate = parseDate(ep.air_date);
-          return airDate && airDate >= today;
-        })
-        .slice(0, MAX_EPISODES_PER_SHOW);
-
-      futureEpisodes.forEach((ep) => {
-        const uniqueKey = `tv-${request.showId}-s${ep.season_number}-e${ep.episode_number}`;
-
-        if (seenKeys.has(uniqueKey)) return;
-
-        const releaseDate = parseDate(ep.air_date)!;
-
-        releases.push({
-          id: request.showId,
-          mediaType: 'tv',
-          title: request.showTitle,
-          posterPath: request.posterPath,
-          backdropPath: request.backdropPath,
-          releaseDate,
-          nextEpisode: {
-            seasonNumber: ep.season_number,
-            episodeNumber: ep.episode_number,
-            episodeName: ep.name,
-          },
-          isReminder: false,
-          sourceLists: request.sourceLists,
-          uniqueKey,
-        });
-        seenKeys.add(uniqueKey);
-      });
-    });
-
-    // Fallback: Process TV shows that don't have season data yet (use next_episode_to_air)
-    listItems.forEach((item) => {
-      if (item.media_type !== 'tv') return;
-
-      // Skip if we already have season data for this show
-      if (seasonDataMap.has(item.id)) return;
-
-      const details = tvDetailsMap.get(item.id);
-      const nextEp = details?.next_episode_to_air;
-      if (!nextEp) return;
-
-      const releaseDate = parseDate(nextEp.air_date);
-      if (!releaseDate || releaseDate < today) return;
-
-      const uniqueKey = `tv-${item.id}-s${nextEp.season_number}-e${nextEp.episode_number}`;
-      if (seenKeys.has(uniqueKey)) return;
-
-      releases.push({
-        id: item.id,
-        mediaType: 'tv',
-        title: item.name || item.title,
-        posterPath: item.poster_path,
-        backdropPath: details?.backdrop_path || null,
-        releaseDate,
-        nextEpisode: {
-          seasonNumber: nextEp.season_number,
-          episodeNumber: nextEp.episode_number,
-          episodeName: nextEp.name,
-        },
-        isReminder: false,
-        sourceLists: [item.sourceList],
-        uniqueKey,
-      });
-      seenKeys.add(uniqueKey);
-    });
-
-    // Process reminders
     reminders?.forEach((reminder: Reminder) => {
       const releaseDate = parseDate(reminder.releaseDate);
       if (!releaseDate || releaseDate < today || reminder.status !== 'active') return;
 
-      // Generate unique key based on media type and episode info
-      let uniqueKey: string;
-      if (reminder.mediaType === 'tv' && reminder.nextEpisode) {
-        uniqueKey = `tv-${reminder.mediaId}-s${reminder.nextEpisode.seasonNumber}-e${reminder.nextEpisode.episodeNumber}`;
-      } else {
-        uniqueKey = `${reminder.mediaType}-${reminder.mediaId}`;
+      const uniqueKey =
+        reminder.mediaType === 'tv' && reminder.nextEpisode
+          ? `tv-${reminder.mediaId}-s${reminder.nextEpisode.seasonNumber}-e${reminder.nextEpisode.episodeNumber}`
+          : `${reminder.mediaType}-${reminder.mediaId}`;
+
+      const existing = releasesByKey.get(uniqueKey);
+      if (existing) {
+        existing.isReminder = true;
+        return;
       }
 
-      const existingIndex = releases.findIndex((r) => r.uniqueKey === uniqueKey);
-
-      if (existingIndex >= 0) {
-        // Mark existing release as also being a reminder
-        releases[existingIndex].isReminder = true;
-      } else {
-        releases.push({
-          id: reminder.mediaId,
-          mediaType: reminder.mediaType as 'movie' | 'tv',
-          title: reminder.title,
-          posterPath: reminder.posterPath,
-          backdropPath: null,
-          releaseDate,
-          nextEpisode: reminder.nextEpisode
-            ? {
-                seasonNumber: reminder.nextEpisode.seasonNumber,
-                episodeNumber: reminder.nextEpisode.episodeNumber,
-                episodeName: reminder.nextEpisode.episodeName,
-              }
-            : undefined,
-          isReminder: true,
-          sourceLists: [],
-          uniqueKey,
-        });
-      }
+      releasesByKey.set(uniqueKey, {
+        id: reminder.mediaId,
+        mediaType: reminder.mediaType as 'movie' | 'tv',
+        title: reminder.title,
+        posterPath: reminder.posterPath,
+        backdropPath: null,
+        releaseDate,
+        nextEpisode: reminder.nextEpisode
+          ? {
+              seasonNumber: reminder.nextEpisode.seasonNumber,
+              episodeNumber: reminder.nextEpisode.episodeNumber,
+              episodeName: reminder.nextEpisode.episodeName,
+            }
+          : undefined,
+        isReminder: true,
+        sourceLists: [],
+        uniqueKey,
+      });
     });
 
-    // Sort by release date ascending
-    releases.sort((a, b) => a.releaseDate.getTime() - b.releaseDate.getTime());
-
-    return releases;
-  }, [listItems, seasonDataMap, tvDetailsMap, movieDetailsMap, reminders, isAuthenticated, region]);
+    return Array.from(releasesByKey.values()).sort(
+      (a, b) => a.releaseDate.getTime() - b.releaseDate.getTime()
+    );
+  }, [
+    isAuthenticated,
+    movies.byKey,
+    reminders,
+    seasons.byKey,
+    trackedMovies,
+    trackedShows,
+    tv.byKey,
+  ]);
 
   // Group releases by month
   const sections = useMemo(() => {
     const sectionMap = new Map<string, UpcomingRelease[]>();
-    const comingSoon: UpcomingRelease[] = [];
 
     allReleases.forEach((release) => {
       const monthKey = formatMonthYear(release.releaseDate);
-      if (!sectionMap.has(monthKey)) {
-        sectionMap.set(monthKey, []);
+      const section = sectionMap.get(monthKey);
+      if (section) {
+        section.push(release);
+      } else {
+        sectionMap.set(monthKey, [release]);
       }
-      sectionMap.get(monthKey)!.push(release);
     });
 
-    // Convert map to array of sections
-    const result: ReleaseSection[] = [];
-    sectionMap.forEach((data, title) => {
-      result.push({ title, data });
-    });
-
-    // Add "Coming Soon" section at the end if there are TBA items
-    if (comingSoon.length > 0) {
-      result.push({ title: 'Coming Soon', data: comingSoon });
-    }
-
-    return result;
+    return Array.from(sectionMap, ([title, data]) => ({ title, data }));
   }, [allReleases]);
 
-  const isLoading = isLoadingLists || isLoadingReminders;
-  const detailsError = tvDetailsQueries.find((q) => q.error)?.error as Error | null;
-  const movieDetailsError = movieDetailsQueries.find((q) => q.error)?.error as Error | null;
-  const seasonError = seasonQueries.find((q) => q.error)?.error as Error | null;
-  const error = detailsError || movieDetailsError || seasonError;
+  const isLoading =
+    isLoadingLists || isLoadingReminders || (isAuthenticated && !isCacheReady);
+  const error = tv.error || movies.error || seasons.error;
 
   const refresh = useCallback(async () => {
     if (!userId || isRefreshing) {

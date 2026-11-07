@@ -9,20 +9,12 @@ import {
   loadWatchProviderCache,
   setCachedWatchProviders,
 } from '@/src/services/watchProviderCache';
-import { createRequestPool, RequestAbortedError } from '@/src/utils/requestPool';
+import { RequestAbortedError } from '@/src/utils/requestPool';
+import { enqueueTmdbBulkRequest } from '@/src/utils/tmdbBulkRequests';
 import { useEffect, useMemo, useState } from 'react';
-
-/**
- * TMDB caps clients at roughly 40 requests/second per IP. This pool is separate
- * from the shared `rateLimitedQuery` queue so this screen never waits behind
- * calendar enrichment. If both run at once and TMDB answers 429, the pool backs off.
- */
-const enrichmentPool = createRequestPool({ maxConcurrent: 12, maxPerSecond: 30 });
 
 /** Push accumulated results to React at most this often while fetching. */
 const UI_FLUSH_INTERVAL_MS = 1000;
-const RATE_LIMIT_BACKOFF_MS = 2000;
-const MAX_RATE_LIMIT_RETRIES = 3;
 
 interface WatchProviderEnrichmentTarget {
   key: string;
@@ -77,31 +69,19 @@ function extractFlatrateProviderIds(result: WatchProviderResults | null): number
   return Array.from(ids);
 }
 
-const isRateLimitError = (error: unknown) => (error as { status?: unknown })?.status === 429;
-
 async function fetchFlatrateProviderIds(
   target: WatchProviderEnrichmentTarget,
   region: string,
   signal: AbortSignal
 ): Promise<number[]> {
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      const result = await enrichmentPool.enqueue(
-        () =>
-          target.mediaType === 'movie'
-            ? tmdbApi.getMovieWatchProviders(target.id, region)
-            : tmdbApi.getTVWatchProviders(target.id, region),
-        signal
-      );
-      return extractFlatrateProviderIds(result);
-    } catch (error) {
-      if (isRateLimitError(error) && attempt < MAX_RATE_LIMIT_RETRIES) {
-        enrichmentPool.pause(RATE_LIMIT_BACKOFF_MS * (attempt + 1));
-        continue;
-      }
-      throw error;
-    }
-  }
+  const result = await enqueueTmdbBulkRequest(
+    () =>
+      target.mediaType === 'movie'
+        ? tmdbApi.getMovieWatchProviders(target.id, region)
+        : tmdbApi.getTVWatchProviders(target.id, region),
+    signal
+  );
+  return extractFlatrateProviderIds(result);
 }
 
 /**

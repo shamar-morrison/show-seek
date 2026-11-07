@@ -2,9 +2,9 @@
  * A request pool that keeps a steady flow of requests going, capped by both
  * concurrency and a sliding one-second rate window.
  *
- * Unlike the batch-then-sleep queue in `rateLimitedQuery`, a slot frees up the
- * moment any request finishes, so throughput stays close to `maxPerSecond`
- * instead of being bounded by the slowest request in each batch.
+ * Unlike a batch-then-sleep queue, a slot frees up the moment any request
+ * finishes, so throughput stays close to `maxPerSecond` instead of being
+ * bounded by the slowest request in each batch.
  */
 
 export class RequestAbortedError extends Error {

@@ -79,7 +79,9 @@ const INITIAL_TAB_STATE: Record<CalendarMediaFilter, MediaTabState> = {
   },
 };
 
-export function ReleaseCalendar({
+// Memoized: the calendar screen re-renders for header/search/modal state that
+// doesn't affect the list, and the props below are referentially stable.
+export const ReleaseCalendar = React.memo(function ReleaseCalendar({
   presentations,
   activeMediaFilter = 'all',
   isLoading,
@@ -357,7 +359,7 @@ export function ReleaseCalendar({
       />
     </View>
   );
-}
+});
 
 const MAINTAIN_VISIBLE_CONTENT_POSITION = { disabled: true } as const;
 
