@@ -46,8 +46,11 @@ export function ShareCardIdentityRow({
 }: ShareCardIdentityRowProps) {
   const sizes = FOOTER_SIZES[format];
   const avatarSize = Math.round(sizes.avatar * scale);
-  const [photoFailed, setPhotoFailed] = useState(false);
   const { photoUrl, displayName } = identity;
+  // Tied to what failed, so a new size or photo tries again, as the remounted capture card does.
+  const photoKey = `${format}|${photoUrl}`;
+  const [failedPhotoKey, setFailedPhotoKey] = useState<string | null>(null);
+  const photoFailed = failedPhotoKey === photoKey;
 
   return (
     <View
@@ -59,7 +62,7 @@ export function ShareCardIdentityRow({
           source={{ uri: photoUrl }}
           style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
           contentFit="cover"
-          onError={() => setPhotoFailed(true)}
+          onError={() => setFailedPhotoKey(photoKey)}
           onLoadEnd={() => onImageSettled?.(photoUrl)}
         />
       ) : (
