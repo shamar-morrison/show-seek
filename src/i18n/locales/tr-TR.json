@@ -2058,5 +2058,11 @@
       "name": "Masalsı",
       "description": "Sihirli maceralar"
     }
+  },
+  "updateRequired": {
+    "title": "Güncelleme gerekli",
+    "body": "ShowSeek'in bu sürümü artık desteklenmiyor. Listelerinizi, izleme geçmişinizi ve puanlarınızı senkronize tutmak için güncelleyin.",
+    "updateButton": "ShowSeek'i güncelle",
+    "storeUnavailable": "Mağaza açılamadı. Lütfen ShowSeek'i uygulama mağazanızdan güncelleyin."
   }
 }

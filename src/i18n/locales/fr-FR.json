@@ -2058,5 +2058,11 @@
     "unavailableTitle": "Série non disponible",
     "unavailableRemovePrompt": "Cette série est introuvable sur TMDB. Voulez-vous retirer \"{{name}}\" de votre suivi ?",
     "unavailableCannotRestore": "Les séries non disponibles ne peuvent pas être restaurées"
+  },
+  "updateRequired": {
+    "title": "Mise à jour requise",
+    "body": "Cette version de ShowSeek n'est plus prise en charge. Mettez à jour pour garder vos listes, votre historique et vos notes synchronisés.",
+    "updateButton": "Mettre à jour ShowSeek",
+    "storeUnavailable": "Impossible d'ouvrir le store. Mettez ShowSeek à jour depuis votre magasin d'applications."
   }
 }

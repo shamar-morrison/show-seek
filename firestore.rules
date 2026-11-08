@@ -21,6 +21,13 @@ service cloud.firestore {
       return isNonAnonymousOwner(userId);
     }
 
+    // App-wide configuration read before sign-in (e.g. config/app.minimumCompatibilityVersion,
+    // see src/constants/appCompatibility.ts). Edited in the Firebase console only.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Installation bearer tokens are hash-indexed and managed only by Admin SDK functions.
     match /stremioAddonTokens/{tokenHash} {
       allow read, write: if false;
