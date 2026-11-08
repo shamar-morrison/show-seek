@@ -103,13 +103,13 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
     return (
       <TrueSheet
         ref={sheetRef}
-        detents={[0.8]}
+        detents={['auto']}
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
         onDidDismiss={handleDismiss}
         grabber={false}
       >
-        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+        <GestureHandlerRootView style={[modalSheetStyles.content, styles.content, { width }]}>
           <View style={modalHeaderStyles.header}>
             <Text style={modalHeaderStyles.title}>{t('library.editList')}</Text>
             <Pressable onPress={() => sheetRef.current?.dismiss()}>
@@ -181,6 +181,9 @@ RenameListModal.displayName = 'RenameListModal';
 export default RenameListModal;
 
 const styles = StyleSheet.create({
+  content: {
+    paddingBottom: SPACING.l,
+  },
   formContainer: {
     gap: SPACING.m,
   },
