@@ -211,4 +211,24 @@ describe('paged list writes (server)', () => {
     expect(reread.items['movie-1']).toMatchObject({ poster_path: '/p.jpg' });
     expect(reread.layout.overflowItemPages['movie-1']).toBe(1);
   });
+
+  it('moves a legacy key to a page under its canonical key and removes the legacy copy', async () => {
+    const store: Store = new Map([
+      [LIST, { items: { ...items(1, LIST_PAGE_CAPACITY + 10), '777777': { id: 777777, media_type: 'movie' } } }],
+    ]);
+    const { db, ref } = createDb(store);
+    const list = await readPagedList(ref(LIST));
+
+    await relocateListItemsToPages(
+      db,
+      list,
+      { 'movie-777777': { id: 777777, media_type: 'movie', poster_path: '/p.jpg' } },
+      ['777777']
+    );
+
+    const reread = await readPagedList(ref(LIST));
+    expect(reread.items['777777']).toBeUndefined();
+    expect(reread.items['movie-777777']).toMatchObject({ poster_path: '/p.jpg' });
+    expect(reread.layout.overflowItemPages['movie-777777']).toBe(1);
+  });
 });

@@ -241,10 +241,11 @@ export async function relocateToOverflowPages(
   db: FirebaseFirestore.Firestore,
   doc: PagedDoc,
   entries: Entries,
+  /** Keys to remove from the document once the pages are written (defaults to the moved keys). */
+  removeFromDocKeys: string[] = Object.keys(entries),
   now: number = Date.now()
 ): Promise<void> {
-  const keys = Object.keys(entries);
-  if (keys.length === 0) {
+  if (Object.keys(entries).length === 0 && removeFromDocKeys.length === 0) {
     return;
   }
 
@@ -258,12 +259,20 @@ export async function relocateToOverflowPages(
     { set: entries },
     FieldValue.delete()
   ) as PagedDocWritePlan;
-  await commitPagedDocWrites(config, db, doc, plan, {}, now);
+  if (Object.keys(entries).length > 0) {
+    await commitPagedDocWrites(config, db, doc, plan, {}, now);
+  }
 
-  await doc.ref.set(
-    { [config.field]: Object.fromEntries(keys.map((key) => [key, FieldValue.delete()])) },
-    { merge: true }
-  );
+  if (removeFromDocKeys.length > 0) {
+    await doc.ref.set(
+      {
+        [config.field]: Object.fromEntries(
+          removeFromDocKeys.map((key) => [key, FieldValue.delete()])
+        ),
+      },
+      { merge: true }
+    );
+  }
 }
 
 /** A document that doesn't exist yet, for writers that create it. */

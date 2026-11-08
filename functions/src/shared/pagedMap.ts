@@ -258,6 +258,17 @@ export function planPagedMapWrites<T, D>(
   };
 }
 
+/**
+ * Rough size of map entries in bytes (their JSON length). Slightly above Firestore's own storage
+ * size for the same data, so it errs on the safe side when guarding the 1 MiB limit.
+ */
+export function estimateEntriesSize(entries: Record<string, unknown>): number {
+  return Object.entries(entries).reduce(
+    (total, [key, value]) => total + key.length + JSON.stringify(value ?? null).length,
+    0
+  );
+}
+
 /** Every page number a document has, including the document itself (0). */
 export function getAllPages(layout: Pick<PageLayout, 'pageCount'>): number[] {
   return Array.from({ length: layout.pageCount + 1 }, (_, page) => page);

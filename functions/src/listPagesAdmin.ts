@@ -58,5 +58,6 @@ export const commitPagedListWrites = (
 export const relocateListItemsToPages = (
   db: FirebaseFirestore.Firestore,
   list: PagedList,
-  items: Record<string, Record<string, unknown>>
-): Promise<void> => relocateToOverflowPages(LIST_PAGES, db, list, items);
+  items: Record<string, Record<string, unknown>>,
+  removeFromListDocKeys?: string[]
+): Promise<void> => relocateToOverflowPages(LIST_PAGES, db, list, items, removeFromListDocKeys);

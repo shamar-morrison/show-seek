@@ -8,8 +8,11 @@ import {
   planPagedListWrites,
   readPagedList,
   relocateListItemsToPages,
+  type PagedList,
 } from '../listPagesAdmin';
+import { buildListItemKey } from '../shared/listItemKeys';
 import { LIST_PAGE_CAPACITY } from '../shared/listPages';
+import { estimateEntriesSize } from '../shared/pagedMap';
 import {
   ACTIVE_RUN_STATUSES,
   DEFAULT_ENRICHMENT_LIST_IDS,
@@ -250,6 +253,68 @@ export const enrichMediaItems = async (
   return enrichedItems;
 };
 
+/** Above this estimated size, the list document is treated as full (Firestore caps it at 1 MiB). */
+const LIST_DOCUMENT_SAFE_BYTES = 800_000;
+
+const CANONICAL_LIST_KEY = /^(movie|tv)-\d+$/;
+const LEGACY_LIST_KEY = /^\d+$/;
+
+/**
+ * Decides where enriched list items are written. Normally they're updated where they are. When
+ * the list document is full — more items than a page holds, or close to 1 MiB once enriched —
+ * the enriched items on it move to overflow pages instead, so enrichment can't push it past the
+ * limit. Legacy numeric keys move under their canonical key; one already stored under the
+ * canonical key is kept, and the legacy duplicate is just removed.
+ */
+export function planEnrichmentRelocation(
+  list: Pick<PagedList, 'items' | 'layout'>,
+  enrichedItems: Record<string, Record<string, unknown>>
+): {
+  itemsInPlace: Record<string, Record<string, unknown>>;
+  itemsToMove: Record<string, Record<string, unknown>>;
+  removeFromListDocKeys: string[];
+} {
+  const isOnListDocument = (key: string) => list.layout.overflowItemPages[key] === undefined;
+  const listDocumentAfterEnrichment = Object.fromEntries(
+    Object.entries({ ...list.items, ...enrichedItems }).filter(([key]) => isOnListDocument(key))
+  );
+  const isListDocumentFull =
+    (list.layout.pageSizes[0] ?? 0) > LIST_PAGE_CAPACITY ||
+    estimateEntriesSize(listDocumentAfterEnrichment) > LIST_DOCUMENT_SAFE_BYTES;
+
+  const itemsInPlace: Record<string, Record<string, unknown>> = {};
+  const itemsToMove: Record<string, Record<string, unknown>> = {};
+  const removeFromListDocKeys: string[] = [];
+
+  Object.entries(enrichedItems).forEach(([key, item]) => {
+    if (!isListDocumentFull || !isOnListDocument(key)) {
+      itemsInPlace[key] = item;
+      return;
+    }
+    if (CANONICAL_LIST_KEY.test(key)) {
+      itemsToMove[key] = item;
+      removeFromListDocKeys.push(key);
+      return;
+    }
+    const isValidLegacy =
+      LEGACY_LIST_KEY.test(key) &&
+      typeof item.id === 'number' &&
+      (item.media_type === 'movie' || item.media_type === 'tv');
+    if (!isValidLegacy) {
+      itemsInPlace[key] = item;
+      return;
+    }
+    const canonicalKey = buildListItemKey(item.media_type as 'movie' | 'tv', item.id as number);
+    if (!(canonicalKey in list.items) && !(canonicalKey in itemsToMove)) {
+      itemsToMove[canonicalKey] = item;
+    }
+    // The canonical copy (moved now, or already stored) wins; the legacy one goes.
+    removeFromListDocKeys.push(key);
+  });
+
+  return { itemsInPlace, itemsToMove, removeFromListDocKeys };
+}
+
 /** True for watched episodes TMDB enrichment has never filled in (e.g. fresh from Trakt). */
 export const needsEpisodeEnrichment = (episode: Record<string, unknown> | undefined): boolean =>
   !!episode && (typeof episode.episodeId !== 'number' || typeof episode.episodeName !== 'string');
@@ -350,22 +415,11 @@ export const runTraktEnrichmentJob = async (
     const enrichedItems =
       Object.keys(pendingItems).length > 0 ? await enrichMediaItems(pendingItems) : {};
 
-    // A legacy list document can already hold more items than a page should; enriching them
-    // in place could push it past 1 MiB. Those items move to overflow pages instead.
-    const isListDocumentOverfull = (list.layout.pageSizes[0] ?? 0) > LIST_PAGE_CAPACITY;
-    const itemsToMove: Record<string, Record<string, unknown>> = {};
-    const itemsInPlace: Record<string, Record<string, unknown>> = {};
-    Object.entries(enrichedItems).forEach(([key, item]) => {
-      const isOnListDocument = list.layout.overflowItemPages[key] === undefined;
-      // Legacy numeric keys stay where they are: pages only ever hold canonical keys.
-      if (isListDocumentOverfull && isOnListDocument && /^(movie|tv)-\d+$/.test(key)) {
-        itemsToMove[key] = item;
-      } else {
-        itemsInPlace[key] = item;
-      }
-    });
-
-    await relocateListItemsToPages(db, list, itemsToMove);
+    const { itemsInPlace, itemsToMove, removeFromListDocKeys } = planEnrichmentRelocation(
+      list,
+      enrichedItems
+    );
+    await relocateListItemsToPages(db, list, itemsToMove, removeFromListDocKeys);
     await commitPagedListWrites(db, list, planPagedListWrites(list, { set: itemsInPlace }));
     // Cleared only once every item write succeeded, so a failed page write is retried later.
     await listRef.set(

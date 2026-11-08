@@ -103,6 +103,7 @@ import {
   exchangeAuthorizationCode,
   isRunFatalSyncError,
   needsMediaEnrichment,
+  planEnrichmentRelocation,
   normalizeSyncError,
   reconcileRatings,
   refreshAccessToken,
@@ -6787,5 +6788,70 @@ describe('Trakt sync batching', () => {
     expect(result.changedCount).toBe(950);
     expect(commits.every((size) => size <= 400)).toBe(true);
     expect(commits.reduce((total, size) => total + size, 0)).toBe(950);
+  });
+});
+
+describe('enrichment on a full list document', () => {
+  const movieItem = (id: number, extra: Record<string, unknown> = {}) => ({
+    id,
+    media_type: 'movie',
+    title: `Movie ${id}`,
+    ...extra,
+  });
+  const singlePage = (items: Record<string, Record<string, unknown>>) => ({
+    items,
+    layout: { overflowItemPages: {}, pageCount: 0, pageSizes: [Object.keys(items).length] },
+  });
+  const manyItems = (count: number, extra: Record<string, unknown> = {}) =>
+    Object.fromEntries(
+      Array.from({ length: count }, (_, i) => [`movie-${i + 1}`, movieItem(i + 1, extra)])
+    );
+
+  it('updates items in place while the list document has room', () => {
+    const list = singlePage(manyItems(10));
+    const result = planEnrichmentRelocation(list, { 'movie-1': movieItem(1, { poster_path: '/p' }) });
+
+    expect(Object.keys(result.itemsInPlace)).toEqual(['movie-1']);
+    expect(result.itemsToMove).toEqual({});
+    expect(result.removeFromListDocKeys).toEqual([]);
+  });
+
+  it('moves items off a document holding more than a page', () => {
+    const list = singlePage(manyItems(2500));
+    const result = planEnrichmentRelocation(list, { 'movie-7': movieItem(7, { poster_path: '/p' }) });
+
+    expect(Object.keys(result.itemsToMove)).toEqual(['movie-7']);
+    expect(result.removeFromListDocKeys).toEqual(['movie-7']);
+  });
+
+  it('moves items off a document under 2,000 items that enrichment would bring near 1 MiB', () => {
+    const heavy = { overview: 'x'.repeat(450) };
+    const list = singlePage(manyItems(1900, heavy));
+    const result = planEnrichmentRelocation(list, {
+      'movie-3': movieItem(3, { ...heavy, poster_path: '/p' }),
+    });
+
+    expect(Object.keys(result.itemsToMove)).toEqual(['movie-3']);
+  });
+
+  it('moves a legacy numeric key under its canonical key', () => {
+    const list = singlePage({ ...manyItems(2500), '900001': movieItem(900001) });
+    const result = planEnrichmentRelocation(list, {
+      '900001': movieItem(900001, { poster_path: '/p' }),
+    });
+
+    expect(result.itemsToMove).toEqual({
+      'movie-900001': expect.objectContaining({ id: 900001, poster_path: '/p' }),
+    });
+    expect(result.removeFromListDocKeys).toEqual(['900001']);
+    expect(result.itemsInPlace).toEqual({});
+  });
+
+  it('keeps the canonical copy and drops a legacy duplicate', () => {
+    const list = singlePage({ ...manyItems(2500), '5': movieItem(5) });
+    const result = planEnrichmentRelocation(list, { '5': movieItem(5, { poster_path: '/p' }) });
+
+    expect(result.itemsToMove).toEqual({});
+    expect(result.removeFromListDocKeys).toEqual(['5']);
   });
 });
