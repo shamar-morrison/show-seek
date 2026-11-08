@@ -46,17 +46,34 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
 
   const missingItems = useMemo<UnstampedListItem[]>(() => {
     if (!list?.items) return [];
-    return Object.entries(list.items)
-      .filter(([, item]) => !hasRuntime(item.runtimeMinutes))
-      .map(([itemKey, item]) => ({
-        listId: list.id,
-        itemKey,
-        page: list.overflowItemPages?.[itemKey] ?? 0,
-        mediaType: item.media_type,
-        mediaId: item.id,
-        addedAt: item.addedAt,
-      }));
+    return (
+      Object.entries(list.items)
+        // Skip incomplete entries (no id or type): there is nothing to look up for them.
+        .filter(
+          ([, item]) =>
+            typeof item?.id === 'number' &&
+            (item.media_type === 'movie' || item.media_type === 'tv') &&
+            !hasRuntime(item.runtimeMinutes)
+        )
+        .map(([itemKey, item]) => {
+          // Cached lists use normalized keys; saves must target the key the item is stored
+          // under (legacy items use their numeric id), or they create a stray entry.
+          const storedKey = list.storedItemKeys?.[itemKey] ?? itemKey;
+          return {
+            listId: list.id,
+            itemKey: storedKey,
+            page: list.overflowItemPages?.[storedKey] ?? 0,
+            mediaType: item.media_type,
+            mediaId: item.id,
+            addedAt: item.addedAt,
+          };
+        })
+    );
   }, [list]);
+
+  // Lists cached before stored keys were tracked can't say where legacy items live, so
+  // runtimes found for them are only kept in memory until the list is next loaded.
+  const canSaveRuntimes = list?.storedItemKeys !== undefined;
 
   // Changes only when the set of titles still needing a runtime changes.
   const missingSignature = useMemo(
@@ -90,6 +107,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
     };
 
     void resolveListItemRuntimes(toLookUp, {
+      ...(canSaveRuntimes ? {} : { stampRuntimes: () => {} }),
       isCancelled: () => cancelled,
       onProgress: ({ done, runtimes }) => {
         rememberFound(runtimes);
@@ -141,7 +159,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
     };
     // missingSignature stands in for missingItems so cache patches don't restart the run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, userId, missingSignature, queryClient]);
+  }, [enabled, userId, missingSignature, queryClient, canSaveRuntimes]);
 
   // Every runtime that can be known is known: nothing is waiting for a lookup this session.
   const isComplete = useMemo(

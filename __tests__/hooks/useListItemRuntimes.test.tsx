@@ -141,6 +141,42 @@ describe('useListItemRuntimes', () => {
     expect(cached.items['movie-1'].runtimeMinutes).toBe(100);
   });
 
+  it('saves under the key a legacy item is stored under', async () => {
+    const client = createQueryClient();
+    mockResolveListItemRuntimes.mockResolvedValue(new Map());
+    const list: UserList = {
+      ...makeList(),
+      items: { 'movie-2': makeList().items['movie-2'] },
+      storedItemKeys: { 'movie-2': '2' },
+      pageCount: 0,
+      overflowItemPages: undefined,
+    };
+
+    const { result } = renderHook(() => useListItemRuntimes(list, true), {
+      wrapper: createWrapper(client),
+    });
+    await waitFor(() => expect(result.current.isResolving).toBe(false));
+
+    const [items, options] = mockResolveListItemRuntimes.mock.calls[0];
+    expect(items).toEqual([expect.objectContaining({ itemKey: '2', mediaId: 2 })]);
+    // Stored keys are known, so the default save is used.
+    expect(options.stampRuntimes).toBeUndefined();
+  });
+
+  it("doesn't save runtimes for a cached list without stored keys", async () => {
+    const client = createQueryClient();
+    mockResolveListItemRuntimes.mockResolvedValue(new Map());
+    const { storedItemKeys: _ignored, ...cachedList } = { ...makeList(), storedItemKeys: {} };
+
+    const { result } = renderHook(() => useListItemRuntimes(cachedList, true), {
+      wrapper: createWrapper(client),
+    });
+    await waitFor(() => expect(result.current.isResolving).toBe(false));
+
+    const [, options] = mockResolveListItemRuntimes.mock.calls[0];
+    expect(typeof options.stampRuntimes).toBe('function');
+  });
+
   it('never looks up the same title twice in a session', async () => {
     const client = createQueryClient();
     mockResolveListItemRuntimes.mockResolvedValue(new Map());
