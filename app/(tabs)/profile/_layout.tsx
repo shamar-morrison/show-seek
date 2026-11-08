@@ -53,6 +53,15 @@ export default function ProfileLayout() {
             }}
           />
           <Stack.Screen
+            name="export-data"
+            options={{
+              headerShown: true,
+              headerTitle: t('profile.exportData'),
+              headerStyle: { backgroundColor: COLORS.background },
+              headerTintColor: COLORS.text,
+            }}
+          />
+          <Stack.Screen
             name="imdb-import"
             options={{
               headerShown: true,

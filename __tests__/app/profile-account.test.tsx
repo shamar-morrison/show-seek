@@ -6,7 +6,6 @@ const mockAuth = { user: null as unknown, isGuest: false };
 const mockLogic = {
   isPremium: false,
   isPremiumLoading: false,
-  isExporting: false,
   isSigningOut: false,
   isDeletingAccount: false,
   handleExportData: jest.fn(),

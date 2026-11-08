@@ -851,10 +851,6 @@
     "hideTalkShowsAndAwardsDescription": "Masquer les late-night, talk-shows, émissions d'info et cérémonies de remise de prix",
     "updatePreferenceError": "Échec de la mise à jour de la préférence. Veuillez réessayer.",
     "content": "Contenu",
-    "exportAsCsv": "Exporter en CSV",
-    "exportAsMarkdown": "Exporter en Markdown",
-    "exportDataMessage": "Choisissez un format d’export.",
-    "exportDataTitle": "Exporter les données",
     "exportFailedFallbackMessage": "L’export a échoué. Veuillez réessayer.",
     "exportFailedTitle": "Échec de l’export",
     "noEmail": "Pas d’e-mail",
@@ -869,6 +865,52 @@
     "webAppModal": {
       "description": "Continuer vers l’application web ShowSeek ?",
       "title": "Ouvrir l’application web"
+    }
+  },
+  "dataExport": {
+    "title": "Exportez vos données ShowSeek",
+    "body": "Nous créons un fichier sur votre appareil à partir de votre bibliothèque ShowSeek, puis ouvrons le menu de partage pour que vous puissiez l’enregistrer ou l’envoyer où vous voulez.",
+    "formatTitle": "Format",
+    "formats": {
+      "csv": {
+        "title": "CSV",
+        "description": "Idéal pour les tableurs. Une ligne par élément, avec les dates et les ID TMDB."
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "Un document facile à lire, organisé par section."
+      }
+    },
+    "exportButton": "Exporter les données",
+    "exporting": "Export en cours…",
+    "durationNote": "Les titres des films et séries notés sont récupérés sur TMDB : pour une grande bibliothèque, cela peut prendre une minute.",
+    "infoTitle": "À propos de votre export",
+    "infoButtonLabel": "Ce qui est exporté",
+    "whatGetsExportedTitle": "Ce qui est exporté",
+    "features": {
+      "listsTitle": "Listes",
+      "listsDescription": "Vos listes par défaut et personnalisées, tous leurs titres et leur date d’ajout.",
+      "ratingsTitle": "Notes",
+      "ratingsDescription": "Notes des films, séries, saisons et épisodes, avec votre note et sa date.",
+      "watchedEpisodesTitle": "Épisodes vus",
+      "watchedEpisodesDescription": "Tous les épisodes marqués comme vus, regroupés par série, avec la date de visionnage.",
+      "favoriteEpisodesTitle": "Épisodes favoris",
+      "favoriteEpisodesDescription": "Les épisodes que vous avez ajoutés à vos favoris.",
+      "notesTitle": "Notes personnelles",
+      "notesDescription": "Le texte complet de vos notes sur les films, séries, saisons et épisodes.",
+      "favoritePeopleTitle": "Personnes favorites",
+      "favoritePeopleDescription": "Les acteurs et membres de l’équipe ajoutés à vos favoris."
+    },
+    "notIncludedTitle": "Ce qui n’est pas inclus",
+    "notIncluded": {
+      "movieRewatchesTitle": "Dates de visionnage des films",
+      "movieRewatchesDescription": "Les films vus figurent dans votre liste Déjà vus, mais les dates de chaque visionnage ne sont pas exportées.",
+      "remindersTitle": "Rappels",
+      "remindersDescription": "Les rappels de sortie restent sur votre compte et ne font pas partie du fichier.",
+      "collectionsTitle": "Collections suivies",
+      "collectionsDescription": "La progression des collections de films n’est pas exportée.",
+      "settingsTitle": "Réglages de l’app",
+      "settingsDescription": "Les préférences comme la langue, la région et les couleurs ne sont pas exportées."
     }
   },
   "tvtimeImport": {

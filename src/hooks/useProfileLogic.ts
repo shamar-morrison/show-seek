@@ -1,7 +1,6 @@
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { accountDeletionService } from '@/src/services/AccountDeletionService';
-import { exportUserData } from '@/src/services/DataExportService';
 import {
   clearLocalAccountData,
   isPolarDeleteBlocked,
@@ -35,7 +34,6 @@ export function useProfileLogic() {
   } = usePremium();
   const router = useRouter();
 
-  const [isExporting, setIsExporting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
@@ -81,39 +79,10 @@ export function useProfileLogic() {
     setShowWebAppModal(false);
   }, []);
 
-  const performExport = useCallback(
-    async (format: 'csv' | 'markdown') => {
-      setIsExporting(true);
-      try {
-        await exportUserData(format);
-      } catch (error) {
-        console.error('Export failed:', error);
-        Alert.alert(t('profile.exportFailedTitle'), t('profile.exportFailedFallbackMessage'));
-      } finally {
-        setIsExporting(false);
-      }
-    },
-    [t]
-  );
-
   const handleExportData = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    Alert.alert(t('profile.exportDataTitle'), t('profile.exportDataMessage'), [
-      {
-        text: t('common.cancel'),
-        style: 'cancel',
-      },
-      {
-        text: t('profile.exportAsCsv'),
-        onPress: () => performExport('csv'),
-      },
-      {
-        text: t('profile.exportAsMarkdown'),
-        onPress: () => performExport('markdown'),
-      },
-    ]);
-  }, [performExport, t]);
+    router.push('/(tabs)/profile/export-data' as any);
+  }, [router]);
 
   const handleImdbImport = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -315,7 +284,6 @@ export function useProfileLogic() {
     isPremiumLoading,
 
     // Modal states
-    isExporting,
     isSigningOut,
     isDeletingAccount,
     isClearingCache,

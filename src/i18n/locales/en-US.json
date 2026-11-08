@@ -849,10 +849,6 @@
     "showOriginalTitlesDescription": "Show movie and TV titles in their original language when available.",
     "updatePreferenceError": "Failed to update preference. Please try again.",
     "content": "Content",
-    "exportAsCsv": "Export as CSV",
-    "exportAsMarkdown": "Export as Markdown",
-    "exportDataMessage": "Choose an export format.",
-    "exportDataTitle": "Export Data",
     "exportFailedFallbackMessage": "Export failed. Please try again.",
     "exportFailedTitle": "Export Failed",
     "noEmail": "No email",
@@ -870,6 +866,52 @@
     },
     "defaultBulkAction": "Default bulk action: {{mode}}",
     "defaultBulkActionDescription": "Choose what happens when you bulk add items from a list."
+  },
+  "dataExport": {
+    "title": "Export your ShowSeek data",
+    "body": "We build a file on your device from your ShowSeek library, then open the share sheet so you can save it or send it anywhere.",
+    "formatTitle": "Format",
+    "formats": {
+      "csv": {
+        "title": "CSV",
+        "description": "Spreadsheet-friendly. One row per item, with dates and TMDB IDs."
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "An easy-to-read document, grouped by section."
+      }
+    },
+    "exportButton": "Export data",
+    "exporting": "Exporting…",
+    "durationNote": "Titles for rated movies and shows are looked up from TMDB, so large libraries can take a minute.",
+    "infoTitle": "About your export",
+    "infoButtonLabel": "What gets exported",
+    "whatGetsExportedTitle": "What gets exported",
+    "features": {
+      "listsTitle": "Lists",
+      "listsDescription": "Your default and custom lists, every title in them, and when you added it.",
+      "ratingsTitle": "Ratings",
+      "ratingsDescription": "Movie, show, season, and episode ratings, with your score and when you rated.",
+      "watchedEpisodesTitle": "Watched episodes",
+      "watchedEpisodesDescription": "Every episode you marked as watched, grouped by show, with the date you watched it.",
+      "favoriteEpisodesTitle": "Favorite episodes",
+      "favoriteEpisodesDescription": "Episodes you added to your favorites.",
+      "notesTitle": "Notes",
+      "notesDescription": "The full text of your notes on movies, shows, seasons, and episodes.",
+      "favoritePeopleTitle": "Favorite people",
+      "favoritePeopleDescription": "Actors and crew members you added to your favorites."
+    },
+    "notIncludedTitle": "What's not included",
+    "notIncluded": {
+      "movieRewatchesTitle": "Movie watch dates",
+      "movieRewatchesDescription": "Watched movies are in your Already Watched list, but individual watch and rewatch dates are not exported.",
+      "remindersTitle": "Reminders",
+      "remindersDescription": "Release reminders stay on your account and are not part of the file.",
+      "collectionsTitle": "Tracked collections",
+      "collectionsDescription": "Movie collection progress is not exported.",
+      "settingsTitle": "App settings",
+      "settingsDescription": "Preferences like language, region, and colors are not exported."
+    }
   },
   "tvtimeImport": {
     "title": "Import your TV Time history",

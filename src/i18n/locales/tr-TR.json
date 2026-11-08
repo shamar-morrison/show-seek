@@ -849,10 +849,6 @@
     "showOriginalTitlesDescription": "Mevcut olduğunda film ve dizi başlıklarını orijinal dilinde gösterir.",
     "updatePreferenceError": "Tercih güncellenemedi. Lütfen tekrar deneyin.",
     "content": "İçerik",
-    "exportAsCsv": "CSV olarak dışa aktar",
-    "exportAsMarkdown": "Markdown olarak dışa aktar",
-    "exportDataMessage": "Bir dışa aktarma biçimi seçin.",
-    "exportDataTitle": "Verileri dışa aktar",
     "exportFailedFallbackMessage": "Dışa aktarma başarısız oldu. Lütfen tekrar deneyin.",
     "exportFailedTitle": "Dışa aktarma başarısız",
     "noEmail": "E-posta yok",
@@ -870,6 +866,52 @@
     },
     "defaultBulkAction": "Varsayılan toplu işlem: {{mode}}",
     "defaultBulkActionDescription": "Bir listeden toplu öğe eklerken ne olacağını seçin."
+  },
+  "dataExport": {
+    "title": "ShowSeek verilerini dışa aktar",
+    "body": "ShowSeek kitaplığından cihazında bir dosya oluşturur, ardından kaydetmen veya istediğin yere göndermen için paylaşım menüsünü açarız.",
+    "formatTitle": "Biçim",
+    "formats": {
+      "csv": {
+        "title": "CSV",
+        "description": "Tablolar için uygun. Tarihler ve TMDB kimlikleriyle her öğe için bir satır."
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "Bölümlere ayrılmış, kolay okunan bir belge."
+      }
+    },
+    "exportButton": "Verileri dışa aktar",
+    "exporting": "Dışa aktarılıyor…",
+    "durationNote": "Puanlanan film ve dizilerin adları TMDB’den alındığı için büyük kitaplıklar bir dakika sürebilir.",
+    "infoTitle": "Dışa aktarma hakkında",
+    "infoButtonLabel": "Neler dışa aktarılır",
+    "whatGetsExportedTitle": "Neler dışa aktarılır",
+    "features": {
+      "listsTitle": "Listeler",
+      "listsDescription": "Varsayılan ve özel listelerin, içlerindeki tüm yapımlar ve ne zaman eklediğin.",
+      "ratingsTitle": "Puanlar",
+      "ratingsDescription": "Film, dizi, sezon ve bölüm puanların; verdiğin puan ve tarihiyle.",
+      "watchedEpisodesTitle": "İzlenen bölümler",
+      "watchedEpisodesDescription": "İzlendi olarak işaretlediğin tüm bölümler, diziye göre gruplanmış ve izlediğin tarihle.",
+      "favoriteEpisodesTitle": "Favori bölümler",
+      "favoriteEpisodesDescription": "Favorilerine eklediğin bölümler.",
+      "notesTitle": "Notlar",
+      "notesDescription": "Filmler, diziler, sezonlar ve bölümler hakkındaki notlarının tam metni.",
+      "favoritePeopleTitle": "Favori kişiler",
+      "favoritePeopleDescription": "Favorilerine eklediğin oyuncular ve ekip üyeleri."
+    },
+    "notIncludedTitle": "Neler dahil değil",
+    "notIncluded": {
+      "movieRewatchesTitle": "Film izleme tarihleri",
+      "movieRewatchesDescription": "İzlenen filmler Daha önce izlenenler listende yer alır, ancak her izleme ve tekrar izleme tarihi dışa aktarılmaz.",
+      "remindersTitle": "Hatırlatıcılar",
+      "remindersDescription": "Yayın hatırlatıcıları hesabında kalır ve dosyaya dahil edilmez.",
+      "collectionsTitle": "Takip edilen koleksiyonlar",
+      "collectionsDescription": "Film koleksiyonu ilerlemesi dışa aktarılmaz.",
+      "settingsTitle": "Uygulama ayarları",
+      "settingsDescription": "Dil, bölge ve renkler gibi tercihler dışa aktarılmaz."
+    }
   },
   "tvtimeImport": {
     "title": "TV Time geçmişinizi içe aktarın",

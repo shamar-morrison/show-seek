@@ -11,7 +11,6 @@ const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockSignOut = jest.fn();
 const mockResetSession = jest.fn();
-const mockExportUserData = jest.fn();
 const mockDeleteAccount = jest.fn();
 const mockClearLocalAccountData = jest.fn();
 const mockPremiumState: {
@@ -38,10 +37,6 @@ jest.mock('@/src/context/auth', () => ({
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
-}));
-
-jest.mock('@/src/services/DataExportService', () => ({
-  exportUserData: (...args: any[]) => mockExportUserData(...args),
 }));
 
 jest.mock('@/src/services/AccountDeletionService', () => ({
@@ -123,36 +118,7 @@ describe('useProfileLogic', () => {
     jest.restoreAllMocks();
   });
 
-  it('shows the translated export fallback instead of the raw error message', async () => {
-    const exportError = new Error('private backend details');
-    mockExportUserData.mockRejectedValue(exportError);
-
-    const { result } = renderHook(() => useProfileLogic());
-
-    act(() => {
-      result.current.handleExportData();
-    });
-
-    const buttons = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as {
-      text?: string;
-      onPress?: () => unknown;
-    }[];
-    const csvButton = buttons.find((button) => button.text === 'profile.exportAsCsv');
-
-    await act(async () => {
-      await csvButton?.onPress?.();
-    });
-
-    expect(mockExportUserData).toHaveBeenCalledWith('csv');
-    expect(console.error).toHaveBeenCalledWith('Export failed:', exportError);
-    expect(Alert.alert).toHaveBeenNthCalledWith(
-      2,
-      'profile.exportFailedTitle',
-      'profile.exportFailedFallbackMessage'
-    );
-  });
-
-  it('shows export options for free users without routing to premium', () => {
+  it('opens the export screen for free users without routing to premium', () => {
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = true;
 
@@ -162,12 +128,9 @@ describe('useProfileLogic', () => {
       result.current.handleExportData();
     });
 
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/profile/export-data');
     expect(mockPush).not.toHaveBeenCalledWith('/premium');
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'profile.exportDataTitle',
-      'profile.exportDataMessage',
-      expect.anything()
-    );
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 
   it('runs account deletion, local cleanup, and routes to sign-in after double confirmation', async () => {

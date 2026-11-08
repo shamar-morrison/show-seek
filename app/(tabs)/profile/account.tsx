@@ -24,7 +24,6 @@ export default function AccountScreen() {
   const {
     isPremium,
     isPremiumLoading,
-    isExporting,
     isSigningOut,
     isDeletingAccount,
     handleExportData,
@@ -60,7 +59,6 @@ export default function AccountScreen() {
               icon={Download01Icon}
               label={t('profile.exportData')}
               onPress={handleExportData}
-              loading={isExporting}
             />
           )}
           <ActionButton

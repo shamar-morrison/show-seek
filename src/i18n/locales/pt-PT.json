@@ -834,10 +834,6 @@
     "hideWatchedContentDescription": "Remover filmes e séries vistos da pesquisa e do Descobrir",
     "checkConnection": "Verifique a sua ligação e tente novamente",
     "content": "Conteúdo",
-    "exportAsCsv": "Exportar como CSV",
-    "exportAsMarkdown": "Exportar como Markdown",
-    "exportDataMessage": "Escolha um formato de exportação.",
-    "exportDataTitle": "Exportar dados",
     "exportFailedFallbackMessage": "A exportação falhou. Tente novamente.",
     "exportFailedTitle": "A exportação falhou",
     "hideUnreleased": "Ocultar conteúdo não lançado",
@@ -870,6 +866,52 @@
     "clearCacheMessage": "Isto limpa apenas cartazes/fundos transferidos e outras imagens em cache. As suas listas, conta e definições não são afetadas.",
     "cacheCleared": "Cache de imagens limpo com sucesso.",
     "clearCacheFailed": "Não foi possível limpar o cache de imagens. Tente novamente."
+  },
+  "dataExport": {
+    "title": "Exporte os seus dados do ShowSeek",
+    "body": "Criamos um ficheiro no seu dispositivo com a sua biblioteca do ShowSeek e abrimos o menu de partilha para o guardar ou enviar para onde quiser.",
+    "formatTitle": "Formato",
+    "formats": {
+      "csv": {
+        "title": "CSV",
+        "description": "Ideal para folhas de cálculo. Uma linha por item, com datas e IDs do TMDB."
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "Um documento fácil de ler, organizado por seções."
+      }
+    },
+    "exportButton": "Exportar dados",
+    "exporting": "A exportar…",
+    "durationNote": "Os títulos dos filmes e séries avaliados são obtidos no TMDB, por isso bibliotecas grandes podem demorar um minuto.",
+    "infoTitle": "Sobre a sua exportação",
+    "infoButtonLabel": "O que é exportado",
+    "whatGetsExportedTitle": "O que é exportado",
+    "features": {
+      "listsTitle": "Listas",
+      "listsDescription": "As suas listas predefinidas e personalizadas, todos os títulos e quando os adicionou.",
+      "ratingsTitle": "Avaliações",
+      "ratingsDescription": "Avaliações de filmes, séries, temporadas e episódios, com a sua nota e a data.",
+      "watchedEpisodesTitle": "Episódios vistos",
+      "watchedEpisodesDescription": "Todos os episódios que marcou como vistos, agrupados por série, com a data em que os viu.",
+      "favoriteEpisodesTitle": "Episódios favoritos",
+      "favoriteEpisodesDescription": "Os episódios que adicionou aos favoritos.",
+      "notesTitle": "Notas",
+      "notesDescription": "O texto completo das suas notas sobre filmes, séries, temporadas e episódios.",
+      "favoritePeopleTitle": "Pessoas favoritas",
+      "favoritePeopleDescription": "Atores e membros da equipa que adicionou aos favoritos."
+    },
+    "notIncludedTitle": "O que não está incluído",
+    "notIncluded": {
+      "movieRewatchesTitle": "Datas de visualização de filmes",
+      "movieRewatchesDescription": "Os filmes vistos estão na sua lista Já vistos, mas as datas de cada visualização não são exportadas.",
+      "remindersTitle": "Lembretes",
+      "remindersDescription": "Os lembretes de estreia ficam na sua conta e não fazem parte do ficheiro.",
+      "collectionsTitle": "Coleções seguidas",
+      "collectionsDescription": "O progresso das coleções de filmes não é exportado.",
+      "settingsTitle": "Definições da app",
+      "settingsDescription": "Preferências como idioma, região e cores não são exportadas."
+    }
   },
   "tvtimeImport": {
     "title": "Importe o seu histórico do TV Time",
