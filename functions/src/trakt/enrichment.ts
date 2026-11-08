@@ -267,7 +267,7 @@ const LEGACY_LIST_KEY = /^\d+$/;
  * canonical key is kept, and the legacy duplicate is just removed.
  */
 export function planEnrichmentRelocation(
-  list: Pick<PagedList, 'items' | 'layout'>,
+  list: Pick<PagedList, 'items' | 'layout'> & { duplicateDocKeys?: string[] },
   enrichedItems: Record<string, Record<string, unknown>>
 ): {
   itemsInPlace: Record<string, Record<string, unknown>>;
@@ -285,6 +285,8 @@ export function planEnrichmentRelocation(
   const itemsInPlace: Record<string, Record<string, unknown>> = {};
   const itemsToMove: Record<string, Record<string, unknown>> = {};
   const removeFromListDocKeys: string[] = [];
+  /** Legacy copies dropped in favor of an existing canonical copy: canonical key → legacy item. */
+  const droppedLegacyCopies: [string, Record<string, unknown>][] = [];
 
   Object.entries(enrichedItems).forEach(([key, item]) => {
     if (!isListDocumentFull || !isOnListDocument(key)) {
@@ -307,9 +309,30 @@ export function planEnrichmentRelocation(
     const canonicalKey = buildListItemKey(item.media_type as 'movie' | 'tv', item.id as number);
     if (!(canonicalKey in list.items) && !(canonicalKey in itemsToMove)) {
       itemsToMove[canonicalKey] = item;
+    } else {
+      droppedLegacyCopies.push([canonicalKey, item]);
     }
     // The canonical copy (moved now, or already stored) wins; the legacy one goes.
     removeFromListDocKeys.push(key);
+  });
+
+  // Fields only the dropped legacy copy has (e.g. addedAt) are kept on the canonical copy;
+  // the canonical copy's own values always win. Written wherever the canonical copy lives.
+  droppedLegacyCopies.forEach(([canonicalKey, legacyItem]) => {
+    const target = canonicalKey in itemsToMove ? itemsToMove : itemsInPlace;
+    const canonical = target[canonicalKey] ?? list.items[canonicalKey] ?? {};
+    const missingFields = Object.entries(legacyItem).filter(([field]) => !(field in canonical));
+    if (missingFields.length > 0 || canonicalKey in target) {
+      target[canonicalKey] = { ...Object.fromEntries(missingFields), ...canonical };
+    }
+  });
+
+  // Stale copies left on the list document (e.g. by an interrupted relocation) are removed on
+  // every pass, so a failed cleanup resumes without tracking it separately.
+  (list.duplicateDocKeys ?? []).forEach((key) => {
+    if (!removeFromListDocKeys.includes(key)) {
+      removeFromListDocKeys.push(key);
+    }
   });
 
   return { itemsInPlace, itemsToMove, removeFromListDocKeys };

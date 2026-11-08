@@ -326,6 +326,7 @@ function emptyPagedList(
 ): PagedList {
   return {
     data: data ?? {},
+    duplicateDocKeys: [],
     exists: data !== null,
     items: {},
     layout: createSinglePageLayout(0),

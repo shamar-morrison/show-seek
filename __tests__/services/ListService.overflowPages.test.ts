@@ -325,4 +325,93 @@ describe('ListService overflow pages', () => {
       path: `${LISTS}/already-watched/item_pages/1`,
     });
   });
+
+  it('moves one existing item onto the first page so pageCount fits a byte-full list', async () => {
+    listService.rememberListLayouts(USER, [pagedList({ items: itemsOf([1, 2]) })]);
+    // Treat the list document as full, so the next item opens page 1.
+    const known = (listService as any).knownLayouts.get(`${USER}/already-watched`);
+    known.layout.pageSizes[0] = LIST_PAGE_CAPACITY;
+    const transaction = {
+      get: jest.fn().mockResolvedValue({ data: () => ({ items: itemsOf([1, 2]) }) }),
+      set: jest.fn(),
+      update: jest.fn(),
+    };
+    (runTransaction as jest.Mock).mockImplementation(async (_db, run) => run(transaction));
+
+    await listService.addToList('already-watched', movie(3));
+
+    const [pageRef, pageData] = transaction.set.mock.calls[0];
+    expect(pageRef).toEqual({ path: `${LISTS}/already-watched/item_pages/1` });
+    expect(Object.keys(pageData.items).sort()).toEqual(['movie-1', 'movie-3']);
+    expect(transaction.update).toHaveBeenCalledWith(
+      { path: `${LISTS}/already-watched` },
+      expect.objectContaining({ pageCount: 1, 'items.movie-1': '__deleteField__' })
+    );
+    // The moved item is remembered on page 1, so removing it reaches that page.
+    expect(known.layout.overflowItemPages['movie-1']).toBe(1);
+  });
+
+  it("doesn't let a read that was in flight during a write replace the newer layout", async () => {
+    listService.rememberListLayouts(USER, [
+      pagedList({ items: itemsOf([1]), pageCount: 1, pageSizes: [1, 0], overflowItemPages: {} }),
+    ]);
+    let resolveRead!: (value: unknown) => void;
+    (getDoc as jest.Mock)
+      .mockReturnValueOnce(new Promise((resolve) => (resolveRead = resolve)))
+      .mockResolvedValue({ exists: () => true, data: () => ({ pageCount: 1 }) });
+
+    // A slow read starts (it will return data from before the page existed)...
+    const slowRead = listService.getUserList(USER, 'already-watched', {
+      queryKey: 'test',
+      callsite: 'test',
+    });
+    // ...a write lands meanwhile...
+    await listService.removeFromList('already-watched', 9, 'movie');
+    // ...then the read completes with stale data.
+    resolveRead({ exists: () => true, data: () => ({ name: 'Already Watched', items: itemsOf([1]) }) });
+    await slowRead;
+
+    batches = [];
+    await listService.removeFromList('already-watched', 1, 'movie');
+    expect(batches[0].set.mock.calls.map(([ref]) => ref.path)).toEqual([
+      `${LISTS}/already-watched/item_pages/1`,
+    ]);
+  });
+
+  it('recounts page sizes so a removal frees room on the last page', async () => {
+    const mainKeys = Array.from({ length: LIST_PAGE_CAPACITY }, (_, i) => i + 1);
+    const pageKeys = Array.from({ length: LIST_PAGE_CAPACITY }, (_, i) => 10_000 + i);
+    const overflowItemPages = Object.fromEntries(pageKeys.map((id) => [`movie-${id}`, 1]));
+    const full = pagedList({
+      items: { ...itemsOf(mainKeys), ...itemsOf(pageKeys) },
+      pageCount: 1,
+      pageSizes: [LIST_PAGE_CAPACITY, LIST_PAGE_CAPACITY],
+      overflowItemPages,
+    });
+    listService.rememberListLayouts(USER, [full]);
+    await listService.removeFromList('already-watched', 10_000, 'movie');
+
+    // Cached data after the optimistic removal: the item is gone, the sizes are stale.
+    const { 'movie-10000': _removed, ...remaining } = full.items;
+    listService.rememberListLayouts(USER, [{ ...full, items: remaining }]);
+    batches = [];
+    await listService.addToList('already-watched', movie(99_999));
+
+    expect(runTransaction).not.toHaveBeenCalled();
+    expect(batches[0].set.mock.calls[0][0]).toEqual({
+      path: `${LISTS}/already-watched/item_pages/1`,
+    });
+  });
+
+  it('deletes more pages than one batch allows in chunks, with the list document last', async () => {
+    (getDocs as jest.Mock).mockResolvedValue({
+      size: 900,
+      docs: Array.from({ length: 900 }, (_, i) => ({ id: String(i + 1), ref: { path: `page-${i + 1}` } })),
+    });
+
+    await listService.deleteList('huge-list');
+
+    expect(batches.map((batch) => batch.delete.mock.calls.length)).toEqual([450, 450, 1]);
+    expect(batches[2].delete.mock.calls[0][0]).toEqual({ path: `${LISTS}/huge-list` });
+  });
 });

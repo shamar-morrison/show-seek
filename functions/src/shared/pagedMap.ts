@@ -149,6 +149,10 @@ export function choosePage(
   if ((layout.pageSizes[lastPage] ?? 0) < PAGE_CAPACITY) {
     return { createsPage: false, page: lastPage };
   }
+  if (lastPage + 1 > MAX_PAGE_COUNT) {
+    // Readers ignore pages past the limit; refuse before anything is written or removed.
+    throw new Error('This list has reached its maximum size.');
+  }
   return { createsPage: true, page: lastPage + 1 };
 }
 
@@ -268,6 +272,30 @@ export function estimateEntriesSize(entries: Record<string, unknown>): number {
     0
   );
 }
+
+/**
+ * Registering the first page adds `pageCount` (~18 bytes) to the document, which fails for a
+ * document within those bytes of 1 MiB — exactly the documents that need pages. Writers move
+ * one existing entry onto page 1 in the same write, so the document shrinks overall.
+ * Returns that entry, or null when none qualifies.
+ */
+export function pickEntryToMakeRoom<T>(
+  entries: Record<string, T> | undefined | null,
+  isMovableKey: (key: string) => boolean,
+  excludedKeys: Iterable<string> = []
+): [string, T] | null {
+  const excluded = new Set(excludedKeys);
+  for (const [key, value] of Object.entries(entries ?? {})) {
+    if (!excluded.has(key) && isMovableKey(key)) {
+      return [key, value];
+    }
+  }
+  return null;
+}
+
+/** Keys pages may hold: canonical list item keys (never legacy numeric ones), episode keys. */
+export const isCanonicalListItemKey = (key: string): boolean => /^(movie|tv)-\d+$/.test(key);
+export const isEpisodeKey = (key: string): boolean => /^\d+_\d+$/.test(key);
 
 /** Every page number a document has, including the document itself (0). */
 export function getAllPages(layout: Pick<PageLayout, 'pageCount'>): number[] {

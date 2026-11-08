@@ -67,6 +67,15 @@ describe('list overflow pages', () => {
     ).toEqual({ createsPage: false, page: 1 });
   });
 
+  it('refuses to allocate a page past the limit instead of writing one readers ignore', () => {
+    const full = {
+      overflowItemPages: {},
+      pageCount: 1000,
+      pageSizes: new Array(1001).fill(LIST_PAGE_CAPACITY),
+    };
+    expect(() => chooseListItemPage(full, has([]), ['n'])).toThrow('maximum size');
+  });
+
   it('tracks placements and removals so consecutive writes keep filling pages', () => {
     const layout = createSinglePageLayout(LIST_PAGE_CAPACITY - 1);
     const placed: string[] = [];

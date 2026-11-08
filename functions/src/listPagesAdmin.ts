@@ -17,8 +17,13 @@ import {
   type PagedDocWritePlan,
 } from './pagedDocAdmin';
 import { LIST_ITEM_PAGES_COLLECTION } from './shared/listPages';
+import { isCanonicalListItemKey } from './shared/pagedMap';
 
-const LIST_PAGES: PagedDocConfig = { field: 'items', pagesCollection: LIST_ITEM_PAGES_COLLECTION };
+const LIST_PAGES: PagedDocConfig = {
+  field: 'items',
+  isMovableKey: isCanonicalListItemKey,
+  pagesCollection: LIST_ITEM_PAGES_COLLECTION,
+};
 
 export type PagedList = PagedDoc;
 export type ListItemChanges = PagedDocChanges;

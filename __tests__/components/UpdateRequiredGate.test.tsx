@@ -173,4 +173,16 @@ describe('app version gate', () => {
 
     expect(await findByText("Couldn't open the store. Please update ShowSeek from your app store.")).toBeTruthy();
   });
+
+  it('blocks a build already known to be outdated before showing the app', async () => {
+    // The config read never finishes (slow network); the minimum stored on the device decides.
+    (getDoc as jest.Mock).mockReturnValue(new Promise(() => {}));
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(String(APP_COMPATIBILITY_VERSION + 1));
+
+    const { findByTestId, queryByTestId } = renderGate();
+
+    expect(queryByTestId('app-content')).toBeNull();
+    expect(await findByTestId('update-required-screen')).toBeTruthy();
+    expect(queryByTestId('app-content')).toBeNull();
+  });
 });

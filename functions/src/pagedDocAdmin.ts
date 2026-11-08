@@ -6,6 +6,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import {
   cloneLayout,
   createSinglePageLayout,
+  pickEntryToMakeRoom,
   PAGE_CAPACITY,
   getPageCount,
   getPageDocId,
@@ -23,6 +24,8 @@ export interface PagedDocConfig {
   field: string;
   /** The pages subcollection (`item_pages`, `episode_pages`). */
   pagesCollection: string;
+  /** Keys that may be stored on a page (see `pickEntryToMakeRoom`). */
+  isMovableKey: (key: string) => boolean;
 }
 
 export interface PagedDoc {
@@ -33,6 +36,11 @@ export interface PagedDoc {
   /** Every map entry, merged across the document and its pages. */
   items: Entries;
   layout: PageLayout;
+  /**
+   * Keys stored on the document that also exist on a page: stale copies (reads use the page
+   * copy), e.g. left by a relocation whose cleanup failed. Safe to remove from the document.
+   */
+  duplicateDocKeys: string[];
 }
 
 export type PagedDocChanges = PagedMapChanges<Record<string, unknown>>;
@@ -81,6 +89,9 @@ function toPagedDoc(
 
   return {
     data,
+    duplicateDocKeys: Object.keys(mainItems).filter(
+      (key) => merged.layout.overflowItemPages[key] !== undefined
+    ),
     exists: snapshot.exists,
     items: merged.items,
     layout: merged.layout,
@@ -139,7 +150,18 @@ export function stagePagedDocWrites(
   fields: Record<string, unknown> = {},
   now: number = Date.now()
 ): void {
-  const mainItems = plan.pageItems.get(0);
+  let mainItems = plan.pageItems.get(0);
+  const pageItems = new Map(plan.pageItems);
+  if (plan.createsPages && doc.layout.pageCount === 0) {
+    // Make room for `pageCount` by moving one untouched entry onto page 1 in this same write.
+    const touched = new Set([...plan.pageItems.values()].flatMap((items) => Object.keys(items)));
+    const entry = pickEntryToMakeRoom(doc.items, config.isMovableKey, touched);
+    if (entry) {
+      const [key, value] = entry;
+      pageItems.set(1, { ...(pageItems.get(1) ?? {}), [key]: value });
+      mainItems = { ...(mainItems ?? {}), [key]: FieldValue.delete() };
+    }
+  }
   transaction.set(
     doc.ref,
     {
@@ -149,7 +171,7 @@ export function stagePagedDocWrites(
     },
     { merge: true }
   );
-  plan.pageItems.forEach((items, page) => {
+  pageItems.forEach((items, page) => {
     if (page === 0) {
       return;
     }
@@ -182,10 +204,35 @@ export async function commitPagedDocWrites(
   if (plan.createsPages) {
     await db.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(doc.ref);
-      const current = getPageCount(snapshot.data());
-      if (current < plan.pageCount) {
-        transaction.set(doc.ref, { pageCount: plan.pageCount }, { merge: true });
+      const data = snapshot.data();
+      const current = getPageCount(data);
+      if (current >= plan.pageCount) {
+        return;
       }
+      if (current === 0 && snapshot.exists) {
+        // Make room for `pageCount` by moving one untouched entry onto page 1 in this write.
+        const touched = [...plan.pageItems.values()].flatMap((items) => Object.keys(items));
+        const entry = pickEntryToMakeRoom(
+          data?.[config.field] as Entries | undefined,
+          config.isMovableKey,
+          touched
+        );
+        if (entry) {
+          const [key, value] = entry;
+          transaction.set(
+            pageRef(config, doc.ref, 1),
+            { [config.field]: { [key]: value }, createdAt: now, updatedAt: now },
+            { merge: true }
+          );
+          transaction.set(
+            doc.ref,
+            { pageCount: plan.pageCount, [config.field]: { [key]: FieldValue.delete() } },
+            { merge: true }
+          );
+          return;
+        }
+      }
+      transaction.set(doc.ref, { pageCount: plan.pageCount }, { merge: true });
     });
   }
 
@@ -277,7 +324,14 @@ export async function relocateToOverflowPages(
 
 /** A document that doesn't exist yet, for writers that create it. */
 export function emptyPagedDoc(ref: FirebaseFirestore.DocumentReference): PagedDoc {
-  return { data: {}, exists: false, items: {}, layout: createSinglePageLayout(0), ref };
+  return {
+    data: {},
+    duplicateDocKeys: [],
+    exists: false,
+    items: {},
+    layout: createSinglePageLayout(0),
+    ref,
+  };
 }
 
 /** Deletes a document together with its overflow pages (and any other subcollections). */

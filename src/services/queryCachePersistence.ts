@@ -136,6 +136,17 @@ const asyncStorageStore: PersistedQueryCacheStore = {
 /** Removes the pre-file AsyncStorage copy; failures don't matter (it's only a cache). */
 const removeLegacyCache = () => AsyncStorage.removeItem(QUERY_CACHE_STORAGE_KEY).catch(() => undefined);
 
+let hasRetriedLegacyRemoval = false;
+
+const isCompleteJson = (text: string): boolean => {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const fileQueryCacheStore: PersistedQueryCacheStore = {
   async clear() {
     // Both removals are attempted even if one fails. A file that couldn't be deleted is
@@ -162,15 +173,25 @@ export const fileQueryCacheStore: PersistedQueryCacheStore = {
 
     const info = await file.fs.getInfoAsync(file.uri);
     if (info.exists) {
+      // Once per session, retry dropping a legacy copy whose removal failed after migrating.
+      if (!hasRetriedLegacyRemoval) {
+        hasRetriedLegacyRemoval = true;
+        void removeLegacyCache();
+      }
       return file.fs.readAsStringAsync(file.uri);
     }
 
-    // Interrupted between removing the old file and moving the new one in: the temp file is
-    // complete (it's only moved after being fully written), so use it.
+    // Interrupted between removing the old file and moving the new one in. The temp file is
+    // used only if it's complete: a crash during the very first write can leave it truncated,
+    // and then the legacy copy below is still the one to use.
     const tempUri = `${file.uri}.tmp`;
     const tempInfo = await file.fs.getInfoAsync(tempUri);
     if (tempInfo.exists) {
-      return file.fs.readAsStringAsync(tempUri);
+      const tempText = await file.fs.readAsStringAsync(tempUri);
+      if (isCompleteJson(tempText)) {
+        return tempText;
+      }
+      await file.fs.deleteAsync(tempUri, { idempotent: true });
     }
 
     // First launch after moving to a file: copy the old AsyncStorage value into the file, then

@@ -13,6 +13,7 @@ import {
   planPagedListWrites,
   readPagedList,
   relocateListItemsToPages,
+  withPages,
   type PagedList,
 } from '@/functions/src/listPagesAdmin';
 import {
@@ -25,13 +26,14 @@ import { LIST_PAGE_CAPACITY } from '@/functions/src/shared/listPages';
 type Store = Map<string, Record<string, unknown>>;
 
 /** Minimal Firestore double: docs keyed by path, set() with shallow-deep merge of `items`. */
-function createDb(store: Store) {
+function createDb(store: Store, hooks: { beforeSet?: (path: string) => Promise<void> } = {}) {
   const events: string[] = [];
   const ref = (path: string): any => ({
     path,
     id: path.split('/').at(-1),
     get: async () => snapshot(path),
     set: async (data: Record<string, unknown>, options?: { merge?: boolean }) => {
+      await hooks.beforeSet?.(path);
       events.push(`set ${path}`);
       write(path, data, options?.merge);
     },
@@ -107,14 +109,18 @@ describe('paged list writes (server)', () => {
 
     await commitPagedListWrites(db, list, plan, { updatedAt: 1 }, 1);
 
-    // pageCount is registered before any page is written.
+    // pageCount is registered (in one transaction, which also moves one item onto page 1 to
+    // make room) before any of the planned page writes.
     expect(events[0]).toBe('transaction');
-    expect(events[1]).toBe(`tx-set ${LIST}`);
+    const registration = events.indexOf(`tx-set ${LIST}`);
+    const firstPlannedWrite = events.findIndex((event) => event.startsWith('set '));
+    expect(registration).toBeGreaterThan(0);
+    expect(registration).toBeLessThan(firstPlannedWrite);
     expect(store.get(LIST)!.pageCount).toBe(2);
 
     const reread = await readPagedList(ref(LIST));
     expect(Object.keys(reread.items)).toHaveLength(2 * LIST_PAGE_CAPACITY + 3);
-    expect(reread.layout.pageSizes).toEqual([LIST_PAGE_CAPACITY, LIST_PAGE_CAPACITY, 3]);
+    expect(reread.layout.pageSizes).toEqual([LIST_PAGE_CAPACITY - 1, LIST_PAGE_CAPACITY + 1, 3]);
   });
 
   it('updates an existing item where it is and deletes from every page', async () => {
@@ -187,9 +193,10 @@ describe('paged list writes (server)', () => {
     );
 
     expect(store.get(SHOW)!.pageCount).toBe(1);
-    expect(store.get(`${SHOW}/episode_pages/1`)!.episodes).toEqual({
-      '2_1': { episodeNumber: 1, seasonNumber: 2 },
-    });
+    const page1 = store.get(`${SHOW}/episode_pages/1`)!.episodes as Record<string, unknown>;
+    // The new episode, plus one existing episode moved to make room for pageCount.
+    expect(page1['2_1']).toEqual({ episodeNumber: 1, seasonNumber: 2 });
+    expect(Object.keys(page1)).toHaveLength(2);
     const reread = await readEpisodeTracking(ref(SHOW));
     expect(Object.keys(reread.items)).toHaveLength(LIST_PAGE_CAPACITY + 1);
   });
@@ -205,7 +212,8 @@ describe('paged list writes (server)', () => {
     await relocateListItemsToPages(db, list, moving);
 
     expect(events.indexOf(`set ${LIST}/item_pages/1`)).toBeLessThan(events.lastIndexOf(`set ${LIST}`));
-    expect(Object.keys(store.get(LIST)!.items as object)).toHaveLength(LIST_PAGE_CAPACITY - 100);
+    // 600 moved, plus one moved alongside registering page 1 (to make room for pageCount).
+    expect(Object.keys(store.get(LIST)!.items as object)).toHaveLength(LIST_PAGE_CAPACITY - 101);
     const reread = await readPagedList(ref(LIST));
     expect(Object.keys(reread.items)).toHaveLength(LIST_PAGE_CAPACITY + 500);
     expect(reread.items['movie-1']).toMatchObject({ poster_path: '/p.jpg' });
@@ -230,5 +238,61 @@ describe('paged list writes (server)', () => {
     expect(reread.items['777777']).toBeUndefined();
     expect(reread.items['movie-777777']).toMatchObject({ poster_path: '/p.jpg' });
     expect(reread.layout.overflowItemPages['movie-777777']).toBe(1);
+  });
+
+  it('moves one item onto page 1 when registering it, so a byte-full document still fits', async () => {
+    const store: Store = new Map([[LIST, { items: items(1, LIST_PAGE_CAPACITY) }]]);
+    const { db, ref } = createDb(store);
+    const list = await readPagedList(ref(LIST));
+
+    await commitPagedListWrites(db, list, planPagedListWrites(list, { set: items(50_000, 1) }));
+
+    const page1 = store.get(`${LIST}/item_pages/1`)!.items as Record<string, unknown>;
+    // The new item plus one existing item moved in the same write as pageCount.
+    expect(Object.keys(page1)).toHaveLength(2);
+    expect(page1['movie-50000']).toBeDefined();
+    expect(Object.keys(store.get(LIST)!.items as object)).toHaveLength(LIST_PAGE_CAPACITY - 1);
+    const reread = await readPagedList(ref(LIST));
+    expect(Object.keys(reread.items)).toHaveLength(LIST_PAGE_CAPACITY + 1);
+  });
+
+  it('keeps items on the list document until their page write succeeds', async () => {
+    const store: Store = new Map([[LIST, { items: items(1, LIST_PAGE_CAPACITY + 5) }]]);
+    let releasePageWrite!: () => void;
+    let failPageWrite = false;
+    const pageWrite = new Promise<void>((resolve) => {
+      releasePageWrite = resolve;
+    });
+    const { db, ref } = createDb(store, {
+      beforeSet: async (path) => {
+        if (path.includes('/item_pages/') ) {
+          await pageWrite;
+          if (failPageWrite) throw new Error('page write failed');
+        }
+      },
+    });
+    const list = await readPagedList(ref(LIST));
+    const moving = { 'movie-1': { id: 1, media_type: 'movie', poster_path: '/p.jpg' } };
+
+    const relocation = relocateListItemsToPages(db, list, moving);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect((store.get(LIST)!.items as Record<string, unknown>)['movie-1']).toBeDefined();
+
+    failPageWrite = true;
+    releasePageWrite();
+    await expect(relocation).rejects.toThrow('page write failed');
+    expect((store.get(LIST)!.items as Record<string, unknown>)['movie-1']).toBeDefined();
+  });
+
+  it('reports document copies that a page already holds as stale duplicates', async () => {
+    const store: Store = new Map<string, Record<string, unknown>>([
+      [LIST, { items: items(1, 3), pageCount: 1 }],
+      [`${LIST}/item_pages/1`, { items: items(2, 1) }],
+    ]);
+    const { ref } = createDb(store);
+
+    const list = await withPages(await ref(LIST).get());
+
+    expect(list.duplicateDocKeys).toEqual(['movie-2']);
   });
 });

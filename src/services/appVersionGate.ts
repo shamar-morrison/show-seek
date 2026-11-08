@@ -13,7 +13,8 @@ const LAST_MINIMUM_STORAGE_KEY = 'appVersionGate:lastMinimumCompatibilityVersion
 const parseMinimum = (value: unknown): number | null =>
   typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
 
-async function readLastMinimum(): Promise<number | null> {
+/** The last minimum seen, from the device (fast, offline-safe). */
+export async function readLastMinimum(): Promise<number | null> {
   try {
     const stored = await AsyncStorage.getItem(LAST_MINIMUM_STORAGE_KEY);
     return stored === null ? null : parseMinimum(Number(stored));

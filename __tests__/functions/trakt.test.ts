@@ -6854,4 +6854,24 @@ describe('enrichment on a full list document', () => {
     expect(result.itemsToMove).toEqual({});
     expect(result.removeFromListDocKeys).toEqual(['5']);
   });
+
+  it('keeps fields only the dropped legacy copy had, without overriding the canonical copy', () => {
+    const list = singlePage({
+      ...manyItems(2500),
+      '5': movieItem(5, { addedAt: 111, title: 'Legacy title' }),
+    });
+    const result = planEnrichmentRelocation(list, { '5': movieItem(5, { addedAt: 111, poster_path: '/p' }) });
+
+    expect(result.removeFromListDocKeys).toEqual(['5']);
+    expect(result.itemsInPlace['movie-5']).toEqual(
+      expect.objectContaining({ addedAt: 111, title: 'Movie 5', poster_path: '/p' })
+    );
+  });
+
+  it('removes stale document copies of items already on a page', () => {
+    const list = { ...singlePage(manyItems(10)), duplicateDocKeys: ['movie-3'] };
+    const result = planEnrichmentRelocation(list, {});
+
+    expect(result.removeFromListDocKeys).toEqual(['movie-3']);
+  });
 });

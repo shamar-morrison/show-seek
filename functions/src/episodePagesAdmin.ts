@@ -16,8 +16,13 @@ import {
   type PagedDocConfig,
 } from './pagedDocAdmin';
 import { EPISODE_PAGES_COLLECTION } from './shared/episodePages';
+import { isEpisodeKey } from './shared/pagedMap';
 
-const EPISODE_PAGES: PagedDocConfig = { field: 'episodes', pagesCollection: EPISODE_PAGES_COLLECTION };
+const EPISODE_PAGES: PagedDocConfig = {
+  field: 'episodes',
+  isMovableKey: isEpisodeKey,
+  pagesCollection: EPISODE_PAGES_COLLECTION,
+};
 
 /** A show's tracking document; `items` holds every watched episode, keyed `${season}_${episode}`. */
 export type PagedEpisodeTracking = PagedDoc;

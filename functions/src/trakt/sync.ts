@@ -754,8 +754,8 @@ export const syncTraktImport = async (
     if (watched) {
       // The Already Watched list and episode progress are written independently, so a failed
       // list write doesn't leave episode progress stale (the run is still marked failed).
-      const alreadyWatchedItems = buildAlreadyWatchedItemsMap(watched.movies, watched.shows);
       try {
+        const alreadyWatchedItems = buildAlreadyWatchedItemsMap(watched.movies, watched.shows);
         const alreadyWatchedResult = await reconcileManagedList(
           userId,
           'already-watched',

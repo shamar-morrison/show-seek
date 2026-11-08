@@ -51,16 +51,34 @@ describe('file-backed query cache store', () => {
     expect(AsyncStorage.removeItem).toHaveBeenCalledWith(LEGACY_KEY);
   });
 
-  it('keeps the old copy when it cannot be written to the file yet', async () => {
+  it('keeps the old copy when it cannot be written to the file yet, and migrates it later', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const fs = jest.requireMock('expo-file-system/legacy');
     (fs.writeAsStringAsync as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+    let legacy: string | null = '{"legacy":true}';
+    (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key: string) =>
+      key === LEGACY_KEY ? legacy : null
+    );
+    (AsyncStorage.removeItem as jest.Mock).mockImplementation(async (key: string) => {
+      if (key === LEGACY_KEY) legacy = null;
+    });
+
+    await expect(fileQueryCacheStore.read()).resolves.toBe('{"legacy":true}');
+    expect(legacy).toBe('{"legacy":true}');
+
+    // The next launch migrates it.
+    await expect(fileQueryCacheStore.read()).resolves.toBe('{"legacy":true}');
+    expect(mockFiles.get(FILE)).toBe('{"legacy":true}');
+    expect(legacy).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('ignores a truncated temp file and falls back to the old copy', async () => {
+    mockFiles.set(`${FILE}.tmp`, '{"cut off');
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue('{"legacy":true}');
 
     await expect(fileQueryCacheStore.read()).resolves.toBe('{"legacy":true}');
-
-    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
-    warn.mockRestore();
+    expect(mockFiles.get(FILE)).toBe('{"legacy":true}');
   });
 
   it('recovers a complete temp file left by an interrupted swap', async () => {

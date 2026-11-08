@@ -1,5 +1,6 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { deleteDocWithPages } from '@/src/services/firestoreHelpers';
 import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
 import { hasEpisodeAired } from '@/src/utils/dateUtils';
 import { createTimeoutWithCleanup, raceWithTimeout } from '@/src/utils/timeout';
@@ -8,7 +9,9 @@ import {
   createSinglePageLayout,
   getPageCount,
   getPageDocId,
+  isEpisodeKey,
   mergePages,
+  pickEntryToMakeRoom,
   PAGE_CAPACITY,
   parsePageDocId,
   planPagedMapWrites,
@@ -54,6 +57,13 @@ class EpisodeTrackingService {
   /** Page layouts from the last read or write, keyed `${userId}/${tvShowId}`. */
   private readonly knownLayouts = new Map<string, KnownEpisodeLayout>();
 
+  /**
+   * Bumped by every write that updates a remembered layout. A read only saves the layout it
+   * loaded if no write happened while it was in flight, so a slow (or timed-out) read can't
+   * replace a newer layout with a stale one.
+   */
+  private layoutWriteCount = 0;
+
   private layoutKey(userId: string, tvShowId: number | string) {
     return `${userId}/${tvShowId}`;
   }
@@ -97,13 +107,14 @@ class EpisodeTrackingService {
     data: DocumentData,
     callsite: string
   ): Promise<{ data: DocumentData; overflowItemPages: Record<string, number> }> {
-    const merged = await this.withEpisodePages(userId, tvShowId, data, callsite);
-    return {
-      data: merged,
-      overflowItemPages: {
-        ...(this.knownLayouts.get(this.layoutKey(userId, tvShowId))?.layout.overflowItemPages ?? {}),
-      },
-    };
+    const loaded = await this.loadEpisodePages(
+      userId,
+      tvShowId,
+      data,
+      callsite,
+      this.layoutWriteCount
+    );
+    return { data: loaded.data, overflowItemPages: { ...loaded.layout.overflowItemPages } };
   }
 
   /**
@@ -114,8 +125,19 @@ class EpisodeTrackingService {
     userId: string,
     tvShowId: number | string,
     data: DocumentData,
-    callsite: string
+    callsite: string,
+    readStartedAt: number
   ): Promise<DocumentData> {
+    return (await this.loadEpisodePages(userId, tvShowId, data, callsite, readStartedAt)).data;
+  }
+
+  private async loadEpisodePages(
+    userId: string,
+    tvShowId: number | string,
+    data: DocumentData,
+    callsite: string,
+    readStartedAt: number
+  ): Promise<{ data: DocumentData; layout: PageLayout; keys: Set<string> }> {
     const mainEpisodes = (data.episodes ?? {}) as Record<string, WatchedEpisode>;
     const pageCount = getPageCount(data);
     let merged = {
@@ -141,11 +163,11 @@ class EpisodeTrackingService {
       );
     }
 
-    this.knownLayouts.set(this.layoutKey(userId, tvShowId), {
-      keys: new Set(Object.keys(merged.items)),
-      layout: merged.layout,
-    });
-    return { ...data, episodes: merged.items };
+    const keys = new Set(Object.keys(merged.items));
+    if (this.layoutWriteCount === readStartedAt) {
+      this.knownLayouts.set(this.layoutKey(userId, tvShowId), { keys, layout: merged.layout });
+    }
+    return { data: { ...data, episodes: merged.items }, keys, layout: merged.layout };
   }
 
   /** The show's layout: remembered, or read from Firestore (document + pages). */
@@ -156,6 +178,7 @@ class EpisodeTrackingService {
     }
 
     const trackingRef = this.getShowTrackingRef(userId, tvShowId);
+    const readStartedAt = this.layoutWriteCount;
     const snapshot = await auditedGetDoc(trackingRef, {
       path: `users/${userId}/episode_tracking/${tvShowId}`,
       queryKey: 'episodeTrackingByShow',
@@ -166,13 +189,19 @@ class EpisodeTrackingService {
       this.knownLayouts.set(this.layoutKey(userId, tvShowId), empty);
       return empty;
     }
-    await this.withEpisodePages(
+    const loaded = await this.loadEpisodePages(
       userId,
       tvShowId,
       snapshot.data(),
-      'EpisodeTrackingService.resolveLayout'
+      'EpisodeTrackingService.resolveLayout',
+      readStartedAt
     );
-    return this.knownLayouts.get(this.layoutKey(userId, tvShowId))!;
+    return (
+      this.knownLayouts.get(this.layoutKey(userId, tvShowId)) ?? {
+        keys: loaded.keys,
+        layout: loaded.layout,
+      }
+    );
   }
 
   /**
@@ -243,17 +272,51 @@ class EpisodeTrackingService {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
+      // Set by the transaction (which may run more than once) when an episode moves to make room.
+      let movedKey: string | null = null;
       if (plan.createsPages) {
         await Promise.race([
           runTransaction(db, async (transaction) => {
+            movedKey = null;
             const snapshot = await transaction.get(trackingRef);
-            const current = getPageCount(snapshot.data());
-            if (snapshot.exists() && current < plan.pageCount) {
-              transaction.update(trackingRef, { pageCount: plan.pageCount });
+            const data = snapshot.data();
+            const current = getPageCount(data);
+            if (!snapshot.exists() || current >= plan.pageCount) {
+              return;
             }
+            const update: Record<string, unknown> = { pageCount: plan.pageCount };
+            if (current === 0) {
+              // Adding `pageCount` grows the show's document; one that's full to the byte
+              // couldn't take it. Move one untouched episode onto page 1 in this same write.
+              const touched = [...plan.pageItems.values()].flatMap((items) => Object.keys(items));
+              const entry = pickEntryToMakeRoom(
+                data?.episodes as Record<string, WatchedEpisode> | undefined,
+                isEpisodeKey,
+                touched
+              );
+              if (entry) {
+                const [entryKey, movedEpisode] = entry;
+                transaction.set(
+                  this.getEpisodePageRef(userId, tvShowId, 1),
+                  { episodes: { [entryKey]: movedEpisode }, createdAt: now, updatedAt: now },
+                  { merge: true }
+                );
+                update[`episodes.${entryKey}`] = deleteField();
+                movedKey = entryKey;
+              }
+            }
+            transaction.update(trackingRef, update);
           }),
           timeout.promise,
         ]);
+      }
+
+      const known = this.knownLayouts.get(this.layoutKey(userId, tvShowId));
+      if (movedKey && known) {
+        // The planned layout (applied by the caller) doesn't know about the moved episode.
+        plan.layout.overflowItemPages[movedKey] = 1;
+        plan.layout.pageSizes[0] = Math.max(0, (plan.layout.pageSizes[0] ?? 0) - 1);
+        plan.layout.pageSizes[1] = (plan.layout.pageSizes[1] ?? 0) + 1;
       }
 
       const batch = writeBatch(db);
@@ -289,6 +352,7 @@ class EpisodeTrackingService {
     episodes: Record<string, WatchedEpisode>,
     plan: EpisodeWritePlan | null
   ) {
+    this.layoutWriteCount += 1;
     const key = this.layoutKey(userId, tvShowId);
     const known = this.knownLayouts.get(key);
     if (!known) {
@@ -340,6 +404,7 @@ class EpisodeTrackingService {
       timeout.cancel();
     }
 
+    this.layoutWriteCount += 1;
     const known = this.knownLayouts.get(this.layoutKey(userId, tvShowId));
     if (known) {
       recordRemoval(known.layout, (key) => known.keys.has(key), episodeKeys);
@@ -367,6 +432,7 @@ class EpisodeTrackingService {
 
     const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
     const timeout = createTimeoutWithCleanup(10000);
+    const readStartedAt = this.layoutWriteCount;
 
     try {
       const snapshot = await Promise.race([
@@ -390,7 +456,8 @@ class EpisodeTrackingService {
           user.uid,
           tvShowId,
           snapshot.data(),
-          'EpisodeTrackingService.getShowTracking'
+          'EpisodeTrackingService.getShowTracking',
+          readStartedAt
         ),
         { ms: 10000 }
       );
@@ -857,6 +924,7 @@ class EpisodeTrackingService {
   async getAllWatchedShows(userId: string): Promise<TVShowEpisodeTracking[]> {
     try {
       const trackingCollectionRef = collection(db, 'users', userId, 'episode_tracking');
+      const readStartedAt = this.layoutWriteCount;
 
       const timeout = createTimeoutWithCleanup(10000);
       const snapshot = await Promise.race([
@@ -880,7 +948,8 @@ class EpisodeTrackingService {
                 userId,
                 trackingDoc.id,
                 trackingDoc.data(),
-                'EpisodeTrackingService.getAllWatchedShows'
+                'EpisodeTrackingService.getAllWatchedShows',
+                readStartedAt
               ),
               trackingDoc.id
             )
@@ -969,13 +1038,15 @@ class EpisodeTrackingService {
           }),
           timeout.promise,
         ]);
-        const batch = writeBatch(db);
-        pages.docs.forEach((pageDoc) => batch.delete(pageDoc.ref));
-        batch.delete(trackingRef);
-        await Promise.race([batch.commit(), timeout.promise]);
+        await deleteDocWithPages(
+          pages.docs.map((pageDoc) => pageDoc.ref),
+          trackingRef,
+          (operation) => Promise.race([operation, timeout.promise])
+        );
       } finally {
         timeout.cancel();
       }
+      this.layoutWriteCount += 1;
       this.knownLayouts.delete(this.layoutKey(user.uid, tvShowId));
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));

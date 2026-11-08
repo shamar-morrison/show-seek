@@ -191,4 +191,32 @@ describe('EpisodeTrackingService overflow pages', () => {
 
     expect(batches[0].delete.mock.calls.map(([ref]) => ref.path)).toEqual(['page-1', SHOW]);
   });
+
+  it('moves one existing episode onto the first page so pageCount fits a byte-full show', async () => {
+    (setDoc as jest.Mock).mockRejectedValueOnce({
+      code: 'invalid-argument',
+      message: 'Document cannot be written because its size (1,048,570 bytes) exceeds the maximum allowed size of 1,048,576 bytes.',
+    });
+    (getDoc as jest.Mock).mockResolvedValue(showDoc({ episodes: episodesOf(['1_1', '1_2']) }));
+    const transaction = {
+      get: jest
+        .fn()
+        .mockResolvedValue({ exists: () => true, data: () => ({ episodes: episodesOf(['1_1', '1_2']) }) }),
+      set: jest.fn(),
+      update: jest.fn(),
+    };
+    (runTransaction as jest.Mock).mockImplementation(async (_db, run) => run(transaction));
+
+    await episodeTrackingService.markEpisodeWatched(42, 3, 1, episode, metadata);
+
+    expect(transaction.set).toHaveBeenCalledWith(
+      { path: `${SHOW}/episode_pages/1` },
+      expect.objectContaining({ episodes: { '1_1': expect.any(Object) } }),
+      { merge: true }
+    );
+    expect(transaction.update).toHaveBeenCalledWith(
+      { path: SHOW },
+      { pageCount: 1, 'episodes.1_1': '__deleteField__' }
+    );
+  });
 });

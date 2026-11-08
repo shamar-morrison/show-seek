@@ -2,6 +2,7 @@ import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { normalizeListKind, trackAddToList, trackCreateList } from '@/src/services/analytics';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { deleteDocWithPages } from '@/src/services/firestoreHelpers';
 import { requireSignedInUser, toFirestoreError } from '@/src/services/serviceSupport';
 import {
   buildListItemKey,
@@ -24,6 +25,7 @@ import {
   type ListItemPlacement,
   type ListPageLayout,
 } from '@/functions/src/shared/listPages';
+import { isCanonicalListItemKey, pickEntryToMakeRoom } from '@/functions/src/shared/pagedMap';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
@@ -125,6 +127,13 @@ class ListService {
   /** Page layouts from the last load or write, keyed `${userId}/${listId}`. */
   private readonly knownLayouts = new Map<string, KnownListLayout>();
 
+  /**
+   * Bumped by every write that updates a remembered layout. A read only saves the layout it
+   * loaded if no write happened while it was in flight, so a slow (or timed-out) read can't
+   * replace a newer layout with a stale one.
+   */
+  private layoutWriteCount = 0;
+
   private layoutKey(userId: string, listId: string) {
     return `${userId}/${listId}`;
   }
@@ -157,9 +166,13 @@ class ListService {
             layout.overflowItemPages[itemKey] = page;
           }
         });
-        layout.pageSizes = layout.pageSizes.map((size, page) =>
-          Math.max(size, existing.layout.pageSizes[page] ?? 0)
-        );
+        // Recount from the item positions, so sizes reflect both those writes and any removals.
+        const sizes = new Array<number>(layout.pageCount + 1).fill(0);
+        keys.forEach((itemKey) => {
+          const page = layout.overflowItemPages[itemKey] ?? 0;
+          sizes[page] = (sizes[page] ?? 0) + 1;
+        });
+        layout.pageSizes = sizes;
       }
       this.knownLayouts.set(key, { keys, layout });
     });
@@ -173,6 +186,7 @@ class ListService {
     userId: string,
     audit: ListAuditInfo
   ): Promise<{ id: string; data: DocumentData; items: Record<string, ListMediaItem>; layout: ListPageLayout }[]> {
+    const readStartedAt = this.layoutWriteCount;
     const snapshot = await auditedGetDocs(this.getUserListsCollection(userId), {
       path: `users/${userId}/lists`,
       queryKey: audit.queryKey,
@@ -180,7 +194,9 @@ class ListService {
     });
 
     return Promise.all(
-      snapshot.docs.map((listDoc) => this.mergeListDoc(userId, listDoc.id, listDoc.data(), audit))
+      snapshot.docs.map((listDoc) =>
+        this.mergeListDoc(userId, listDoc.id, listDoc.data(), audit, readStartedAt)
+      )
     );
   }
 
@@ -188,7 +204,8 @@ class ListService {
     userId: string,
     listId: string,
     data: DocumentData,
-    audit: ListAuditInfo
+    audit: ListAuditInfo,
+    readStartedAt: number
   ) {
     const pageCount = getListPageCount(data);
     const mainItems = (data.items ?? {}) as Record<string, ListMediaItem>;
@@ -215,10 +232,12 @@ class ListService {
       );
     }
 
-    this.knownLayouts.set(this.layoutKey(userId, listId), {
-      keys: new Set(Object.keys(merged.items)),
-      layout: merged.layout,
-    });
+    if (this.layoutWriteCount === readStartedAt) {
+      this.knownLayouts.set(this.layoutKey(userId, listId), {
+        keys: new Set(Object.keys(merged.items)),
+        layout: merged.layout,
+      });
+    }
 
     return { data, id: listId, items: merged.items, layout: merged.layout };
   }
@@ -268,12 +287,13 @@ class ListService {
       return list;
     }
     const { id, ...data } = list;
-    const record = await this.mergeListDoc(userId, id, data, audit);
+    const record = await this.mergeListDoc(userId, id, data, audit, this.layoutWriteCount);
     return this.toUserList(record, { normalizeKeys: false });
   }
 
   /** Loads one list with its items merged across overflow pages; null if it doesn't exist. */
   async getUserList(userId: string, listId: string, audit: ListAuditInfo): Promise<UserList | null> {
+    const readStartedAt = this.layoutWriteCount;
     const snapshot = await auditedGetDoc(this.getUserListRef(userId, listId), {
       path: `users/${userId}/lists/${listId}`,
       queryKey: audit.queryKey,
@@ -282,7 +302,9 @@ class ListService {
     if (!snapshot.exists()) {
       return null;
     }
-    return this.toUserList(await this.mergeListDoc(userId, listId, snapshot.data(), audit));
+    return this.toUserList(
+      await this.mergeListDoc(userId, listId, snapshot.data(), audit, readStartedAt)
+    );
   }
 
   /** The list's layout: remembered, or read from Firestore (list document + pages). */
@@ -573,6 +595,7 @@ class ListService {
         );
       }
 
+      this.layoutWriteCount += 1;
       const knownAfterWrite = this.knownLayouts.get(this.layoutKey(user.uid, listId));
       if (knownAfterWrite) {
         const isNewItem = !candidateKeys.some((key) => knownAfterWrite.keys.has(key));
@@ -697,26 +720,56 @@ class ListService {
         return;
       }
 
+      // Set by the transaction (which may run more than once) when an item moves to make room.
+      let movedKey: string | null = null;
       await Promise.race([
         runTransaction(db, async (transaction) => {
+          movedKey = null;
           const listSnapshot = await transaction.get(listRef);
-          const currentPageCount = getListPageCount(listSnapshot.data());
+          const listData = listSnapshot.data();
+          const currentPageCount = getListPageCount(listData);
+          const pageItems: Record<string, ListMediaItem> = { [itemKey]: itemToAdd };
+          const update: Record<string, unknown> = {
+            ...listUpdate,
+            pageCount: Math.max(currentPageCount, placement.page),
+          };
+
+          if (currentPageCount === 0 && placement.page === 1) {
+            // Adding `pageCount` grows the list document; one that's full to the byte couldn't
+            // take it. Move one existing item onto the new page in this same write.
+            const entry = pickEntryToMakeRoom(
+              listData?.items as Record<string, ListMediaItem> | undefined,
+              isCanonicalListItemKey,
+              [itemKey]
+            );
+            if (entry) {
+              const [entryKey, movedItem] = entry;
+              pageItems[entryKey] = movedItem;
+              update[`items.${entryKey}`] = deleteField();
+              movedKey = entryKey;
+            }
+          }
+
           transaction.set(
             pageRef,
             {
-              items: { [itemKey]: itemToAdd },
+              items: pageItems,
               updatedAt: now,
               ...(currentPageCount < placement.page ? { createdAt: now } : {}),
             },
             { merge: true }
           );
-          transaction.update(listRef, {
-            ...listUpdate,
-            pageCount: Math.max(currentPageCount, placement.page),
-          });
+          transaction.update(listRef, update);
         }),
         timeout.promise,
       ]);
+
+      const known = this.knownLayouts.get(this.layoutKey(userId, listId));
+      if (movedKey && known) {
+        known.layout.overflowItemPages[movedKey] = 1;
+        known.layout.pageSizes[0] = Math.max(0, (known.layout.pageSizes[0] ?? 0) - 1);
+        known.layout.pageSizes[1] = (known.layout.pageSizes[1] ?? 0) + 1;
+      }
     } finally {
       timeout.cancel();
     }
@@ -773,6 +826,7 @@ class ListService {
         await Promise.race([batch.commit(), timeout.promise]);
       }
 
+      this.layoutWriteCount += 1;
       if (known) {
         recordListItemRemoval(known.layout, (key) => known.keys.has(key), [itemKey, legacyKey]);
         known.keys.delete(itemKey);
@@ -895,13 +949,13 @@ class ListService {
         }),
         timeout.promise,
       ]);
-      const batch = writeBatch(db);
-      pages.docs.forEach((pageDoc: QueryDocumentSnapshot<DocumentData>) => {
-        batch.delete(pageDoc.ref);
-      });
-      batch.delete(listRef);
-      await Promise.race([batch.commit(), timeout.promise]);
+      await deleteDocWithPages(
+        pages.docs.map((pageDoc: QueryDocumentSnapshot<DocumentData>) => pageDoc.ref),
+        listRef,
+        (operation) => Promise.race([operation, timeout.promise])
+      );
 
+      this.layoutWriteCount += 1;
       this.knownLayouts.delete(this.layoutKey(user.uid, listId));
     } catch (error) {
       console.error('[ListService] deleteList error:', error);
