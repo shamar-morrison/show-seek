@@ -378,6 +378,40 @@ describe('ListService overflow pages', () => {
     ]);
   });
 
+  it('still remembers a list read while a different list was written', async () => {
+    listService.rememberListLayouts(USER, [
+      pagedList({ id: 'favorites', name: 'Favorites', items: itemsOf([7]) }),
+    ]);
+    let resolveRead!: (value: unknown) => void;
+    (getDoc as jest.Mock)
+      .mockReturnValueOnce(new Promise((resolve) => (resolveRead = resolve)))
+      .mockResolvedValue({ exists: () => true, data: () => ({}) });
+    (getDocs as jest.Mock).mockResolvedValue({
+      size: 1,
+      docs: [snapshotDoc('1', { items: itemsOf([2]) })],
+    });
+
+    const read = listService.getUserList(USER, 'already-watched', {
+      queryKey: 'test',
+      callsite: 'test',
+    });
+    await listService.removeFromList('favorites', 7, 'movie');
+    resolveRead({
+      exists: () => true,
+      data: () => ({ name: 'Already Watched', items: itemsOf([1]), pageCount: 1 }),
+    });
+    await read;
+
+    // The layout it read (with page 1) was kept, so the removal reaches page 1 without a read.
+    (getDoc as jest.Mock).mockClear();
+    batches = [];
+    await listService.removeFromList('already-watched', 2, 'movie');
+    expect(getDoc).not.toHaveBeenCalled();
+    expect(batches[0].set.mock.calls.map(([ref]) => ref.path)).toEqual([
+      `${LISTS}/already-watched/item_pages/1`,
+    ]);
+  });
+
   it('recounts page sizes so a removal frees room on the last page', async () => {
     const mainKeys = Array.from({ length: LIST_PAGE_CAPACITY }, (_, i) => i + 1);
     const pageKeys = Array.from({ length: LIST_PAGE_CAPACITY }, (_, i) => 10_000 + i);

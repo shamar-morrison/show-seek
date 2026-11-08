@@ -6847,25 +6847,40 @@ describe('enrichment on a full list document', () => {
     expect(result.itemsInPlace).toEqual({});
   });
 
-  it('keeps the canonical copy and drops a legacy duplicate', () => {
-    const list = singlePage({ ...manyItems(2500), '5': movieItem(5) });
+  it('keeps the canonical copy and just drops a legacy duplicate with nothing to add', () => {
+    const list = singlePage({ ...manyItems(2500, { poster_path: '/c' }), '5': movieItem(5) });
     const result = planEnrichmentRelocation(list, { '5': movieItem(5, { poster_path: '/p' }) });
 
     expect(result.itemsToMove).toEqual({});
+    expect(result.itemsInPlace).toEqual({});
     expect(result.removeFromListDocKeys).toEqual(['5']);
   });
 
-  it('keeps fields only the dropped legacy copy had, without overriding the canonical copy', () => {
+  it('moves the canonical copy with fields only the legacy copy had, before the legacy one goes', () => {
     const list = singlePage({
       ...manyItems(2500),
       '5': movieItem(5, { addedAt: 111, title: 'Legacy title' }),
     });
     const result = planEnrichmentRelocation(list, { '5': movieItem(5, { addedAt: 111, poster_path: '/p' }) });
 
-    expect(result.removeFromListDocKeys).toEqual(['5']);
-    expect(result.itemsInPlace['movie-5']).toEqual(
+    // Written to a page (with addedAt) by the relocation, which runs before any removal.
+    expect(result.itemsToMove['movie-5']).toEqual(
       expect.objectContaining({ addedAt: 111, title: 'Movie 5', poster_path: '/p' })
     );
+    expect(result.itemsInPlace).toEqual({});
+    expect(result.removeFromListDocKeys).toEqual(['5', 'movie-5']);
+  });
+
+  it('updates a canonical copy already on a page in place with the legacy-only fields', () => {
+    const list = {
+      items: { ...manyItems(2500), '5': movieItem(5, { addedAt: 111 }) },
+      layout: { overflowItemPages: { 'movie-5': 1 }, pageCount: 1, pageSizes: [2500, 1] },
+    };
+    const result = planEnrichmentRelocation(list, { '5': movieItem(5, { addedAt: 111, poster_path: '/p' }) });
+
+    expect(result.itemsInPlace['movie-5']).toEqual(expect.objectContaining({ addedAt: 111 }));
+    expect(result.itemsToMove).toEqual({});
+    expect(result.removeFromListDocKeys).toEqual(['5']);
   });
 
   it('removes stale document copies of items already on a page', () => {

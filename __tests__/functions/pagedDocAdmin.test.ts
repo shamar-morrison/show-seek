@@ -256,6 +256,26 @@ describe('paged list writes (server)', () => {
     expect(Object.keys(reread.items)).toHaveLength(LIST_PAGE_CAPACITY + 1);
   });
 
+  it('makes room when every item on the document is being relocated', async () => {
+    const store: Store = new Map([[LIST, { items: items(1, 3) }]]);
+    const { db, events, ref } = createDb(store);
+    const list = await readPagedList(ref(LIST));
+    const enriched = Object.fromEntries(
+      Object.entries(list.items).map(([key, item]) => [key, { ...item, poster_path: '/p.jpg' }])
+    );
+
+    await relocateListItemsToPages(db, list, enriched);
+
+    // No untouched item is left to move, so registration moves one the plan puts on page 1,
+    // with its new value, in the same transaction that adds pageCount.
+    const registration = events.indexOf(`tx-set ${LIST}`);
+    expect(events[registration - 1]).toBe(`tx-set ${LIST}/item_pages/1`);
+    expect(store.get(LIST)!.items).toEqual({});
+    const reread = await readPagedList(ref(LIST));
+    expect(reread.items).toEqual(enriched);
+    expect(reread.layout.pageSizes).toEqual([0, 3]);
+  });
+
   it('keeps items on the list document until their page write succeeds', async () => {
     const store: Store = new Map([[LIST, { items: items(1, LIST_PAGE_CAPACITY + 5) }]]);
     let releasePageWrite!: () => void;

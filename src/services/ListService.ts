@@ -3,6 +3,7 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { normalizeListKind, trackAddToList, trackCreateList } from '@/src/services/analytics';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { deleteDocWithPages } from '@/src/services/firestoreHelpers';
+import { LayoutReadToken, LayoutWriteTracker } from '@/src/services/layoutWriteTracker';
 import { requireSignedInUser, toFirestoreError } from '@/src/services/serviceSupport';
 import {
   buildListItemKey,
@@ -127,12 +128,8 @@ class ListService {
   /** Page layouts from the last load or write, keyed `${userId}/${listId}`. */
   private readonly knownLayouts = new Map<string, KnownListLayout>();
 
-  /**
-   * Bumped by every write that updates a remembered layout. A read only saves the layout it
-   * loaded if no write happened while it was in flight, so a slow (or timed-out) read can't
-   * replace a newer layout with a stale one.
-   */
-  private layoutWriteCount = 0;
+  /** Writes per list, so a slow read can't replace a layout a newer write recorded. */
+  private readonly layoutWrites = new LayoutWriteTracker();
 
   private layoutKey(userId: string, listId: string) {
     return `${userId}/${listId}`;
@@ -186,7 +183,7 @@ class ListService {
     userId: string,
     audit: ListAuditInfo
   ): Promise<{ id: string; data: DocumentData; items: Record<string, ListMediaItem>; layout: ListPageLayout }[]> {
-    const readStartedAt = this.layoutWriteCount;
+    const readStartedAt = this.layoutWrites.startRead();
     const snapshot = await auditedGetDocs(this.getUserListsCollection(userId), {
       path: `users/${userId}/lists`,
       queryKey: audit.queryKey,
@@ -205,7 +202,7 @@ class ListService {
     listId: string,
     data: DocumentData,
     audit: ListAuditInfo,
-    readStartedAt: number
+    readStartedAt: LayoutReadToken
   ) {
     const pageCount = getListPageCount(data);
     const mainItems = (data.items ?? {}) as Record<string, ListMediaItem>;
@@ -232,7 +229,7 @@ class ListService {
       );
     }
 
-    if (this.layoutWriteCount === readStartedAt) {
+    if (this.layoutWrites.isCurrent(this.layoutKey(userId, listId), readStartedAt)) {
       this.knownLayouts.set(this.layoutKey(userId, listId), {
         keys: new Set(Object.keys(merged.items)),
         layout: merged.layout,
@@ -287,13 +284,13 @@ class ListService {
       return list;
     }
     const { id, ...data } = list;
-    const record = await this.mergeListDoc(userId, id, data, audit, this.layoutWriteCount);
+    const record = await this.mergeListDoc(userId, id, data, audit, this.layoutWrites.startRead());
     return this.toUserList(record, { normalizeKeys: false });
   }
 
   /** Loads one list with its items merged across overflow pages; null if it doesn't exist. */
   async getUserList(userId: string, listId: string, audit: ListAuditInfo): Promise<UserList | null> {
-    const readStartedAt = this.layoutWriteCount;
+    const readStartedAt = this.layoutWrites.startRead();
     const snapshot = await auditedGetDoc(this.getUserListRef(userId, listId), {
       path: `users/${userId}/lists/${listId}`,
       queryKey: audit.queryKey,
@@ -318,11 +315,19 @@ class ListService {
       queryKey: 'listById',
       callsite: 'ListService.resolveLayout',
     });
-    const resolved: KnownListLayout = list
-      ? { keys: new Set(Object.keys(list.items)), layout: getUserListLayout(list) }
-      : { keys: new Set(), layout: createSinglePageLayout(0) };
-    this.knownLayouts.set(this.layoutKey(userId, listId), resolved);
-    return resolved;
+    // getUserList saved what it read unless a write to this list happened meanwhile (e.g. one
+    // that created a page); either way, what's remembered now is the newest layout.
+    const current = this.knownLayouts.get(this.layoutKey(userId, listId));
+    if (current) {
+      return current;
+    }
+    if (!list) {
+      const empty: KnownListLayout = { keys: new Set(), layout: createSinglePageLayout(0) };
+      this.knownLayouts.set(this.layoutKey(userId, listId), empty);
+      return empty;
+    }
+    // Superseded by a write that had no layout to update: use it once, but don't remember it.
+    return { keys: new Set(Object.keys(list.items)), layout: getUserListLayout(list) };
   }
 
   /**
@@ -595,7 +600,7 @@ class ListService {
         );
       }
 
-      this.layoutWriteCount += 1;
+      this.layoutWrites.recordWrite(this.layoutKey(user.uid, listId));
       const knownAfterWrite = this.knownLayouts.get(this.layoutKey(user.uid, listId));
       if (knownAfterWrite) {
         const isNewItem = !candidateKeys.some((key) => knownAfterWrite.keys.has(key));
@@ -826,7 +831,7 @@ class ListService {
         await Promise.race([batch.commit(), timeout.promise]);
       }
 
-      this.layoutWriteCount += 1;
+      this.layoutWrites.recordWrite(this.layoutKey(user.uid, listId));
       if (known) {
         recordListItemRemoval(known.layout, (key) => known.keys.has(key), [itemKey, legacyKey]);
         known.keys.delete(itemKey);
@@ -955,7 +960,7 @@ class ListService {
         (operation) => Promise.race([operation, timeout.promise])
       );
 
-      this.layoutWriteCount += 1;
+      this.layoutWrites.recordWrite(this.layoutKey(user.uid, listId));
       this.knownLayouts.delete(this.layoutKey(user.uid, listId));
     } catch (error) {
       console.error('[ListService] deleteList error:', error);

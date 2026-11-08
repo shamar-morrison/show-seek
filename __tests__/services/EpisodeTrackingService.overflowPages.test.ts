@@ -219,4 +219,69 @@ describe('EpisodeTrackingService overflow pages', () => {
       { pageCount: 1, 'episodes.1_1': '__deleteField__' }
     );
   });
+  it('remembers a show layout even when another show is written while it loads', async () => {
+    let finishRead!: (value: unknown) => void;
+    (getDoc as jest.Mock).mockReturnValueOnce(new Promise((resolve) => (finishRead = resolve)));
+    (getDocs as jest.Mock).mockResolvedValue({
+      size: 1,
+      docs: [{ id: '1', data: () => ({ episodes: episodesOf(['2_1']) }) }],
+    });
+
+    const loading = episodeTrackingService.getShowTracking(42);
+    await episodeTrackingService.markEpisodeWatched(99, 1, 1, episode, metadata);
+    finishRead(showDoc({ episodes: episodesOf(['1_1']), pageCount: 1 }));
+    await loading;
+    (setDoc as jest.Mock).mockClear();
+
+    // Re-marking an episode stored on page 1 updates it there, not in the show document.
+    await episodeTrackingService.markEpisodeWatched(42, 2, 1, episode, metadata);
+
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(batches.at(-1)!.set).toHaveBeenCalledWith(
+      { path: `${SHOW}/episode_pages/1` },
+      { episodes: { '2_1': expect.objectContaining({ episodeId: 7 }) }, updatedAt: expect.any(Number) },
+      { merge: true }
+    );
+  });
+
+  it('remembers an episode moved to page 1 even if the writes after it fail', async () => {
+    (setDoc as jest.Mock).mockRejectedValueOnce({
+      code: 'invalid-argument',
+      message: 'Document cannot be written because its size (1,048,570 bytes) exceeds the maximum allowed size of 1,048,576 bytes.',
+    });
+    (getDoc as jest.Mock).mockResolvedValue(showDoc({ episodes: episodesOf(['1_1', '1_2']) }));
+    const transaction = {
+      get: jest
+        .fn()
+        .mockResolvedValue({ exists: () => true, data: () => ({ episodes: episodesOf(['1_1', '1_2']) }) }),
+      set: jest.fn(),
+      update: jest.fn(),
+    };
+    (runTransaction as jest.Mock).mockImplementation(async (_db, run) => run(transaction));
+    (writeBatch as jest.Mock).mockImplementationOnce(() => {
+      const batch: MockBatch = {
+        set: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        commit: jest.fn().mockRejectedValue(new Error('offline')),
+      };
+      batches.push(batch);
+      return batch;
+    });
+
+    await expect(
+      episodeTrackingService.markEpisodeWatched(42, 3, 1, episode, metadata)
+    ).rejects.toThrow();
+    (setDoc as jest.Mock).mockClear();
+
+    // 1_1 now lives on page 1, so re-marking it must not write the hidden document copy.
+    await episodeTrackingService.markEpisodeWatched(42, 1, 1, episode, metadata);
+
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(batches.at(-1)!.set).toHaveBeenCalledWith(
+      { path: `${SHOW}/episode_pages/1` },
+      { episodes: { '1_1': expect.objectContaining({ episodeId: 7 }) }, updatedAt: expect.any(Number) },
+      { merge: true }
+    );
+  });
 });

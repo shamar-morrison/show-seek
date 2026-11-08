@@ -211,12 +211,13 @@ export async function commitPagedDocWrites(
       }
       if (current === 0 && snapshot.exists) {
         // Make room for `pageCount` by moving one untouched entry onto page 1 in this write.
+        const docEntries = data?.[config.field] as Entries | undefined;
         const touched = [...plan.pageItems.values()].flatMap((items) => Object.keys(items));
-        const entry = pickEntryToMakeRoom(
-          data?.[config.field] as Entries | undefined,
-          config.isMovableKey,
-          touched
-        );
+        const entry =
+          pickEntryToMakeRoom(docEntries, config.isMovableKey, touched) ??
+          // Every entry is being written (e.g. all of them are being relocated): move one that
+          // the plan puts on page 1 anyway, with its planned value.
+          pickPlannedPageOneEntry(config, docEntries, plan);
         if (entry) {
           const [key, value] = entry;
           transaction.set(
@@ -259,6 +260,23 @@ export async function commitPagedDocWrites(
     );
   });
   await Promise.all(writes);
+}
+
+/** An entry the plan writes to page 1 that is also still on the document, with its new value. */
+function pickPlannedPageOneEntry(
+  config: PagedDocConfig,
+  docEntries: Entries | undefined,
+  plan: PagedDocWritePlan
+): [string, unknown] | null {
+  const pageOne = plan.pageItems.get(1) ?? {};
+  // FieldValue.delete() is a singleton, so a staged delete compares equal to it.
+  const deleteValue: unknown = FieldValue.delete();
+  for (const [key, value] of Object.entries(pageOne)) {
+    if (docEntries && key in docEntries && config.isMovableKey(key) && value !== deleteValue) {
+      return [key, value];
+    }
+  }
+  return null;
 }
 
 /** The document as it is after a plan is written, so a caller writing again needn't re-read it. */

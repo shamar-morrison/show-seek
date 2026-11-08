@@ -317,13 +317,19 @@ export function planEnrichmentRelocation(
   });
 
   // Fields only the dropped legacy copy has (e.g. addedAt) are kept on the canonical copy;
-  // the canonical copy's own values always win. Written wherever the canonical copy lives.
+  // the canonical copy's own values always win. A canonical copy on the full list document
+  // moves to a page with them; one already on a page is updated there. Either way the fields
+  // are written before the legacy copy is removed (see runTraktEnrichmentJob).
   droppedLegacyCopies.forEach(([canonicalKey, legacyItem]) => {
-    const target = canonicalKey in itemsToMove ? itemsToMove : itemsInPlace;
+    const moves = canonicalKey in itemsToMove || isOnListDocument(canonicalKey);
+    const target = moves ? itemsToMove : itemsInPlace;
     const canonical = target[canonicalKey] ?? list.items[canonicalKey] ?? {};
     const missingFields = Object.entries(legacyItem).filter(([field]) => !(field in canonical));
     if (missingFields.length > 0 || canonicalKey in target) {
       target[canonicalKey] = { ...Object.fromEntries(missingFields), ...canonical };
+      if (moves && !removeFromListDocKeys.includes(canonicalKey)) {
+        removeFromListDocKeys.push(canonicalKey);
+      }
     }
   });
 
@@ -442,8 +448,11 @@ export const runTraktEnrichmentJob = async (
       list,
       enrichedItems
     );
-    await relocateListItemsToPages(db, list, itemsToMove, removeFromListDocKeys);
+    // Every enriched copy is written before any copy is removed from the list document, so an
+    // interrupted run leaves a duplicate (removed on the next pass), never a lost field.
+    await relocateListItemsToPages(db, list, itemsToMove, []);
     await commitPagedListWrites(db, list, planPagedListWrites(list, { set: itemsInPlace }));
+    await relocateListItemsToPages(db, list, {}, removeFromListDocKeys);
     // Cleared only once every item write succeeded, so a failed page write is retried later.
     await listRef.set(
       {
