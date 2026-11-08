@@ -25,9 +25,18 @@ import { ArrowUpDownIcon, Cancel01Icon, FilterRemoveIcon } from '@hugeicons/core
 import type { IconSvgElement } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
 import type { TFunction } from 'i18next';
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 
 export interface ActiveFilterChip {
   key: string;
@@ -134,6 +143,27 @@ export function ActiveFiltersBar({
 }: ActiveFiltersBarProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollXRef = useRef(0);
+  const viewportWidthRef = useRef(0);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollXRef.current = event.nativeEvent.contentOffset.x;
+  }, []);
+
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    viewportWidthRef.current = event.nativeEvent.layout.width;
+  }, []);
+
+  // Removing a chip shrinks the row, but the scroll position stays where it was, which would
+  // leave blank space past the last chip. Pull the row back so it ends at the screen edge.
+  const handleContentSizeChange = useCallback((contentWidth: number) => {
+    const maxScrollX = Math.max(0, contentWidth - viewportWidthRef.current);
+    if (scrollXRef.current > maxScrollX) {
+      scrollXRef.current = maxScrollX;
+      scrollRef.current?.scrollTo({ x: maxScrollX, animated: true });
+    }
+  }, []);
 
   const filterChips = describeActiveFilters(filters, t, genreMap);
   const hasCustomSort =
@@ -166,7 +196,12 @@ export function ActiveFiltersBar({
   return (
     <View testID="active-filters-bar">
       <ScrollView
+        ref={scrollRef}
         {...HORIZONTAL_SCROLL_PROPS}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onLayout={handleLayout}
+        onContentSizeChange={handleContentSizeChange}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

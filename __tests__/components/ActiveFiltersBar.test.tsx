@@ -18,6 +18,21 @@ jest.mock('@/src/components/ui/ModalBackground', () => ({
   ModalBackground: () => null,
 }));
 
+// The project's react-native mock renders ScrollView as a plain host element with no methods,
+// so swap in one whose scrollTo can be observed.
+const mockScrollTo = jest.fn();
+jest.mock('react-native', () => {
+  const actual = jest.requireActual('react-native');
+  const mockReact = jest.requireActual('react');
+  return {
+    ...actual,
+    ScrollView: mockReact.forwardRef((props: object, ref: unknown) => {
+      mockReact.useImperativeHandle(ref, () => ({ scrollTo: mockScrollTo }));
+      return mockReact.createElement(actual.View, { ...props, testID: 'chip-strip-scroll' });
+    }),
+  };
+});
+
 const genreMap = { 28: 'Action', 18: 'Drama' };
 
 const renderBar = (filters: WatchStatusFilterState, sortState: SortState = DEFAULT_SORT_STATE) => {
@@ -131,5 +146,30 @@ describe('ActiveFiltersBar', () => {
     fireEvent.press(getByTestId('active-filters-clear-all'));
     expect(onFiltersChange).toHaveBeenCalledWith(DEFAULT_WATCH_STATUS_FILTERS);
     expect(onSortChange).toHaveBeenCalledWith(DEFAULT_SORT_STATE);
+  });
+
+  it('pulls the strip back when a removed chip would leave blank space at the end', () => {
+    const { getByTestId } = renderBar({ ...DEFAULT_WATCH_STATUS_FILTERS, rating: 7 });
+    const scrollView = getByTestId('chip-strip-scroll');
+    const scrollTo = mockScrollTo;
+    scrollTo.mockClear();
+
+    fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 400 } } });
+    fireEvent(scrollView, 'contentSizeChange', 1000, 34);
+    // Scrolled to the very end: 1000 - 400.
+    fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 600, y: 0 } } });
+
+    // A chip is removed: the row is 100 shorter, so it scrolls back by 100.
+    fireEvent(scrollView, 'contentSizeChange', 900, 34);
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 500, animated: true });
+    scrollTo.mockClear();
+
+    // A chip is added: there is more room to scroll, so nothing moves.
+    fireEvent(scrollView, 'contentSizeChange', 950, 34);
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    // Content now fits on screen: back to the start.
+    fireEvent(scrollView, 'contentSizeChange', 300, 34);
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 0, animated: true });
   });
 });
