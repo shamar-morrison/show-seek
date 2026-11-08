@@ -134,6 +134,9 @@ export const filterSelectStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  footerApplyButtonDisabled: {
+    opacity: 0.5,
+  },
   footerApplyButtonText: {
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.semiBold,

@@ -477,3 +477,121 @@ export function backfillRuntimes(
     }
   })();
 }
+
+/** Most distinct titles looked up in one runtime-filter run. */
+export const MAX_FILTER_RUNTIME_LOOKUPS = 300;
+
+export interface ListRuntimeLookupOptions {
+  getShowRuntime?: (tvShowId: number) => Promise<number | null>;
+  getMovieRuntime?: (movieId: number) => Promise<number | null>;
+  stampRuntimes?: (stamps: RuntimeStamps) => void;
+  /** Called after each batch with the titles looked up so far and every runtime found. */
+  onProgress?: (progress: { done: number; total: number; runtimes: Map<string, number> }) => void;
+  /** Checked between batches; when true the run stops and saves what it found. */
+  isCancelled?: () => boolean;
+}
+
+/**
+ * Looks up runtimes for list items that have none stored, for the list runtime filter.
+ *
+ * Unlike background backfill this runs because the user asked for it, so it is not limited
+ * by the per-session budget, only by MAX_FILTER_RUNTIME_LOOKUPS. Each title is looked up
+ * once, in TMDB-paced batches, and the run stops on rate limits or timeouts. Measured values
+ * are saved back to the items (one write per list document or overflow page) when the run
+ * ends, so later visits need no lookups.
+ *
+ * @returns Measured runtimes keyed by `${mediaType}:${mediaId}`.
+ */
+export async function resolveListItemRuntimes(
+  items: UnstampedListItem[],
+  options: ListRuntimeLookupOptions = {}
+): Promise<Map<string, number>> {
+  const {
+    getShowRuntime = defaultGetShowRuntime,
+    getMovieRuntime = defaultGetMovieRuntime,
+    stampRuntimes = defaultStampRuntimes,
+    onProgress,
+    isCancelled,
+  } = options;
+
+  // One lookup per title, newest additions first so the cap keeps the most recent ones.
+  const titles = new Map<string, { mediaType: 'movie' | 'tv'; mediaId: number; recency: number }>();
+  items.forEach((item) => {
+    const key = `${item.mediaType}:${item.mediaId}`;
+    const recency = toMillis(item.addedAt) ?? 0;
+    const existing = titles.get(key);
+    if (!existing || recency > existing.recency) {
+      titles.set(key, { mediaType: item.mediaType, mediaId: item.mediaId, recency });
+    }
+  });
+  const lookups = [...titles.entries()]
+    .sort(([, a], [, b]) => b.recency - a.recency)
+    .slice(0, MAX_FILTER_RUNTIME_LOOKUPS);
+
+  const runtimes = new Map<string, number>();
+  let done = 0;
+  let aborted = false;
+
+  for (let i = 0; i < lookups.length && !aborted; i += BACKFILL_BATCH_SIZE) {
+    if (isCancelled?.()) break;
+    const batch = lookups.slice(i, i + BACKFILL_BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map(async ([key, { mediaType, mediaId }]) => {
+        try {
+          const minutes =
+            mediaType === 'tv' ? await getShowRuntime(mediaId) : await getMovieRuntime(mediaId);
+          return { key, minutes, error: undefined as unknown };
+        } catch (error) {
+          return { key, minutes: null, error };
+        }
+      })
+    );
+
+    for (const { key, minutes, error } of results) {
+      if (error !== undefined && isAbortError(error)) {
+        aborted = true;
+        break;
+      }
+      if (typeof minutes === 'number' && minutes > 0) {
+        runtimes.set(key, minutes);
+      }
+    }
+    done += batch.length;
+    if (!isCancelled?.()) {
+      onProgress?.({ done, total: lookups.length, runtimes: new Map(runtimes) });
+    }
+
+    if (!aborted && i + BACKFILL_BATCH_SIZE < lookups.length && !isCancelled?.()) {
+      await sleep(BACKFILL_BATCH_GAP_MS);
+    }
+  }
+
+  // Save measured values onto every item of that title, in the document that holds it.
+  const stamps: RuntimeStamps = {
+    episodesByShow: new Map(),
+    itemsByList: new Map(),
+    itemPages: new Map(),
+  };
+  items.forEach((item) => {
+    const minutes = runtimes.get(`${item.mediaType}:${item.mediaId}`);
+    if (minutes === undefined) return;
+    let listStamps = stamps.itemsByList.get(item.listId);
+    if (!listStamps) {
+      listStamps = new Map();
+      stamps.itemsByList.set(item.listId, listStamps);
+    }
+    listStamps.set(item.itemKey, minutes);
+    if (item.page) {
+      stamps.itemPages?.set(`${item.listId}/${item.itemKey}`, item.page);
+    }
+  });
+  if (stamps.itemsByList.size > 0) {
+    try {
+      stampRuntimes(stamps);
+    } catch (error) {
+      console.warn('[WatchTimeBackfill] Stamp dispatch failed:', error);
+    }
+  }
+
+  return runtimes;
+}

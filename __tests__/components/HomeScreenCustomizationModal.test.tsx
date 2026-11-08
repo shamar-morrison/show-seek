@@ -194,6 +194,24 @@ describe('HomeScreenCustomizationModal', () => {
       return { ...utils, ref };
     };
 
+    it('disables Apply until the selected lists or their order change', async () => {
+      const initial: HomeScreenListItem[] = [
+        { id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' },
+      ];
+      const { getByTestId } = await renderAndPresent(initial);
+
+      const apply = () => getByTestId('home-customization-apply-button');
+      expect(apply().props.accessibilityState).toMatchObject({ disabled: true });
+
+      await act(async () => {
+        fireEvent.press(apply());
+      });
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+
+      fireEvent.press(getByTestId('home-customization-row-comedy-list'));
+      expect(apply().props.accessibilityState).toMatchObject({ disabled: false });
+    });
+
     it('filters rows across all sections and hides empty section headers', async () => {
       const { getByTestId, queryByTestId, queryByText } = await renderAndPresent();
 

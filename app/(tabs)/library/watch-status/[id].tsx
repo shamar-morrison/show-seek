@@ -11,7 +11,7 @@ import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
-import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { DEFAULT_SORT_STATE, LIST_SORT_OPTIONS, SortState } from '@/src/components/MediaSortModal';
 import ShuffleModal from '@/src/components/ShuffleModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import Toast from '@/src/components/ui/Toast';
@@ -22,7 +22,11 @@ import { useListShareCardAction } from '@/src/hooks/useListShareCard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
+import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
+import { compareMissingLast, getItemRuntime, getItemUserRating } from '@/src/utils/listSort';
+import { useListItemRuntimes } from '@/src/hooks/useListItemRuntimes';
+import { useUserRatingMap } from '@/src/hooks/useRatings';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { compareAddedAt } from '@/src/utils/timestamps';
@@ -99,12 +103,22 @@ export default function WatchStatusDetailScreen() {
     return lists?.find((l) => l.id === id);
   }, [lists, id]);
 
+  const { ratings: userRatings } = useUserRatingMap(
+    filterState.userRating !== 'any' || sortState.option === 'userRating'
+  );
+  const {
+    runtimes,
+    isResolving: isResolvingRuntimes,
+    done: runtimesDone,
+    total: runtimesTotal,
+  } = useListItemRuntimes(list, filterState.runtime !== 'any' || sortState.option === 'runtime');
+
   const listItems = useMemo(() => {
     if (!list?.items) return [];
     const items = Object.values(list.items);
 
     // Apply filters first
-    const filteredItems = filterMediaItems(items, filterState);
+    const filteredItems = filterMediaItems(items, filterState, { userRatings, runtimes });
 
     // Then apply sorting
     const sortedItems = [...filteredItems].sort((a, b) => {
@@ -120,6 +134,18 @@ export default function WatchStatusDetailScreen() {
         }
         case 'rating':
           return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
+        case 'userRating':
+          return compareMissingLast(
+            getItemUserRating(a, userRatings),
+            getItemUserRating(b, userRatings),
+            direction
+          );
+        case 'runtime':
+          return compareMissingLast(
+            getItemRuntime(a, runtimes),
+            getItemRuntime(b, runtimes),
+            direction
+          );
         case 'alphabetical': {
           const titleA = (a.title || a.name || '').toLowerCase();
           const titleB = (b.title || b.name || '').toLowerCase();
@@ -131,7 +157,7 @@ export default function WatchStatusDetailScreen() {
     });
 
     return sortedItems;
-  }, [list, sortState, filterState]);
+  }, [list, sortState, filterState, userRatings, runtimes]);
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
@@ -364,6 +390,12 @@ export default function WatchStatusDetailScreen() {
       />
 
       <View style={libraryListStyles.divider} />
+      {isResolvingRuntimes && (
+        <InlineUpdatingIndicator
+          message={t('filters.lookingUpRuntimes', { done: runtimesDone, total: runtimesTotal })}
+          testID="runtime-lookup-indicator"
+        />
+      )}
 
       <View style={[screenStyles.container, styles.container]}>
         {viewMode === 'grid' ? (
@@ -440,7 +472,8 @@ export default function WatchStatusDetailScreen() {
         setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
-        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
+        allowedOptions={LIST_SORT_OPTIONS}
+        showUserRatingOption
       />
 
       <WatchStatusFiltersModal
@@ -452,6 +485,7 @@ export default function WatchStatusDetailScreen() {
           setFilterModalVisible(false);
         }}
         genreMap={genreMap}
+        showListFilters
       />
 
       <Toast ref={toastRef} />

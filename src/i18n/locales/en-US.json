@@ -1799,10 +1799,25 @@
   },
   "filters": {
     "anyRating": "Any rating",
-    "mediaType": "Media type",
     "searchPlaceholder": "Search...",
     "selectPlaceholder": "Select...",
-    "starsPlus": "{{count}}+ stars"
+    "starsPlus": "{{count}}+ stars",
+    "type": "Type",
+    "tmdbRating": "TMDB Rating",
+    "yourRating": "Your Rating",
+    "runtime": "Runtime",
+    "anyRuntime": "Any runtime",
+    "rated": "Rated",
+    "notRated": "Not rated",
+    "runtimeOptions": {
+      "under30": "Under 30 min",
+      "30to60": "30–60 min",
+      "60to90": "1–1.5 h",
+      "90to120": "1.5–2 h",
+      "120to150": "2–2.5 h",
+      "over150": "Over 2.5 h"
+    },
+    "lookingUpRuntimes": "Looking up runtimes… {{done}}/{{total}}"
   },
   "lists": {
     "alreadyWatched": "Already Watched",
@@ -1954,7 +1969,21 @@
     "lastUpdated": "Last Updated",
     "lastWatched": "Last Watched",
     "progress": "Progress",
-    "recentlyAdded": "Recently Added"
+    "recentlyAdded": "Recently Added",
+    "tmdbRating": "TMDB Rating",
+    "runtime": "Runtime",
+    "title": "Sort",
+    "orderTitle": "Order",
+    "directions": {
+      "newestFirst": "Newest to Oldest",
+      "oldestFirst": "Oldest to Newest",
+      "highestFirst": "Highest to Lowest",
+      "lowestFirst": "Lowest to Highest",
+      "longestFirst": "Longest to Shortest",
+      "shortestFirst": "Shortest to Longest",
+      "aToZ": "A to Z",
+      "zToA": "Z to A"
+    }
   },
   "stats": {
     "activityPatterns": "Activity Patterns",

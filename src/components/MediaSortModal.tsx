@@ -1,22 +1,17 @@
+import { FilterSelect } from '@/src/components/filters';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import {
   BORDER_RADIUS,
   COLORS,
   FONT_FAMILY,
   FONT_SIZE,
-  hexToRGBA,
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import {
-  ArrowDown01Icon,
-  ArrowUp01Icon,
-  Cancel01Icon,
-  Tick02Icon,
-} from '@hugeicons/core-free-icons';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -35,6 +30,7 @@ export type SortOption =
   | 'releaseDate'
   | 'rating'
   | 'userRating'
+  | 'runtime'
   | 'alphabetical'
   | 'popularity'
   | 'progress'
@@ -78,17 +74,57 @@ const BASE_SORT_OPTIONS: {
 }[] = [
   { labelKey: 'sort.recentlyAdded', value: 'recentlyAdded', defaultDirection: 'desc' },
   { labelKey: 'discover.releaseDate', value: 'releaseDate', defaultDirection: 'desc' },
-  { labelKey: 'discover.rating', value: 'rating', defaultDirection: 'desc' },
+  { labelKey: 'sort.tmdbRating', value: 'rating', defaultDirection: 'desc' },
   { labelKey: 'discover.popularity', value: 'popularity', defaultDirection: 'desc' },
   { labelKey: 'sort.progress', value: 'progress', defaultDirection: 'desc' },
   { labelKey: 'sort.lastWatched', value: 'lastWatched', defaultDirection: 'desc' },
   { labelKey: 'sort.dateAdded', value: 'dateAdded', defaultDirection: 'desc' },
   { labelKey: 'sort.lastUpdated', value: 'lastUpdated', defaultDirection: 'desc' },
+  { labelKey: 'sort.runtime', value: 'runtime', defaultDirection: 'desc' },
   { labelKey: 'sort.alphabetical', value: 'alphabetical', defaultDirection: 'asc' },
+];
+
+/** Sort options for list screens (custom lists, watch status lists, favorites) */
+export const LIST_SORT_OPTIONS: SortOption[] = [
+  'recentlyAdded',
+  'releaseDate',
+  'rating',
+  'userRating',
+  'runtime',
+  'alphabetical',
 ];
 
 /** Sort options for notes screens */
 export const NOTES_SCREEN_SORT_OPTIONS: SortOption[] = ['dateAdded', 'lastUpdated', 'alphabetical'];
+
+type OrderLabels = Record<SortDirection, string>;
+
+const DATE_ORDER: OrderLabels = {
+  desc: 'sort.directions.newestFirst',
+  asc: 'sort.directions.oldestFirst',
+};
+const NUMBER_ORDER: OrderLabels = {
+  desc: 'sort.directions.highestFirst',
+  asc: 'sort.directions.lowestFirst',
+};
+
+/**
+ * What each direction means for each sort, in plain words. Every screen sorts ascending as
+ * oldest / lowest / shortest / A first, so these labels hold wherever the modal is used.
+ */
+const ORDER_LABELS: Record<SortOption, OrderLabels> = {
+  recentlyAdded: DATE_ORDER,
+  releaseDate: DATE_ORDER,
+  lastWatched: DATE_ORDER,
+  dateAdded: DATE_ORDER,
+  lastUpdated: DATE_ORDER,
+  rating: NUMBER_ORDER,
+  userRating: NUMBER_ORDER,
+  popularity: NUMBER_ORDER,
+  progress: NUMBER_ORDER,
+  runtime: { desc: 'sort.directions.longestFirst', asc: 'sort.directions.shortestFirst' },
+  alphabetical: { asc: 'sort.directions.aToZ', desc: 'sort.directions.zToA' },
+};
 
 const USER_RATING_OPTION = {
   labelKey: 'media.userRating',
@@ -106,11 +142,13 @@ export default function MediaSortModal({
 }: MediaSortModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  // Your Rating sits right after TMDB Rating so the two ratings read together.
+  const ratingIndex = BASE_SORT_OPTIONS.findIndex((o) => o.value === 'rating');
   let SORT_OPTIONS = showUserRatingOption
     ? [
-        ...BASE_SORT_OPTIONS.slice(0, -1),
+        ...BASE_SORT_OPTIONS.slice(0, ratingIndex + 1),
         USER_RATING_OPTION,
-        BASE_SORT_OPTIONS[BASE_SORT_OPTIONS.length - 1],
+        ...BASE_SORT_OPTIONS.slice(ratingIndex + 1),
       ]
     : [...BASE_SORT_OPTIONS];
 
@@ -128,23 +166,32 @@ export default function MediaSortModal({
   }, [visible, sortState]);
 
   const handleOptionSelect = (option: SortOption) => {
+    if (localSortState.option === option) return;
+    // A new sort starts in its natural order (newest / highest / A first).
     const sortOption = SORT_OPTIONS.find((o) => o.value === option);
-    if (localSortState.option === option) {
-      // Toggle direction if same option is selected
-      setLocalSortState((prev) => ({
-        ...prev,
-        direction: prev.direction === 'asc' ? 'desc' : 'asc',
-      }));
-    } else {
-      // Set new option with its default direction
-      setLocalSortState({
-        option,
-        direction: sortOption?.defaultDirection ?? 'desc',
-      });
-    }
+    setLocalSortState({
+      option,
+      direction: sortOption?.defaultDirection ?? 'desc',
+    });
   };
 
+  const handleDirectionSelect = (direction: SortDirection) => {
+    setLocalSortState((prev) => ({ ...prev, direction }));
+  };
+
+  // The selected sort's natural order is listed first.
+  const selectedOption = SORT_OPTIONS.find((o) => o.value === localSortState.option);
+  const defaultDirection = selectedOption?.defaultDirection ?? 'desc';
+  const directions: SortDirection[] =
+    defaultDirection === 'asc' ? ['asc', 'desc'] : ['desc', 'asc'];
+  const orderLabels = ORDER_LABELS[localSortState.option] ?? DATE_ORDER;
+
+  // Nothing to apply when the choice matches the sort already in use.
+  const canApply =
+    localSortState.option !== sortState.option || localSortState.direction !== sortState.direction;
+
   const handleApply = () => {
+    if (!canApply) return;
     onApplySort(localSortState);
     onClose();
   };
@@ -160,55 +207,46 @@ export default function MediaSortModal({
 
         <View style={modalLayoutStyles.card}>
           <View style={[modalHeaderStyles.header, styles.header]}>
-            <Text style={modalHeaderStyles.title}>{t('discover.sortBy')}</Text>
+            <Text style={modalHeaderStyles.title}>{t('sort.title')}</Text>
             <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
               <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
             </Pressable>
           </View>
 
-          <View style={styles.optionsContainer}>
-            {SORT_OPTIONS.map((option) => {
-              const isSelected = localSortState.option === option.value;
-              return (
-                <Pressable
-                  key={option.value}
-                  style={[
-                    styles.optionItem,
-                    isSelected && {
-                      borderColor: accentColor,
-                      backgroundColor: hexToRGBA(accentColor, 0.15),
-                    },
-                  ]}
-                  onPress={() => handleOptionSelect(option.value)}
-                >
-                  <View style={styles.optionContent}>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        isSelected && { color: accentColor, fontFamily: FONT_FAMILY.semiBold },
-                      ]}
-                    >
-                      {t(option.labelKey)}
-                    </Text>
-                    {isSelected && (
-                      <View style={styles.directionIndicator}>
-                        {localSortState.direction === 'asc' ? (
-                          <AppIcon icon={ArrowUp01Icon} size={16} color={accentColor} />
-                        ) : (
-                          <AppIcon icon={ArrowDown01Icon} size={16} color={accentColor} />
-                        )}
-                      </View>
-                    )}
-                  </View>
-                  {isSelected && <AppIcon icon={Tick02Icon} size={20} color={accentColor} />}
-                </Pressable>
-              );
-            })}
+          <View style={styles.fields}>
+            <FilterSelect
+              label={t('discover.sortBy')}
+              value={localSortState.option}
+              options={SORT_OPTIONS.map((option) => ({
+                label: t(option.labelKey),
+                value: option.value,
+              }))}
+              onSelect={(value: SortOption) => handleOptionSelect(value)}
+              testID="sort-by-select"
+            />
+            <FilterSelect
+              label={t('sort.orderTitle')}
+              value={localSortState.direction}
+              options={directions.map((direction) => ({
+                label: t(orderLabels[direction]),
+                value: direction,
+              }))}
+              onSelect={(value: SortDirection) => handleDirectionSelect(value)}
+              testID="sort-order-select"
+            />
           </View>
 
           <Pressable
-            style={[styles.applyButton, { backgroundColor: accentColor }]}
+            style={[
+              styles.applyButton,
+              { backgroundColor: accentColor },
+              !canApply && styles.applyButtonDisabled,
+            ]}
             onPress={handleApply}
+            disabled={!canApply}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canApply }}
+            testID="sort-apply-button"
           >
             <Text style={styles.applyButtonText}>{t('common.apply')}</Text>
           </Pressable>
@@ -220,38 +258,19 @@ export default function MediaSortModal({
 
 const styles = StyleSheet.create({
   header: {
+    marginBottom: SPACING.m,
+  },
+  fields: {
+    gap: SPACING.m,
     marginBottom: SPACING.l,
-  },
-  optionsContainer: {
-    gap: SPACING.s,
-    marginBottom: SPACING.l,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-  },
-  optionText: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.textSecondary,
-  },
-  directionIndicator: {
-    opacity: 0.8,
   },
   applyButton: {
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
+  },
+  applyButtonDisabled: {
+    opacity: 0.5,
   },
   applyButtonText: {
     fontSize: FONT_SIZE.m,

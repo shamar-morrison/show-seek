@@ -11,7 +11,7 @@ import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
-import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { DEFAULT_SORT_STATE, LIST_SORT_OPTIONS, SortState } from '@/src/components/MediaSortModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
@@ -21,7 +21,11 @@ import { useListShareCardAction } from '@/src/hooks/useListShareCard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
+import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
+import { compareMissingLast, getItemRuntime, getItemUserRating } from '@/src/utils/listSort';
+import { useListItemRuntimes } from '@/src/hooks/useListItemRuntimes';
+import { useUserRatingMap } from '@/src/hooks/useRatings';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { compareAddedAt } from '@/src/utils/timestamps';
@@ -99,12 +103,25 @@ export default function FavoritesScreen() {
     return lists?.find((l) => l.id === DEFAULT_LIST_IDS[3]);
   }, [lists]);
 
+  const { ratings: userRatings } = useUserRatingMap(
+    filterState.userRating !== 'any' || sortState.option === 'userRating'
+  );
+  const {
+    runtimes,
+    isResolving: isResolvingRuntimes,
+    done: runtimesDone,
+    total: runtimesTotal,
+  } = useListItemRuntimes(
+    favoritesList,
+    filterState.runtime !== 'any' || sortState.option === 'runtime'
+  );
+
   const listItems = useMemo(() => {
     if (!favoritesList?.items) return [];
     const items = Object.values(favoritesList.items);
 
     // Apply filters first
-    const filteredItems = filterMediaItems(items, filterState);
+    const filteredItems = filterMediaItems(items, filterState, { userRatings, runtimes });
 
     // Then apply sorting
     return [...filteredItems].sort((a, b) => {
@@ -120,6 +137,18 @@ export default function FavoritesScreen() {
         }
         case 'rating':
           return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
+        case 'userRating':
+          return compareMissingLast(
+            getItemUserRating(a, userRatings),
+            getItemUserRating(b, userRatings),
+            direction
+          );
+        case 'runtime':
+          return compareMissingLast(
+            getItemRuntime(a, runtimes),
+            getItemRuntime(b, runtimes),
+            direction
+          );
         case 'alphabetical': {
           const titleA = (a.title || a.name || '').toLowerCase();
           const titleB = (b.title || b.name || '').toLowerCase();
@@ -129,7 +158,7 @@ export default function FavoritesScreen() {
           return 0;
       }
     });
-  }, [favoritesList, sortState, filterState]);
+  }, [favoritesList, sortState, filterState, userRatings, runtimes]);
 
   // Search01Icon functionality
   const {
@@ -298,6 +327,12 @@ export default function FavoritesScreen() {
     <>
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
+        {isResolvingRuntimes && (
+          <InlineUpdatingIndicator
+            message={t('filters.lookingUpRuntimes', { done: runtimesDone, total: runtimesTotal })}
+            testID="runtime-lookup-indicator"
+          />
+        )}
         <View style={styles.content}>
           {viewMode === 'grid' ? (
             <MediaGrid
@@ -385,7 +420,8 @@ export default function FavoritesScreen() {
         setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
-        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
+        allowedOptions={LIST_SORT_OPTIONS}
+        showUserRatingOption
       />
 
       <WatchStatusFiltersModal
@@ -397,6 +433,7 @@ export default function FavoritesScreen() {
           setFilterModalVisible(false);
         }}
         genreMap={genreMap}
+        showListFilters
       />
 
       <Toast ref={toastRef} />

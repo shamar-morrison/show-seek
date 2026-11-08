@@ -785,6 +785,9 @@ export default function TVDetailScreen() {
               vote_average: show.vote_average,
               release_date: show.first_air_date,
               genre_ids: show.genres?.map((g) => g.id) || [],
+              ...(show.episode_run_time?.[0] != null && show.episode_run_time[0] > 0
+                ? { runtimeMinutes: show.episode_run_time[0] }
+                : {}),
             }}
             onShowToast={(message) => toastRef.current?.show(message)}
           />

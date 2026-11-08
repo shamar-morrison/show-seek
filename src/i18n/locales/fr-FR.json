@@ -1833,10 +1833,25 @@
   },
   "filters": {
     "anyRating": "Toute note",
-    "mediaType": "Type de média",
     "searchPlaceholder": "Rechercher...",
     "selectPlaceholder": "Sélectionner...",
-    "starsPlus": "{{count}}+ étoiles"
+    "starsPlus": "{{count}}+ étoiles",
+    "type": "Type",
+    "tmdbRating": "Note TMDB",
+    "yourRating": "Votre note",
+    "runtime": "Durée",
+    "anyRuntime": "Toute durée",
+    "rated": "Noté",
+    "notRated": "Non noté",
+    "runtimeOptions": {
+      "under30": "Moins de 30 min",
+      "30to60": "30–60 min",
+      "60to90": "1 h–1 h 30",
+      "90to120": "1 h 30–2 h",
+      "120to150": "2 h–2 h 30",
+      "over150": "Plus de 2 h 30"
+    },
+    "lookingUpRuntimes": "Recherche des durées… {{done}}/{{total}}"
   },
   "lists": {
     "alreadyWatched": "Déjà vus",
@@ -1988,7 +2003,21 @@
     "lastUpdated": "Dernière mise à jour",
     "lastWatched": "Dernier visionnage",
     "progress": "Progression",
-    "recentlyAdded": "Ajoutés récemment"
+    "recentlyAdded": "Ajoutés récemment",
+    "tmdbRating": "Note TMDB",
+    "runtime": "Durée",
+    "title": "Trier",
+    "orderTitle": "Ordre",
+    "directions": {
+      "newestFirst": "Du plus récent au plus ancien",
+      "oldestFirst": "Du plus ancien au plus récent",
+      "highestFirst": "Du plus élevé au plus bas",
+      "lowestFirst": "Du plus bas au plus élevé",
+      "longestFirst": "Du plus long au plus court",
+      "shortestFirst": "Du plus court au plus long",
+      "aToZ": "De A à Z",
+      "zToA": "De Z à A"
+    }
   },
   "stats": {
     "activityPatterns": "Habitudes d’activité",

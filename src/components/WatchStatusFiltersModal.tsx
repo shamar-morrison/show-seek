@@ -1,9 +1,5 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import {
-  FilterSelect,
-  MultiSelectFilter,
-  SelectOption,
-} from '@/src/components/filters';
+import { FilterSelect, MultiSelectFilter, SelectOption } from '@/src/components/filters';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -15,7 +11,12 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
-import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '@/src/utils/listFilters';
+import {
+  areWatchStatusFiltersEqual,
+  DEFAULT_WATCH_STATUS_FILTERS,
+  RUNTIME_FILTER_VALUES,
+  WatchStatusFilterState,
+} from '@/src/utils/listFilters';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import React, { useState } from 'react';
@@ -39,6 +40,8 @@ interface WatchStatusFiltersModalProps {
   genreMap: Record<number, string>;
   /** Whether to show the media type filter. Defaults to true. Set to false for single-type screens. */
   showMediaTypeFilter?: boolean;
+  /** Whether to show the Runtime and Your rating filters (list screens only). Defaults to false. */
+  showListFilters?: boolean;
 }
 
 export default function WatchStatusFiltersModal({
@@ -48,6 +51,7 @@ export default function WatchStatusFiltersModal({
   onApplyFilters,
   genreMap,
   showMediaTypeFilter = true,
+  showListFilters = false,
 }: WatchStatusFiltersModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -70,7 +74,11 @@ export default function WatchStatusFiltersModal({
     }));
   };
 
+  // Nothing to apply when the choices match the filters already in use.
+  const canApply = !areWatchStatusFiltersEqual(localFilters, filters);
+
   const handleApply = () => {
+    if (!canApply) return;
     onApplyFilters(localFilters);
   };
 
@@ -101,6 +109,24 @@ export default function WatchStatusFiltersModal({
     })),
   ];
 
+  const userRatingOptions: SelectOption[] = [
+    { label: t('filters.anyRating'), value: 'any' },
+    { label: t('filters.rated'), value: 'rated' },
+    { label: t('filters.notRated'), value: 'unrated' },
+    ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((value) => ({
+      label: t('filters.starsPlus', { count: value }),
+      value,
+    })),
+  ];
+
+  const runtimeOptions: SelectOption[] = [
+    { label: t('filters.anyRuntime'), value: 'any' },
+    ...RUNTIME_FILTER_VALUES.map((value) => ({
+      label: t(`filters.runtimeOptions.${value}`),
+      value,
+    })),
+  ];
+
   const mediaTypeOptions: SelectOption[] = [
     { label: t('library.allMedia'), value: 'all' },
     { label: t('media.movies'), value: 'movie' },
@@ -125,43 +151,72 @@ export default function WatchStatusFiltersModal({
           </View>
 
           <View style={styles.filtersContainer}>
-            {showMediaTypeFilter && (
-              <FilterSelect
-                label={t('filters.mediaType')}
-                value={localFilters.mediaType}
-                options={mediaTypeOptions}
-                onSelect={(val) => updateFilter('mediaType', val)}
-              />
+            {toRows(
+              [
+                showMediaTypeFilter && (
+                  <FilterSelect
+                    key="mediaType"
+                    label={t('filters.type')}
+                    value={localFilters.mediaType}
+                    options={mediaTypeOptions}
+                    onSelect={(val) => updateFilter('mediaType', val)}
+                    isActive={localFilters.mediaType !== DEFAULT_WATCH_STATUS_FILTERS.mediaType}
+                  />
+                ),
+                <MultiSelectFilter
+                  key="genres"
+                  label={t('discover.genres')}
+                  selectedIds={localFilters.genres}
+                  operator={localFilters.genreOperator}
+                  showOperatorTabs
+                  operatorTestID="genre-operator-toggle"
+                  options={genreOptions}
+                  onApply={(ids, op) =>
+                    setLocalFilters((prev) => ({ ...prev, genres: ids, genreOperator: op }))
+                  }
+                  placeholder={t('discover.anyGenre')}
+                  isActive={localFilters.genres.length > 0}
+                />,
+                <FilterSelect
+                  key="rating"
+                  label={t('filters.tmdbRating')}
+                  value={localFilters.rating}
+                  options={ratingOptions}
+                  onSelect={(val) => updateFilter('rating', val)}
+                  isActive={localFilters.rating !== DEFAULT_WATCH_STATUS_FILTERS.rating}
+                />,
+                showListFilters && (
+                  <FilterSelect
+                    key="userRating"
+                    label={t('filters.yourRating')}
+                    value={localFilters.userRating}
+                    options={userRatingOptions}
+                    onSelect={(val) => updateFilter('userRating', val)}
+                    isActive={localFilters.userRating !== DEFAULT_WATCH_STATUS_FILTERS.userRating}
+                  />
+                ),
+                <FilterSelect
+                  key="year"
+                  label={t('discover.releaseYear')}
+                  value={localFilters.year}
+                  options={yearOptions}
+                  onSelect={(val) => updateFilter('year', val)}
+                  placeholder={t('discover.anyYear')}
+                  isActive={localFilters.year !== DEFAULT_WATCH_STATUS_FILTERS.year}
+                />,
+                showListFilters && (
+                  <FilterSelect
+                    key="runtime"
+                    label={t('filters.runtime')}
+                    value={localFilters.runtime}
+                    options={runtimeOptions}
+                    onSelect={(val) => updateFilter('runtime', val)}
+                    isActive={localFilters.runtime !== DEFAULT_WATCH_STATUS_FILTERS.runtime}
+                  />
+                ),
+              ],
+              styles
             )}
-
-            <MultiSelectFilter
-              label={t('discover.genres')}
-              selectedIds={localFilters.genres}
-              operator={localFilters.genreOperator}
-              showOperatorTabs
-              operatorTestID="genre-operator-toggle"
-              options={genreOptions}
-              onApply={(ids, op) =>
-                setLocalFilters((prev) => ({ ...prev, genres: ids, genreOperator: op }))
-              }
-              placeholder={t('discover.anyGenre')}
-              isActive={localFilters.genres.length > 0}
-            />
-
-            <FilterSelect
-              label={t('discover.rating')}
-              value={localFilters.rating}
-              options={ratingOptions}
-              onSelect={(val) => updateFilter('rating', val)}
-            />
-
-            <FilterSelect
-              label={t('discover.releaseYear')}
-              value={localFilters.year}
-              options={yearOptions}
-              onSelect={(val) => updateFilter('year', val)}
-              placeholder={t('discover.anyYear')}
-            />
           </View>
 
           <View style={styles.actions}>
@@ -173,9 +228,17 @@ export default function WatchStatusFiltersModal({
               <Text style={styles.clearButtonText}>{t('common.clearAll')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.applyButton, { backgroundColor: accentColor }]}
+              style={[
+                styles.applyButton,
+                { backgroundColor: accentColor },
+                !canApply && styles.applyButtonDisabled,
+              ]}
               onPress={handleApply}
               activeOpacity={ACTIVE_OPACITY}
+              disabled={!canApply}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canApply }}
+              testID="filters-apply-button"
             >
               <Text style={styles.applyButtonText}>{t('common.apply')}</Text>
             </TouchableOpacity>
@@ -186,7 +249,31 @@ export default function WatchStatusFiltersModal({
   );
 }
 
+/** Lays filters out two per row; an odd last filter keeps half width. */
+function toRows(cells: (React.ReactElement | false)[], rowStyles: typeof styles) {
+  const visible = cells.filter((cell): cell is React.ReactElement => cell !== false);
+  const rows: React.ReactElement[] = [];
+  for (let i = 0; i < visible.length; i += 2) {
+    const [first, second] = visible.slice(i, i + 2);
+    rows.push(
+      <View key={`row-${i}`} style={rowStyles.row} testID="filters-row">
+        <View style={rowStyles.cell}>{first}</View>
+        <View style={rowStyles.cell}>{second ?? null}</View>
+      </View>
+    );
+  }
+  return rows;
+}
+
 const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: SPACING.m,
+  },
+  cell: {
+    flex: 1,
+    minWidth: 0,
+  },
   filtersContainer: {
     gap: SPACING.m,
     marginBottom: SPACING.l,
@@ -213,6 +300,9 @@ const styles = StyleSheet.create({
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
+  },
+  applyButtonDisabled: {
+    opacity: 0.5,
   },
   applyButtonText: {
     fontSize: FONT_SIZE.m,

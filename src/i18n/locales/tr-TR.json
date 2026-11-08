@@ -1799,10 +1799,25 @@
   },
   "filters": {
     "anyRating": "Tüm puanlar",
-    "mediaType": "Medya türü",
     "searchPlaceholder": "Ara...",
     "selectPlaceholder": "Seç...",
-    "starsPlus": "{{count}}+ yıldız"
+    "starsPlus": "{{count}}+ yıldız",
+    "type": "Tip",
+    "tmdbRating": "TMDB puanı",
+    "yourRating": "Senin puanın",
+    "runtime": "Süre",
+    "anyRuntime": "Tüm süreler",
+    "rated": "Puanlanan",
+    "notRated": "Puanlanmayan",
+    "runtimeOptions": {
+      "under30": "30 dk’dan kısa",
+      "30to60": "30–60 dk",
+      "60to90": "1–1,5 sa",
+      "90to120": "1,5–2 sa",
+      "120to150": "2–2,5 sa",
+      "over150": "2,5 sa’ten uzun"
+    },
+    "lookingUpRuntimes": "Süreler aranıyor… {{done}}/{{total}}"
   },
   "lists": {
     "alreadyWatched": "Daha önce izlenenler",
@@ -1954,7 +1969,21 @@
     "lastUpdated": "Son güncelleme",
     "lastWatched": "Son izleme",
     "progress": "İlerleme",
-    "recentlyAdded": "Yeni eklenenler"
+    "recentlyAdded": "Yeni eklenenler",
+    "tmdbRating": "TMDB puanı",
+    "runtime": "Süre",
+    "title": "Sıralama",
+    "orderTitle": "Sıra",
+    "directions": {
+      "newestFirst": "Yeniden eskiye",
+      "oldestFirst": "Eskiden yeniye",
+      "highestFirst": "Yüksekten düşüğe",
+      "lowestFirst": "Düşükten yükseğe",
+      "longestFirst": "Uzundan kısaya",
+      "shortestFirst": "Kısadan uzuna",
+      "aToZ": "A’dan Z’ye",
+      "zToA": "Z’den A’ya"
+    }
   },
   "stats": {
     "activityPatterns": "Etkinlik düzenleri",

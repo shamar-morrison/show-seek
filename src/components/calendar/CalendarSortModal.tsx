@@ -53,7 +53,11 @@ export function CalendarSortModal({ visible, sortMode, onClose, onApply }: Calen
     [t]
   );
 
+  // Nothing to apply when the choice matches the sort already in use.
+  const canApply = localSortMode !== sortMode;
+
   const handleApply = () => {
+    if (!canApply) return;
     onApply(localSortMode);
     onClose();
   };
@@ -106,8 +110,16 @@ export function CalendarSortModal({ visible, sortMode, onClose, onApply }: Calen
           </View>
 
           <Pressable
-            style={[styles.primaryButton, { backgroundColor: accentColor }]}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: accentColor },
+              !canApply && styles.primaryButtonDisabled,
+            ]}
             onPress={handleApply}
+            disabled={!canApply}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canApply }}
+            testID="calendar-sort-apply-button"
           >
             <Text style={styles.primaryButtonText}>{t('common.apply')}</Text>
           </Pressable>
@@ -142,6 +154,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.m,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.5,
   },
   primaryButtonText: {
     color: COLORS.white,

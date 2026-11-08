@@ -1,6 +1,7 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useAuth } from '@/src/context/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { RatingItem, ratingService } from '../services/RatingService';
 
 const getRatingsQueryKey = (userId?: string) => ['ratings', userId] as const;
@@ -105,6 +106,40 @@ export const useRatings = () => {
     ...query,
     data: query.data ?? [],
   };
+};
+
+/**
+ * Movie and TV ratings keyed by `${mediaType}:${id}`, for filtering lists by the user's rating.
+ *
+ * Shares the `useRatings` cache (in memory and persisted on device) but never refreshes it:
+ * a cached copy costs no reads, and only a device with no cached ratings loads them once.
+ * Ratings changed in the app stay current because the rating mutations update this cache.
+ */
+export const useUserRatingMap = (enabled: boolean) => {
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
+  const query = useQuery({
+    queryKey: getRatingsQueryKey(userId),
+    queryFn: () => ratingService.getUserRatings(userId!),
+    enabled: enabled && !!userId,
+    staleTime: Infinity,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const ratings = useMemo(() => {
+    const map = new Map<string, number>();
+    (query.data ?? []).forEach((rating) => {
+      if (rating.mediaType === 'movie' || rating.mediaType === 'tv') {
+        map.set(`${rating.mediaType}:${rating.id}`, rating.rating);
+      }
+    });
+    return map;
+  }, [query.data]);
+
+  return { ratings, isLoading: enabled && query.isLoading };
 };
 
 export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
