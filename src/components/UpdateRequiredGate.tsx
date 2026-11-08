@@ -12,6 +12,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { fetchMinimumCompatibilityVersion, isBelowMinimum } from '@/src/services/appVersionGate';
 import { Download04Icon } from '@hugeicons/core-free-icons';
+import * as SplashScreen from 'expo-splash-screen';
 import * as StoreReview from 'expo-store-review';
 import * as Updates from 'expo-updates';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -67,6 +68,11 @@ export function UpdateRequiredScreen() {
   const { accentColor } = useAccentColor();
   const [isUpdating, setIsUpdating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  // The splash screen is normally hidden by the navigation tree this screen replaces.
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => undefined);
+  }, []);
 
   const handleUpdate = async () => {
     setIsUpdating(true);

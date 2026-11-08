@@ -3,7 +3,13 @@ import { getFunctions } from 'firebase-admin/functions';
 import type { TaskOptions } from 'firebase-admin/functions';
 import { Timestamp } from 'firebase-admin/firestore';
 import { commitEpisodeWrites, planEpisodeWrites, withEpisodePages } from '../episodePagesAdmin';
-import { commitPagedListWrites, planPagedListWrites, readPagedList } from '../listPagesAdmin';
+import {
+  commitPagedListWrites,
+  planPagedListWrites,
+  readPagedList,
+  relocateListItemsToPages,
+} from '../listPagesAdmin';
+import { LIST_PAGE_CAPACITY } from '../shared/listPages';
 import {
   ACTIVE_RUN_STATUSES,
   DEFAULT_ENRICHMENT_LIST_IDS,
@@ -172,7 +178,11 @@ export const needsMediaEnrichment = (item: Record<string, unknown> | undefined):
   !!item &&
   typeof item.id === 'number' &&
   typeof item.media_type === 'string' &&
-  (item.poster_path === undefined || item.vote_average === undefined);
+  (item.poster_path === undefined ||
+    item.vote_average === undefined ||
+    // Enrichment used to read genre_ids from TMDB details (which only return `genres`), so
+    // items it enriched have an empty list. They're looked up again to fill in their genres.
+    (Array.isArray(item.genre_ids) && item.genre_ids.length === 0));
 
 export const enrichMediaItem = async (item: Record<string, unknown>): Promise<Record<string, unknown>> => {
   if (!item || typeof item.id !== 'number' || typeof item.media_type !== 'string') {
@@ -340,14 +350,34 @@ export const runTraktEnrichmentJob = async (
     const enrichedItems =
       Object.keys(pendingItems).length > 0 ? await enrichMediaItems(pendingItems) : {};
 
-    const plan = planPagedListWrites(list, { set: enrichedItems });
-    await commitPagedListWrites(db, list, plan, {
-      metadata: {
-        ...(list.data.metadata ?? {}),
-        lastEnriched: Timestamp.now(),
-        needsEnrichment: false,
-      },
+    // A legacy list document can already hold more items than a page should; enriching them
+    // in place could push it past 1 MiB. Those items move to overflow pages instead.
+    const isListDocumentOverfull = (list.layout.pageSizes[0] ?? 0) > LIST_PAGE_CAPACITY;
+    const itemsToMove: Record<string, Record<string, unknown>> = {};
+    const itemsInPlace: Record<string, Record<string, unknown>> = {};
+    Object.entries(enrichedItems).forEach(([key, item]) => {
+      const isOnListDocument = list.layout.overflowItemPages[key] === undefined;
+      // Legacy numeric keys stay where they are: pages only ever hold canonical keys.
+      if (isListDocumentOverfull && isOnListDocument && /^(movie|tv)-\d+$/.test(key)) {
+        itemsToMove[key] = item;
+      } else {
+        itemsInPlace[key] = item;
+      }
     });
+
+    await relocateListItemsToPages(db, list, itemsToMove);
+    await commitPagedListWrites(db, list, planPagedListWrites(list, { set: itemsInPlace }));
+    // Cleared only once every item write succeeded, so a failed page write is retried later.
+    await listRef.set(
+      {
+        metadata: {
+          ...(list.data.metadata ?? {}),
+          lastEnriched: Timestamp.now(),
+          needsEnrichment: false,
+        },
+      },
+      { merge: true }
+    );
 
     enrichedCounts.items += Object.keys(enrichedItems).length;
     enrichedCounts.lists++;

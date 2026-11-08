@@ -4,7 +4,9 @@
  */
 import { FieldValue } from 'firebase-admin/firestore';
 import {
+  cloneLayout,
   createSinglePageLayout,
+  PAGE_CAPACITY,
   getPageCount,
   getPageDocId,
   mergePages,
@@ -226,6 +228,42 @@ export function applyPlanToPagedDoc(
     items[key] = value;
   });
   return { ...doc, exists: true, items, layout: plan.layout };
+}
+
+/**
+ * Moves entries off the document (page 0) onto overflow pages, e.g. when a legacy document
+ * already holds more than PAGE_CAPACITY entries and updating them in place would push it past
+ * 1 MiB. The pages are written first and the document's copies removed after, so an
+ * interruption leaves a duplicate (the page copy wins on read), never a lost entry.
+ */
+export async function relocateToOverflowPages(
+  config: PagedDocConfig,
+  db: FirebaseFirestore.Firestore,
+  doc: PagedDoc,
+  entries: Entries,
+  now: number = Date.now()
+): Promise<void> {
+  const keys = Object.keys(entries);
+  if (keys.length === 0) {
+    return;
+  }
+
+  // Plan them as new entries with the document treated as full, so they land on pages.
+  const layout = cloneLayout(doc.layout);
+  layout.pageSizes[0] = Math.max(layout.pageSizes[0] ?? 0, PAGE_CAPACITY);
+  const remainingKeys = Object.keys(doc.items).filter((key) => !(key in entries));
+  const plan = planPagedMapWrites(
+    layout,
+    remainingKeys,
+    { set: entries },
+    FieldValue.delete()
+  ) as PagedDocWritePlan;
+  await commitPagedDocWrites(config, db, doc, plan, {}, now);
+
+  await doc.ref.set(
+    { [config.field]: Object.fromEntries(keys.map((key) => [key, FieldValue.delete()])) },
+    { merge: true }
+  );
 }
 
 /** A document that doesn't exist yet, for writers that create it. */

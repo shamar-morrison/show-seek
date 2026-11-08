@@ -89,6 +89,9 @@ describe('list overflow pages', () => {
     expect(getListPageCount({ pageCount: -1 })).toBe(0);
     expect(getListPageCount({ pageCount: '2' })).toBe(0);
     expect(getListPageCount(undefined)).toBe(0);
+    // A corrupt value can't make readers allocate billions of pages.
+    expect(getListPageCount({ pageCount: 4294967295 })).toBe(1000);
+    expect(parseListItemPageDocId('99999999')).toBeNull();
     expect(parseListItemPageDocId('4')).toBe(4);
     expect(parseListItemPageDocId('0')).toBeNull();
     expect(parseListItemPageDocId('01')).toBeNull();

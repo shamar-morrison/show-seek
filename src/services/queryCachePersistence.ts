@@ -138,11 +138,21 @@ const removeLegacyCache = () => AsyncStorage.removeItem(QUERY_CACHE_STORAGE_KEY)
 
 export const fileQueryCacheStore: PersistedQueryCacheStore = {
   async clear() {
+    // Both removals are attempted even if one fails. A file that couldn't be deleted is
+    // retried by the next hydration, which clears a cache whose owner doesn't match.
     const file = getCacheFile();
-    if (file) {
-      await file.fs.deleteAsync(file.uri, { idempotent: true });
+    const [fileResult] = await Promise.allSettled([
+      file
+        ? Promise.all([
+            file.fs.deleteAsync(file.uri, { idempotent: true }),
+            file.fs.deleteAsync(`${file.uri}.tmp`, { idempotent: true }),
+          ])
+        : Promise.resolve(),
+      removeLegacyCache(),
+    ]);
+    if (fileResult.status === 'rejected') {
+      throw fileResult.reason;
     }
-    await removeLegacyCache();
   },
   async read() {
     const file = getCacheFile();
@@ -155,15 +165,34 @@ export const fileQueryCacheStore: PersistedQueryCacheStore = {
       return file.fs.readAsStringAsync(file.uri);
     }
 
-    // First launch after moving to a file: take the old AsyncStorage copy once, then drop it.
-    // Reading it can throw on Android when it grew past ~2 MB; it's removed either way.
+    // Interrupted between removing the old file and moving the new one in: the temp file is
+    // complete (it's only moved after being fully written), so use it.
+    const tempUri = `${file.uri}.tmp`;
+    const tempInfo = await file.fs.getInfoAsync(tempUri);
+    if (tempInfo.exists) {
+      return file.fs.readAsStringAsync(tempUri);
+    }
+
+    // First launch after moving to a file: copy the old AsyncStorage value into the file, then
+    // drop it. Reading it can throw on Android once it grew past ~2 MB; it's dropped then too.
     let legacy: string | null = null;
     try {
       legacy = await AsyncStorage.getItem(QUERY_CACHE_STORAGE_KEY);
     } catch (error) {
       console.warn('[queryCachePersistence] Could not read legacy cache; discarding it:', error);
+      await removeLegacyCache();
+      return null;
     }
-    await removeLegacyCache();
+    if (legacy === null) {
+      return null;
+    }
+    try {
+      await fileQueryCacheStore.write(legacy);
+      await removeLegacyCache();
+    } catch (error) {
+      // Keep the old copy so a later launch can migrate it.
+      console.warn('[queryCachePersistence] Could not migrate legacy cache yet:', error);
+    }
     return legacy;
   },
   async write(text) {
@@ -173,7 +202,8 @@ export const fileQueryCacheStore: PersistedQueryCacheStore = {
       return;
     }
 
-    // Write a temp file and swap it in, so a crash mid-write never leaves half a cache.
+    // Write a temp file and swap it in, so a crash mid-write never leaves half a cache. If
+    // the swap is interrupted, read() picks up the complete temp file.
     const tempUri = `${file.uri}.tmp`;
     await file.fs.writeAsStringAsync(tempUri, text);
     await file.fs.deleteAsync(file.uri, { idempotent: true });
@@ -225,6 +255,10 @@ export async function hydratePersistedQueryCache(
     return true;
   } catch (error) {
     console.warn('[queryCachePersistence] Failed to hydrate query cache:', error);
+    if (error instanceof SyntaxError) {
+      // Unreadable cache data: drop it so later launches don't keep failing on it.
+      await clearPersistedQueryCache().catch(() => undefined);
+    }
     return false;
   }
 }

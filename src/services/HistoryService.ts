@@ -100,11 +100,14 @@ class HistoryService {
           return { data, id, overflowItemPages: {} as Record<string, number> };
         }
         try {
-          const merged = await episodeTrackingService.mergeOverflowPages(
-            user.uid,
-            id,
-            data,
-            'HistoryService.fetchEpisodeTracking'
+          const merged = await raceWithTimeout(
+            episodeTrackingService.mergeOverflowPages(
+              user.uid,
+              id,
+              data,
+              'HistoryService.fetchEpisodeTracking'
+            ),
+            { ms: 10000, message: 'HistoryService.fetchEpisodeTracking pages timed out' }
           );
           return { data: merged.data, id, overflowItemPages: merged.overflowItemPages };
         } catch (error) {

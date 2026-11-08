@@ -147,6 +147,11 @@ service cloud.firestore {
           && (!('description' in request.resource.data) || (
             request.resource.data.description is string
             && request.resource.data.description.size() <= 120
+          ))
+          && (!('pageCount' in request.resource.data) || (
+            request.resource.data.pageCount is int
+            && request.resource.data.pageCount >= 0
+            && request.resource.data.pageCount <= 1000
           ));
         allow update: if canWriteUserData(userId)
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -239,7 +244,12 @@ service cloud.firestore {
         allow create: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['episodes', 'metadata'])
           && request.resource.data.metadata.keys().hasAll(['tvShowName', 'lastUpdated'])
-          && request.resource.data.episodes is map;
+          && request.resource.data.episodes is map
+          && (!('pageCount' in request.resource.data) || (
+            request.resource.data.pageCount is int
+            && request.resource.data.pageCount >= 0
+            && request.resource.data.pageCount <= 1000
+          ));
         allow update: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['episodes', 'metadata'])
           // pageCount (overflow pages in use) only ever grows; see functions/src/shared/episodePages.ts.

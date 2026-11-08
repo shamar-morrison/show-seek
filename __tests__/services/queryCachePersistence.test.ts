@@ -151,6 +151,16 @@ describe('queryCachePersistence', () => {
     expect(AsyncStorage.removeItem).toHaveBeenCalledWith('showseek_query_cache_v1');
   });
 
+  it('drops unreadable cache data so later launches start clean', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('{not json');
+
+    await expect(hydratePersistedQueryCache(new QueryClient(), 'user-1')).resolves.toBe(false);
+
+    expect(AsyncStorage.removeItem).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('logs when debounced query cache persistence fails', async () => {
     jest.useFakeTimers();
     const queryClient = new QueryClient();

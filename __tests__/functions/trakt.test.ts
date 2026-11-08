@@ -5195,6 +5195,8 @@ describe('Trakt sync Firestore sanitization', () => {
 
     expect(failedWrite).toMatchObject({ errorCategory: 'storage_limit', status: 'failed' });
     expect(mockEnqueue).not.toHaveBeenCalled();
+    // A failed run must not advance the incremental state, or the next sync would skip the step.
+    expect(batchSet.mock.calls.every(([_ref, data]) => !('traktIncrementalState' in data))).toBe(true);
   });
 
   it('only treats Trakt-side errors as fatal to the whole sync run', () => {
@@ -6720,6 +6722,13 @@ describe('Trakt list item enrichment', () => {
       needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: null, vote_average: 0 })
     ).toBe(false);
     expect(needsMediaEnrichment({ id: 'x', media_type: 'movie' })).toBe(false);
+    // Enriched before genre ids were read correctly: looked up again to fill them in.
+    expect(
+      needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: '/p.jpg', vote_average: 7, genre_ids: [] })
+    ).toBe(true);
+    expect(
+      needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: '/p.jpg', vote_average: 7, genre_ids: [18] })
+    ).toBe(false);
   });
 
   it('reads genre ids from the genres TMDB details actually return', async () => {

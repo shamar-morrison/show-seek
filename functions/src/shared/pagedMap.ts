@@ -23,6 +23,9 @@
  */
 export const PAGE_CAPACITY = 2000;
 
+/** Upper bound on pages (also enforced by the security rules); guards against corrupt values. */
+export const MAX_PAGE_COUNT = 1000;
+
 /** Where a map's entries live. Page 0 is the document itself. */
 export interface PageLayout {
   /** Number of overflow pages (1..pageCount). */
@@ -56,7 +59,9 @@ export const getPageDocId = (page: number): string => String(page);
 /** Reads `pageCount` from a document, tolerating absent or malformed values. */
 export function getPageCount(data: { pageCount?: unknown } | null | undefined): number {
   const value = data?.pageCount;
-  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 0;
+  return typeof value === 'number' && Number.isInteger(value) && value > 0
+    ? Math.min(value, MAX_PAGE_COUNT)
+    : 0;
 }
 
 /** Parses a page document id; null for anything that isn't a page number ≥ 1. */
@@ -64,7 +69,8 @@ export function parsePageDocId(id: string): number | null {
   if (!/^[1-9]\d*$/.test(id)) {
     return null;
   }
-  return Number(id);
+  const page = Number(id);
+  return page <= MAX_PAGE_COUNT ? page : null;
 }
 
 /** A layout for a document without overflow pages. */

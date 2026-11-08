@@ -8,6 +8,7 @@ import {
   deletePagedDoc,
   planPagedDocWrites,
   readPagedDoc,
+  relocateToOverflowPages,
   stagePagedDocWrites,
   withDocPages,
   type PagedDoc,
@@ -53,3 +54,9 @@ export const commitPagedListWrites = (
   listFields?: Record<string, unknown>,
   now?: number
 ): Promise<void> => commitPagedDocWrites(LIST_PAGES, db, list, plan, listFields, now);
+
+export const relocateListItemsToPages = (
+  db: FirebaseFirestore.Firestore,
+  list: PagedList,
+  items: Record<string, Record<string, unknown>>
+): Promise<void> => relocateToOverflowPages(LIST_PAGES, db, list, items);

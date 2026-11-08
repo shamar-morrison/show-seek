@@ -4,6 +4,10 @@ import { getDoc } from 'firebase/firestore';
 import React from 'react';
 import { Linking, Platform, Text } from 'react-native';
 
+jest.mock('expo-splash-screen', () => ({ hideAsync: jest.fn(() => Promise.resolve()) }));
+
+jest.mock('expo-store-review', () => ({ storeUrl: jest.fn(() => null) }));
+
 jest.mock('expo-updates', () => ({
   isEnabled: true,
   checkForUpdateAsync: jest.fn(),
@@ -14,6 +18,8 @@ jest.mock('expo-updates', () => ({
 import { UpdateRequiredGate } from '@/src/components/UpdateRequiredGate';
 import { APP_COMPATIBILITY_VERSION } from '@/src/constants/appCompatibility';
 import { fetchMinimumCompatibilityVersion, isBelowMinimum } from '@/src/services/appVersionGate';
+import * as SplashScreen from 'expo-splash-screen';
+import * as StoreReview from 'expo-store-review';
 import * as Updates from 'expo-updates';
 
 const configDoc = (data: Record<string, unknown> | null) => ({
@@ -94,6 +100,8 @@ describe('app version gate', () => {
 
     fireEvent.press(await findByTestId('update-required-button'));
     expect(queryByTestId('app-content')).toBeNull();
+    // The splash screen is hidden even though the navigation tree that usually does it isn't mounted.
+    expect(SplashScreen.hideAsync).toHaveBeenCalled();
     await waitFor(() => expect(Updates.reloadAsync).toHaveBeenCalled());
     expect(Updates.fetchUpdateAsync).toHaveBeenCalled();
   });
@@ -114,5 +122,55 @@ describe('app version gate', () => {
     );
     expect(Updates.reloadAsync).not.toHaveBeenCalled();
     openURL.mockRestore();
+  });
+
+  it('falls back to the Play Store website when the market link fails', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    (getDoc as jest.Mock).mockResolvedValue(
+      configDoc({ minimumCompatibilityVersion: APP_COMPATIBILITY_VERSION + 1 })
+    );
+    (Updates.checkForUpdateAsync as jest.Mock).mockResolvedValue({ isAvailable: false });
+    const openURL = jest
+      .spyOn(Linking, 'openURL')
+      .mockRejectedValueOnce(new Error('no market app'))
+      .mockResolvedValue(true);
+
+    const { findByTestId } = renderGate();
+    fireEvent.press(await findByTestId('update-required-button'));
+
+    await waitFor(() =>
+      expect(openURL).toHaveBeenLastCalledWith(
+        'https://play.google.com/store/apps/details?id=app.horizon.showseek'
+      )
+    );
+  });
+
+  it('opens the configured App Store link on iOS', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    (StoreReview.storeUrl as jest.Mock).mockReturnValue('https://apps.apple.com/app/id123');
+    (getDoc as jest.Mock).mockResolvedValue(
+      configDoc({ minimumCompatibilityVersion: APP_COMPATIBILITY_VERSION + 1 })
+    );
+    (Updates.checkForUpdateAsync as jest.Mock).mockResolvedValue({ isAvailable: false });
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+
+    const { findByTestId } = renderGate();
+    fireEvent.press(await findByTestId('update-required-button'));
+
+    await waitFor(() => expect(openURL).toHaveBeenCalledWith('https://apps.apple.com/app/id123'));
+  });
+
+  it('says so when no store can be opened', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    (StoreReview.storeUrl as jest.Mock).mockReturnValue(null);
+    (getDoc as jest.Mock).mockResolvedValue(
+      configDoc({ minimumCompatibilityVersion: APP_COMPATIBILITY_VERSION + 1 })
+    );
+    (Updates.checkForUpdateAsync as jest.Mock).mockResolvedValue({ isAvailable: false });
+
+    const { findByTestId, findByText } = renderGate();
+    fireEvent.press(await findByTestId('update-required-button'));
+
+    expect(await findByText("Couldn't open the store. Please update ShowSeek from your app store.")).toBeTruthy();
   });
 });

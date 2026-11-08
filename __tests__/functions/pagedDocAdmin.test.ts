@@ -12,6 +12,7 @@ import {
   commitPagedListWrites,
   planPagedListWrites,
   readPagedList,
+  relocateListItemsToPages,
   type PagedList,
 } from '@/functions/src/listPagesAdmin';
 import {
@@ -191,5 +192,23 @@ describe('paged list writes (server)', () => {
     });
     const reread = await readEpisodeTracking(ref(SHOW));
     expect(Object.keys(reread.items)).toHaveLength(LIST_PAGE_CAPACITY + 1);
+  });
+
+  it('moves items off an oversized legacy list document, writing pages before removing', async () => {
+    const store: Store = new Map([[LIST, { items: items(1, LIST_PAGE_CAPACITY + 500) }]]);
+    const { db, events, ref } = createDb(store);
+    const list = await readPagedList(ref(LIST));
+    const moving = Object.fromEntries(
+      Object.entries(items(1, 600)).map(([key, item]) => [key, { ...item, poster_path: '/p.jpg' }])
+    );
+
+    await relocateListItemsToPages(db, list, moving);
+
+    expect(events.indexOf(`set ${LIST}/item_pages/1`)).toBeLessThan(events.lastIndexOf(`set ${LIST}`));
+    expect(Object.keys(store.get(LIST)!.items as object)).toHaveLength(LIST_PAGE_CAPACITY - 100);
+    const reread = await readPagedList(ref(LIST));
+    expect(Object.keys(reread.items)).toHaveLength(LIST_PAGE_CAPACITY + 500);
+    expect(reread.items['movie-1']).toMatchObject({ poster_path: '/p.jpg' });
+    expect(reread.layout.overflowItemPages['movie-1']).toBe(1);
   });
 });

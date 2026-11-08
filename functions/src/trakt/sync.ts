@@ -70,6 +70,7 @@ import type {
   TraktRating,
   TraktTaskDispatchOptions,
   TraktUserDoc,
+  TraktWatchedMovie,
   TraktWatchedShow,
   TraktWatchlistItem,
 } from './types';
@@ -315,7 +316,22 @@ export const reconcileManagedList = async (
 const createChunkedBatch = (db: FirebaseFirestore.Firestore) => {
   let batch = db.batch();
   let size = 0;
-  const commits: Promise<unknown>[] = [];
+  // Each started commit is handled at once, so a rejection never goes unhandled while the
+  // caller is still awaiting other work; the first failure is rethrown by commit().
+  const commits: Promise<void>[] = [];
+  let firstError: unknown = null;
+  const start = () => {
+    commits.push(
+      batch.commit().then(
+        () => undefined,
+        (error: unknown) => {
+          firstError ??= error;
+        }
+      )
+    );
+    batch = db.batch();
+    size = 0;
+  };
   return {
     set(
       ref: FirebaseFirestore.DocumentReference,
@@ -325,15 +341,21 @@ const createChunkedBatch = (db: FirebaseFirestore.Firestore) => {
       batch.set(ref, data, options);
       size += 1;
       if (size >= 400) {
-        commits.push(batch.commit());
-        batch = db.batch();
-        size = 0;
+        start();
       }
     },
+    /** Commits the rest and waits for every started commit; throws the first failure. */
     async commit() {
       if (size > 0) {
-        commits.push(batch.commit());
+        start();
       }
+      await Promise.all(commits);
+      if (firstError !== null) {
+        throw firstError;
+      }
+    },
+    /** On an error path: waits for already-started commits without committing the rest. */
+    async settle() {
       await Promise.all(commits);
     },
   };
@@ -351,108 +373,114 @@ export const reconcileEpisodeTracking = async (
   let changedEpisodes = 0;
   let importedEpisodes = 0;
 
-  for (const traktShow of traktShows) {
-    const remoteDoc = buildEpisodeTrackingDoc(traktShow);
-    if (!remoteDoc) {
-      continue;
-    }
+  try {
+    for (const traktShow of traktShows) {
+      const remoteDoc = buildEpisodeTrackingDoc(traktShow);
+      if (!remoteDoc) {
+        continue;
+      }
 
-    const existingDoc = existingDocs.get(remoteDoc.showId);
-    if (!existingDoc) {
-      const showIdNumber = Number(remoteDoc.showId);
-      if (Number.isFinite(showIdNumber)) {
-        try {
-          const tmdbShow = await fetchTMDBJson<TMDBShowDetails>(`/tv/${showIdNumber}`);
-          if (!tmdbShow) {
-            console.warn(
-              `[TraktSync] Skipping unresolvable TMDB TV show ID ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"): show not found on TMDB (404)`
-            );
-            continue;
-          }
-        } catch (error) {
-          // Transient TMDB failures (timeouts, 429s, 5xx) fail open: the show
-          // still syncs and a later run can re-verify it. Configuration errors
-          // (missing TMDB_API_KEY secret, 401/403) fail deterministically on
-          // every call, so failing open would silently disable this validation
-          // for all shows — log at error level so it pages/alerts instead.
-          if (error instanceof TraktSyncError && !error.retryable) {
-            console.error(
-              `[TraktSync] TMDB existence validation is misconfigured; cannot verify show ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"). ` +
-                `Failing open. Investigate immediately. category=${error.category} statusCode=${error.statusCode ?? 'unknown'} message=${error.message}`
-            );
-          } else {
-            console.warn(
-              `[TraktSync] Could not verify TMDB existence for show ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"):`,
-              error
-            );
+      const existingDoc = existingDocs.get(remoteDoc.showId);
+      if (!existingDoc) {
+        const showIdNumber = Number(remoteDoc.showId);
+        if (Number.isFinite(showIdNumber)) {
+          try {
+            const tmdbShow = await fetchTMDBJson<TMDBShowDetails>(`/tv/${showIdNumber}`);
+            if (!tmdbShow) {
+              console.warn(
+                `[TraktSync] Skipping unresolvable TMDB TV show ID ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"): show not found on TMDB (404)`
+              );
+              continue;
+            }
+          } catch (error) {
+            // Transient TMDB failures (timeouts, 429s, 5xx) fail open: the show
+            // still syncs and a later run can re-verify it. Configuration errors
+            // (missing TMDB_API_KEY secret, 401/403) fail deterministically on
+            // every call, so failing open would silently disable this validation
+            // for all shows — log at error level so it pages/alerts instead.
+            if (error instanceof TraktSyncError && !error.retryable) {
+              console.error(
+                `[TraktSync] TMDB existence validation is misconfigured; cannot verify show ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"). ` +
+                  `Failing open. Investigate immediately. category=${error.category} statusCode=${error.statusCode ?? 'unknown'} message=${error.message}`
+              );
+            } else {
+              console.warn(
+                `[TraktSync] Could not verify TMDB existence for show ${remoteDoc.showId} ("${remoteDoc.metadata.tvShowName}"):`,
+                error
+              );
+            }
           }
         }
       }
-    }
 
-    importedEpisodes += Object.keys(remoteDoc.episodes).length;
-    // Very long shows keep their episodes across overflow pages; compare against all of them.
-    const tracking = existingDoc
-      ? await withEpisodePages(existingDoc)
-      : emptyEpisodeTracking(collectionRef.doc(remoteDoc.showId));
-    const existingData = tracking.data as Record<string, unknown>;
-    const existingEpisodes = tracking.items;
-    const episodeChanges: Record<string, unknown> = {};
-    let docChanged = !existingDoc;
+      importedEpisodes += Object.keys(remoteDoc.episodes).length;
+      // Very long shows keep their episodes across overflow pages; compare against all of them.
+      const tracking = existingDoc
+        ? await withEpisodePages(existingDoc)
+        : emptyEpisodeTracking(collectionRef.doc(remoteDoc.showId));
+      const existingData = tracking.data as Record<string, unknown>;
+      const existingEpisodes = tracking.items;
+      const episodeChanges: Record<string, unknown> = {};
+      let docChanged = !existingDoc;
 
-    Object.entries(remoteDoc.episodes).forEach(([episodeKey, remoteEpisode]) => {
-      const existingEpisode = isPlainObject(existingEpisodes[episodeKey])
-        ? (existingEpisodes[episodeKey] as Record<string, unknown>)
-        : undefined;
+      Object.entries(remoteDoc.episodes).forEach(([episodeKey, remoteEpisode]) => {
+        const existingEpisode = isPlainObject(existingEpisodes[episodeKey])
+          ? (existingEpisodes[episodeKey] as Record<string, unknown>)
+          : undefined;
 
-      if (shouldApplyRemoteManagedValue(existingEpisode, remoteEpisode, 'watchedAt')) {
-        episodeChanges[episodeKey] = mergeManagedValue(existingEpisode, remoteEpisode);
-        changedEpisodes += 1;
-        docChanged = true;
-      }
-    });
-
-    const existingMetadata = isPlainObject(existingData.metadata)
-      ? (existingData.metadata as Record<string, unknown>)
-      : {};
-    const metadataBase = {
-      tvShowName: remoteDoc.metadata.tvShowName,
-    };
-    const metadataChanged = !existingDoc || hasManagedFieldChanges(existingMetadata, metadataBase);
-
-    if (docChanged || metadataChanged) {
-      const metadata = { ...existingMetadata, ...metadataBase, lastUpdated: Timestamp.now() };
-      const plan = planEpisodeWrites(tracking, {
-        set: stripUndefinedDeep(episodeChanges, true) as Record<string, Record<string, unknown>>,
+        if (shouldApplyRemoteManagedValue(existingEpisode, remoteEpisode, 'watchedAt')) {
+          episodeChanges[episodeKey] = mergeManagedValue(existingEpisode, remoteEpisode);
+          changedEpisodes += 1;
+          docChanged = true;
+        }
       });
 
-      if (tracking.layout.pageCount === 0 && !plan.createsPages) {
-        // Fits in the show's document: batched as before.
-        batch.set(
-          tracking.ref,
-          stripUndefinedDeep(
-            {
-              episodes: plan.pageItems.get(0) ?? (!existingDoc ? {} : undefined),
-              metadata,
-            },
-            true
-          ) as FirebaseFirestore.DocumentData,
-          { merge: true }
-        );
-      } else {
-        await commitEpisodeWrites(
-          db,
-          tracking,
-          plan,
-          stripUndefinedDeep(
-            { ...(!existingDoc ? { episodes: {} } : {}), metadata },
-            true
-          ) as Record<string, unknown>
-        );
-      }
-    }
+      const existingMetadata = isPlainObject(existingData.metadata)
+        ? (existingData.metadata as Record<string, unknown>)
+        : {};
+      const metadataBase = {
+        tvShowName: remoteDoc.metadata.tvShowName,
+      };
+      const metadataChanged = !existingDoc || hasManagedFieldChanges(existingMetadata, metadataBase);
 
-    existingDocs.delete(remoteDoc.showId);
+      if (docChanged || metadataChanged) {
+        const metadata = { ...existingMetadata, ...metadataBase, lastUpdated: Timestamp.now() };
+        const plan = planEpisodeWrites(tracking, {
+          set: stripUndefinedDeep(episodeChanges, true) as Record<string, Record<string, unknown>>,
+        });
+
+        if (tracking.layout.pageCount === 0 && !plan.createsPages) {
+          // Fits in the show's document: batched as before.
+          batch.set(
+            tracking.ref,
+            stripUndefinedDeep(
+              {
+                episodes: plan.pageItems.get(0) ?? (!existingDoc ? {} : undefined),
+                metadata,
+              },
+              true
+            ) as FirebaseFirestore.DocumentData,
+            { merge: true }
+          );
+        } else {
+          await commitEpisodeWrites(
+            db,
+            tracking,
+            plan,
+            stripUndefinedDeep(
+              { ...(!existingDoc ? { episodes: {} } : {}), metadata },
+              true
+            ) as Record<string, unknown>
+          );
+        }
+      }
+
+      existingDocs.delete(remoteDoc.showId);
+    }
+  } catch (error) {
+    // Don't leave started commits running past this step.
+    await batch.settle();
+    throw error;
   }
 
   await batch.commit();
@@ -705,46 +733,67 @@ export const syncTraktImport = async (
   };
 
   if (shouldSyncWatched) {
-    try {
-      const watchedMovies = await getWatchedMovies(accessToken);
-      const watchedShows = await getWatchedShows(accessToken);
-      const alreadyWatchedItems = buildAlreadyWatchedItemsMap(watchedMovies, watchedShows);
-      const alreadyWatchedResult = await reconcileManagedList(
-        userId,
-        'already-watched',
-        alreadyWatchedItems,
-        {
-          id: 'already-watched',
-          name: TRAKT_MANAGED_DEFAULT_LIST_NAMES['already-watched'],
-        },
-        undefined,
-        {
-          preserveLocalItems: true,
-          recencyField: 'addedAt',
-        }
-      );
-      const episodeTrackingResult = await reconcileEpisodeTracking(userId, watchedShows);
-
-      itemsSynced.movies =
-        summaryMode === 'bootstrap'
-          ? countManagedListItemsByMediaType(alreadyWatchedItems, 'movie')
-          : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
-      itemsSynced.shows =
-        summaryMode === 'bootstrap'
-          ? countManagedListItemsByMediaType(alreadyWatchedItems, 'tv')
-          : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
-      itemsSynced.episodes =
-        summaryMode === 'bootstrap' ? episodeTrackingResult.itemCount : episodeTrackingResult.changedCount;
-
-      if (alreadyWatchedResult.shouldEnrich) {
-        listsToEnrich.push('already-watched');
-      }
-    } catch (error) {
+    const logWatchedStepError = (error: unknown) => {
       console.error('[TraktSync] Error during watched items sync step (/sync/watched/movies, /sync/watched/shows?extended=progress):', {
         error,
         userId,
       });
       recordStepFailure(error);
+    };
+
+    let watched: { movies: TraktWatchedMovie[]; shows: TraktWatchedShow[] } | null = null;
+    try {
+      watched = {
+        movies: await getWatchedMovies(accessToken),
+        shows: await getWatchedShows(accessToken),
+      };
+    } catch (error) {
+      logWatchedStepError(error);
+    }
+
+    if (watched) {
+      // The Already Watched list and episode progress are written independently, so a failed
+      // list write doesn't leave episode progress stale (the run is still marked failed).
+      const alreadyWatchedItems = buildAlreadyWatchedItemsMap(watched.movies, watched.shows);
+      try {
+        const alreadyWatchedResult = await reconcileManagedList(
+          userId,
+          'already-watched',
+          alreadyWatchedItems,
+          {
+            id: 'already-watched',
+            name: TRAKT_MANAGED_DEFAULT_LIST_NAMES['already-watched'],
+          },
+          undefined,
+          {
+            preserveLocalItems: true,
+            recencyField: 'addedAt',
+          }
+        );
+
+        itemsSynced.movies =
+          summaryMode === 'bootstrap'
+            ? countManagedListItemsByMediaType(alreadyWatchedItems, 'movie')
+            : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
+        itemsSynced.shows =
+          summaryMode === 'bootstrap'
+            ? countManagedListItemsByMediaType(alreadyWatchedItems, 'tv')
+            : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
+
+        if (alreadyWatchedResult.shouldEnrich) {
+          listsToEnrich.push('already-watched');
+        }
+      } catch (error) {
+        logWatchedStepError(error);
+      }
+
+      try {
+        const episodeTrackingResult = await reconcileEpisodeTracking(userId, watched.shows);
+        itemsSynced.episodes =
+          summaryMode === 'bootstrap' ? episodeTrackingResult.itemCount : episodeTrackingResult.changedCount;
+      } catch (error) {
+        logWatchedStepError(error);
+      }
     }
   }
 

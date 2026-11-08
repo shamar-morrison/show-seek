@@ -27,7 +27,6 @@ import {
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
-  deleteDoc,
   deleteField,
   doc,
   runTransaction,
@@ -149,7 +148,20 @@ class ListService {
       if (existing && existing.layout.pageCount > layout.pageCount) {
         return;
       }
-      this.knownLayouts.set(key, { keys: new Set(Object.keys(list.items ?? {})), layout });
+      const keys = new Set(Object.keys(list.items ?? {}));
+      if (existing && existing.layout.pageCount === layout.pageCount) {
+        // Optimistic cache updates don't carry page positions; keep the ones this service
+        // recorded when it wrote those items, or a later update would land on page 0.
+        Object.entries(existing.layout.overflowItemPages).forEach(([itemKey, page]) => {
+          if (keys.has(itemKey) && layout.overflowItemPages[itemKey] === undefined) {
+            layout.overflowItemPages[itemKey] = page;
+          }
+        });
+        layout.pageSizes = layout.pageSizes.map((size, page) =>
+          Math.max(size, existing.layout.pageSizes[page] ?? 0)
+        );
+      }
+      this.knownLayouts.set(key, { keys, layout });
     });
   }
 
@@ -871,28 +883,24 @@ class ListService {
       }
 
       const listRef = this.getUserListRef(user.uid, listId);
-      const known = this.knownLayouts.get(this.layoutKey(user.uid, listId));
 
-      if (known && known.layout.pageCount === 0) {
-        await Promise.race([deleteDoc(listRef), timeout.promise]);
-      } else {
-        // Delete the overflow pages with the list, in one batch, so a list later created with
-        // the same id never inherits old items.
-        const pages = await Promise.race([
-          auditedGetDocs(this.getListItemPagesCollection(user.uid, listId), {
-            path: `users/${user.uid}/lists/${listId}/${LIST_ITEM_PAGES_COLLECTION}`,
-            queryKey: 'list-pages',
-            callsite: 'ListService.deleteList',
-          }),
-          timeout.promise,
-        ]);
-        const batch = writeBatch(db);
-        pages.docs.forEach((pageDoc: QueryDocumentSnapshot<DocumentData>) => {
-          batch.delete(pageDoc.ref);
-        });
-        batch.delete(listRef);
-        await Promise.race([batch.commit(), timeout.promise]);
-      }
+      // Always look for overflow pages (another device may have added some since this one
+      // last loaded the list) and delete them with the list in one batch, so a list later
+      // created with the same id never inherits old items. Deleting is rare; one read is fine.
+      const pages = await Promise.race([
+        auditedGetDocs(this.getListItemPagesCollection(user.uid, listId), {
+          path: `users/${user.uid}/lists/${listId}/${LIST_ITEM_PAGES_COLLECTION}`,
+          queryKey: 'list-pages',
+          callsite: 'ListService.deleteList',
+        }),
+        timeout.promise,
+      ]);
+      const batch = writeBatch(db);
+      pages.docs.forEach((pageDoc: QueryDocumentSnapshot<DocumentData>) => {
+        batch.delete(pageDoc.ref);
+      });
+      batch.delete(listRef);
+      await Promise.race([batch.commit(), timeout.promise]);
 
       this.knownLayouts.delete(this.layoutKey(user.uid, listId));
     } catch (error) {

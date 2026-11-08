@@ -1,4 +1,13 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
@@ -416,14 +425,17 @@ describe('ListService', () => {
   });
 
   describe('deleteList', () => {
-    it('should call deleteDoc for custom lists', async () => {
+    it('deletes a custom list together with its overflow pages in one batch', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/my-custom-list' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
-      (deleteDoc as jest.Mock).mockResolvedValue(undefined);
+      (getDocs as jest.Mock).mockResolvedValue({ size: 0, docs: [] });
+      const batch = { delete: jest.fn(), commit: jest.fn().mockResolvedValue(undefined) };
+      (writeBatch as jest.Mock).mockReturnValueOnce(batch);
 
       await listService.deleteList('my-custom-list');
 
-      expect(deleteDoc).toHaveBeenCalledWith(mockDocRef);
+      expect(batch.delete).toHaveBeenCalledWith(mockDocRef);
+      expect(batch.commit).toHaveBeenCalledTimes(1);
     });
 
     it('should prevent deletion of default lists', async () => {
@@ -497,7 +509,11 @@ describe('ListService', () => {
     it('cancels timeout when deleteList throws', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/my-custom-list' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
-      (deleteDoc as jest.Mock).mockRejectedValueOnce(new Error('delete failed'));
+      (getDocs as jest.Mock).mockResolvedValue({ size: 0, docs: [] });
+      (writeBatch as jest.Mock).mockReturnValueOnce({
+        delete: jest.fn(),
+        commit: jest.fn().mockRejectedValue(new Error('delete failed')),
+      });
 
       await expect(listService.deleteList('my-custom-list')).rejects.toThrow('delete failed');
       expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();

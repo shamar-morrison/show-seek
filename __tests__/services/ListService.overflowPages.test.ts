@@ -303,4 +303,26 @@ describe('ListService overflow pages', () => {
       `${LISTS}/already-watched/item_pages/1`,
     ]);
   });
+
+  it('keeps item pages it wrote when cached data without them is remembered', async () => {
+    const layout = {
+      items: itemsOf([1]),
+      pageCount: 1,
+      pageSizes: [LIST_PAGE_CAPACITY, 1],
+      overflowItemPages: {},
+    };
+    listService.rememberListLayouts(USER, [pagedList(layout)]);
+    await listService.addToList('already-watched', movie(9)); // goes to page 1
+
+    // The optimistic cache update has the item, but not its page.
+    listService.rememberListLayouts(USER, [
+      pagedList({ ...layout, items: { ...itemsOf([1]), ...itemsOf([9]) } }),
+    ]);
+    await listService.addToList('already-watched', movie(9));
+
+    expect(updateDoc).not.toHaveBeenCalled();
+    expect(batches[1].set.mock.calls[0][0]).toEqual({
+      path: `${LISTS}/already-watched/item_pages/1`,
+    });
+  });
 });

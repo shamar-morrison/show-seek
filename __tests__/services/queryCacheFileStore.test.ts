@@ -42,13 +42,32 @@ describe('file-backed query cache store', () => {
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
   });
 
-  it('migrates the old AsyncStorage copy once, then removes it', async () => {
+  it('migrates the old AsyncStorage copy into the file, then removes it', async () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue('{"legacy":true}');
 
     await expect(fileQueryCacheStore.read()).resolves.toBe('{"legacy":true}');
 
-    expect(AsyncStorage.getItem).toHaveBeenCalledWith(LEGACY_KEY);
+    expect(mockFiles.get(FILE)).toBe('{"legacy":true}');
     expect(AsyncStorage.removeItem).toHaveBeenCalledWith(LEGACY_KEY);
+  });
+
+  it('keeps the old copy when it cannot be written to the file yet', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const fs = jest.requireMock('expo-file-system/legacy');
+    (fs.writeAsStringAsync as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('{"legacy":true}');
+
+    await expect(fileQueryCacheStore.read()).resolves.toBe('{"legacy":true}');
+
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('recovers a complete temp file left by an interrupted swap', async () => {
+    mockFiles.set(`${FILE}.tmp`, '{"swapped":true}');
+
+    await expect(fileQueryCacheStore.read()).resolves.toBe('{"swapped":true}');
+    expect(AsyncStorage.getItem).not.toHaveBeenCalled();
   });
 
   it('discards an old copy too large for Android to read', async () => {
@@ -77,6 +96,14 @@ describe('file-backed query cache store', () => {
     await fileQueryCacheStore.clear();
 
     expect(mockFiles.has(FILE)).toBe(false);
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(LEGACY_KEY);
+  });
+
+  it('still removes the old copy when deleting the file fails', async () => {
+    const fs = jest.requireMock('expo-file-system/legacy');
+    (fs.deleteAsync as jest.Mock).mockRejectedValueOnce(new Error('busy'));
+
+    await expect(fileQueryCacheStore.clear()).rejects.toThrow('busy');
     expect(AsyncStorage.removeItem).toHaveBeenCalledWith(LEGACY_KEY);
   });
 });

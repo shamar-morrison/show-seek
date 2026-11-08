@@ -2,7 +2,7 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
 import { hasEpisodeAired } from '@/src/utils/dateUtils';
-import { createTimeoutWithCleanup } from '@/src/utils/timeout';
+import { createTimeoutWithCleanup, raceWithTimeout } from '@/src/utils/timeout';
 import { EPISODE_PAGES_COLLECTION } from '@/functions/src/shared/episodePages';
 import {
   createSinglePageLayout,
@@ -18,7 +18,6 @@ import {
 } from '@/functions/src/shared/pagedMap';
 import {
   collection,
-  deleteDoc,
   deleteField,
   doc,
   runTransaction,
@@ -385,15 +384,17 @@ class EpisodeTrackingService {
         return null;
       }
 
-      return normalizeEpisodeTrackingDoc(
-        await this.withEpisodePages(
+      // Overflow pages (very long shows) get their own 10s deadline, like the document read.
+      const data = await raceWithTimeout(
+        this.withEpisodePages(
           user.uid,
           tvShowId,
           snapshot.data(),
           'EpisodeTrackingService.getShowTracking'
         ),
-        snapshot.id
+        { ms: 10000 }
       );
+      return normalizeEpisodeTrackingDoc(data, snapshot.id);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
@@ -870,18 +871,22 @@ class EpisodeTrackingService {
       });
 
       // Very long shows keep episodes in overflow pages; only those shows cost an extra read.
-      const shows = await Promise.all(
-        snapshot.docs.map(async (trackingDoc) =>
-          normalizeEpisodeTrackingDoc(
-            await this.withEpisodePages(
-              userId,
-              trackingDoc.id,
-              trackingDoc.data(),
-              'EpisodeTrackingService.getAllWatchedShows'
-            ),
-            trackingDoc.id
+      // The page reads share one 10s deadline, like the collection read.
+      const shows = await raceWithTimeout(
+        Promise.all(
+          snapshot.docs.map(async (trackingDoc) =>
+            normalizeEpisodeTrackingDoc(
+              await this.withEpisodePages(
+                userId,
+                trackingDoc.id,
+                trackingDoc.data(),
+                'EpisodeTrackingService.getAllWatchedShows'
+              ),
+              trackingDoc.id
+            )
           )
-        )
+        ),
+        { ms: 10000 }
       );
       return shows.filter((show): show is TVShowEpisodeTracking => show !== null);
     } catch (error) {
@@ -952,26 +957,22 @@ class EpisodeTrackingService {
       if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
-      const known = this.knownLayouts.get(this.layoutKey(user.uid, tvShowId));
       const timeout = createTimeoutWithCleanup(10000);
       try {
-        if (known && known.layout.pageCount === 0) {
-          await Promise.race([deleteDoc(trackingRef), timeout.promise]);
-        } else {
-          // Delete overflow pages with the show, so re-tracking it later starts clean.
-          const pages = await Promise.race([
-            auditedGetDocs(this.getEpisodePagesCollection(user.uid, tvShowId), {
-              path: `users/${user.uid}/episode_tracking/${tvShowId}/${EPISODE_PAGES_COLLECTION}`,
-              queryKey: 'episodeTrackingPages',
-              callsite: 'EpisodeTrackingService.deleteShowTracking',
-            }),
-            timeout.promise,
-          ]);
-          const batch = writeBatch(db);
-          pages.docs.forEach((pageDoc) => batch.delete(pageDoc.ref));
-          batch.delete(trackingRef);
-          await Promise.race([batch.commit(), timeout.promise]);
-        }
+        // Always look for overflow pages (another device may have added some) and delete them
+        // with the show, so re-tracking it later starts clean.
+        const pages = await Promise.race([
+          auditedGetDocs(this.getEpisodePagesCollection(user.uid, tvShowId), {
+            path: `users/${user.uid}/episode_tracking/${tvShowId}/${EPISODE_PAGES_COLLECTION}`,
+            queryKey: 'episodeTrackingPages',
+            callsite: 'EpisodeTrackingService.deleteShowTracking',
+          }),
+          timeout.promise,
+        ]);
+        const batch = writeBatch(db);
+        pages.docs.forEach((pageDoc) => batch.delete(pageDoc.ref));
+        batch.delete(trackingRef);
+        await Promise.race([batch.commit(), timeout.promise]);
       } finally {
         timeout.cancel();
       }
