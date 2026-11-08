@@ -23,6 +23,7 @@ import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
+import { ActiveFiltersBar } from '@/src/components/library/ActiveFiltersBar';
 import { useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { compareMissingLast, getItemRuntime, getItemUserRating } from '@/src/utils/listSort';
 import { useListItemRuntimes } from '@/src/hooks/useListItemRuntimes';
@@ -101,15 +102,27 @@ export default function CustomListDetailScreen() {
     return lists?.find((l) => l.id === id);
   }, [lists, id]);
 
-  const { ratings: userRatings } = useUserRatingMap(
+  const { ratings: userRatings, isReady: userRatingsReady } = useUserRatingMap(
     filterState.userRating !== 'any' || sortState.option === 'userRating'
   );
   const {
     runtimes,
     isResolving: isResolvingRuntimes,
+    isComplete: runtimesComplete,
     done: runtimesDone,
     total: runtimesTotal,
   } = useListItemRuntimes(list, filterState.runtime !== 'any' || sortState.option === 'runtime');
+
+  // Live count for the filter modal; hidden while it would be a guess.
+  const getMatchCount = useCallback(
+    (draft: WatchStatusFilterState) => {
+      const items = list?.items ? Object.values(list.items) : [];
+      if (draft.userRating !== 'any' && !userRatingsReady) return null;
+      if (draft.runtime !== 'any' && !runtimesComplete) return null;
+      return filterMediaItems(items, draft, { userRatings, runtimes }).length;
+    },
+    [list, userRatingsReady, runtimesComplete, userRatings, runtimes]
+  );
 
   const handleRenameList = useCallback(() => {
     if (!list) return;
@@ -468,6 +481,16 @@ export default function CustomListDetailScreen() {
           testID="runtime-lookup-indicator"
         />
       )}
+      <ActiveFiltersBar
+        filters={filterState}
+        onFiltersChange={setFilterState}
+        sortState={sortState}
+        defaultSortState={DEFAULT_SORT_STATE}
+        onSortChange={setSortState}
+        genreMap={genreMap}
+        onEditFilters={() => setFilterModalVisible(true)}
+        onEditSort={() => setSortModalVisible(true)}
+      />
 
       <View style={[screenStyles.container, styles.container]}>
         {!!list.description?.trim() && (
@@ -563,6 +586,7 @@ export default function CustomListDetailScreen() {
         }}
         genreMap={genreMap}
         showListFilters
+        getMatchCount={getMatchCount}
       />
 
       <Toast ref={toastRef} />

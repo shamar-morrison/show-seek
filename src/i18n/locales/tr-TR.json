@@ -1817,7 +1817,12 @@
       "120to150": "2–2,5 sa",
       "over150": "2,5 sa’ten uzun"
     },
-    "lookingUpRuntimes": "Süreler aranıyor… {{done}}/{{total}}"
+    "lookingUpRuntimes": "Süreler aranıyor… {{done}}/{{total}}",
+    "matchCount_one": "{{count}} yapım eşleşiyor",
+    "matchCount_other": "{{count}} yapım eşleşiyor",
+    "noMatches": "Bu filtrelerle eşleşen yapım yok",
+    "removeFilter": "{{name}} kaldır",
+    "editFilters": "Filtreleri açar"
   },
   "lists": {
     "alreadyWatched": "Daha önce izlenenler",
@@ -1983,7 +1988,8 @@
       "shortestFirst": "Kısadan uzuna",
       "aToZ": "A’dan Z’ye",
       "zToA": "Z’den A’ya"
-    }
+    },
+    "editSort": "Sıralama seçeneklerini açar"
   },
   "stats": {
     "activityPatterns": "Etkinlik düzenleri",

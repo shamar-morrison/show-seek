@@ -1851,7 +1851,12 @@
       "120to150": "2 h–2 h 30",
       "over150": "Plus de 2 h 30"
     },
-    "lookingUpRuntimes": "Recherche des durées… {{done}}/{{total}}"
+    "lookingUpRuntimes": "Recherche des durées… {{done}}/{{total}}",
+    "matchCount_one": "{{count}} titre correspond",
+    "matchCount_other": "{{count}} titres correspondent",
+    "noMatches": "Aucun titre ne correspond à ces filtres",
+    "removeFilter": "Retirer {{name}}",
+    "editFilters": "Ouvre les filtres"
   },
   "lists": {
     "alreadyWatched": "Déjà vus",
@@ -2017,7 +2022,8 @@
       "shortestFirst": "Du plus court au plus long",
       "aToZ": "De A à Z",
       "zToA": "De Z à A"
-    }
+    },
+    "editSort": "Ouvre les options de tri"
   },
   "stats": {
     "activityPatterns": "Habitudes d’activité",

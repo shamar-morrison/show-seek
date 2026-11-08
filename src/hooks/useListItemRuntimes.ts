@@ -143,9 +143,22 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, userId, missingSignature, queryClient]);
 
+  // Every runtime that can be known is known: nothing is waiting for a lookup this session.
+  const isComplete = useMemo(
+    () =>
+      !state.isResolving &&
+      missingItems.every((item) => {
+        const key = getMediaKey(item.mediaType, item.mediaId);
+        // state.runtimes mirrors the session's found runtimes and changes when a run ends.
+        return state.runtimes.has(key) || attemptedTitles.has(key);
+      }),
+    [missingItems, state.isResolving, state.runtimes]
+  );
+
   return {
     runtimes: state.runtimes,
     isResolving: enabled && state.isResolving,
+    isComplete,
     done: state.done,
     total: state.total,
   };

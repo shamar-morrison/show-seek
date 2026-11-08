@@ -12,14 +12,24 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import {
+  getMediaTypeLabel,
+  getRuntimeLabel,
+  getTmdbRatingLabel,
+  getUserRatingLabel,
+  RATING_THRESHOLDS,
+} from '@/src/utils/listFilterLabels';
+import {
   areWatchStatusFiltersEqual,
   DEFAULT_WATCH_STATUS_FILTERS,
+  MediaTypeFilter,
   RUNTIME_FILTER_VALUES,
+  RuntimeFilter,
+  UserRatingFilter,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
@@ -42,6 +52,11 @@ interface WatchStatusFiltersModalProps {
   showMediaTypeFilter?: boolean;
   /** Whether to show the Runtime and Your rating filters (list screens only). Defaults to false. */
   showListFilters?: boolean;
+  /**
+   * How many titles the given filters would show, for a live count above the buttons.
+   * Return null when the count can't be known yet (e.g. runtimes not looked up), to hide it.
+   */
+  getMatchCount?: (filters: WatchStatusFilterState) => number | null;
 }
 
 export default function WatchStatusFiltersModal({
@@ -52,6 +67,7 @@ export default function WatchStatusFiltersModal({
   genreMap,
   showMediaTypeFilter = true,
   showListFilters = false,
+  getMatchCount,
 }: WatchStatusFiltersModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -73,6 +89,11 @@ export default function WatchStatusFiltersModal({
       [key]: value,
     }));
   };
+
+  const matchCount = useMemo(
+    () => (visible && getMatchCount ? getMatchCount(localFilters) : null),
+    [getMatchCount, localFilters, visible]
+  );
 
   // Nothing to apply when the choices match the filters already in use.
   const canApply = !areWatchStatusFiltersEqual(localFilters, filters);
@@ -101,37 +122,22 @@ export default function WatchStatusFiltersModal({
     }),
   ];
 
-  const ratingOptions: SelectOption[] = [
-    { label: t('filters.anyRating'), value: 0 },
-    ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((value) => ({
-      label: t('filters.starsPlus', { count: value }),
-      value,
-    })),
-  ];
+  const ratingOptions: SelectOption[] = [0, ...RATING_THRESHOLDS].map((value) => ({
+    label: getTmdbRatingLabel(t, value),
+    value,
+  }));
 
-  const userRatingOptions: SelectOption[] = [
-    { label: t('filters.anyRating'), value: 'any' },
-    { label: t('filters.rated'), value: 'rated' },
-    { label: t('filters.notRated'), value: 'unrated' },
-    ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((value) => ({
-      label: t('filters.starsPlus', { count: value }),
-      value,
-    })),
-  ];
+  const userRatingOptions: SelectOption[] = (
+    ['any', 'rated', 'unrated', ...RATING_THRESHOLDS] as UserRatingFilter[]
+  ).map((value) => ({ label: getUserRatingLabel(t, value), value }));
 
-  const runtimeOptions: SelectOption[] = [
-    { label: t('filters.anyRuntime'), value: 'any' },
-    ...RUNTIME_FILTER_VALUES.map((value) => ({
-      label: t(`filters.runtimeOptions.${value}`),
-      value,
-    })),
-  ];
+  const runtimeOptions: SelectOption[] = (['any', ...RUNTIME_FILTER_VALUES] as RuntimeFilter[]).map(
+    (value) => ({ label: getRuntimeLabel(t, value), value })
+  );
 
-  const mediaTypeOptions: SelectOption[] = [
-    { label: t('library.allMedia'), value: 'all' },
-    { label: t('media.movies'), value: 'movie' },
-    { label: t('media.tvShows'), value: 'tv' },
-  ];
+  const mediaTypeOptions: SelectOption[] = (['all', 'movie', 'tv'] as MediaTypeFilter[]).map(
+    (value) => ({ label: getMediaTypeLabel(t, value), value })
+  );
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -219,6 +225,18 @@ export default function WatchStatusFiltersModal({
             )}
           </View>
 
+          {matchCount !== null && (
+            <Text
+              style={[styles.matchCount, matchCount === 0 && styles.matchCountEmpty]}
+              accessibilityLiveRegion="polite"
+              testID="filters-match-count"
+            >
+              {matchCount === 0
+                ? t('filters.noMatches')
+                : t('filters.matchCount', { count: matchCount })}
+            </Text>
+          )}
+
           <View style={styles.actions}>
             <TouchableOpacity
               style={styles.clearButton}
@@ -277,6 +295,15 @@ const styles = StyleSheet.create({
   filtersContainer: {
     gap: SPACING.m,
     marginBottom: SPACING.l,
+  },
+  matchCount: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.m,
+  },
+  matchCountEmpty: {
+    color: COLORS.warning,
   },
   actions: {
     flexDirection: 'row',

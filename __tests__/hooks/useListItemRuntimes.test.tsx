@@ -91,6 +91,8 @@ describe('useListItemRuntimes', () => {
 
     expect(mockResolveListItemRuntimes).not.toHaveBeenCalled();
     expect(result.current.isResolving).toBe(false);
+    // Runtimes are still unknown, so a count based on them would be a guess.
+    expect(result.current.isComplete).toBe(false);
   });
 
   it('looks up only missing runtimes, reports progress, and patches the cached list', async () => {
@@ -131,6 +133,7 @@ describe('useListItemRuntimes', () => {
 
     await waitFor(() => expect(result.current.isResolving).toBe(false));
     expect(result.current.runtimes.get('tv:3')).toBe(45);
+    expect(result.current.isComplete).toBe(true);
 
     const cached = client.getQueryData<UserList[]>(['lists', 'user-1'])![0];
     expect(cached.items['movie-2'].runtimeMinutes).toBe(95);

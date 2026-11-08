@@ -78,4 +78,37 @@ describe('WatchStatusFiltersModal', () => {
     fireEvent.press(getByTestId('filters-apply-button'));
     expect(onApplyFilters).toHaveBeenCalledWith(DEFAULT_WATCH_STATUS_FILTERS);
   });
+
+  it('shows a live match count, hides it when unknown, and warns when nothing matches', () => {
+    const getMatchCount = jest.fn((filters) =>
+      filters.runtime !== 'any' ? null : filters.mediaType === 'tv' ? 0 : 12
+    );
+    const { getByTestId, queryByTestId, rerender } = renderModal({ getMatchCount });
+
+    expect(getByTestId('filters-match-count').props.children).toBe('12 titles match');
+
+    rerender(
+      <WatchStatusFiltersModal
+        visible
+        onClose={jest.fn()}
+        filters={{ ...DEFAULT_WATCH_STATUS_FILTERS, mediaType: 'tv' }}
+        onApplyFilters={jest.fn()}
+        genreMap={genreMap}
+        getMatchCount={getMatchCount}
+      />
+    );
+    expect(getByTestId('filters-match-count').props.children).toBe('No titles match these filters');
+
+    rerender(
+      <WatchStatusFiltersModal
+        visible
+        onClose={jest.fn()}
+        filters={{ ...DEFAULT_WATCH_STATUS_FILTERS, runtime: '60to90' }}
+        onApplyFilters={jest.fn()}
+        genreMap={genreMap}
+        getMatchCount={getMatchCount}
+      />
+    );
+    expect(queryByTestId('filters-match-count')).toBeNull();
+  });
 });

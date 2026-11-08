@@ -139,7 +139,12 @@ export const useUserRatingMap = (enabled: boolean) => {
     return map;
   }, [query.data]);
 
-  return { ratings, isLoading: enabled && query.isLoading };
+  return {
+    ratings,
+    isLoading: enabled && query.isLoading,
+    /** True once ratings are in memory (cached or loaded), so counts based on them are exact. */
+    isReady: query.data !== undefined,
+  };
 };
 
 export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {

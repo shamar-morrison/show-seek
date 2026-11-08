@@ -22,6 +22,7 @@ import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
+import { ActiveFiltersBar } from '@/src/components/library/ActiveFiltersBar';
 import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { compareMissingLast, getItemRuntime, getItemUserRating } from '@/src/utils/listSort';
 import { useListItemRuntimes } from '@/src/hooks/useListItemRuntimes';
@@ -103,17 +104,29 @@ export default function FavoritesScreen() {
     return lists?.find((l) => l.id === DEFAULT_LIST_IDS[3]);
   }, [lists]);
 
-  const { ratings: userRatings } = useUserRatingMap(
+  const { ratings: userRatings, isReady: userRatingsReady } = useUserRatingMap(
     filterState.userRating !== 'any' || sortState.option === 'userRating'
   );
   const {
     runtimes,
     isResolving: isResolvingRuntimes,
+    isComplete: runtimesComplete,
     done: runtimesDone,
     total: runtimesTotal,
   } = useListItemRuntimes(
     favoritesList,
     filterState.runtime !== 'any' || sortState.option === 'runtime'
+  );
+
+  // Live count for the filter modal; hidden while it would be a guess.
+  const getMatchCount = useCallback(
+    (draft: WatchStatusFilterState) => {
+      const items = favoritesList?.items ? Object.values(favoritesList.items) : [];
+      if (draft.userRating !== 'any' && !userRatingsReady) return null;
+      if (draft.runtime !== 'any' && !runtimesComplete) return null;
+      return filterMediaItems(items, draft, { userRatings, runtimes }).length;
+    },
+    [favoritesList, userRatingsReady, runtimesComplete, userRatings, runtimes]
   );
 
   const listItems = useMemo(() => {
@@ -333,6 +346,16 @@ export default function FavoritesScreen() {
             testID="runtime-lookup-indicator"
           />
         )}
+        <ActiveFiltersBar
+          filters={filterState}
+          onFiltersChange={setFilterState}
+          sortState={sortState}
+          defaultSortState={DEFAULT_SORT_STATE}
+          onSortChange={setSortState}
+          genreMap={genreMap}
+          onEditFilters={() => setFilterModalVisible(true)}
+          onEditSort={() => setSortModalVisible(true)}
+        />
         <View style={styles.content}>
           {viewMode === 'grid' ? (
             <MediaGrid
@@ -434,6 +457,7 @@ export default function FavoritesScreen() {
         }}
         genreMap={genreMap}
         showListFilters
+        getMatchCount={getMatchCount}
       />
 
       <Toast ref={toastRef} />

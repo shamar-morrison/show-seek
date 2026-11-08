@@ -1,4 +1,4 @@
-import { FilterSelect } from '@/src/components/filters';
+import { FilterSelect } from '@/src/components/filters/FilterSelect';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import {
   BORDER_RADIUS,
@@ -131,6 +131,17 @@ const USER_RATING_OPTION = {
   value: 'userRating' as SortOption,
   defaultDirection: 'desc' as SortDirection,
 };
+
+/** Translation key for a sort option's name, e.g. "Runtime". */
+export function getSortOptionLabelKey(option: SortOption): string {
+  if (option === USER_RATING_OPTION.value) return USER_RATING_OPTION.labelKey;
+  return BASE_SORT_OPTIONS.find((o) => o.value === option)?.labelKey ?? 'sort.recentlyAdded';
+}
+
+/** Translation key for a sort order in plain words, e.g. "Longest to Shortest". */
+export function getSortOrderLabelKey(option: SortOption, direction: SortDirection): string {
+  return (ORDER_LABELS[option] ?? DATE_ORDER)[direction];
+}
 
 export default function MediaSortModal({
   visible,
