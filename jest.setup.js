@@ -356,6 +356,13 @@ jest.mock('firebase/firestore', () => ({
   updateDoc: jest.fn(),
   deleteDoc: jest.fn(),
   deleteField: jest.fn(() => '__deleteField__'),
+  writeBatch: jest.fn(() => ({
+    set: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    commit: jest.fn(() => Promise.resolve()),
+  })),
+  runTransaction: jest.fn(),
   arrayUnion: jest.fn((value) => `__arrayUnion__${value}`),
   arrayRemove: jest.fn((value) => `__arrayRemove__${value}`),
   onSnapshot: jest.fn(() => jest.fn()),

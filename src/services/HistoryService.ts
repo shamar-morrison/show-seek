@@ -2,6 +2,8 @@ import i18n from '../i18n';
 import { normalizeEpisodeTrackingDoc } from './episodeTrackingNormalization';
 import type { WatchedEpisode } from '../types/episodeTracking';
 import { toMillis } from '../utils/timestamps';
+import { raceWithTimeout } from '../utils/timeout';
+import { getFirestoreErrorMessage } from '../firebase/firestore';
 import type {
   ActivityItem,
   HistoryData,
@@ -11,7 +13,8 @@ import type {
   MonthWatchedItem,
 } from '../types/history';
 import { fetchUserCollection } from './firestoreHelpers';
-import type { UserList } from './ListService';
+import { listService, type UserList } from './ListService';
+import { getListPageCount } from '@/functions/src/shared/listPages';
 import { normalizeRatingItem, type RatingItem } from './RatingService';
 import { getSignedInUser } from './serviceSupport';
 import {
@@ -136,7 +139,31 @@ class HistoryService {
         })) as UserList[],
       { errorContext: 'HistoryService.fetchLists' }
     );
-    return result ?? [];
+    const lists = result ?? [];
+    const user = getSignedInUser();
+    if (!user || !lists.some((list) => getListPageCount(list) > 0)) {
+      return lists;
+    }
+
+    // Large lists keep their newest items in overflow pages. Only those lists cost an extra read.
+    try {
+      return await raceWithTimeout(
+        Promise.all(
+          lists.map((list) =>
+            getListPageCount(list) > 0
+              ? listService.withOverflowPages(user.uid, list, {
+                  queryKey: 'lists',
+                  callsite: 'HistoryService.fetchLists',
+                })
+              : list
+          )
+        ),
+        { ms: 10000, message: 'HistoryService.fetchLists pages timed out' }
+      );
+    } catch (error) {
+      console.error('[HistoryService.fetchLists] Error:', getFirestoreErrorMessage(error));
+      return lists;
+    }
   }
 
   /**
@@ -407,6 +434,8 @@ class HistoryService {
       timestamp: number;
       listId: string;
       itemKey: string;
+      /** Overflow page holding the item (0 = the list document). */
+      page: number;
       mediaType: 'movie' | 'tv';
       mediaId: number;
       runtimeMinutes?: number;
@@ -429,6 +458,7 @@ class HistoryService {
                 timestamp: addedAtMillis,
                 listId: list.id,
                 itemKey,
+                page: list.overflowItemPages?.[itemKey] ?? 0,
                 mediaType: item.media_type,
                 mediaId: item.id,
                 runtimeMinutes: item.runtimeMinutes,
@@ -458,6 +488,7 @@ class HistoryService {
       .map((i) => ({
         listId: i.listId,
         itemKey: i.itemKey,
+        page: i.page,
         mediaType: i.mediaType,
         mediaId: i.mediaId,
         addedAt: i.timestamp,
@@ -733,6 +764,7 @@ class HistoryService {
             unstampedDetailItems.push({
               listId: alreadyWatchedList.id,
               itemKey,
+              page: alreadyWatchedList.overflowItemPages?.[itemKey] ?? 0,
               mediaType: item.media_type,
               mediaId: item.id,
               addedAt: addedAtMillis,

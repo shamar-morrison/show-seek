@@ -2,6 +2,10 @@ import { tmdbApi } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
 import { toMillis } from '@/src/utils/timestamps';
 import { getSignedInUser } from '@/src/services/serviceSupport';
+import {
+  getListItemPageDocId,
+  LIST_ITEM_PAGES_COLLECTION,
+} from '@/functions/src/shared/listPages';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
 /**
@@ -40,6 +44,8 @@ export interface UnstampedEpisode {
 export interface UnstampedListItem {
   listId: string;
   itemKey: string;
+  /** Overflow page holding the item (0 or absent = the list document). */
+  page?: number;
   mediaType: 'movie' | 'tv';
   mediaId: number;
   addedAt: number;
@@ -66,6 +72,8 @@ export interface RuntimeStamps {
   episodesByShow: Map<number, Map<string, number>>;
   /** listId -> (itemKey -> measured minutes) */
   itemsByList: Map<string, Map<string, number>>;
+  /** `${listId}/${itemKey}` -> overflow page holding the item; absent = the list document. */
+  itemPages?: Map<string, number>;
 }
 
 export interface ResolvedRuntimes {
@@ -106,15 +114,34 @@ function defaultStampRuntimes(stamps: RuntimeStamps): void {
   });
 
   stamps.itemsByList.forEach((items, listId) => {
-    const updates: Record<string, number> = {};
+    // Stamp each item in the document that holds it: the list document or an overflow page.
+    // (A field-path update on the wrong document would create a partial item there.)
+    const updatesByPage = new Map<number, Record<string, number>>();
     items.forEach((minutes, itemKey) => {
+      const page = stamps.itemPages?.get(`${listId}/${itemKey}`) ?? 0;
+      const updates = updatesByPage.get(page) ?? {};
       updates[`items.${itemKey}.runtimeMinutes`] = minutes;
+      updatesByPage.set(page, updates);
     });
-    writes.push(
-      updateDoc(doc(db, 'users', user.uid, 'lists', listId), updates).catch((error) => {
-        console.warn('[WatchTimeBackfill] List stamp failed:', error);
-      })
-    );
+    updatesByPage.forEach((updates, page) => {
+      const ref =
+        page > 0
+          ? doc(
+              db,
+              'users',
+              user.uid,
+              'lists',
+              listId,
+              LIST_ITEM_PAGES_COLLECTION,
+              getListItemPageDocId(page)
+            )
+          : doc(db, 'users', user.uid, 'lists', listId);
+      writes.push(
+        updateDoc(ref, updates).catch((error) => {
+          console.warn('[WatchTimeBackfill] List stamp failed:', error);
+        })
+      );
+    });
   });
 
   void Promise.allSettled(writes);
@@ -264,6 +291,7 @@ export async function resolveMissingRuntimes(
   // Build in-memory minutes + measured-only stamps.
   const stamps: RuntimeStamps = {
     episodesByShow: new Map(),
+    itemPages: new Map(),
     itemsByList: new Map(),
   };
 
@@ -297,6 +325,9 @@ export async function resolveMissingRuntimes(
           stamps.itemsByList.set(item.listId, listStamps);
         }
         listStamps.set(item.itemKey, measured);
+        if (item.page) {
+          stamps.itemPages?.set(`${item.listId}/${item.itemKey}`, item.page);
+        }
       }
     } else {
       const measured = measuredMovieRuntimes.get(item.mediaId);
@@ -308,6 +339,9 @@ export async function resolveMissingRuntimes(
           stamps.itemsByList.set(item.listId, listStamps);
         }
         listStamps.set(item.itemKey, measured);
+        if (item.page) {
+          stamps.itemPages?.set(`${item.listId}/${item.itemKey}`, item.page);
+        }
       }
     }
   });

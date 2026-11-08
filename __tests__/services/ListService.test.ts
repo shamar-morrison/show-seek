@@ -46,11 +46,21 @@ import {
   getFirestoreReadAuditReport,
 } from '@/src/services/firestoreReadAudit';
 
+/** The layouts `useLists` hands the service in the app: these lists fit in their document. */
+const seedSinglePageLayouts = (...listIds: string[]) => {
+  listService.rememberListLayouts(
+    'test-user-id',
+    listIds.map((id) => ({ id, name: id, items: {}, createdAt: 0 }))
+  );
+};
+
 describe('ListService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset current user to authenticated state
     mockUserId = 'test-user-id';
+    listService.clearListLayouts();
+    seedSinglePageLayouts('watchlist', 'my-custom-list');
   });
 
   describe('addToList', () => {

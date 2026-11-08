@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
 import type { TaskOptions } from 'firebase-admin/functions';
 import { Timestamp } from 'firebase-admin/firestore';
+import { commitPagedListWrites, planPagedListWrites, readPagedList } from '../listPagesAdmin';
 import {
   ACTIVE_RUN_STATUSES,
   DEFAULT_ENRICHMENT_LIST_IDS,
@@ -158,6 +159,20 @@ export const getEnrichmentListStatuses = async (
   return listsStatus;
 };
 
+const getGenreIds = (details: { genre_ids?: number[]; genres?: { id: number }[] }): number[] =>
+  details.genre_ids ??
+  (details.genres ?? []).map((genre) => genre.id).filter((id) => typeof id === 'number');
+
+/**
+ * True for items TMDB enrichment has never filled in (e.g. fresh from Trakt, which only gives
+ * ids and titles). Enriched items always have `poster_path` set, even if TMDB has no poster (null).
+ */
+export const needsMediaEnrichment = (item: Record<string, unknown> | undefined): boolean =>
+  !!item &&
+  typeof item.id === 'number' &&
+  typeof item.media_type === 'string' &&
+  (item.poster_path === undefined || item.vote_average === undefined);
+
 export const enrichMediaItem = async (item: Record<string, unknown>): Promise<Record<string, unknown>> => {
   if (!item || typeof item.id !== 'number' || typeof item.media_type !== 'string') {
     return item;
@@ -169,7 +184,7 @@ export const enrichMediaItem = async (item: Record<string, unknown>): Promise<Re
     if (movie) {
       enrichedItem.poster_path = movie.poster_path;
       enrichedItem.vote_average = movie.vote_average;
-      enrichedItem.genre_ids = movie.genre_ids ?? [];
+      enrichedItem.genre_ids = getGenreIds(movie);
       if (!enrichedItem.release_date) {
         enrichedItem.release_date = movie.release_date;
       }
@@ -182,7 +197,7 @@ export const enrichMediaItem = async (item: Record<string, unknown>): Promise<Re
     if (show) {
       enrichedItem.poster_path = show.poster_path;
       enrichedItem.vote_average = show.vote_average;
-      enrichedItem.genre_ids = show.genre_ids ?? [];
+      enrichedItem.genre_ids = getGenreIds(show);
       if (!enrichedItem.first_air_date) {
         enrichedItem.first_air_date = show.first_air_date;
       }
@@ -307,26 +322,27 @@ export const runTraktEnrichmentJob = async (
 
   for (const listId of listIds) {
     const listRef = db.collection('users').doc(userId).collection('lists').doc(listId);
-    const listSnapshot = await listRef.get();
-    if (!listSnapshot.exists) {
+    // Reads the overflow pages too, and writes each enriched item back to the page holding it.
+    const list = await readPagedList(listRef);
+    if (!list.exists) {
       continue;
     }
 
-    const listData = listSnapshot.data();
-    const currentItems = (listData?.items ?? {}) as Record<string, Record<string, unknown>>;
-    const enrichedItems = Object.keys(currentItems).length > 0 ? await enrichMediaItems(currentItems) : currentItems;
+    // Only items never enriched are fetched from TMDB; enriched ones are left as they are.
+    const pendingItems = Object.fromEntries(
+      Object.entries(list.items).filter(([, item]) => needsMediaEnrichment(item))
+    ) as Record<string, Record<string, unknown>>;
+    const enrichedItems =
+      Object.keys(pendingItems).length > 0 ? await enrichMediaItems(pendingItems) : {};
 
-    await listRef.set(
-      {
-        items: enrichedItems,
-        metadata: {
-          ...(listData?.metadata ?? {}),
-          lastEnriched: Timestamp.now(),
-          needsEnrichment: false,
-        },
+    const plan = planPagedListWrites(list, { set: enrichedItems });
+    await commitPagedListWrites(db, list, plan, {
+      metadata: {
+        ...(list.data.metadata ?? {}),
+        lastEnriched: Timestamp.now(),
+        needsEnrichment: false,
       },
-      { merge: true }
-    );
+    });
 
     enrichedCounts.items += Object.keys(enrichedItems).length;
     enrichedCounts.lists++;

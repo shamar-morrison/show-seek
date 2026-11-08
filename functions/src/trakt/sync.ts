@@ -1,6 +1,14 @@
 import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import {
+  commitPagedListWrites,
+  deletePagedList,
+  planPagedListWrites,
+  readPagedList,
+  withPages,
+  type ListItemChanges,
+} from '../listPagesAdmin';
 import { getLegacyListItemKey } from '../shared/listItemKeys';
 import {
   buildAlreadyWatchedItemsMap,
@@ -153,13 +161,18 @@ export const reconcileManagedList = async (
 }> => {
   const listRef =
     existingSnapshot?.ref ?? admin.firestore().collection('users').doc(userId).collection('lists').doc(listId);
-  const snapshot = existingSnapshot ?? (await listRef.get());
-  const existingData = (snapshot.data() ?? {}) as Record<string, unknown>;
-  const existingItemsRaw = isPlainObject(existingData.items)
-    ? (existingData.items as Record<string, unknown>)
+  // Items of a large list are spread over overflow pages; reconcile against all of them.
+  const pagedList = existingSnapshot
+    ? await withPages(existingSnapshot, undefined, listRef)
+    : await readPagedList(listRef);
+  const snapshot = { exists: pagedList.exists };
+  const existingData = pagedList.data as Record<string, unknown>;
+  const existingItemsRaw = pagedList.exists
+    ? (pagedList.items as Record<string, unknown>)
     : undefined;
   const existingItems = normalizeStoredListItems(existingItemsRaw);
-  const itemChanges: Record<string, unknown> = {};
+  const itemSets: Record<string, Record<string, unknown>> = {};
+  const itemDeletes = new Set<string>();
   const changedMediaTypes: ('movie' | 'tv')[] = [];
   let changedCount = 0;
   let addedOrUpdatedCount = 0;
@@ -184,7 +197,7 @@ export const reconcileManagedList = async (
     const isRemoteChange = !existingItem || shouldApplyRemote;
 
     if (shouldWriteNormalizedItem) {
-      itemChanges[remoteKey] = nextItem;
+      itemSets[remoteKey] = nextItem;
       hasItemWrites = true;
       if (isRemoteChange) {
         changedMediaTypes.push(mediaType);
@@ -194,7 +207,7 @@ export const reconcileManagedList = async (
     }
 
     if (hasLegacyKey) {
-      itemChanges[legacyKey] = FieldValue.delete();
+      itemDeletes.add(legacyKey);
       hasItemWrites = true;
     }
   });
@@ -205,7 +218,7 @@ export const reconcileManagedList = async (
         return;
       }
 
-      itemChanges[existingKey] = FieldValue.delete();
+      itemDeletes.add(existingKey);
       hasItemWrites = true;
 
       const mediaType = existingItem.media_type;
@@ -216,7 +229,7 @@ export const reconcileManagedList = async (
       if (typeof mediaId === 'number' && existingItemsRaw) {
         const legacyKey = getLegacyListItemKey(mediaId);
         if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
-          itemChanges[legacyKey] = FieldValue.delete();
+          itemDeletes.add(legacyKey);
           hasItemWrites = true;
         }
       }
@@ -249,15 +262,11 @@ export const reconcileManagedList = async (
     };
   }
 
-  const payload = stripUndefinedDeep(
+  const listFields = stripUndefinedDeep(
     {
       ...baseData,
-      items:
-        hasItemWrites
-          ? itemChanges
-          : !snapshot.exists
-            ? {}
-            : undefined,
+      // A new list document still needs an items map, even when every item goes to a page.
+      ...(!snapshot.exists ? { items: {} } : {}),
       metadata: {
         ...existingMetadata,
         itemCount: nextItemCount,
@@ -266,9 +275,23 @@ export const reconcileManagedList = async (
       },
     },
     true
-  ) as FirebaseFirestore.DocumentData;
+  ) as Record<string, unknown>;
+  const itemWrites: ListItemChanges = {
+    delete: [...itemDeletes],
+    set: Object.fromEntries(
+      Object.entries(itemSets).map(([key, value]) => [
+        key,
+        stripUndefinedDeep(value, true) as Record<string, unknown>,
+      ])
+    ),
+  };
+  const plan = planPagedListWrites(pagedList, itemWrites);
+  if (!snapshot.exists && plan.pageItems.has(0)) {
+    // planPagedListWrites puts page-0 items in their own `items` field; keep the empty map out.
+    delete listFields.items;
+  }
 
-  await listRef.set(payload, { merge: true });
+  await commitPagedListWrites(admin.firestore(), pagedList, plan, listFields);
 
   return {
     changedCount,
@@ -573,12 +596,9 @@ export const reconcileCustomLists = async (
     (doc) => doc.id.startsWith('trakt_') && !nextCustomLists[doc.id.replace(/^trakt_/, '')]
   );
   if (removedLocalLists.length > 0) {
-    const deleteBatch = admin.firestore().batch();
-    removedLocalLists.forEach((doc) => {
-      deleteBatch.delete(doc.ref);
-      changedCount += 1;
-    });
-    await deleteBatch.commit();
+    // Deletes each list with its overflow pages.
+    await Promise.all(removedLocalLists.map((doc) => deletePagedList(admin.firestore(), doc.ref)));
+    changedCount += removedLocalLists.length;
   }
 
   return {

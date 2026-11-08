@@ -379,6 +379,8 @@ export interface EnrichmentResponseBody {
 
 export interface TMDBMovieDetails {
   genre_ids?: number[];
+  /** What TMDB's details endpoint actually returns (`genre_ids` is only on list results). */
+  genres?: { id: number }[];
   poster_path: string | null;
   release_date: string;
   title: string;
@@ -388,6 +390,8 @@ export interface TMDBMovieDetails {
 export interface TMDBShowDetails {
   first_air_date: string;
   genre_ids?: number[];
+  /** What TMDB's details endpoint actually returns (`genre_ids` is only on list results). */
+  genres?: { id: number }[];
   name: string;
   poster_path: string | null;
   vote_average: number;

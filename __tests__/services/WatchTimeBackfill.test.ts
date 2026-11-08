@@ -151,6 +151,45 @@ describe('WatchTimeBackfill', () => {
   });
 });
 
+describe('WatchTimeBackfill list overflow pages', () => {
+  it('records the overflow page of items that live outside the list document', async () => {
+    const stamps: RuntimeStamps[] = [];
+
+    await resolveMissingRuntimes(
+      [],
+      [listItem({ mediaId: 101 }), listItem({ mediaId: 102, page: 2 })],
+      { getMovieRuntime: async () => 90, stampRuntimes: (s) => stamps.push(s) }
+    );
+
+    expect(stamps[0].itemsByList.get('already-watched')?.get('movie-102')).toBe(90);
+    expect(stamps[0].itemPages?.get('already-watched/movie-102')).toBe(2);
+    expect(stamps[0].itemPages?.has('already-watched/movie-101')).toBe(false);
+  });
+
+  it('stamps each item in the document that holds it', async () => {
+    const { doc, updateDoc } = jest.requireMock('firebase/firestore');
+    (doc as jest.Mock).mockImplementation((_db: unknown, ...segments: string[]) => ({
+      path: segments.join('/'),
+    }));
+    (updateDoc as jest.Mock).mockClear().mockResolvedValue(undefined);
+
+    await resolveMissingRuntimes(
+      [],
+      [listItem({ mediaId: 101 }), listItem({ mediaId: 102, page: 2 })],
+      { getMovieRuntime: async () => 90 }
+    );
+
+    expect(updateDoc).toHaveBeenCalledWith(
+      { path: 'users/test-user-id/lists/already-watched' },
+      { 'items.movie-101.runtimeMinutes': 90 }
+    );
+    expect(updateDoc).toHaveBeenCalledWith(
+      { path: 'users/test-user-id/lists/already-watched/item_pages/2' },
+      { 'items.movie-102.runtimeMinutes': 90 }
+    );
+  });
+});
+
 describe('backfillRuntimes', () => {
   beforeEach(() => {
     resetBackfillSessionForTests();

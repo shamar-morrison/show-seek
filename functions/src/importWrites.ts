@@ -3,9 +3,17 @@
  * (IMDb, TV Time). Server-only: unlike `shared/`, nothing here is imported by the app.
  */
 import * as admin from 'firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
+import {
+  applyPlanToPagedList,
+  commitPagedListWrites,
+  planPagedListWrites,
+  withPages,
+  type ListItemChanges,
+  type PagedList,
+} from './listPagesAdmin';
 import { buildListItemKey, getLegacyListItemKey, hasExistingListItem } from './shared/listItemKeys';
+import { createSinglePageLayout } from './shared/listPages';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_REQUEST_TIMEOUT_MS = 15_000;
@@ -76,7 +84,8 @@ export type ResolvedListMedia =
   | { kind: 'tv'; value: TmdbTvResult };
 
 export interface CachedListRecord {
-  data: FirebaseFirestore.DocumentData | null;
+  /** The list with its items merged across overflow pages. */
+  list: PagedList;
   id: string;
   name: string;
   ref: FirebaseFirestore.DocumentReference;
@@ -145,14 +154,14 @@ async function loadUserListCache(
 ): Promise<Map<string, CachedListRecord>> {
   const snapshot = await db.collection('users').doc(userId).collection('lists').get();
   const listCache = new Map<string, CachedListRecord>();
+  const lists = await Promise.all(snapshot.docs.map((doc) => withPages(doc)));
 
-  snapshot.docs.forEach((doc) => {
-    const data = doc.data();
-    listCache.set(doc.id, {
-      data,
-      id: doc.id,
-      name: String(data.name ?? doc.id),
-      ref: doc.ref,
+  lists.forEach((list) => {
+    listCache.set(list.ref.id, {
+      id: list.ref.id,
+      list,
+      name: String(list.data.name ?? list.ref.id),
+      ref: list.ref,
     });
   });
 
@@ -213,8 +222,9 @@ export async function ensureCustomList(
           .toLowerCase() === normalizedName
       ) {
         context.listCache.set(nextId, {
-          data: existingData,
           id: nextId,
+          // Just created by another call: no items yet worth merging.
+          list: emptyPagedList(ref, existingData),
           name: String(existingData.name),
           ref,
         });
@@ -227,13 +237,13 @@ export async function ensureCustomList(
   }
 
   context.listCache.set(nextId, {
-    data: {
+    id: nextId,
+    list: emptyPagedList(ref, {
       createdAt: Date.now(),
       isCustom: true,
       items: {},
       name: listName,
-    },
-    id: nextId,
+    }),
     name: listName,
     ref,
   });
@@ -254,13 +264,12 @@ export async function upsertListMembership(
   const ref =
     existingRecord?.ref ??
     context.db.collection('users').doc(context.userId).collection('lists').doc(listId);
-  const existingData = existingRecord?.data ?? null;
-  const existingItems = (existingData?.items ?? {}) as Record<string, unknown>;
+  const list = existingRecord?.list ?? emptyPagedList(ref, null);
   const mediaType = resolvedResult.kind === 'movie' ? 'movie' : 'tv';
   const itemKey = buildListItemKey(mediaType, resolvedResult.value.id);
   const legacyItemKey = getLegacyListItemKey(resolvedResult.value.id);
 
-  if (hasExistingListItem(existingItems, mediaType, resolvedResult.value.id)) {
+  if (hasExistingListItem(list.items, mediaType, resolvedResult.value.id)) {
     return false;
   }
 
@@ -289,39 +298,39 @@ export async function upsertListMembership(
           vote_average: resolvedResult.value.vote_average ?? 0,
         };
 
-  await ref.set(
-    {
-      createdAt: existingData?.createdAt ?? Date.now(),
-      items: {
-        [legacyItemKey]: FieldValue.delete(),
-        [itemKey]: removeUndefined(basePayload),
-      },
-      name: existingData?.name ?? listName,
-      updatedAt: Date.now(),
-    },
-    { merge: true }
-  );
+  // Large lists spill into overflow pages; the item goes wherever there's room.
+  const changes: ListItemChanges = {
+    set: { [itemKey]: removeUndefined(basePayload) },
+    ...(legacyItemKey in list.items ? { delete: [legacyItemKey] } : {}),
+  };
+  const plan = planPagedListWrites(list, changes);
+  const now = Date.now();
+  const storedName = String(list.data.name ?? listName);
+  const listFields = { createdAt: list.data.createdAt ?? now, name: storedName, updatedAt: now };
+  await commitPagedListWrites(context.db, list, plan, listFields, now);
 
-  const nextItems = {
-    ...(existingItems ?? {}),
-    [itemKey]: removeUndefined(basePayload),
-  } as Record<string, unknown>;
-  delete nextItems[legacyItemKey];
-
+  const nextList = applyPlanToPagedList(list, changes, plan);
   context.listCache.set(listId, {
-    data: {
-      ...(existingData ?? {}),
-      createdAt: existingData?.createdAt ?? Date.now(),
-      items: nextItems,
-      name: existingData?.name ?? listName,
-      updatedAt: Date.now(),
-    },
     id: listId,
-    name: existingData?.name ?? listName,
+    list: { ...nextList, data: { ...nextList.data, ...listFields } },
+    name: storedName,
     ref,
   });
 
   return true;
+}
+
+function emptyPagedList(
+  ref: FirebaseFirestore.DocumentReference,
+  data: FirebaseFirestore.DocumentData | null
+): PagedList {
+  return {
+    data: data ?? {},
+    exists: data !== null,
+    items: {},
+    layout: createSinglePageLayout(0),
+    ref,
+  };
 }
 
 /**

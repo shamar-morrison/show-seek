@@ -1,5 +1,11 @@
 import * as admin from 'firebase-admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
+import {
+  planPagedListWrites,
+  readPagedList,
+  stagePagedListWrites,
+  type PagedList,
+} from '../listPagesAdmin';
 import { buildListItemKey, getLegacyListItemKey, hasExistingListItem } from '../shared/listItemKeys';
 import { STREMIO_MAX_FREE_LIST_ITEMS } from './constants';
 import type { MappedTitle } from './tmdb';
@@ -21,14 +27,14 @@ const preferenceEnabled = (data: FirebaseFirestore.DocumentData, key: string): b
 
 function addListItem(
   transaction: FirebaseFirestore.Transaction,
-  snapshot: FirebaseFirestore.DocumentSnapshot,
+  list: PagedList,
   name: string,
   item: Record<string, unknown> & { id: number; media_type: 'movie' | 'tv' },
   isPremium: boolean,
   receivedAt: number
 ): NonNullable<WatchWriteResult['listOutcome']> {
-  const data = snapshot.data() ?? {};
-  const items = asMap(data.items);
+  // Every item, including those in a large list's overflow pages.
+  const items = asMap(list.items);
   if (hasExistingListItem(items, item.media_type, item.id)) return 'already_present';
   // Count a legacy + canonical duplicate once, as the mobile list normalization does.
   const keys = new Set(Object.entries(items).map(([key, value]) =>
@@ -38,20 +44,20 @@ function addListItem(
   if (!isPremium && keys.size >= STREMIO_MAX_FREE_LIST_ITEMS) return 'skipped_limit';
 
   const itemKey = buildListItemKey(item.media_type, item.id);
-  if (snapshot.exists) {
-    transaction.update(snapshot.ref, {
-      [`items.${itemKey}`]: { ...item, addedAt: receivedAt },
-      [`items.${getLegacyListItemKey(item.id)}`]: FieldValue.delete(),
-      updatedAt: receivedAt,
-    });
-  } else {
-    transaction.set(snapshot.ref, {
-      name,
-      items: { [itemKey]: { ...item, addedAt: receivedAt } },
-      createdAt: receivedAt,
-      updatedAt: receivedAt,
-    }, { merge: true });
-  }
+  const legacyKey = getLegacyListItemKey(item.id);
+  const changes = {
+    set: { [itemKey]: { ...item, addedAt: receivedAt } },
+    ...(legacyKey in items ? { delete: [legacyKey] } : {}),
+  };
+  stagePagedListWrites(
+    transaction,
+    list,
+    planPagedListWrites(list, changes),
+    list.exists
+      ? { updatedAt: receivedAt }
+      : { name, createdAt: receivedAt, updatedAt: receivedAt },
+    receivedAt
+  );
   return 'added';
 }
 
@@ -79,9 +85,9 @@ export async function writeStremioWatch(
       const autoAdd = preferenceEnabled(userData, 'autoAddToAlreadyWatched');
       const hasPreviousWatch = autoAdd ? !(await transaction.get(watches.limit(1))).empty : true;
       const alreadyWatched = autoAdd && !hasPreviousWatch
-        ? await transaction.get(lists.doc('already-watched')) : null;
+        ? await readPagedList(lists.doc('already-watched'), transaction) : null;
       const watchlist = preferenceEnabled(userData, 'autoRemoveFromShouldWatch')
-        ? await transaction.get(lists.doc('watchlist')) : null;
+        ? await readPagedList(lists.doc('watchlist'), transaction) : null;
 
       // All reads precede writes. A transaction retry sees concurrent watches/revocation.
       transaction.create(watchRef, { movieId: movie.id, watchedAt: Timestamp.fromMillis(receivedAt) });
@@ -98,12 +104,17 @@ export async function writeStremioWatch(
           ...(movie.runtime !== null && movie.runtime > 0 ? { runtimeMinutes: movie.runtime } : {}),
         }, isPremium, receivedAt);
       }
-      if (watchlist?.exists && hasExistingListItem(asMap(watchlist.data()?.items), 'movie', movie.id)) {
-        transaction.update(watchlist.ref, {
-          [`items.${buildListItemKey('movie', movie.id)}`]: FieldValue.delete(),
-          [`items.${getLegacyListItemKey(movie.id)}`]: FieldValue.delete(),
-          updatedAt: receivedAt,
-        });
+      if (watchlist?.exists && hasExistingListItem(watchlist.items, 'movie', movie.id)) {
+        // Removes the movie from the watchlist document and every overflow page.
+        stagePagedListWrites(
+          transaction,
+          watchlist,
+          planPagedListWrites(watchlist, {
+            delete: [buildListItemKey('movie', movie.id), getLegacyListItemKey(movie.id)],
+          }),
+          { updatedAt: receivedAt },
+          receivedAt
+        );
       }
       return { outcome: 'written', ...(listOutcome ? { listOutcome } : {}) };
     }
@@ -116,7 +127,7 @@ export async function writeStremioWatch(
       return { outcome: 'skipped_duplicate' };
     }
     const watching = preferenceEnabled(userData, 'autoAddToWatching')
-      ? await transaction.get(lists.doc('currently-watching')) : null;
+      ? await readPagedList(lists.doc('currently-watching'), transaction) : null;
 
     transaction.set(trackingRef, {
       episodes: {

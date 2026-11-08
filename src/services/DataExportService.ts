@@ -2,7 +2,7 @@ import { tmdbApi } from '@/src/api/tmdb';
 import { auth, db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
-import { ListMediaItem } from '@/src/services/ListService';
+import { ListMediaItem, listService } from '@/src/services/ListService';
 import { normalizeRatingItem, type RatingItem } from '@/src/services/RatingService';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import { raceWithTimeout } from '@/src/utils/timeout';
@@ -42,10 +42,10 @@ async function fetchAllUserData(): Promise<{
 
   try {
     // Fetch all data in parallel using audited reads (no orderBy to avoid index requirements)
-    const [listsSnapshot, ratingsSnapshot, favoritePersonsSnapshot] = await raceWithTimeout(
+    const [lists, ratingsSnapshot, favoritePersonsSnapshot] = await raceWithTimeout(
       Promise.all([
-        auditedGetDocs(collection(db, `users/${userId}/lists`), {
-          path: `users/${userId}/lists`,
+        // Includes items in overflow pages of large lists.
+        listService.fetchListsWithItems(userId, {
           queryKey: 'exportLists',
           callsite: 'DataExportService.fetchAllUserData',
         }),
@@ -62,11 +62,6 @@ async function fetchAllUserData(): Promise<{
       ]),
       { ms: 10000 }
     );
-
-    const lists: UserList[] = listsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as UserList[];
 
     const ratings: RawExportRating[] = ratingsSnapshot.docs.map((doc) => {
       const data = doc.data();

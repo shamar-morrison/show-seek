@@ -54,6 +54,11 @@
       "indexes": []
     },
     {
+      "collectionGroup": "item_pages",
+      "fieldPath": "items",
+      "indexes": []
+    },
+    {
       "collectionGroup": "episode_tracking",
       "fieldPath": "episodes",
       "indexes": []

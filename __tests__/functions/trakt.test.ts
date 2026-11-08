@@ -99,8 +99,10 @@ import {
   __test__,
   clearTraktTokensIfRefreshTokenUnchanged,
   createOAuthState,
+  enrichMediaItem,
   exchangeAuthorizationCode,
   isRunFatalSyncError,
+  needsMediaEnrichment,
   normalizeSyncError,
   refreshAccessToken,
   requestOAuthToken,
@@ -6707,5 +6709,34 @@ describe('Trakt OAuth invalid_grant handling', () => {
         { merge: true }
       );
     });
+  });
+});
+
+describe('Trakt list item enrichment', () => {
+  it('only treats never-enriched items as needing TMDB data', () => {
+    expect(needsMediaEnrichment({ id: 1, media_type: 'movie', title: 'From Trakt' })).toBe(true);
+    expect(
+      needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: null, vote_average: 0 })
+    ).toBe(false);
+    expect(needsMediaEnrichment({ id: 'x', media_type: 'movie' })).toBe(false);
+  });
+
+  it('reads genre ids from the genres TMDB details actually return', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      headers: { get: () => null },
+      json: jest.fn().mockResolvedValue({
+        genres: [{ id: 18, name: 'Drama' }, { id: 80, name: 'Crime' }],
+        poster_path: '/p.jpg',
+        release_date: '2008-07-18',
+        title: 'The Dark Knight',
+        vote_average: 8.5,
+      }),
+      ok: true,
+      status: 200,
+    });
+
+    const enriched = await enrichMediaItem({ id: 155, media_type: 'movie', title: 'The Dark Knight' });
+
+    expect(enriched).toMatchObject({ genre_ids: [18, 80], poster_path: '/p.jpg', vote_average: 8.5 });
   });
 });

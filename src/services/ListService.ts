@@ -6,10 +6,37 @@ import { requireSignedInUser, toFirestoreError } from '@/src/services/serviceSup
 import {
   buildListItemKey,
   getLegacyListItemKey,
+  getListItemCandidateKeys,
   normalizeListItemsMap,
 } from '@/src/utils/listItemKeys';
+import {
+  chooseListItemPage,
+  createSinglePageLayout,
+  getAllListPages,
+  getListItemPageDocId,
+  getListPageCount,
+  LIST_ITEM_PAGES_COLLECTION,
+  mergeListPages,
+  parseListItemPageDocId,
+  recordListItemPlacement,
+  LIST_PAGE_CAPACITY,
+  recordListItemRemoval,
+  type ListItemPlacement,
+  type ListPageLayout,
+} from '@/functions/src/shared/listPages';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
-import { collection, deleteDoc, deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  deleteField,
+  doc,
+  runTransaction,
+  setDoc,
+  updateDoc,
+  writeBatch,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+} from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 export interface ListMediaItem {
@@ -32,9 +59,33 @@ export interface UserList {
   id: string;
   name: string;
   description?: string;
+  /** Every item, merged across the list document and its overflow pages. */
   items: Record<string, ListMediaItem>;
   createdAt: number;
   updatedAt?: number;
+  /**
+   * Overflow pages (`item_pages/1..pageCount`) holding items beyond the list document's
+   * capacity. Absent for lists that fit in their document. See functions/src/shared/listPages.ts.
+   */
+  pageCount?: number;
+  /** Item count per page (index 0 = the list document). Only set when `pageCount` > 0. */
+  pageSizes?: number[];
+  /** Item key → overflow page holding it. Only set when `pageCount` > 0. */
+  overflowItemPages?: Record<string, number>;
+}
+
+/** Firestore's error when a write would push a document past 1 MiB. */
+const DOCUMENT_TOO_LARGE_PATTERN = /exceeds the maximum allowed size/i;
+
+interface ListAuditInfo {
+  queryKey: string;
+  callsite: string;
+}
+
+/** A list's page layout plus its item keys, remembered between loads to route writes. */
+interface KnownListLayout {
+  layout: ListPageLayout;
+  keys: Set<string>;
 }
 
 export type ListMembershipIndex = Record<string, string[]>;
@@ -54,6 +105,190 @@ class ListService {
 
   private getUserListsCollection(userId: string) {
     return collection(db, 'users', userId, 'lists');
+  }
+
+  private getListItemPagesCollection(userId: string, listId: string) {
+    return collection(db, 'users', userId, 'lists', listId, LIST_ITEM_PAGES_COLLECTION);
+  }
+
+  private getListItemPageRef(userId: string, listId: string, page: number) {
+    return doc(
+      db,
+      'users',
+      userId,
+      'lists',
+      listId,
+      LIST_ITEM_PAGES_COLLECTION,
+      getListItemPageDocId(page)
+    );
+  }
+
+  /** Page layouts from the last load or write, keyed `${userId}/${listId}`. */
+  private readonly knownLayouts = new Map<string, KnownListLayout>();
+
+  private layoutKey(userId: string, listId: string) {
+    return `${userId}/${listId}`;
+  }
+
+  /** Forgets every remembered layout (tests; also safe to call on sign-out). */
+  clearListLayouts() {
+    this.knownLayouts.clear();
+  }
+
+  /**
+   * Remembers where each list's items live, so adds and removes go to the right page without
+   * extra reads. `useLists` calls this with cached data, including data restored from disk.
+   */
+  rememberListLayouts(userId: string, lists: UserList[]) {
+    lists.forEach((list) => {
+      const key = this.layoutKey(userId, list.id);
+      const layout = getUserListLayout(list);
+      // Cached data can predate a page this device just created; never forget a page,
+      // or a later removal would skip it.
+      const existing = this.knownLayouts.get(key);
+      if (existing && existing.layout.pageCount > layout.pageCount) {
+        return;
+      }
+      this.knownLayouts.set(key, { keys: new Set(Object.keys(list.items ?? {})), layout });
+    });
+  }
+
+  /**
+   * Reads every list document, plus the overflow pages of lists that have them, and merges
+   * each list's items. Lists without overflow pages cost no extra reads.
+   */
+  private async loadMergedListDocs(
+    userId: string,
+    audit: ListAuditInfo
+  ): Promise<{ id: string; data: DocumentData; items: Record<string, ListMediaItem>; layout: ListPageLayout }[]> {
+    const snapshot = await auditedGetDocs(this.getUserListsCollection(userId), {
+      path: `users/${userId}/lists`,
+      queryKey: audit.queryKey,
+      callsite: audit.callsite,
+    });
+
+    return Promise.all(
+      snapshot.docs.map((listDoc) => this.mergeListDoc(userId, listDoc.id, listDoc.data(), audit))
+    );
+  }
+
+  private async mergeListDoc(
+    userId: string,
+    listId: string,
+    data: DocumentData,
+    audit: ListAuditInfo
+  ) {
+    const pageCount = getListPageCount(data);
+    const mainItems = (data.items ?? {}) as Record<string, ListMediaItem>;
+    let merged = {
+      items: mainItems,
+      layout: createSinglePageLayout(Object.keys(mainItems).length),
+    };
+
+    if (pageCount > 0) {
+      const pagesSnapshot = await auditedGetDocs(this.getListItemPagesCollection(userId, listId), {
+        path: `users/${userId}/lists/${listId}/${LIST_ITEM_PAGES_COLLECTION}`,
+        queryKey: `${audit.queryKey}-pages`,
+        callsite: audit.callsite,
+      });
+      merged = mergeListPages(
+        mainItems,
+        pageCount,
+        pagesSnapshot.docs
+          .map((pageDoc: QueryDocumentSnapshot<DocumentData>) => ({
+            items: (pageDoc.data().items ?? {}) as Record<string, ListMediaItem>,
+            page: parseListItemPageDocId(pageDoc.id) ?? -1,
+          }))
+          .filter((source) => source.page >= 1)
+      );
+    }
+
+    this.knownLayouts.set(this.layoutKey(userId, listId), {
+      keys: new Set(Object.keys(merged.items)),
+      layout: merged.layout,
+    });
+
+    return { data, id: listId, items: merged.items, layout: merged.layout };
+  }
+
+  private toUserList(
+    record: {
+      id: string;
+      data: DocumentData;
+      items: Record<string, ListMediaItem>;
+      layout: ListPageLayout;
+    },
+    { normalizeKeys = true }: { normalizeKeys?: boolean } = {}
+  ): UserList {
+    const { items: _rawItems, pageCount: _pageCount, ...rest } = record.data;
+    const rawList = {
+      ...rest,
+      id: record.id,
+      items: record.items,
+    } as UserList;
+    const list = normalizeKeys ? this.normalizeList(rawList) : rawList;
+
+    if (record.layout.pageCount > 0) {
+      list.pageCount = record.layout.pageCount;
+      list.pageSizes = record.layout.pageSizes;
+      list.overflowItemPages = record.layout.overflowItemPages;
+    }
+
+    return list;
+  }
+
+  /**
+   * Loads every list with its items merged across overflow pages. Unlike `getUserLists`,
+   * default lists that don't exist yet are not added, and item keys are kept exactly as
+   * stored (legacy numeric keys are not normalized), so callers can write back by key path.
+   */
+  async fetchListsWithItems(userId: string, audit: ListAuditInfo): Promise<UserList[]> {
+    const records = await this.loadMergedListDocs(userId, audit);
+    return records.map((record) => this.toUserList(record, { normalizeKeys: false }));
+  }
+
+  /**
+   * Adds a list's overflow-page items to a list document that was already read. Item keys are
+   * kept as stored. Lists without pages are returned as they are, at no cost.
+   */
+  async withOverflowPages(userId: string, list: UserList, audit: ListAuditInfo): Promise<UserList> {
+    if (getListPageCount(list) === 0) {
+      return list;
+    }
+    const { id, ...data } = list;
+    const record = await this.mergeListDoc(userId, id, data, audit);
+    return this.toUserList(record, { normalizeKeys: false });
+  }
+
+  /** Loads one list with its items merged across overflow pages; null if it doesn't exist. */
+  async getUserList(userId: string, listId: string, audit: ListAuditInfo): Promise<UserList | null> {
+    const snapshot = await auditedGetDoc(this.getUserListRef(userId, listId), {
+      path: `users/${userId}/lists/${listId}`,
+      queryKey: audit.queryKey,
+      callsite: audit.callsite,
+    });
+    if (!snapshot.exists()) {
+      return null;
+    }
+    return this.toUserList(await this.mergeListDoc(userId, listId, snapshot.data(), audit));
+  }
+
+  /** The list's layout: remembered, or read from Firestore (list document + pages). */
+  private async resolveLayout(userId: string, listId: string): Promise<KnownListLayout> {
+    const known = this.knownLayouts.get(this.layoutKey(userId, listId));
+    if (known) {
+      return known;
+    }
+
+    const list = await this.getUserList(userId, listId, {
+      queryKey: 'listById',
+      callsite: 'ListService.resolveLayout',
+    });
+    const resolved: KnownListLayout = list
+      ? { keys: new Set(Object.keys(list.items)), layout: getUserListLayout(list) }
+      : { keys: new Set(), layout: createSinglePageLayout(0) };
+    this.knownLayouts.set(this.layoutKey(userId, listId), resolved);
+    return resolved;
   }
 
   /**
@@ -94,7 +329,6 @@ class ListService {
   }
 
   async getUserLists(userId: string): Promise<UserList[]> {
-    const listsRef = this.getUserListsCollection(userId);
     const timeout = createTimeoutWithCleanup(10000);
     const debugLogsEnabled = __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
 
@@ -106,9 +340,8 @@ class ListService {
         });
       }
 
-      const snapshot = await Promise.race([
-        auditedGetDocs(listsRef, {
-          path: `users/${userId}/lists`,
+      const records = await Promise.race([
+        this.loadMergedListDocs(userId, {
           queryKey: 'lists',
           callsite: 'ListService.getUserLists',
         }),
@@ -117,12 +350,7 @@ class ListService {
         timeout.cancel();
       });
 
-      const lists: UserList[] = snapshot.docs.map((listDoc) =>
-        this.normalizeList({
-          id: listDoc.id,
-          ...listDoc.data(),
-        } as UserList)
-      );
+      const lists: UserList[] = records.map((record) => this.toUserList(record));
 
       const mergedLists = [...lists];
 
@@ -155,7 +383,7 @@ class ListService {
       if (debugLogsEnabled) {
         console.log('[ListService.getUserLists:result]', {
           userId,
-          rawDocCount: snapshot.size,
+          rawDocCount: records.length,
           mergedListCount: mergedLists.length,
           defaultListCount: DEFAULT_LISTS.length,
         });
@@ -178,7 +406,6 @@ class ListService {
    * Key format: "${mediaId}-${mediaType}" => array of list IDs containing the media item.
    */
   async getListMembershipIndex(userId: string): Promise<ListMembershipIndex> {
-    const listsRef = this.getUserListsCollection(userId);
     const timeout = createTimeoutWithCleanup(10000);
     const debugLogsEnabled = __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
 
@@ -190,9 +417,8 @@ class ListService {
         });
       }
 
-      const snapshot = await Promise.race([
-        auditedGetDocs(listsRef, {
-          path: `users/${userId}/lists`,
+      const records = await Promise.race([
+        this.loadMergedListDocs(userId, {
           queryKey: 'list-membership-index',
           callsite: 'ListService.getListMembershipIndex',
         }),
@@ -203,10 +429,9 @@ class ListService {
 
       const index: ListMembershipIndex = {};
 
-      snapshot.docs.forEach((listDoc) => {
-        const listId = listDoc.id;
-        const listData = this.normalizeList(listDoc.data() as Partial<UserList>);
-        const listItems = listData.items || {};
+      records.forEach((record) => {
+        const listId = record.id;
+        const listItems = normalizeListItemsMap(record.items);
 
         Object.values(listItems).forEach((item) => {
           if (!item || typeof item.id !== 'number' || !item.media_type) {
@@ -225,7 +450,7 @@ class ListService {
       if (debugLogsEnabled) {
         console.log('[ListService.getListMembershipIndex:result]', {
           userId,
-          rawDocCount: snapshot.size,
+          rawDocCount: records.length,
           indexedMediaCount: Object.keys(index).length,
         });
       }
@@ -246,12 +471,10 @@ class ListService {
    * Add a media item to a specific list
    */
   async addToList(listId: string, mediaItem: Omit<ListMediaItem, 'addedAt'>, listName?: string) {
-    let failureStage: 'update' | 'fallback-create' | null = null;
+    let failureStage: 'update' | 'fallback-create' | 'overflow-page' | null = null;
 
     try {
       const user = requireSignedInUser();
-
-      const listRef = this.getUserListRef(user.uid, listId);
 
       // Sanitize to remove any undefined values (Firestore doesn't accept undefined)
       const sanitizedItem = this.sanitizeForFirestore(mediaItem);
@@ -261,9 +484,8 @@ class ListService {
         addedAt: Date.now(),
       } as ListMediaItem;
       const itemKey = buildListItemKey(mediaItem.media_type, mediaItem.id);
-
+      const candidateKeys = getListItemCandidateKeys(mediaItem.media_type, mediaItem.id);
       const now = Date.now();
-      const updateTimeout = createTimeoutWithCleanup(10000);
 
       // Resolve the display name without clobbering stored custom names:
       // an explicit listName wins, then the canonical default-list name.
@@ -272,61 +494,84 @@ class ListService {
       const defaultList = DEFAULT_LISTS.find((l) => l.id === listId);
       const resolvedName = listName || defaultList?.name;
 
-      // Fast path for existing lists: update without a read.
-      const updateData: Record<string, unknown> = {
-        [`items.${itemKey}`]: itemToAdd,
-        [`items.${getLegacyListItemKey(mediaItem.id)}`]: deleteField(),
-        updatedAt: now,
-      };
-      if (resolvedName) {
-        updateData.name = resolvedName;
-      }
-      try {
-        await Promise.race([updateDoc(listRef, updateData), updateTimeout.promise]);
-        void trackAddToList({
-          listKind: normalizeListKind(listId),
-          mediaType: mediaItem.media_type,
-        });
-        return;
-      } catch (error) {
-        failureStage = 'update';
-        if (!this.isCreateFallbackEligibleError(error)) {
-          throw error;
+      // Large lists spill into overflow pages. Without a known layout, write to the list
+      // document as before (no read); a "document too large" error routes to a page instead.
+      const known = this.knownLayouts.get(this.layoutKey(user.uid, listId));
+      let placement: ListItemPlacement = known
+        ? chooseListItemPage(known.layout, (key) => known.keys.has(key), candidateKeys)
+        : { createsPage: false, page: 0 };
+
+      if (placement.page === 0) {
+        try {
+          await this.writeItemToListDocument(
+            user.uid,
+            listId,
+            itemKey,
+            itemToAdd,
+            mediaItem.id,
+            resolvedName,
+            now,
+            (stage) => {
+              failureStage = stage;
+            }
+          );
+        } catch (error) {
+          if (!isDocumentTooLargeError(error)) {
+            throw error;
+          }
+          // The list document is full (possibly filled from another device): use a page.
+          this.knownLayouts.delete(this.layoutKey(user.uid, listId));
+          const resolved = await this.resolveLayout(user.uid, listId);
+          resolved.layout.pageSizes[0] = Math.max(
+            resolved.layout.pageSizes[0] ?? 0,
+            LIST_PAGE_CAPACITY
+          );
+          placement = chooseListItemPage(
+            resolved.layout,
+            (key) => resolved.keys.has(key),
+            candidateKeys
+          );
+          if (placement.page === 0) {
+            // The item itself lives in the full document; there is nowhere else to update it.
+            throw error;
+          }
+          failureStage = 'overflow-page';
+          await this.writeItemToOverflowPage(
+            user.uid,
+            listId,
+            placement,
+            itemKey,
+            itemToAdd,
+            mediaItem.id,
+            resolvedName,
+            now
+          );
         }
-      } finally {
-        updateTimeout.cancel();
+      } else {
+        failureStage = 'overflow-page';
+        await this.writeItemToOverflowPage(
+          user.uid,
+          listId,
+          placement,
+          itemKey,
+          itemToAdd,
+          mediaItem.id,
+          resolvedName,
+          now
+        );
       }
 
-      // Fallback for first write to a missing list doc with a fresh timeout budget.
-      // A first-time doc still needs a name; prefer the explicit/default name
-      // and only fall back to the slug ID when neither is available.
-      const createTimeout = createTimeoutWithCleanup(10000);
-      try {
-        await Promise.race([
-          setDoc(
-            listRef,
-            {
-              name: resolvedName || listId,
-              items: {
-                [itemKey]: itemToAdd,
-              },
-              updatedAt: now,
-              createdAt: now,
-            },
-            { merge: true }
-          ),
-          createTimeout.promise,
-        ]);
-        void trackAddToList({
-          listKind: normalizeListKind(listId),
-          mediaType: mediaItem.media_type,
-        });
-      } catch (error) {
-        failureStage = 'fallback-create';
-        throw error;
-      } finally {
-        createTimeout.cancel();
+      const knownAfterWrite = this.knownLayouts.get(this.layoutKey(user.uid, listId));
+      if (knownAfterWrite) {
+        const isNewItem = !candidateKeys.some((key) => knownAfterWrite.keys.has(key));
+        recordListItemPlacement(knownAfterWrite.layout, itemKey, placement, isNewItem);
+        knownAfterWrite.keys.add(itemKey);
       }
+
+      void trackAddToList({
+        listKind: normalizeListKind(listId),
+        mediaType: mediaItem.media_type,
+      });
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       const firebaseCode = (error as { code?: string })?.code;
@@ -343,8 +588,130 @@ class ListService {
     }
   }
 
+  /** Writes an item into the list document itself (page 0), creating the document if needed. */
+  private async writeItemToListDocument(
+    userId: string,
+    listId: string,
+    itemKey: string,
+    itemToAdd: ListMediaItem,
+    mediaId: number,
+    resolvedName: string | undefined,
+    now: number,
+    setStage: (stage: 'update' | 'fallback-create') => void
+  ): Promise<void> {
+    const listRef = this.getUserListRef(userId, listId);
+    const updateTimeout = createTimeoutWithCleanup(10000);
+
+    // Fast path for existing lists: update without a read.
+    const updateData: Record<string, unknown> = {
+      [`items.${itemKey}`]: itemToAdd,
+      [`items.${getLegacyListItemKey(mediaId)}`]: deleteField(),
+      updatedAt: now,
+    };
+    if (resolvedName) {
+      updateData.name = resolvedName;
+    }
+    try {
+      await Promise.race([updateDoc(listRef, updateData), updateTimeout.promise]);
+      return;
+    } catch (error) {
+      setStage('update');
+      if (!this.isCreateFallbackEligibleError(error)) {
+        throw error;
+      }
+    } finally {
+      updateTimeout.cancel();
+    }
+
+    // Fallback for first write to a missing list doc with a fresh timeout budget.
+    // A first-time doc still needs a name; prefer the explicit/default name
+    // and only fall back to the slug ID when neither is available.
+    const createTimeout = createTimeoutWithCleanup(10000);
+    try {
+      await Promise.race([
+        setDoc(
+          listRef,
+          {
+            name: resolvedName || listId,
+            items: {
+              [itemKey]: itemToAdd,
+            },
+            updatedAt: now,
+            createdAt: now,
+          },
+          { merge: true }
+        ),
+        createTimeout.promise,
+      ]);
+    } catch (error) {
+      setStage('fallback-create');
+      throw error;
+    } finally {
+      createTimeout.cancel();
+    }
+  }
+
   /**
-   * Remove a media item from a specific list
+   * Writes an item into an overflow page. A new page is created in a transaction that only ever
+   * raises the list's `pageCount`, so a device with a stale layout can't hide another's page.
+   */
+  private async writeItemToOverflowPage(
+    userId: string,
+    listId: string,
+    placement: ListItemPlacement,
+    itemKey: string,
+    itemToAdd: ListMediaItem,
+    mediaId: number,
+    resolvedName: string | undefined,
+    now: number
+  ): Promise<void> {
+    const listRef = this.getUserListRef(userId, listId);
+    const pageRef = this.getListItemPageRef(userId, listId, placement.page);
+    const listUpdate: Record<string, unknown> = {
+      [`items.${getLegacyListItemKey(mediaId)}`]: deleteField(),
+      updatedAt: now,
+    };
+    if (resolvedName) {
+      listUpdate.name = resolvedName;
+    }
+
+    const timeout = createTimeoutWithCleanup(10000);
+    try {
+      if (!placement.createsPage) {
+        const batch = writeBatch(db);
+        batch.set(pageRef, { items: { [itemKey]: itemToAdd }, updatedAt: now }, { merge: true });
+        batch.update(listRef, listUpdate);
+        await Promise.race([batch.commit(), timeout.promise]);
+        return;
+      }
+
+      await Promise.race([
+        runTransaction(db, async (transaction) => {
+          const listSnapshot = await transaction.get(listRef);
+          const currentPageCount = getListPageCount(listSnapshot.data());
+          transaction.set(
+            pageRef,
+            {
+              items: { [itemKey]: itemToAdd },
+              updatedAt: now,
+              ...(currentPageCount < placement.page ? { createdAt: now } : {}),
+            },
+            { merge: true }
+          );
+          transaction.update(listRef, {
+            ...listUpdate,
+            pageCount: Math.max(currentPageCount, placement.page),
+          });
+        }),
+        timeout.promise,
+      ]);
+    } finally {
+      timeout.cancel();
+    }
+  }
+
+  /**
+   * Remove a media item from a specific list (from the list document and every overflow page)
    */
   async removeFromList(listId: string, mediaId: number, mediaType: 'movie' | 'tv') {
     const timeout = createTimeoutWithCleanup(10000);
@@ -354,15 +721,51 @@ class ListService {
 
       const listRef = this.getUserListRef(user.uid, listId);
       const itemKey = buildListItemKey(mediaType, mediaId);
+      const legacyKey = getLegacyListItemKey(mediaId);
+      const now = Date.now();
+      const known = this.knownLayouts.get(this.layoutKey(user.uid, listId));
 
-      await Promise.race([
-        updateDoc(listRef, {
-          [`items.${itemKey}`]: deleteField(),
-          [`items.${getLegacyListItemKey(mediaId)}`]: deleteField(),
-          updatedAt: Date.now(),
-        }),
-        timeout.promise,
-      ]);
+      let pageCount = known?.layout.pageCount;
+      if (pageCount === undefined) {
+        const snapshot = await Promise.race([
+          auditedGetDoc(listRef, {
+            path: `users/${user.uid}/lists/${listId}`,
+            queryKey: 'listById',
+            callsite: 'ListService.removeFromList',
+          }),
+          timeout.promise,
+        ]);
+        pageCount = getListPageCount(snapshot.exists() ? snapshot.data() : undefined);
+      }
+
+      const removal = {
+        [`items.${itemKey}`]: deleteField(),
+        [`items.${legacyKey}`]: deleteField(),
+        updatedAt: now,
+      };
+
+      if (pageCount === 0) {
+        await Promise.race([updateDoc(listRef, removal), timeout.promise]);
+      } else {
+        const batch = writeBatch(db);
+        batch.update(listRef, removal);
+        getAllListPages({ pageCount })
+          .filter((page) => page > 0)
+          .forEach((page) => {
+            batch.set(
+              this.getListItemPageRef(user.uid, listId, page),
+              { items: { [itemKey]: deleteField() }, updatedAt: now },
+              { merge: true }
+            );
+          });
+        await Promise.race([batch.commit(), timeout.promise]);
+      }
+
+      if (known) {
+        recordListItemRemoval(known.layout, (key) => known.keys.has(key), [itemKey, legacyKey]);
+        known.keys.delete(itemKey);
+        known.keys.delete(legacyKey);
+      }
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       const firebaseCode = (error as { code?: string })?.code;
@@ -468,8 +871,30 @@ class ListService {
       }
 
       const listRef = this.getUserListRef(user.uid, listId);
+      const known = this.knownLayouts.get(this.layoutKey(user.uid, listId));
 
-      await Promise.race([deleteDoc(listRef), timeout.promise]);
+      if (known && known.layout.pageCount === 0) {
+        await Promise.race([deleteDoc(listRef), timeout.promise]);
+      } else {
+        // Delete the overflow pages with the list, in one batch, so a list later created with
+        // the same id never inherits old items.
+        const pages = await Promise.race([
+          auditedGetDocs(this.getListItemPagesCollection(user.uid, listId), {
+            path: `users/${user.uid}/lists/${listId}/${LIST_ITEM_PAGES_COLLECTION}`,
+            queryKey: 'list-pages',
+            callsite: 'ListService.deleteList',
+          }),
+          timeout.promise,
+        ]);
+        const batch = writeBatch(db);
+        pages.docs.forEach((pageDoc: QueryDocumentSnapshot<DocumentData>) => {
+          batch.delete(pageDoc.ref);
+        });
+        batch.delete(listRef);
+        await Promise.race([batch.commit(), timeout.promise]);
+      }
+
+      this.knownLayouts.delete(this.layoutKey(user.uid, listId));
     } catch (error) {
       console.error('[ListService] deleteList error:', error);
       throw toFirestoreError(error);
@@ -535,3 +960,20 @@ class ListService {
 }
 
 export const listService = new ListService();
+
+/** A list's page layout, from the fields `getUserLists` sets. */
+export function getUserListLayout(list: UserList): ListPageLayout {
+  if (!list.pageCount || list.pageCount <= 0) {
+    return createSinglePageLayout(Object.keys(list.items ?? {}).length);
+  }
+  return {
+    overflowItemPages: { ...(list.overflowItemPages ?? {}) },
+    pageCount: list.pageCount,
+    pageSizes: [...(list.pageSizes ?? [])],
+  };
+}
+
+function isDocumentTooLargeError(error: unknown): boolean {
+  const message = (error as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && DOCUMENT_TOO_LARGE_PATTERN.test(message);
+}

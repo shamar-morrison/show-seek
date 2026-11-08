@@ -14,6 +14,7 @@ import {
   hasListItemInMap,
 } from '@/src/utils/listItemKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { calendarTvQueryOptions } from '@/src/services/calendarEnrichment';
 import { useAuth } from '../context/auth';
 import { usePremium } from '../context/PremiumContext';
@@ -91,6 +92,14 @@ export const useLists = (options: UseListsOptions = {}) => {
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
+
+  // Lists restored from the on-device cache never pass through ListService; tell it where
+  // their items live so adds and removes reach the right overflow page without a read.
+  useEffect(() => {
+    if (userId && query.data) {
+      listService.rememberListLayouts(userId, query.data);
+    }
+  }, [query.data, userId]);
 
   return {
     ...query,

@@ -42,6 +42,7 @@ jest.mock('@/src/services/ListService', () => ({
     deleteList: (...args: any[]) => mockDeleteList(...args),
     getUserLists: (...args: any[]) => mockGetUserLists(...args),
     removeFromList: (...args: any[]) => mockRemoveFromList(...args),
+    rememberListLayouts: jest.fn(),
   },
   DEFAULT_LISTS: [],
 }));
