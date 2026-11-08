@@ -21,6 +21,13 @@ service cloud.firestore {
       return isNonAnonymousOwner(userId);
     }
 
+    // App-wide configuration read before sign-in (e.g. config/app.minimumCompatibilityVersion,
+    // see src/constants/appCompatibility.ts). Edited in the Firebase console only.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Installation bearer tokens are hash-indexed and managed only by Admin SDK functions.
     match /stremioAddonTokens/{tokenHash} {
       allow read, write: if false;
@@ -140,10 +147,15 @@ service cloud.firestore {
           && (!('description' in request.resource.data) || (
             request.resource.data.description is string
             && request.resource.data.description.size() <= 120
+          ))
+          && (!('pageCount' in request.resource.data) || (
+            request.resource.data.pageCount is int
+            && request.resource.data.pageCount >= 0
+            && request.resource.data.pageCount <= 1000
           ));
         allow update: if canWriteUserData(userId)
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['items', 'updatedAt', 'name', 'createdAt', 'description'])
+            .hasOnly(['items', 'updatedAt', 'name', 'createdAt', 'description', 'pageCount'])
           // Validate description only when this write actually modifies description.
           && (
             !request.resource.data.diff(resource.data).affectedKeys().hasAny(['description'])
@@ -152,8 +164,27 @@ service cloud.firestore {
               request.resource.data.description is string
               && request.resource.data.description.size() <= 120
             )
+          )
+          // pageCount (overflow pages in use) only ever grows; see functions/src/shared/listPages.ts.
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['pageCount'])
+            || (
+              request.resource.data.pageCount is int
+              && request.resource.data.pageCount >= ('pageCount' in resource.data ? resource.data.pageCount : 0)
+              && request.resource.data.pageCount <= 1000
+            )
           );
         allow delete: if canWriteUserData(userId);
+
+        // Overflow pages: items beyond what fits in the list document.
+        match /item_pages/{pageId} {
+          allow read: if isNonAnonymousOwner(userId);
+          allow create, update: if canWriteUserData(userId)
+            && pageId.matches('^[1-9][0-9]{0,3}$')
+            && request.resource.data.keys().hasOnly(['items', 'createdAt', 'updatedAt'])
+            && request.resource.data.items is map;
+          allow delete: if canWriteUserData(userId);
+        }
       }
 
       function hasAllowedNoteKeys() {
@@ -213,10 +244,34 @@ service cloud.firestore {
         allow create: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['episodes', 'metadata'])
           && request.resource.data.metadata.keys().hasAll(['tvShowName', 'lastUpdated'])
-          && request.resource.data.episodes is map;
+          && request.resource.data.episodes is map
+          && (!('pageCount' in request.resource.data) || (
+            request.resource.data.pageCount is int
+            && request.resource.data.pageCount >= 0
+            && request.resource.data.pageCount <= 1000
+          ));
         allow update: if canWriteUserData(userId)
-          && request.resource.data.keys().hasAll(['episodes', 'metadata']);
+          && request.resource.data.keys().hasAll(['episodes', 'metadata'])
+          // pageCount (overflow pages in use) only ever grows; see functions/src/shared/episodePages.ts.
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['pageCount'])
+            || (
+              request.resource.data.pageCount is int
+              && request.resource.data.pageCount >= ('pageCount' in resource.data ? resource.data.pageCount : 0)
+              && request.resource.data.pageCount <= 1000
+            )
+          );
         allow delete: if canWriteUserData(userId);
+
+        // Overflow pages: watched episodes beyond what fits in the show's document.
+        match /episode_pages/{pageId} {
+          allow read: if isNonAnonymousOwner(userId);
+          allow create, update: if canWriteUserData(userId)
+            && pageId.matches('^[1-9][0-9]{0,3}$')
+            && request.resource.data.keys().hasOnly(['episodes', 'createdAt', 'updatedAt'])
+            && request.resource.data.episodes is map;
+          allow delete: if canWriteUserData(userId);
+        }
       }
 
       // Collection tracking (movie collections like Lord of the Rings, Marvel, etc.)

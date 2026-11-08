@@ -9,6 +9,7 @@
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { planEpisodeWrites, readEpisodeTracking, stageEpisodeWrites } from './episodePagesAdmin';
 import {
   DEFAULT_LIST_NAMES,
   assertPremiumUser,
@@ -793,9 +794,10 @@ async function writeEpisodeTracking(
   // A transaction, so an episode the user marks in the app meanwhile is never overwritten.
   // Stats are applied only after it commits (the callback can run more than once).
   const { alreadyTracked, newCount } = await context.db.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
-    const existing = snapshot.data() ?? {};
-    const existingEpisodes = (existing.episodes ?? {}) as Record<string, unknown>;
+    // Includes episodes in overflow pages (very long shows); new ones go wherever there's room.
+    const tracking = await readEpisodeTracking(ref, transaction);
+    const existing = tracking.data;
+    const existingEpisodes = tracking.items as Record<string, unknown>;
     const existingMetadata = (existing.metadata ?? {}) as Record<string, unknown>;
 
     const newEpisodes: Record<string, Partial<MappedEpisode>> = {};
@@ -818,10 +820,13 @@ async function writeEpisodeTracking(
       const existingLastUpdated =
         typeof existingMetadata.lastUpdated === 'number' ? existingMetadata.lastUpdated : 0;
 
-      transaction.set(
-        ref,
+      stageEpisodeWrites(
+        transaction,
+        tracking,
+        planEpisodeWrites(tracking, {
+          set: newEpisodes as Record<string, Record<string, unknown>>,
+        }),
         {
-          episodes: newEpisodes,
           metadata: {
             lastUpdated: Math.max(existingLastUpdated, latestWatchedAt),
             posterPath:
@@ -830,8 +835,7 @@ async function writeEpisodeTracking(
               null,
             tvShowName: (existingMetadata.tvShowName as string | undefined) ?? show.name,
           },
-        },
-        { merge: true }
+        }
       );
     }
 

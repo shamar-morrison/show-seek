@@ -1,6 +1,12 @@
 import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { getSignedInUser } from '@/src/services/serviceSupport';
-import { collection, DocumentData, QuerySnapshot } from 'firebase/firestore';
+import {
+  collection,
+  DocumentData,
+  DocumentReference,
+  QuerySnapshot,
+  writeBatch,
+} from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getFirestoreErrorMessage } from '../firebase/firestore';
 import { raceWithTimeout } from '../utils/timeout';
@@ -58,4 +64,29 @@ export async function fetchUserCollection<T>(
     console.error(`[${errorContext}] Error:`, message);
     return [];
   }
+}
+
+/** Firestore allows at most 500 writes per batch; stay below it. */
+const MAX_DELETES_PER_BATCH = 450;
+
+/**
+ * Deletes a document together with its overflow pages. Normally one atomic batch. Past the
+ * batch limit, the pages go first in chunks and the document last, so an interrupted delete
+ * leaves the document in place to be deleted again, never pages without their document.
+ */
+export async function deleteDocWithPages(
+  pageRefs: DocumentReference[],
+  docRef: DocumentReference,
+  race: <T>(operation: Promise<T>) => Promise<T>
+): Promise<void> {
+  for (let start = 0; pageRefs.length - start >= MAX_DELETES_PER_BATCH; start += MAX_DELETES_PER_BATCH) {
+    const chunkBatch = writeBatch(db);
+    pageRefs.slice(start, start + MAX_DELETES_PER_BATCH).forEach((ref) => chunkBatch.delete(ref));
+    await race(chunkBatch.commit());
+  }
+  const remainder = pageRefs.length % MAX_DELETES_PER_BATCH;
+  const batch = writeBatch(db);
+  pageRefs.slice(pageRefs.length - remainder).forEach((ref) => batch.delete(ref));
+  batch.delete(docRef);
+  await race(batch.commit());
 }

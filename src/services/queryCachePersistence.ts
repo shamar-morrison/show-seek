@@ -7,7 +7,9 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 
+/** Where the cache lived before it moved to a file; read once to migrate, then removed. */
 const QUERY_CACHE_STORAGE_KEY = 'showseek_query_cache_v1';
+const QUERY_CACHE_FILE_NAME = 'showseek_query_cache_v1.json';
 const QUERY_CACHE_PERSIST_DEBOUNCE_MS = 300;
 const PERSISTED_QUERY_ROOTS = new Set([
   'preferences',
@@ -90,6 +92,153 @@ const shouldPersistQuery = (query: Query): boolean => {
   return query.state.status === 'success' && query.state.data !== undefined;
 };
 
+/**
+ * Where the serialized cache is kept. It's a file, not AsyncStorage: on Android, AsyncStorage
+ * is a SQLite database capped at 6 MB in total, and a single value over ~2 MB can't be read back
+ * ("Row too big to fit into CursorWindow"). Large libraries (thousands of list items and watched
+ * episodes) exceed both, which silently dropped the cache on every launch and crowded out
+ * everything else stored in AsyncStorage.
+ */
+export interface PersistedQueryCacheStore {
+  read: () => Promise<string | null>;
+  write: (text: string) => Promise<void>;
+  clear: () => Promise<void>;
+}
+
+type FileSystemModule = typeof import('expo-file-system/legacy');
+
+let fileSystemModule: FileSystemModule | null | undefined;
+
+/** Loaded on first use; null where the native module isn't available (web, some tests). */
+const getFileSystem = (): FileSystemModule | null => {
+  if (fileSystemModule === undefined) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      fileSystemModule = require('expo-file-system/legacy') as FileSystemModule;
+    } catch {
+      fileSystemModule = null;
+    }
+  }
+  return fileSystemModule;
+};
+
+const getCacheFile = (): { fs: FileSystemModule; uri: string } | null => {
+  const fs = getFileSystem();
+  return fs?.documentDirectory ? { fs, uri: `${fs.documentDirectory}${QUERY_CACHE_FILE_NAME}` } : null;
+};
+
+const asyncStorageStore: PersistedQueryCacheStore = {
+  clear: () => AsyncStorage.removeItem(QUERY_CACHE_STORAGE_KEY),
+  read: () => AsyncStorage.getItem(QUERY_CACHE_STORAGE_KEY),
+  write: (text) => AsyncStorage.setItem(QUERY_CACHE_STORAGE_KEY, text),
+};
+
+/** Removes the pre-file AsyncStorage copy; failures don't matter (it's only a cache). */
+const removeLegacyCache = () => AsyncStorage.removeItem(QUERY_CACHE_STORAGE_KEY).catch(() => undefined);
+
+let hasRetriedLegacyRemoval = false;
+
+const isCompleteJson = (text: string): boolean => {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const fileQueryCacheStore: PersistedQueryCacheStore = {
+  async clear() {
+    // Both removals are attempted even if one fails. A file that couldn't be deleted is
+    // retried by the next hydration, which clears a cache whose owner doesn't match.
+    const file = getCacheFile();
+    const [fileResult] = await Promise.allSettled([
+      file
+        ? Promise.all([
+            file.fs.deleteAsync(file.uri, { idempotent: true }),
+            file.fs.deleteAsync(`${file.uri}.tmp`, { idempotent: true }),
+          ])
+        : Promise.resolve(),
+      removeLegacyCache(),
+    ]);
+    if (fileResult.status === 'rejected') {
+      throw fileResult.reason;
+    }
+  },
+  async read() {
+    const file = getCacheFile();
+    if (!file) {
+      return asyncStorageStore.read();
+    }
+
+    const info = await file.fs.getInfoAsync(file.uri);
+    if (info.exists) {
+      // Once per session, retry dropping a legacy copy whose removal failed after migrating.
+      if (!hasRetriedLegacyRemoval) {
+        hasRetriedLegacyRemoval = true;
+        void removeLegacyCache();
+      }
+      return file.fs.readAsStringAsync(file.uri);
+    }
+
+    // Interrupted between removing the old file and moving the new one in. The temp file is
+    // used only if it's complete: a crash during the very first write can leave it truncated,
+    // and then the legacy copy below is still the one to use.
+    const tempUri = `${file.uri}.tmp`;
+    const tempInfo = await file.fs.getInfoAsync(tempUri);
+    if (tempInfo.exists) {
+      const tempText = await file.fs.readAsStringAsync(tempUri);
+      if (isCompleteJson(tempText)) {
+        return tempText;
+      }
+      await file.fs.deleteAsync(tempUri, { idempotent: true });
+    }
+
+    // First launch after moving to a file: copy the old AsyncStorage value into the file, then
+    // drop it. Reading it can throw on Android once it grew past ~2 MB; it's dropped then too.
+    let legacy: string | null = null;
+    try {
+      legacy = await AsyncStorage.getItem(QUERY_CACHE_STORAGE_KEY);
+    } catch (error) {
+      console.warn('[queryCachePersistence] Could not read legacy cache; discarding it:', error);
+      await removeLegacyCache();
+      return null;
+    }
+    if (legacy === null) {
+      return null;
+    }
+    try {
+      await fileQueryCacheStore.write(legacy);
+      await removeLegacyCache();
+    } catch (error) {
+      // Keep the old copy so a later launch can migrate it.
+      console.warn('[queryCachePersistence] Could not migrate legacy cache yet:', error);
+    }
+    return legacy;
+  },
+  async write(text) {
+    const file = getCacheFile();
+    if (!file) {
+      await asyncStorageStore.write(text);
+      return;
+    }
+
+    // Write a temp file and swap it in, so a crash mid-write never leaves half a cache. If
+    // the swap is interrupted, read() picks up the complete temp file.
+    const tempUri = `${file.uri}.tmp`;
+    await file.fs.writeAsStringAsync(tempUri, text);
+    await file.fs.deleteAsync(file.uri, { idempotent: true });
+    await file.fs.moveAsync({ from: tempUri, to: file.uri });
+  },
+};
+
+let cacheStore: PersistedQueryCacheStore = fileQueryCacheStore;
+
+/** Tests only: swap where the cache is kept. */
+export function setPersistedQueryCacheStoreForTests(store: PersistedQueryCacheStore | null): void {
+  cacheStore = store ?? fileQueryCacheStore;
+}
+
 type PersistedQueryOwnerId = string | null;
 
 interface PersistedQueryCachePayload {
@@ -110,7 +259,7 @@ export async function hydratePersistedQueryCache(
   expectedOwnerId: PersistedQueryOwnerId
 ): Promise<boolean> {
   try {
-    const raw = await AsyncStorage.getItem(QUERY_CACHE_STORAGE_KEY);
+    const raw = await cacheStore.read();
     if (!raw) {
       return false;
     }
@@ -127,12 +276,16 @@ export async function hydratePersistedQueryCache(
     return true;
   } catch (error) {
     console.warn('[queryCachePersistence] Failed to hydrate query cache:', error);
+    if (error instanceof SyntaxError) {
+      // Unreadable cache data: drop it so later launches don't keep failing on it.
+      await clearPersistedQueryCache().catch(() => undefined);
+    }
     return false;
   }
 }
 
 export async function clearPersistedQueryCache(): Promise<void> {
-  await AsyncStorage.removeItem(QUERY_CACHE_STORAGE_KEY);
+  await cacheStore.clear();
 }
 
 export interface PersistedQueryCacheSyncController {
@@ -168,7 +321,7 @@ export function createPersistedQueryCacheSyncController(
         state: serializeValue(state),
       };
 
-      await AsyncStorage.setItem(QUERY_CACHE_STORAGE_KEY, JSON.stringify(payload));
+      await cacheStore.write(JSON.stringify(payload));
     });
 
     pendingWrite = nextWrite;
@@ -212,7 +365,7 @@ export function createPersistedQueryCacheSyncController(
       } catch (error) {
         console.error('[queryCachePersistence] Query cache persist failed:', {
           error,
-          storageKey: QUERY_CACHE_STORAGE_KEY,
+          storage: QUERY_CACHE_FILE_NAME,
           debounceMs: QUERY_CACHE_PERSIST_DEBOUNCE_MS,
           persistTimeoutActive: persistTimeout !== null,
           scheduler: 'schedulePersist',

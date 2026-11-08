@@ -2058,5 +2058,11 @@
     },
     "unlockWidgets": "Desbloquear widgets",
     "widgetSizeLabel": "Tamanho: {{size}}"
+  },
+  "updateRequired": {
+    "title": "Atualização necessária",
+    "body": "Esta versão do ShowSeek já não é suportada. Atualize para manter as suas listas, o histórico e as classificações sincronizados.",
+    "updateButton": "Atualizar o ShowSeek",
+    "storeUnavailable": "Não foi possível abrir a loja. Atualize o ShowSeek a partir da sua loja de aplicações."
   }
 }

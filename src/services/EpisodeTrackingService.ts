@@ -1,9 +1,35 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { deleteDocWithPages } from '@/src/services/firestoreHelpers';
+import { LayoutReadToken, LayoutWriteTracker } from '@/src/services/layoutWriteTracker';
 import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
 import { hasEpisodeAired } from '@/src/utils/dateUtils';
-import { createTimeoutWithCleanup } from '@/src/utils/timeout';
-import { collection, deleteDoc, deleteField, doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { createTimeoutWithCleanup, raceWithTimeout } from '@/src/utils/timeout';
+import { EPISODE_PAGES_COLLECTION } from '@/functions/src/shared/episodePages';
+import {
+  createSinglePageLayout,
+  getPageCount,
+  getPageDocId,
+  isEpisodeKey,
+  mergePages,
+  pickEntryToMakeRoom,
+  PAGE_CAPACITY,
+  parsePageDocId,
+  planPagedMapWrites,
+  recordRemoval,
+  type PageLayout,
+  type PagedMapWritePlan,
+} from '@/functions/src/shared/pagedMap';
+import {
+  collection,
+  deleteField,
+  doc,
+  runTransaction,
+  setDoc,
+  updateDoc,
+  writeBatch,
+  type DocumentData,
+} from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
 import { auth, db } from '../firebase/config';
 import type {
@@ -17,7 +43,396 @@ import type {
 /** Maximum writes per Firestore WriteBatch commit. */
 const MAX_HIDDEN_BATCH_WRITES = 500;
 
+/** Firestore's error when a write would push a document past 1 MiB. */
+const DOCUMENT_TOO_LARGE_PATTERN = /exceeds the maximum allowed size/i;
+
+type EpisodeWritePlan = PagedMapWritePlan<WatchedEpisode, unknown>;
+
+/** Where a show's episodes live (very long shows spill into `episode_pages`), plus their keys. */
+interface KnownEpisodeLayout {
+  layout: PageLayout;
+  keys: Set<string>;
+}
+
 class EpisodeTrackingService {
+  /** Page layouts from the last read or write, keyed `${userId}/${tvShowId}`. */
+  private readonly knownLayouts = new Map<string, KnownEpisodeLayout>();
+
+  /** Writes per show, so a slow read can't replace a layout a newer write recorded. */
+  private readonly layoutWrites = new LayoutWriteTracker();
+
+  private layoutKey(userId: string, tvShowId: number | string) {
+    return `${userId}/${tvShowId}`;
+  }
+
+  /** Forgets every remembered layout (tests; also safe to call on sign-out). */
+  clearEpisodeLayouts() {
+    this.knownLayouts.clear();
+  }
+
+  private getEpisodePagesCollection(userId: string, tvShowId: number | string) {
+    return collection(
+      db,
+      'users',
+      userId,
+      'episode_tracking',
+      String(tvShowId),
+      EPISODE_PAGES_COLLECTION
+    );
+  }
+
+  private getEpisodePageRef(userId: string, tvShowId: number, page: number) {
+    return doc(
+      db,
+      'users',
+      userId,
+      'episode_tracking',
+      tvShowId.toString(),
+      EPISODE_PAGES_COLLECTION,
+      getPageDocId(page)
+    );
+  }
+
+  /**
+   * Merges a tracking document that was already read with its overflow pages, and says which
+   * page holds each episode (episodes not listed are in the document). Free for shows without
+   * pages. Used by History, which reads every show's document itself.
+   */
+  async mergeOverflowPages(
+    userId: string,
+    tvShowId: number | string,
+    data: DocumentData,
+    callsite: string
+  ): Promise<{ data: DocumentData; overflowItemPages: Record<string, number> }> {
+    const loaded = await this.loadEpisodePages(
+      userId,
+      tvShowId,
+      data,
+      callsite,
+      this.layoutWrites.startRead()
+    );
+    return { data: loaded.data, overflowItemPages: { ...loaded.layout.overflowItemPages } };
+  }
+
+  /**
+   * Merges a tracking document's overflow pages (if any) into its `episodes` and remembers
+   * where each episode lives. Shows without pages cost no extra reads.
+   */
+  private async withEpisodePages(
+    userId: string,
+    tvShowId: number | string,
+    data: DocumentData,
+    callsite: string,
+    readStartedAt: LayoutReadToken
+  ): Promise<DocumentData> {
+    return (await this.loadEpisodePages(userId, tvShowId, data, callsite, readStartedAt)).data;
+  }
+
+  private async loadEpisodePages(
+    userId: string,
+    tvShowId: number | string,
+    data: DocumentData,
+    callsite: string,
+    readStartedAt: LayoutReadToken
+  ): Promise<{ data: DocumentData; layout: PageLayout; keys: Set<string> }> {
+    const mainEpisodes = (data.episodes ?? {}) as Record<string, WatchedEpisode>;
+    const pageCount = getPageCount(data);
+    let merged = {
+      items: mainEpisodes,
+      layout: createSinglePageLayout(Object.keys(mainEpisodes).length),
+    };
+
+    if (pageCount > 0) {
+      const pages = await auditedGetDocs(this.getEpisodePagesCollection(userId, tvShowId), {
+        path: `users/${userId}/episode_tracking/${tvShowId}/${EPISODE_PAGES_COLLECTION}`,
+        queryKey: 'episodeTrackingPages',
+        callsite,
+      });
+      merged = mergePages(
+        mainEpisodes,
+        pageCount,
+        pages.docs
+          .map((pageDoc) => ({
+            items: (pageDoc.data().episodes ?? {}) as Record<string, WatchedEpisode>,
+            page: parsePageDocId(pageDoc.id) ?? -1,
+          }))
+          .filter((source) => source.page >= 1)
+      );
+    }
+
+    const keys = new Set(Object.keys(merged.items));
+    const layoutKey = this.layoutKey(userId, tvShowId);
+    if (this.layoutWrites.isCurrent(layoutKey, readStartedAt)) {
+      this.knownLayouts.set(layoutKey, { keys, layout: merged.layout });
+    }
+    return { data: { ...data, episodes: merged.items }, keys, layout: merged.layout };
+  }
+
+  /** The show's layout: remembered, or read from Firestore (document + pages). */
+  private async resolveLayout(userId: string, tvShowId: number): Promise<KnownEpisodeLayout> {
+    const known = this.knownLayouts.get(this.layoutKey(userId, tvShowId));
+    if (known) {
+      return known;
+    }
+
+    const trackingRef = this.getShowTrackingRef(userId, tvShowId);
+    const readStartedAt = this.layoutWrites.startRead();
+    const snapshot = await auditedGetDoc(trackingRef, {
+      path: `users/${userId}/episode_tracking/${tvShowId}`,
+      queryKey: 'episodeTrackingByShow',
+      callsite: 'EpisodeTrackingService.resolveLayout',
+    });
+    if (!snapshot.exists()) {
+      const empty = { keys: new Set<string>(), layout: createSinglePageLayout(0) };
+      this.knownLayouts.set(this.layoutKey(userId, tvShowId), empty);
+      return empty;
+    }
+    const loaded = await this.loadEpisodePages(
+      userId,
+      tvShowId,
+      snapshot.data(),
+      'EpisodeTrackingService.resolveLayout',
+      readStartedAt
+    );
+    return (
+      this.knownLayouts.get(this.layoutKey(userId, tvShowId)) ?? {
+        keys: loaded.keys,
+        layout: loaded.layout,
+      }
+    );
+  }
+
+  /**
+   * Writes watched episodes. Shows that fit in their document are written exactly as before
+   * (one merge, no read); very long shows spill new episodes into overflow pages.
+   */
+  private async writeWatchedEpisodes(
+    userId: string,
+    tvShowId: number,
+    episodes: Record<string, WatchedEpisode>,
+    metadata: EpisodeTrackingMetadata
+  ): Promise<void> {
+    const trackingRef = this.getShowTrackingRef(userId, tvShowId);
+    const known = this.knownLayouts.get(this.layoutKey(userId, tvShowId));
+    let plan: EpisodeWritePlan | null = known
+      ? planPagedMapWrites(known.layout, known.keys, { set: episodes }, deleteField() as unknown)
+      : null;
+
+    if (!plan || plan.pageCount === 0) {
+      const timeout = createTimeoutWithCleanup(10000);
+      try {
+        await Promise.race([
+          setDoc(trackingRef, { episodes, metadata }, { merge: true }),
+          timeout.promise,
+        ]);
+        this.recordWritten(userId, tvShowId, episodes, plan);
+        return;
+      } catch (error) {
+        const message = (error as { message?: unknown } | null)?.message;
+        if (typeof message !== 'string' || !DOCUMENT_TOO_LARGE_PATTERN.test(message)) {
+          throw error;
+        }
+        // The show's document is full: spill into overflow pages instead.
+        this.knownLayouts.delete(this.layoutKey(userId, tvShowId));
+      } finally {
+        timeout.cancel();
+      }
+
+      const resolved = await this.resolveLayout(userId, tvShowId);
+      resolved.layout.pageSizes[0] = Math.max(resolved.layout.pageSizes[0] ?? 0, PAGE_CAPACITY);
+      plan = planPagedMapWrites(
+        resolved.layout,
+        resolved.keys,
+        { set: episodes },
+        deleteField() as unknown
+      );
+    }
+
+    await this.writePlannedEpisodes(userId, tvShowId, plan, metadata);
+    this.recordWritten(userId, tvShowId, episodes, plan);
+  }
+
+  /**
+   * Writes a plan across pages. New pages are registered first by raising `pageCount` in a
+   * transaction (it never goes down); if a later write fails, `pageCount` points at an empty
+   * page, which reads as nothing.
+   */
+  private async writePlannedEpisodes(
+    userId: string,
+    tvShowId: number,
+    plan: EpisodeWritePlan,
+    metadata: EpisodeTrackingMetadata
+  ): Promise<void> {
+    const trackingRef = this.getShowTrackingRef(userId, tvShowId);
+    const now = Date.now();
+    const knownPageCount =
+      this.knownLayouts.get(this.layoutKey(userId, tvShowId))?.layout.pageCount ?? 0;
+    const timeout = createTimeoutWithCleanup(10000);
+
+    try {
+      // Set by the transaction (which may run more than once) when an episode moves to make room.
+      let movedKey: string | null = null;
+      if (plan.createsPages) {
+        await Promise.race([
+          runTransaction(db, async (transaction) => {
+            movedKey = null;
+            const snapshot = await transaction.get(trackingRef);
+            const data = snapshot.data();
+            const current = getPageCount(data);
+            if (!snapshot.exists() || current >= plan.pageCount) {
+              return;
+            }
+            const update: Record<string, unknown> = { pageCount: plan.pageCount };
+            if (current === 0) {
+              // Adding `pageCount` grows the show's document; one that's full to the byte
+              // couldn't take it. Move one untouched episode onto page 1 in this same write.
+              const touched = [...plan.pageItems.values()].flatMap((items) => Object.keys(items));
+              const entry = pickEntryToMakeRoom(
+                data?.episodes as Record<string, WatchedEpisode> | undefined,
+                isEpisodeKey,
+                touched
+              );
+              if (entry) {
+                const [entryKey, movedEpisode] = entry;
+                transaction.set(
+                  this.getEpisodePageRef(userId, tvShowId, 1),
+                  { episodes: { [entryKey]: movedEpisode }, createdAt: now, updatedAt: now },
+                  { merge: true }
+                );
+                update[`episodes.${entryKey}`] = deleteField();
+                movedKey = entryKey;
+              }
+            }
+            transaction.update(trackingRef, update);
+          }),
+          timeout.promise,
+        ]);
+      }
+
+      if (plan.createsPages) {
+        // Remembered before the batch below, so if it fails the next write of a moved episode
+        // still goes to page 1 rather than the show document, where the page copy would hide it.
+        this.recordPageRegistration(userId, tvShowId, plan, movedKey);
+      }
+
+      const batch = writeBatch(db);
+      const mainEpisodes = plan.pageItems.get(0);
+      batch.set(
+        trackingRef,
+        { ...(mainEpisodes ? { episodes: mainEpisodes } : {}), metadata },
+        { merge: true }
+      );
+      plan.pageItems.forEach((episodes, page) => {
+        if (page === 0) {
+          return;
+        }
+        batch.set(
+          this.getEpisodePageRef(userId, tvShowId, page),
+          {
+            episodes,
+            updatedAt: now,
+            ...(page > knownPageCount ? { createdAt: now } : {}),
+          },
+          { merge: true }
+        );
+      });
+      await Promise.race([batch.commit(), timeout.promise]);
+    } finally {
+      timeout.cancel();
+    }
+  }
+
+  /** Records that `pageCount` was raised to the plan's, and where an episode moved, if one did. */
+  private recordPageRegistration(
+    userId: string,
+    tvShowId: number,
+    plan: EpisodeWritePlan,
+    movedKey: string | null
+  ) {
+    const key = this.layoutKey(userId, tvShowId);
+    this.layoutWrites.recordWrite(key);
+    const known = this.knownLayouts.get(key);
+    // The planned layout (applied by the caller once the batch succeeds) and the remembered one.
+    const layouts = known ? [plan.layout, known.layout] : [plan.layout];
+    layouts.forEach((layout) => {
+      for (let page = layout.pageCount + 1; page <= plan.pageCount; page += 1) {
+        layout.pageSizes[page] = layout.pageSizes[page] ?? 0;
+      }
+      layout.pageCount = Math.max(layout.pageCount, plan.pageCount);
+      if (movedKey && layout.overflowItemPages[movedKey] === undefined) {
+        layout.overflowItemPages[movedKey] = 1;
+        layout.pageSizes[0] = Math.max(0, (layout.pageSizes[0] ?? 0) - 1);
+        layout.pageSizes[1] = (layout.pageSizes[1] ?? 0) + 1;
+      }
+    });
+  }
+
+  private recordWritten(
+    userId: string,
+    tvShowId: number,
+    episodes: Record<string, WatchedEpisode>,
+    plan: EpisodeWritePlan | null
+  ) {
+    const key = this.layoutKey(userId, tvShowId);
+    this.layoutWrites.recordWrite(key);
+    const known = this.knownLayouts.get(key);
+    if (!known) {
+      return;
+    }
+    if (plan) {
+      known.layout = plan.layout;
+    }
+    Object.keys(episodes).forEach((episodeKey) => known.keys.add(episodeKey));
+  }
+
+  /**
+   * Removes episodes from the show's document and, for very long shows, every overflow page.
+   * `pageCount` comes from the document the caller just read.
+   */
+  private async deleteWatchedEpisodes(
+    userId: string,
+    tvShowId: number,
+    episodeKeys: string[],
+    pageCount: number
+  ): Promise<void> {
+    const trackingRef = this.getShowTrackingRef(userId, tvShowId);
+    const now = Date.now();
+    const updatePayload: Record<string, unknown> = { 'metadata.lastUpdated': now };
+    episodeKeys.forEach((episodeKey) => {
+      updatePayload[`episodes.${episodeKey}`] = deleteField();
+    });
+
+    const timeout = createTimeoutWithCleanup(10000);
+    try {
+      if (pageCount === 0) {
+        await Promise.race([updateDoc(trackingRef, updatePayload), timeout.promise]);
+      } else {
+        const batch = writeBatch(db);
+        batch.update(trackingRef, updatePayload);
+        for (let page = 1; page <= pageCount; page += 1) {
+          batch.set(
+            this.getEpisodePageRef(userId, tvShowId, page),
+            {
+              episodes: Object.fromEntries(episodeKeys.map((key) => [key, deleteField()])),
+              updatedAt: now,
+            },
+            { merge: true }
+          );
+        }
+        await Promise.race([batch.commit(), timeout.promise]);
+      }
+    } finally {
+      timeout.cancel();
+    }
+
+    this.layoutWrites.recordWrite(this.layoutKey(userId, tvShowId));
+    const known = this.knownLayouts.get(this.layoutKey(userId, tvShowId));
+    if (known) {
+      recordRemoval(known.layout, (key) => known.keys.has(key), episodeKeys);
+      episodeKeys.forEach((key) => known.keys.delete(key));
+    }
+  }
+
   /**
    * Get reference to a TV show's episode tracking document
    */
@@ -38,6 +453,7 @@ class EpisodeTrackingService {
 
     const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
     const timeout = createTimeoutWithCleanup(10000);
+    const readStartedAt = this.layoutWrites.startRead();
 
     try {
       const snapshot = await Promise.race([
@@ -55,7 +471,18 @@ class EpisodeTrackingService {
         return null;
       }
 
-      return normalizeEpisodeTrackingDoc(snapshot.data(), snapshot.id);
+      // Overflow pages (very long shows) get their own 10s deadline, like the document read.
+      const data = await raceWithTimeout(
+        this.withEpisodePages(
+          user.uid,
+          tvShowId,
+          snapshot.data(),
+          'EpisodeTrackingService.getShowTracking',
+          readStartedAt
+        ),
+        { ms: 10000 }
+      );
+      return normalizeEpisodeTrackingDoc(data, snapshot.id);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
@@ -83,7 +510,6 @@ class EpisodeTrackingService {
       const user = auth.currentUser;
       if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
-      const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const episodeKey = this.getEpisodeKey(seasonNumber, episodeNumber);
 
       const watchedEpisode: WatchedEpisode = {
@@ -105,22 +531,12 @@ class EpisodeTrackingService {
         lastUpdated: Date.now(),
       };
 
-      const timeout = createTimeoutWithCleanup(10000);
-      await Promise.race([
-        setDoc(
-          trackingRef,
-          {
-            episodes: {
-              [episodeKey]: watchedEpisode,
-            },
-            metadata,
-          },
-          { merge: true }
-        ),
-        timeout.promise,
-      ]).finally(() => {
-        timeout.cancel();
-      });
+      await this.writeWatchedEpisodes(
+        user.uid,
+        tvShowId,
+        { [episodeKey]: watchedEpisode },
+        metadata
+      );
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
@@ -159,16 +575,12 @@ class EpisodeTrackingService {
         return;
       }
 
-      const updateTimeout = createTimeoutWithCleanup(10000);
-      await Promise.race([
-        updateDoc(trackingRef, {
-          [`episodes.${episodeKey}`]: deleteField(),
-          'metadata.lastUpdated': Date.now(),
-        }),
-        updateTimeout.promise,
-      ]).finally(() => {
-        updateTimeout.cancel();
-      });
+      await this.deleteWatchedEpisodes(
+        user.uid,
+        tvShowId,
+        [episodeKey],
+        getPageCount(snapshot.data())
+      );
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
@@ -190,7 +602,6 @@ class EpisodeTrackingService {
       const user = auth.currentUser;
       if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
-      const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const now = Date.now();
 
       // Build the episodes map for batch update
@@ -217,22 +628,8 @@ class EpisodeTrackingService {
         lastUpdated: now,
       };
 
-      const timeout = createTimeoutWithCleanup(10000);
-
-      // Use setDoc with merge to update all episodes at once
-      await Promise.race([
-        setDoc(
-          trackingRef,
-          {
-            episodes: episodesMap,
-            metadata,
-          },
-          { merge: true }
-        ),
-        timeout.promise,
-      ]).finally(() => {
-        timeout.cancel();
-      });
+      // One merge for the whole season (spread over pages only for very long shows).
+      await this.writeWatchedEpisodes(user.uid, tvShowId, episodesMap, metadata);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
@@ -271,7 +668,6 @@ class EpisodeTrackingService {
       options.delayMs >= 0
         ? options.delayMs
         : 300;
-    const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
     let markedCount = 0;
     let wasCancelled = false;
 
@@ -307,23 +703,10 @@ class EpisodeTrackingService {
         lastUpdated: now,
       };
 
-      const timeout = createTimeoutWithCleanup(10000);
       try {
-        await Promise.race([
-          setDoc(
-            trackingRef,
-            {
-              episodes: episodesMap,
-              metadata,
-            },
-            { merge: true }
-          ),
-          timeout.promise,
-        ]);
+        await this.writeWatchedEpisodes(user.uid, tvShowId, episodesMap, metadata);
       } catch (error) {
         throw new Error(getFirestoreErrorMessage(error));
-      } finally {
-        timeout.cancel();
       }
 
       markedCount += chunk.length;
@@ -373,20 +756,11 @@ class EpisodeTrackingService {
         return;
       }
 
-      const updatePayload: Record<string, unknown> = {
-        'metadata.lastUpdated': Date.now(),
-      };
-
-      episodes.forEach((episode) => {
-        const episodeKey = this.getEpisodeKey(seasonNumber, episode.episode_number);
-        updatePayload[`episodes.${episodeKey}`] = deleteField();
-      });
-
-      const updateTimeout = createTimeoutWithCleanup(10000);
-      await Promise.race([updateDoc(trackingRef, updatePayload), updateTimeout.promise]).finally(
-        () => {
-          updateTimeout.cancel();
-        }
+      await this.deleteWatchedEpisodes(
+        user.uid,
+        tvShowId,
+        episodes.map((episode) => this.getEpisodeKey(seasonNumber, episode.episode_number)),
+        getPageCount(snapshot.data())
       );
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
@@ -442,6 +816,7 @@ class EpisodeTrackingService {
     if (!snapshot.exists()) {
       return { unmarkedCount: 0, wasCancelled: false };
     }
+    const pageCount = getPageCount(snapshot.data());
 
     let unmarkedCount = 0;
     let wasCancelled = false;
@@ -453,23 +828,17 @@ class EpisodeTrackingService {
       }
 
       const chunk = episodesToUnmark.slice(i, i + batchSize);
-      const now = Date.now();
-      const updatePayload: Record<string, unknown> = {
-        'metadata.lastUpdated': now,
-      };
-
-      chunk.forEach(({ seasonNumber, episode }) => {
-        const episodeKey = this.getEpisodeKey(seasonNumber, episode.episode_number);
-        updatePayload[`episodes.${episodeKey}`] = deleteField();
-      });
-
-      const updateTimeout = createTimeoutWithCleanup(10000);
       try {
-        await Promise.race([updateDoc(trackingRef, updatePayload), updateTimeout.promise]);
+        await this.deleteWatchedEpisodes(
+          user.uid,
+          tvShowId,
+          chunk.map(({ seasonNumber, episode }) =>
+            this.getEpisodeKey(seasonNumber, episode.episode_number)
+          ),
+          pageCount
+        );
       } catch (error) {
         throw new Error(getFirestoreErrorMessage(error));
-      } finally {
-        updateTimeout.cancel();
       }
 
       unmarkedCount += chunk.length;
@@ -576,6 +945,7 @@ class EpisodeTrackingService {
   async getAllWatchedShows(userId: string): Promise<TVShowEpisodeTracking[]> {
     try {
       const trackingCollectionRef = collection(db, 'users', userId, 'episode_tracking');
+      const readStartedAt = this.layoutWrites.startRead();
 
       const timeout = createTimeoutWithCleanup(10000);
       const snapshot = await Promise.race([
@@ -589,9 +959,26 @@ class EpisodeTrackingService {
         timeout.cancel();
       });
 
-      return snapshot.docs
-        .map((doc) => normalizeEpisodeTrackingDoc(doc.data(), doc.id))
-        .filter((show): show is TVShowEpisodeTracking => show !== null);
+      // Very long shows keep episodes in overflow pages; only those shows cost an extra read.
+      // The page reads share one 10s deadline, like the collection read.
+      const shows = await raceWithTimeout(
+        Promise.all(
+          snapshot.docs.map(async (trackingDoc) =>
+            normalizeEpisodeTrackingDoc(
+              await this.withEpisodePages(
+                userId,
+                trackingDoc.id,
+                trackingDoc.data(),
+                'EpisodeTrackingService.getAllWatchedShows',
+                readStartedAt
+              ),
+              trackingDoc.id
+            )
+          )
+        ),
+        { ms: 10000 }
+      );
+      return shows.filter((show): show is TVShowEpisodeTracking => show !== null);
     } catch (error) {
       console.error('[EpisodeTrackingService] Error fetching all watched shows:', error);
       throw new Error(getFirestoreErrorMessage(error));
@@ -661,9 +1048,27 @@ class EpisodeTrackingService {
 
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const timeout = createTimeoutWithCleanup(10000);
-      await Promise.race([deleteDoc(trackingRef), timeout.promise]).finally(() => {
+      try {
+        // Always look for overflow pages (another device may have added some) and delete them
+        // with the show, so re-tracking it later starts clean.
+        const pages = await Promise.race([
+          auditedGetDocs(this.getEpisodePagesCollection(user.uid, tvShowId), {
+            path: `users/${user.uid}/episode_tracking/${tvShowId}/${EPISODE_PAGES_COLLECTION}`,
+            queryKey: 'episodeTrackingPages',
+            callsite: 'EpisodeTrackingService.deleteShowTracking',
+          }),
+          timeout.promise,
+        ]);
+        await deleteDocWithPages(
+          pages.docs.map((pageDoc) => pageDoc.ref),
+          trackingRef,
+          (operation) => Promise.race([operation, timeout.promise])
+        );
+      } finally {
         timeout.cancel();
-      });
+      }
+      this.layoutWrites.recordWrite(this.layoutKey(user.uid, tvShowId));
+      this.knownLayouts.delete(this.layoutKey(user.uid, tvShowId));
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }

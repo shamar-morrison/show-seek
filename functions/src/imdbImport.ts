@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { commitEpisodeWrites, planEpisodeWrites, readEpisodeTracking } from './episodePagesAdmin';
 import {
   DEFAULT_LIST_NAMES,
   assertPremiumUser,
@@ -375,10 +376,10 @@ async function upsertEpisodeWatch(
     .doc(context.userId)
     .collection('episode_tracking')
     .doc(String(value.show_id));
-  const snapshot = await ref.get();
-  const existingData = snapshot.data() ?? {};
+  // Includes episodes in overflow pages (very long shows).
+  const tracking = await readEpisodeTracking(ref);
   const episodeKey = `${value.season_number}_${value.episode_number}`;
-  const existingEpisode = existingData.episodes?.[episodeKey];
+  const existingEpisode = tracking.items[episodeKey];
 
   if (
     existingEpisode &&
@@ -398,18 +399,17 @@ async function upsertEpisodeWatch(
     watchedAt: action.watchedAt,
   };
 
-  await ref.set(
+  await commitEpisodeWrites(
+    context.db,
+    tracking,
+    planEpisodeWrites(tracking, { set: { [episodeKey]: nextEpisode } }),
     {
-      episodes: {
-        [episodeKey]: nextEpisode,
-      },
       metadata: {
         lastUpdated: Math.max(action.watchedAt, Date.now()),
         posterPath: showDetails.poster_path ?? null,
         tvShowName: showDetails.name,
       },
-    },
-    { merge: true }
+    }
   );
 
   return true;

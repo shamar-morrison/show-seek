@@ -99,14 +99,20 @@ import {
   __test__,
   clearTraktTokensIfRefreshTokenUnchanged,
   createOAuthState,
+  enrichMediaItem,
   exchangeAuthorizationCode,
+  isRunFatalSyncError,
+  needsMediaEnrichment,
+  planEnrichmentRelocation,
   normalizeSyncError,
+  reconcileRatings,
   refreshAccessToken,
   requestOAuthToken,
   runTraktSync,
   TRAKT_INVALID_GRANT_MESSAGE,
   TRAKT_OAUTH_STATE_TTL_MS,
   TraktOAuthError,
+  TraktSyncError,
   traktApi,
   traktCallback,
 } from '@/functions/src/trakt';
@@ -5046,7 +5052,12 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      throw new Error(`Unexpected fetch URL ${url}`);
+      // Later sync steps still run after the failed list write; give them empty Trakt data.
+      return Promise.resolve({
+        json: jest.fn().mockResolvedValue([]),
+        ok: true,
+        status: 200,
+      });
     });
 
     await expect(
@@ -5074,6 +5085,130 @@ describe('Trakt sync Firestore sanitization', () => {
     );
     expect(failedWrite?.nextRetryAt).toBeUndefined();
     expect(failedWrite?.nextAllowedSyncAt).toBeUndefined();
+  });
+
+  it('keeps syncing the other steps when one list write fails, then fails the run as storage_limit', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const sizeLimitError = new Error(
+      "3 INVALID_ARGUMENT: Document 'projects/p/databases/(default)/documents/users/user-1/lists/already-watched' cannot be written because its size (1,100,000 bytes) exceeds the maximum allowed size of 1,048,576 bytes."
+    );
+    const writtenListIds: string[] = [];
+    const listSet = jest.fn((data: Record<string, unknown>) => {
+      if (data.id === 'already-watched') {
+        return Promise.reject(sizeLimitError);
+      }
+      writtenListIds.push(String(data.id));
+      return Promise.resolve(undefined);
+    });
+    const emptyCollection = (name: string) => ({
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/${name}/${id}`,
+        get: jest.fn().mockResolvedValue({ data: () => undefined, exists: false }),
+        set: listSet,
+      })),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+    });
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return { doc: jest.fn((id: string) => ({ id, path: `users/user-1/traktSyncRuns/${id}` })) };
+        }
+        if (['lists', 'episode_tracking', 'ratings'].includes(name)) {
+          return emptyCollection(name);
+        }
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: { runId: 'run-1' },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({ commit: batchCommit, set: batchSet })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+        return { doc: jest.fn(() => userRef) };
+      }),
+    }));
+
+    const fetchedPaths: string[] = [];
+    (global.fetch as jest.Mock).mockImplementation((input: any) => {
+      const url = String(input);
+      fetchedPaths.push(new URL(url).pathname);
+      const json = (body: unknown) =>
+        Promise.resolve({ json: jest.fn().mockResolvedValue(body), ok: true, status: 200 });
+
+      if (url.endsWith('/users/settings')) {
+        return json({ user: { ids: { slug: 'tester' }, username: 'tester' } });
+      }
+      if (url.includes('/sync/watched/movies')) {
+        return json([
+          {
+            last_watched_at: '2024-01-01T00:00:00.000Z',
+            movie: { ids: { slug: 'movie-1', tmdb: 101, trakt: 201 }, title: 'Movie One', year: 2024 },
+            plays: 1,
+          },
+        ]);
+      }
+      if (url.includes('/sync/watchlist')) {
+        return json([
+          {
+            listed_at: '2024-02-01T00:00:00.000Z',
+            movie: { ids: { slug: 'movie-2', tmdb: 102, trakt: 202 }, title: 'Movie Two', year: 2023 },
+            type: 'movie',
+          },
+        ]);
+      }
+      if (url.includes('/sync/last_activities')) {
+        return json({});
+      }
+      return json([]);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: 'size-limit',
+      })
+    ).resolves.toBeUndefined();
+
+    // The steps after the failed Already Watched write still ran and wrote.
+    expect(fetchedPaths).toEqual(
+      expect.arrayContaining(['/sync/ratings', '/sync/watchlist', '/sync/favorites'])
+    );
+    expect(writtenListIds).toContain('watchlist');
+
+    const failedWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'failed') as Record<string, unknown> | undefined;
+
+    expect(failedWrite).toMatchObject({ errorCategory: 'storage_limit', status: 'failed' });
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    // A failed run must not advance the incremental state, or the next sync would skip the step.
+    expect(batchSet.mock.calls.every(([_ref, data]) => !('traktIncrementalState' in data))).toBe(true);
+  });
+
+  it('only treats Trakt-side errors as fatal to the whole sync run', () => {
+    expect(isRunFatalSyncError(new TraktSyncError('slow down', 'rate_limited', true))).toBe(true);
+    expect(isRunFatalSyncError(new TraktSyncError('reconnect', 'auth_invalid', false))).toBe(true);
+    expect(
+      isRunFatalSyncError(new TraktOAuthError('invalid grant', 'invalid_grant'))
+    ).toBe(true);
+    expect(isRunFatalSyncError(new TraktSyncError('write failed', 'internal', false))).toBe(false);
+    expect(isRunFatalSyncError(new TraktSyncError('too big', 'storage_limit', false))).toBe(false);
+    expect(isRunFatalSyncError(new Error('Firestore write failed'))).toBe(false);
   });
 
   it('omits undefined release_date from already-watched items when Trakt movies are missing year', async () => {
@@ -6578,5 +6713,180 @@ describe('Trakt OAuth invalid_grant handling', () => {
         { merge: true }
       );
     });
+  });
+});
+
+describe('Trakt list item enrichment', () => {
+  it('only treats never-enriched items as needing TMDB data', () => {
+    expect(needsMediaEnrichment({ id: 1, media_type: 'movie', title: 'From Trakt' })).toBe(true);
+    expect(
+      needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: null, vote_average: 0 })
+    ).toBe(false);
+    expect(needsMediaEnrichment({ id: 'x', media_type: 'movie' })).toBe(false);
+    // Enriched before genre ids were read correctly: looked up again to fill them in.
+    expect(
+      needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: '/p.jpg', vote_average: 7, genre_ids: [] })
+    ).toBe(true);
+    expect(
+      needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: '/p.jpg', vote_average: 7, genre_ids: [18] })
+    ).toBe(false);
+  });
+
+  it('reads genre ids from the genres TMDB details actually return', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      headers: { get: () => null },
+      json: jest.fn().mockResolvedValue({
+        genres: [{ id: 18, name: 'Drama' }, { id: 80, name: 'Crime' }],
+        poster_path: '/p.jpg',
+        release_date: '2008-07-18',
+        title: 'The Dark Knight',
+        vote_average: 8.5,
+      }),
+      ok: true,
+      status: 200,
+    });
+
+    const enriched = await enrichMediaItem({ id: 155, media_type: 'movie', title: 'The Dark Knight' });
+
+    expect(enriched).toMatchObject({ genre_ids: [18, 80], poster_path: '/p.jpg', vote_average: 8.5 });
+  });
+});
+
+describe('Trakt sync batching', () => {
+  it('splits large rating syncs into batches under the 500-write limit', async () => {
+    const commits: number[] = [];
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => {
+        let writes = 0;
+        return {
+          set: jest.fn(() => {
+            writes += 1;
+          }),
+          commit: jest.fn(async () => {
+            commits.push(writes);
+          }),
+        };
+      }),
+      collection: jest.fn(() => ({
+        doc: jest.fn(() => ({
+          collection: jest.fn(() => ({
+            doc: jest.fn((id: string) => ({ id })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          })),
+        })),
+      })),
+    }));
+    const ratings = Array.from({ length: 950 }, (_, i) => ({
+      movie: { ids: { tmdb: i + 1, trakt: i + 1 }, title: `Movie ${i}`, year: 2000 },
+      rated_at: '2024-01-01T00:00:00.000Z',
+      rating: 7,
+      type: 'movie',
+    }));
+
+    const result = await reconcileRatings('user-1', ratings as any);
+
+    expect(result.changedCount).toBe(950);
+    expect(commits.every((size) => size <= 400)).toBe(true);
+    expect(commits.reduce((total, size) => total + size, 0)).toBe(950);
+  });
+});
+
+describe('enrichment on a full list document', () => {
+  const movieItem = (id: number, extra: Record<string, unknown> = {}) => ({
+    id,
+    media_type: 'movie',
+    title: `Movie ${id}`,
+    ...extra,
+  });
+  const singlePage = (items: Record<string, Record<string, unknown>>) => ({
+    items,
+    layout: { overflowItemPages: {}, pageCount: 0, pageSizes: [Object.keys(items).length] },
+  });
+  const manyItems = (count: number, extra: Record<string, unknown> = {}) =>
+    Object.fromEntries(
+      Array.from({ length: count }, (_, i) => [`movie-${i + 1}`, movieItem(i + 1, extra)])
+    );
+
+  it('updates items in place while the list document has room', () => {
+    const list = singlePage(manyItems(10));
+    const result = planEnrichmentRelocation(list, { 'movie-1': movieItem(1, { poster_path: '/p' }) });
+
+    expect(Object.keys(result.itemsInPlace)).toEqual(['movie-1']);
+    expect(result.itemsToMove).toEqual({});
+    expect(result.removeFromListDocKeys).toEqual([]);
+  });
+
+  it('moves items off a document holding more than a page', () => {
+    const list = singlePage(manyItems(2500));
+    const result = planEnrichmentRelocation(list, { 'movie-7': movieItem(7, { poster_path: '/p' }) });
+
+    expect(Object.keys(result.itemsToMove)).toEqual(['movie-7']);
+    expect(result.removeFromListDocKeys).toEqual(['movie-7']);
+  });
+
+  it('moves items off a document under 2,000 items that enrichment would bring near 1 MiB', () => {
+    const heavy = { overview: 'x'.repeat(450) };
+    const list = singlePage(manyItems(1900, heavy));
+    const result = planEnrichmentRelocation(list, {
+      'movie-3': movieItem(3, { ...heavy, poster_path: '/p' }),
+    });
+
+    expect(Object.keys(result.itemsToMove)).toEqual(['movie-3']);
+  });
+
+  it('moves a legacy numeric key under its canonical key', () => {
+    const list = singlePage({ ...manyItems(2500), '900001': movieItem(900001) });
+    const result = planEnrichmentRelocation(list, {
+      '900001': movieItem(900001, { poster_path: '/p' }),
+    });
+
+    expect(result.itemsToMove).toEqual({
+      'movie-900001': expect.objectContaining({ id: 900001, poster_path: '/p' }),
+    });
+    expect(result.removeFromListDocKeys).toEqual(['900001']);
+    expect(result.itemsInPlace).toEqual({});
+  });
+
+  it('keeps the canonical copy and just drops a legacy duplicate with nothing to add', () => {
+    const list = singlePage({ ...manyItems(2500, { poster_path: '/c' }), '5': movieItem(5) });
+    const result = planEnrichmentRelocation(list, { '5': movieItem(5, { poster_path: '/p' }) });
+
+    expect(result.itemsToMove).toEqual({});
+    expect(result.itemsInPlace).toEqual({});
+    expect(result.removeFromListDocKeys).toEqual(['5']);
+  });
+
+  it('moves the canonical copy with fields only the legacy copy had, before the legacy one goes', () => {
+    const list = singlePage({
+      ...manyItems(2500),
+      '5': movieItem(5, { addedAt: 111, title: 'Legacy title' }),
+    });
+    const result = planEnrichmentRelocation(list, { '5': movieItem(5, { addedAt: 111, poster_path: '/p' }) });
+
+    // Written to a page (with addedAt) by the relocation, which runs before any removal.
+    expect(result.itemsToMove['movie-5']).toEqual(
+      expect.objectContaining({ addedAt: 111, title: 'Movie 5', poster_path: '/p' })
+    );
+    expect(result.itemsInPlace).toEqual({});
+    expect(result.removeFromListDocKeys).toEqual(['5', 'movie-5']);
+  });
+
+  it('updates a canonical copy already on a page in place with the legacy-only fields', () => {
+    const list = {
+      items: { ...manyItems(2500), '5': movieItem(5, { addedAt: 111 }) },
+      layout: { overflowItemPages: { 'movie-5': 1 }, pageCount: 1, pageSizes: [2500, 1] },
+    };
+    const result = planEnrichmentRelocation(list, { '5': movieItem(5, { addedAt: 111, poster_path: '/p' }) });
+
+    expect(result.itemsInPlace['movie-5']).toEqual(expect.objectContaining({ addedAt: 111 }));
+    expect(result.itemsToMove).toEqual({});
+    expect(result.removeFromListDocKeys).toEqual(['5']);
+  });
+
+  it('removes stale document copies of items already on a page', () => {
+    const list = { ...singlePage(manyItems(10)), duplicateDocKeys: ['movie-3'] };
+    const result = planEnrichmentRelocation(list, {});
+
+    expect(result.removeFromListDocKeys).toEqual(['movie-3']);
   });
 });

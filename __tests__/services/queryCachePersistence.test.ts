@@ -5,8 +5,22 @@ import {
   clearPersistedQueryCache,
   createPersistedQueryCacheSyncController,
   hydratePersistedQueryCache,
+  setPersistedQueryCacheStoreForTests,
   subscribeToPersistedQueryCache,
 } from '@/src/services/queryCachePersistence';
+
+// These tests cover the persistence logic; the file-backed store has its own tests.
+const KEY = 'showseek_query_cache_v1';
+beforeAll(() => {
+  setPersistedQueryCacheStoreForTests({
+    clear: () => AsyncStorage.removeItem(KEY),
+    read: () => AsyncStorage.getItem(KEY),
+    write: (text) => AsyncStorage.setItem(KEY, text),
+  });
+});
+afterAll(() => {
+  setPersistedQueryCacheStoreForTests(null);
+});
 
 const flushMicrotasks = async () => {
   await Promise.resolve();
@@ -137,6 +151,16 @@ describe('queryCachePersistence', () => {
     expect(AsyncStorage.removeItem).toHaveBeenCalledWith('showseek_query_cache_v1');
   });
 
+  it('drops unreadable cache data so later launches start clean', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('{not json');
+
+    await expect(hydratePersistedQueryCache(new QueryClient(), 'user-1')).resolves.toBe(false);
+
+    expect(AsyncStorage.removeItem).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('logs when debounced query cache persistence fails', async () => {
     jest.useFakeTimers();
     const queryClient = new QueryClient();
@@ -153,7 +177,7 @@ describe('queryCachePersistence', () => {
       '[queryCachePersistence] Query cache persist failed:',
       expect.objectContaining({
         error: expect.any(Error),
-        storageKey: 'showseek_query_cache_v1',
+        storage: 'showseek_query_cache_v1.json',
         debounceMs: 300,
         scheduler: 'schedulePersist',
       })

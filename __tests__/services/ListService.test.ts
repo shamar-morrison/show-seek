@@ -1,4 +1,13 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
@@ -46,11 +55,21 @@ import {
   getFirestoreReadAuditReport,
 } from '@/src/services/firestoreReadAudit';
 
+/** The layouts `useLists` hands the service in the app: these lists fit in their document. */
+const seedSinglePageLayouts = (...listIds: string[]) => {
+  listService.rememberListLayouts(
+    'test-user-id',
+    listIds.map((id) => ({ id, name: id, items: {}, createdAt: 0 }))
+  );
+};
+
 describe('ListService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset current user to authenticated state
     mockUserId = 'test-user-id';
+    listService.clearListLayouts();
+    seedSinglePageLayouts('watchlist', 'my-custom-list');
   });
 
   describe('addToList', () => {
@@ -406,14 +425,17 @@ describe('ListService', () => {
   });
 
   describe('deleteList', () => {
-    it('should call deleteDoc for custom lists', async () => {
+    it('deletes a custom list together with its overflow pages in one batch', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/my-custom-list' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
-      (deleteDoc as jest.Mock).mockResolvedValue(undefined);
+      (getDocs as jest.Mock).mockResolvedValue({ size: 0, docs: [] });
+      const batch = { delete: jest.fn(), commit: jest.fn().mockResolvedValue(undefined) };
+      (writeBatch as jest.Mock).mockReturnValueOnce(batch);
 
       await listService.deleteList('my-custom-list');
 
-      expect(deleteDoc).toHaveBeenCalledWith(mockDocRef);
+      expect(batch.delete).toHaveBeenCalledWith(mockDocRef);
+      expect(batch.commit).toHaveBeenCalledTimes(1);
     });
 
     it('should prevent deletion of default lists', async () => {
@@ -487,7 +509,11 @@ describe('ListService', () => {
     it('cancels timeout when deleteList throws', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/my-custom-list' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
-      (deleteDoc as jest.Mock).mockRejectedValueOnce(new Error('delete failed'));
+      (getDocs as jest.Mock).mockResolvedValue({ size: 0, docs: [] });
+      (writeBatch as jest.Mock).mockReturnValueOnce({
+        delete: jest.fn(),
+        commit: jest.fn().mockRejectedValue(new Error('delete failed')),
+      });
 
       await expect(listService.deleteList('my-custom-list')).rejects.toThrow('delete failed');
       expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();

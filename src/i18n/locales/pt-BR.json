@@ -2058,5 +2058,11 @@
       "name": "Fantástico",
       "description": "Aventuras mágicas"
     }
+  },
+  "updateRequired": {
+    "title": "Atualização necessária",
+    "body": "Esta versão do ShowSeek não é mais compatível. Atualize para manter suas listas, seu histórico e suas avaliações sincronizados.",
+    "updateButton": "Atualizar o ShowSeek",
+    "storeUnavailable": "Não foi possível abrir a loja. Atualize o ShowSeek pela sua loja de aplicativos."
   }
 }

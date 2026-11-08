@@ -1,13 +1,11 @@
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
-import { db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
 import { filterNonScriptedTV } from '@/src/utils/nonScriptedFilter';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc } from 'firebase/firestore';
 import { compareAddedAt } from '../utils/timestamps';
-import { ListMediaItem } from './ListService';
+import { ListMediaItem, listService } from './ListService';
 import { writeToSharedPreferences } from './sharedPreferencesService';
 
 const WIDGET_CACHE_PREFIX = 'widget_data_';
@@ -95,25 +93,28 @@ export async function getUserWatchlist(
   }
 
   try {
-    const listRef = doc(db, 'users', userId, 'lists', listId);
-
     // Create a timeout promise to race against the Firestore call
     const { promise: timeoutPromise, cancel } = createTimeoutWithCleanup(
       10_000,
       'Firestore getDoc timed out'
     );
 
-    // Race the getDoc call against the timeout
-    const docSnap = await Promise.race([getDoc(listRef), timeoutPromise]).finally(() => cancel()); // Ensure we clear the timeout timer
+    // Includes items in overflow pages, so the newest additions to a large list show up.
+    const list = await Promise.race([
+      listService.getUserList(userId, listId, {
+        queryKey: 'widgetList',
+        callsite: 'widgetDataService.getUserWatchlist',
+      }),
+      timeoutPromise,
+    ]).finally(() => cancel()); // Ensure we clear the timeout timer
 
-    if (!docSnap.exists()) {
+    if (!list) {
       await setWidgetLoadingState('watchlist', false);
       return { items: [], listName: listId, listId };
     }
 
-    const data = docSnap.data();
-    const listName = data.name || listId;
-    const itemsMap = (data.items || {}) as Record<string, ListMediaItem>;
+    const listName = list.name || listId;
+    const itemsMap = (list.items || {}) as Record<string, ListMediaItem>;
 
     // Sort by addedAt descending and take the first few
     const items = Object.values(itemsMap)

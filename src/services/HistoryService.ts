@@ -2,6 +2,8 @@ import i18n from '../i18n';
 import { normalizeEpisodeTrackingDoc } from './episodeTrackingNormalization';
 import type { WatchedEpisode } from '../types/episodeTracking';
 import { toMillis } from '../utils/timestamps';
+import { raceWithTimeout } from '../utils/timeout';
+import { getFirestoreErrorMessage } from '../firebase/firestore';
 import type {
   ActivityItem,
   HistoryData,
@@ -11,7 +13,9 @@ import type {
   MonthWatchedItem,
 } from '../types/history';
 import { fetchUserCollection } from './firestoreHelpers';
-import type { UserList } from './ListService';
+import { listService, type UserList } from './ListService';
+import { episodeTrackingService } from './EpisodeTrackingService';
+import { getListPageCount } from '@/functions/src/shared/listPages';
 import { normalizeRatingItem, type RatingItem } from './RatingService';
 import { getSignedInUser } from './serviceSupport';
 import {
@@ -23,6 +27,8 @@ import {
 
 /** Episode with show metadata for history display */
 interface EnrichedWatchedEpisode extends WatchedEpisode {
+  /** Overflow page holding the episode (0 = the show's document); used to stamp runtimes. */
+  storagePage?: number;
   tvShowName: string;
   posterPath: string | null;
 }
@@ -82,28 +88,53 @@ class HistoryService {
   private async fetchEpisodeTracking(): Promise<EnrichedWatchedEpisode[]> {
     const result = await fetchUserCollection(
       ['episode_tracking'],
-      (snapshot) => {
-        const episodes: EnrichedWatchedEpisode[] = [];
-        snapshot.docs.forEach((doc) => {
-          const data = normalizeEpisodeTrackingDoc(doc.data(), doc.id);
-          if (!data) return;
-
-          const tvShowName = data.metadata.tvShowName ?? i18n.t('media.unknownShow');
-          const posterPath = data.metadata.posterPath ?? null;
-
-          Object.values(data.episodes).forEach((episode) => {
-            episodes.push({
-              ...episode,
-              tvShowName,
-              posterPath,
-            });
-          });
-        });
-        return episodes;
-      },
+      (snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() })),
       { errorContext: 'HistoryService.fetchEpisodeTracking' }
     );
-    return result ?? [];
+    const user = getSignedInUser();
+
+    // Very long shows keep episodes in overflow pages; only those shows cost an extra read.
+    const showDocs = await Promise.all(
+      (result ?? []).map(async ({ id, data }) => {
+        if (!user || getListPageCount(data) === 0) {
+          return { data, id, overflowItemPages: {} as Record<string, number> };
+        }
+        try {
+          const merged = await raceWithTimeout(
+            episodeTrackingService.mergeOverflowPages(
+              user.uid,
+              id,
+              data,
+              'HistoryService.fetchEpisodeTracking'
+            ),
+            { ms: 10000, message: 'HistoryService.fetchEpisodeTracking pages timed out' }
+          );
+          return { data: merged.data, id, overflowItemPages: merged.overflowItemPages };
+        } catch (error) {
+          console.error('[HistoryService.fetchEpisodeTracking] Pages error:', error);
+          return { data, id, overflowItemPages: {} as Record<string, number> };
+        }
+      })
+    );
+
+    const episodes: EnrichedWatchedEpisode[] = [];
+    showDocs.forEach(({ data: rawData, id, overflowItemPages }) => {
+      const data = normalizeEpisodeTrackingDoc(rawData, id);
+      if (!data) return;
+
+      const tvShowName = data.metadata.tvShowName ?? i18n.t('media.unknownShow');
+      const posterPath = data.metadata.posterPath ?? null;
+
+      Object.entries(data.episodes).forEach(([episodeKey, episode]) => {
+        episodes.push({
+          ...episode,
+          tvShowName,
+          posterPath,
+          storagePage: overflowItemPages[episodeKey] ?? 0,
+        });
+      });
+    });
+    return episodes;
   }
 
   /**
@@ -136,7 +167,31 @@ class HistoryService {
         })) as UserList[],
       { errorContext: 'HistoryService.fetchLists' }
     );
-    return result ?? [];
+    const lists = result ?? [];
+    const user = getSignedInUser();
+    if (!user || !lists.some((list) => getListPageCount(list) > 0)) {
+      return lists;
+    }
+
+    // Large lists keep their newest items in overflow pages. Only those lists cost an extra read.
+    try {
+      return await raceWithTimeout(
+        Promise.all(
+          lists.map((list) =>
+            getListPageCount(list) > 0
+              ? listService.withOverflowPages(user.uid, list, {
+                  queryKey: 'lists',
+                  callsite: 'HistoryService.fetchLists',
+                })
+              : list
+          )
+        ),
+        { ms: 10000, message: 'HistoryService.fetchLists pages timed out' }
+      );
+    } catch (error) {
+      console.error('[HistoryService.fetchLists] Error:', getFirestoreErrorMessage(error));
+      return lists;
+    }
   }
 
   /**
@@ -407,6 +462,8 @@ class HistoryService {
       timestamp: number;
       listId: string;
       itemKey: string;
+      /** Overflow page holding the item (0 = the list document). */
+      page: number;
       mediaType: 'movie' | 'tv';
       mediaId: number;
       runtimeMinutes?: number;
@@ -429,6 +486,7 @@ class HistoryService {
                 timestamp: addedAtMillis,
                 listId: list.id,
                 itemKey,
+                page: list.overflowItemPages?.[itemKey] ?? 0,
                 mediaType: item.media_type,
                 mediaId: item.id,
                 runtimeMinutes: item.runtimeMinutes,
@@ -449,6 +507,7 @@ class HistoryService {
         unstampedEpisodes.push({
           tvShowId: e.tvShowId,
           episodeKey: `${e.seasonNumber}_${e.episodeNumber}`,
+          page: e.storagePage,
           watchedAt: e.watchedAt,
         });
       }
@@ -458,6 +517,7 @@ class HistoryService {
       .map((i) => ({
         listId: i.listId,
         itemKey: i.itemKey,
+        page: i.page,
         mediaType: i.mediaType,
         mediaId: i.mediaId,
         addedAt: i.timestamp,
@@ -733,6 +793,7 @@ class HistoryService {
             unstampedDetailItems.push({
               listId: alreadyWatchedList.id,
               itemKey,
+              page: alreadyWatchedList.overflowItemPages?.[itemKey] ?? 0,
               mediaType: item.media_type,
               mediaId: item.id,
               addedAt: addedAtMillis,
@@ -810,6 +871,7 @@ class HistoryService {
         unstampedDetailEpisodes.push({
           tvShowId: e.tvShowId,
           episodeKey: `${e.seasonNumber}_${e.episodeNumber}`,
+          page: e.storagePage,
           watchedAt: e.watchedAt,
         });
       }

@@ -2058,5 +2058,11 @@
       "name": "Whimsical",
       "description": "Magical adventures"
     }
+  },
+  "updateRequired": {
+    "title": "Update required",
+    "body": "This version of ShowSeek is no longer supported. Update to keep your lists, watch history and ratings in sync.",
+    "updateButton": "Update ShowSeek",
+    "storeUnavailable": "Couldn't open the store. Please update ShowSeek from your app store."
   }
 }

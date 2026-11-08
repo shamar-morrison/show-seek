@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
+  FIRESTORE_DOCUMENT_SIZE_LIMIT_PATTERN,
   FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN,
   TRAKT_ENRICHMENT_COOLDOWN_MS,
   TRAKT_ENRICHMENT_QUEUE_MAX_ATTEMPTS,
@@ -458,7 +459,10 @@ export const normalizeSyncError = (error: unknown): TraktSyncError => {
   }
 
   if (error instanceof Error) {
-    if (FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN.test(error.message)) {
+    if (
+      FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN.test(error.message) ||
+      FIRESTORE_DOCUMENT_SIZE_LIMIT_PATTERN.test(error.message)
+    ) {
       return new TraktSyncError(TRAKT_SYNC_STORAGE_LIMIT_MESSAGE, 'storage_limit', false, {
         snippet: error.message,
       });

@@ -8,6 +8,7 @@ import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { BASE_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
 import { COLORS, FONT_FAMILY } from '@/src/constants/theme';
 import ErrorBoundary from '@/src/components/ErrorBoundary';
+import { UpdateRequiredGate } from '@/src/components/UpdateRequiredGate';
 import { DeepLinkHandler } from '@/src/components/DeepLinkHandler';
 import { AccentColorProvider, useAccentColor } from '@/src/context/AccentColorProvider';
 import { AuthProvider, useAuth } from '@/src/context/auth';
@@ -865,8 +866,10 @@ export default function RootLayout() {
                         <GestureHandlerRootView
                           style={{ flex: 1, backgroundColor: COLORS.background }}
                         >
-                          <DeepLinkHandler />
-                          <RootLayoutNav />
+                          <UpdateRequiredGate>
+                            <DeepLinkHandler />
+                            <RootLayoutNav />
+                          </UpdateRequiredGate>
                         </GestureHandlerRootView>
                       </AccentColorProvider>
                     </RegionProvider>
