@@ -5,8 +5,22 @@ import {
   clearPersistedQueryCache,
   createPersistedQueryCacheSyncController,
   hydratePersistedQueryCache,
+  setPersistedQueryCacheStoreForTests,
   subscribeToPersistedQueryCache,
 } from '@/src/services/queryCachePersistence';
+
+// These tests cover the persistence logic; the file-backed store has its own tests.
+const KEY = 'showseek_query_cache_v1';
+beforeAll(() => {
+  setPersistedQueryCacheStoreForTests({
+    clear: () => AsyncStorage.removeItem(KEY),
+    read: () => AsyncStorage.getItem(KEY),
+    write: (text) => AsyncStorage.setItem(KEY, text),
+  });
+});
+afterAll(() => {
+  setPersistedQueryCacheStoreForTests(null);
+});
 
 const flushMicrotasks = async () => {
   await Promise.resolve();
@@ -153,7 +167,7 @@ describe('queryCachePersistence', () => {
       '[queryCachePersistence] Query cache persist failed:',
       expect.objectContaining({
         error: expect.any(Error),
-        storageKey: 'showseek_query_cache_v1',
+        storage: 'showseek_query_cache_v1.json',
         debounceMs: 300,
         scheduler: 'schedulePersist',
       })
