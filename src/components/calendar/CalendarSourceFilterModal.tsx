@@ -95,7 +95,13 @@ export function CalendarSourceFilterModal({
     setLocalSources([...CALENDAR_SOURCE_FILTERS]);
   };
 
+  // Nothing to apply when the same sources are chosen (order doesn't matter).
+  const canApply =
+    localSources.length !== selectedSources.length ||
+    localSources.some((source) => !selectedSources.includes(source));
+
   const handleApply = () => {
+    if (!canApply) return;
     onApply(localSources);
     onClose();
   };
@@ -174,8 +180,16 @@ export function CalendarSourceFilterModal({
               <Text style={styles.secondaryButtonText}>{t('common.reset')}</Text>
             </Pressable>
             <Pressable
-              style={[styles.primaryButton, { backgroundColor: accentColor }]}
+              style={[
+                styles.primaryButton,
+                { backgroundColor: accentColor },
+                !canApply && styles.primaryButtonDisabled,
+              ]}
               onPress={handleApply}
+              disabled={!canApply}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canApply }}
+              testID="calendar-source-apply-button"
             >
               <Text style={styles.primaryButtonText}>{t('common.apply')}</Text>
             </Pressable>
@@ -246,6 +260,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.m,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.5,
   },
   primaryButtonText: {
     color: COLORS.white,

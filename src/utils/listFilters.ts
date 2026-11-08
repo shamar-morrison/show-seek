@@ -4,12 +4,26 @@ export type MediaTypeFilter = 'all' | 'movie' | 'tv';
 
 export type GenreOperator = 'and' | 'or';
 
+export type RuntimeFilter =
+  | 'any'
+  | 'under30'
+  | '30to60'
+  | '60to90'
+  | '90to120'
+  | '120to150'
+  | 'over150';
+
+/** 'rated' / 'unrated' check for a rating; a number N (1-9) matches ratings of N or higher. */
+export type UserRatingFilter = 'any' | 'rated' | 'unrated' | number;
+
 export interface WatchStatusFilterState {
   genres: number[];
   genreOperator: GenreOperator;
   year: number | null;
   rating: number;
   mediaType: MediaTypeFilter;
+  runtime: RuntimeFilter;
+  userRating: UserRatingFilter;
 }
 
 export const DEFAULT_WATCH_STATUS_FILTERS: WatchStatusFilterState = {
@@ -18,7 +32,54 @@ export const DEFAULT_WATCH_STATUS_FILTERS: WatchStatusFilterState = {
   year: null,
   rating: 0,
   mediaType: 'all',
+  runtime: 'any',
+  userRating: 'any',
 };
+
+/** Runtime ranges in minutes; `min` is inclusive and `max` exclusive. TV uses episode length. */
+export const RUNTIME_RANGES: Record<Exclude<RuntimeFilter, 'any'>, { min: number; max: number }> = {
+  under30: { min: 0, max: 30 },
+  '30to60': { min: 30, max: 60 },
+  '60to90': { min: 60, max: 90 },
+  '90to120': { min: 90, max: 120 },
+  '120to150': { min: 120, max: 150 },
+  over150: { min: 150, max: Infinity },
+};
+
+export const RUNTIME_FILTER_VALUES: Exclude<RuntimeFilter, 'any'>[] = [
+  'under30',
+  '30to60',
+  '60to90',
+  '90to120',
+  '120to150',
+  'over150',
+];
+
+/** Extra per-item data for filters that aren't stored on list items. */
+export interface ListFilterContext {
+  /** User ratings keyed by `${media_type}:${id}`. */
+  userRatings?: Map<string, number>;
+  /** Runtimes (minutes) found after load, keyed by `${media_type}:${id}`. */
+  runtimes?: Map<string, number>;
+}
+
+export function getMediaKey(mediaType: 'movie' | 'tv', id: number): string {
+  return `${mediaType}:${id}`;
+}
+
+function matchesRuntime(minutes: number | undefined, filter: RuntimeFilter): boolean {
+  if (filter === 'any') return true;
+  if (minutes === undefined || !(minutes > 0)) return false;
+  const { min, max } = RUNTIME_RANGES[filter];
+  return minutes >= min && minutes < max;
+}
+
+function matchesUserRating(rating: number | undefined, filter: UserRatingFilter): boolean {
+  if (filter === 'any') return true;
+  if (filter === 'rated') return rating !== undefined;
+  if (filter === 'unrated') return rating === undefined;
+  return rating !== undefined && rating >= filter;
+}
 
 interface FilterableMedia {
   genre_ids?: number[];
@@ -31,10 +92,11 @@ interface FilterableMedia {
 /**
  * Filter list media items based on filter criteria
  */
-export function filterMediaItems(
-  items: ListMediaItem[],
-  filters: WatchStatusFilterState
-): ListMediaItem[] {
+export function filterMediaItems<T extends ListMediaItem>(
+  items: T[],
+  filters: WatchStatusFilterState,
+  context: ListFilterContext = {}
+): T[] {
   return items.filter((item) => {
     // Media type filter
     if (filters.mediaType !== 'all') {
@@ -82,6 +144,26 @@ export function filterMediaItems(
 
       const itemYear = parseInt(yearMatch[1], 10);
       if (itemYear !== filters.year) {
+        return false;
+      }
+    }
+
+    const key = getMediaKey(item.media_type, item.id);
+
+    // Runtime filter (stored runtime first, then runtimes found after load)
+    if (filters.runtime !== 'any') {
+      const minutes =
+        item.runtimeMinutes != null && item.runtimeMinutes > 0
+          ? item.runtimeMinutes
+          : context.runtimes?.get(key);
+      if (!matchesRuntime(minutes, filters.runtime)) {
+        return false;
+      }
+    }
+
+    // User rating filter
+    if (filters.userRating !== 'any') {
+      if (!matchesUserRating(context.userRatings?.get(key), filters.userRating)) {
         return false;
       }
     }
@@ -159,6 +241,31 @@ export function hasActiveFilters(filters: WatchStatusFilterState): boolean {
     filters.genres.length > 0 ||
     filters.year !== DEFAULT_WATCH_STATUS_FILTERS.year ||
     filters.rating !== DEFAULT_WATCH_STATUS_FILTERS.rating ||
-    filters.mediaType !== DEFAULT_WATCH_STATUS_FILTERS.mediaType
+    filters.mediaType !== DEFAULT_WATCH_STATUS_FILTERS.mediaType ||
+    filters.runtime !== DEFAULT_WATCH_STATUS_FILTERS.runtime ||
+    filters.userRating !== DEFAULT_WATCH_STATUS_FILTERS.userRating
+  );
+}
+
+/**
+ * Whether two filter states would show the same results, so applying one over the other
+ * changes nothing. Genre order is ignored, and the AND/OR operator only matters once a
+ * genre is chosen.
+ */
+export function areWatchStatusFiltersEqual(
+  a: WatchStatusFilterState,
+  b: WatchStatusFilterState
+): boolean {
+  const genresA = new Set(a.genres);
+  const sameGenres =
+    genresA.size === new Set(b.genres).size && b.genres.every((id) => genresA.has(id));
+  return (
+    sameGenres &&
+    (a.genres.length === 0 || a.genreOperator === b.genreOperator) &&
+    a.year === b.year &&
+    a.rating === b.rating &&
+    a.mediaType === b.mediaType &&
+    a.runtime === b.runtime &&
+    a.userRating === b.userRating
   );
 }

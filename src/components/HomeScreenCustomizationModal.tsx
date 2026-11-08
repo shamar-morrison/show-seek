@@ -201,7 +201,14 @@ const HomeScreenCustomizationModal = forwardRef<
     [canAccessTrailers, isPremiumLoading, router, t]
   );
 
+  // Nothing to apply when the same lists are chosen in the same order (order sets the
+  // order of Home sections).
+  const canApply =
+    pendingSelections.length !== resolvedHomeScreenLists.length ||
+    pendingSelections.some((item, index) => item.id !== resolvedHomeScreenLists[index]?.id);
+
   const handleApply = async () => {
+    if (!canApply) return;
     try {
       await updateMutation.mutateAsync(pendingSelections);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -354,10 +361,13 @@ const HomeScreenCustomizationModal = forwardRef<
             style={[
               styles.applyButton,
               { backgroundColor: accentColor },
-              updateMutation.isPending && styles.disabledButton,
+              (updateMutation.isPending || !canApply) && styles.disabledButton,
             ]}
             onPress={handleApply}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || !canApply}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: updateMutation.isPending || !canApply }}
+            testID="home-customization-apply-button"
           >
             {updateMutation.isPending ? (
               <ActivityIndicator size="small" color={COLORS.white} />

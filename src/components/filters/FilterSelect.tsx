@@ -24,6 +24,7 @@ export interface FilterSelectProps {
   onSelect: (val: any) => void;
   placeholder?: string;
   isActive?: boolean;
+  testID?: string;
 }
 
 /**
@@ -38,6 +39,7 @@ export function FilterSelect({
   onSelect,
   placeholder,
   isActive = false,
+  testID,
 }: FilterSelectProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -51,12 +53,16 @@ export function FilterSelect({
         style={[styles.selectButton, isActive && { borderColor: accentBorder(accentColor) }]}
         onPress={() => setVisible(true)}
         activeOpacity={ACTIVE_OPACITY}
+        accessibilityRole="button"
+        accessibilityLabel={selectedOption ? `${label}: ${selectedOption.label}` : label}
+        testID={testID}
       >
         <Text
           style={[
             styles.selectButtonText,
             (value == null || value === 0) && { color: COLORS.textSecondary },
           ]}
+          numberOfLines={1}
         >
           {selectedOption ? selectedOption.label : (placeholder ?? t('filters.selectPlaceholder'))}
         </Text>

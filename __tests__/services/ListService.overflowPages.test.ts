@@ -449,3 +449,57 @@ describe('ListService overflow pages', () => {
     expect(batches[2].delete.mock.calls[0][0]).toEqual({ path: `${LISTS}/huge-list` });
   });
 });
+
+describe('ListService runtime leftovers', () => {
+  const horrorWith = (items: Record<string, unknown>) => {
+    (getDocs as jest.Mock).mockImplementation(async (ref: { path: string }) => {
+      if (ref.path === LISTS) {
+        return { size: 1, docs: [snapshotDoc('horror', { name: 'horror', items })] };
+      }
+      throw new Error(`Unexpected read ${ref.path}`);
+    });
+    (updateDoc as jest.Mock).mockResolvedValue(undefined);
+  };
+
+  it('shows the real legacy item and removes the stray entry, keeping its runtime', async () => {
+    horrorWith({
+      '123': { ...movie(123), addedAt: 1 },
+      'movie-123': { runtimeMinutes: 95 },
+      'movie-200': { ...movie(200), addedAt: 2 },
+    });
+
+    const lists = await listService.getUserLists(USER);
+    const horror = lists.find((list) => list.id === 'horror')!;
+
+    expect(horror.items['movie-123']).toEqual({ ...movie(123), addedAt: 1, runtimeMinutes: 95 });
+    expect(horror.items['movie-200'].title).toBe('Movie 200');
+    expect(horror.storedItemKeys).toEqual({ 'movie-123': '123' });
+    expect(updateDoc).toHaveBeenCalledTimes(1);
+    expect(updateDoc).toHaveBeenCalledWith(
+      { path: `${LISTS}/horror` },
+      {
+        'items.movie-123': expect.anything(),
+        'items.123.runtimeMinutes': 95,
+      }
+    );
+  });
+
+  it('writes nothing when a list has no stray entries', async () => {
+    horrorWith({
+      '123': { ...movie(123), addedAt: 1 },
+      'movie-200': { ...movie(200), addedAt: 2 },
+    });
+
+    await listService.getUserLists(USER);
+
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it('leaves a runtime-only entry alone when there is no real item to keep', async () => {
+    horrorWith({ 'movie-123': { runtimeMinutes: 95 } });
+
+    await listService.getUserLists(USER);
+
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+});

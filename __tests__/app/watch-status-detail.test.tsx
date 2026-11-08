@@ -67,6 +67,18 @@ jest.mock('@/src/hooks/useLists', () => ({
   }),
 }));
 
+jest.mock('@/src/components/library/ActiveFiltersBar', () => ({
+  ActiveFiltersBar: () => null,
+}));
+
+jest.mock('@/src/hooks/useListItemRuntimes', () => ({
+  useListItemRuntimes: () => ({ runtimes: new Map(), isResolving: false, done: 0, total: 0 }),
+}));
+
+jest.mock('@/src/hooks/useRatings', () => ({
+  useUserRatingMap: () => ({ ratings: new Map(), isLoading: false }),
+}));
+
 jest.mock('@/src/hooks/useHeaderSearch', () => ({
   useHeaderSearch: (...args: unknown[]) => mockUseHeaderSearch(...args),
 }));

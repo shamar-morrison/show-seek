@@ -1096,6 +1096,9 @@ export default function MovieDetailScreen() {
               vote_average: movie.vote_average,
               release_date: displayReleaseDate || movie.release_date,
               genre_ids: movie.genres?.map((g) => g.id) || [],
+              ...(movie.runtime != null && movie.runtime > 0
+                ? { runtimeMinutes: movie.runtime }
+                : {}),
             }}
             onShowToast={(message) => toastRef.current?.show(message)}
           />

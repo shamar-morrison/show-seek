@@ -1600,10 +1600,30 @@
   },
   "filters": {
     "anyRating": "Cualquier puntuación",
-    "mediaType": "Tipo de contenido",
     "searchPlaceholder": "Buscar...",
     "selectPlaceholder": "Selecciona...",
-    "starsPlus": "{{count}}+ estrellas"
+    "starsPlus": "{{count}}+ estrellas",
+    "type": "Tipo",
+    "tmdbRating": "Calificación de TMDB",
+    "yourRating": "Tu calificación",
+    "runtime": "Duración",
+    "anyRuntime": "Cualquier duración",
+    "rated": "Calificado",
+    "notRated": "Sin calificar",
+    "runtimeOptions": {
+      "under30": "Menos de 30 min",
+      "30to60": "30–60 min",
+      "60to90": "1–1.5 h",
+      "90to120": "1.5–2 h",
+      "120to150": "2–2.5 h",
+      "over150": "Más de 2.5 h"
+    },
+    "lookingUpRuntimes": "Buscando duraciones… {{done}}/{{total}}",
+    "matchCount_one": "{{count}} título coincide",
+    "matchCount_other": "{{count}} títulos coinciden",
+    "noMatches": "Ningún título coincide con estos filtros",
+    "removeFilter": "Quitar {{name}}",
+    "editFilters": "Abre los filtros"
   },
   "lists": {
     "alreadyWatched": "Ya vistos",
@@ -1918,7 +1938,22 @@
     "lastUpdated": "Última actualización",
     "lastWatched": "Visto por última vez",
     "progress": "Progreso",
-    "recentlyAdded": "Añadido recientemente"
+    "recentlyAdded": "Añadido recientemente",
+    "tmdbRating": "Calificación de TMDB",
+    "runtime": "Duración",
+    "title": "Ordenar",
+    "orderTitle": "Orden",
+    "directions": {
+      "newestFirst": "Del más reciente al más antiguo",
+      "oldestFirst": "Del más antiguo al más reciente",
+      "highestFirst": "De mayor a menor",
+      "lowestFirst": "De menor a mayor",
+      "longestFirst": "Del más largo al más corto",
+      "shortestFirst": "Del más corto al más largo",
+      "aToZ": "De la A a la Z",
+      "zToA": "De la Z a la A"
+    },
+    "editSort": "Abre las opciones de orden"
   },
   "stats": {
     "activityPatterns": "Patrones de actividad",

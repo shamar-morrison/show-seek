@@ -151,10 +151,102 @@ describe('listFilters', () => {
         year: 2024,
         rating: 7,
         mediaType: 'movie',
+        runtime: 'any',
+        userRating: 'any',
       };
       const result = filterMediaItems(mockItems, filters);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(1);
+    });
+
+    describe('runtime', () => {
+      const runtimeItems = [
+        { id: 10, media_type: 'movie', title: 'Short', runtimeMinutes: 29 },
+        { id: 11, media_type: 'movie', title: 'Edge', runtimeMinutes: 90 },
+        { id: 12, media_type: 'movie', title: 'Long', runtimeMinutes: 151 },
+        { id: 13, media_type: 'tv', name: 'Looked up later' },
+        { id: 14, media_type: 'movie', title: 'Unknown' },
+      ] as ListMediaItem[];
+
+      it('matches stored runtimes with an inclusive min and exclusive max', () => {
+        const under30 = filterMediaItems(runtimeItems, {
+          ...DEFAULT_WATCH_STATUS_FILTERS,
+          runtime: 'under30',
+        });
+        expect(under30.map((item) => item.id)).toEqual([10]);
+
+        const ninetyTo120 = filterMediaItems(runtimeItems, {
+          ...DEFAULT_WATCH_STATUS_FILTERS,
+          runtime: '90to120',
+        });
+        expect(ninetyTo120.map((item) => item.id)).toEqual([11]);
+
+        const over150 = filterMediaItems(runtimeItems, {
+          ...DEFAULT_WATCH_STATUS_FILTERS,
+          runtime: 'over150',
+        });
+        expect(over150.map((item) => item.id)).toEqual([12]);
+      });
+
+      it('uses runtimes found after load and leaves out items with no known runtime', () => {
+        const result = filterMediaItems(
+          runtimeItems,
+          { ...DEFAULT_WATCH_STATUS_FILTERS, runtime: '30to60' },
+          { runtimes: new Map([['tv:13', 45]]) }
+        );
+        expect(result.map((item) => item.id)).toEqual([13]);
+      });
+
+      it('prefers the stored runtime over a found one', () => {
+        const result = filterMediaItems(
+          runtimeItems,
+          { ...DEFAULT_WATCH_STATUS_FILTERS, runtime: 'under30' },
+          { runtimes: new Map([['movie:10', 100]]) }
+        );
+        expect(result.map((item) => item.id)).toEqual([10]);
+      });
+    });
+
+    describe('your rating', () => {
+      const userRatings = new Map([
+        ['movie:1', 9],
+        ['tv:2', 6],
+      ]);
+
+      it('keeps only rated or only unrated items', () => {
+        const rated = filterMediaItems(
+          mockItems,
+          { ...DEFAULT_WATCH_STATUS_FILTERS, userRating: 'rated' },
+          { userRatings }
+        );
+        expect(rated.map((item) => item.id).sort()).toEqual([1, 2]);
+
+        const unrated = filterMediaItems(
+          mockItems,
+          { ...DEFAULT_WATCH_STATUS_FILTERS, userRating: 'unrated' },
+          { userRatings }
+        );
+        expect(unrated.map((item) => item.id)).not.toContain(1);
+        expect(unrated.map((item) => item.id)).not.toContain(2);
+        expect(unrated).toHaveLength(mockItems.length - 2);
+      });
+
+      it('matches ratings at or above the chosen score', () => {
+        const result = filterMediaItems(
+          mockItems,
+          { ...DEFAULT_WATCH_STATUS_FILTERS, userRating: 7 },
+          { userRatings }
+        );
+        expect(result.map((item) => item.id)).toEqual([1]);
+      });
+
+      it('treats ratings as missing when no ratings are passed', () => {
+        const result = filterMediaItems(mockItems, {
+          ...DEFAULT_WATCH_STATUS_FILTERS,
+          userRating: 'rated',
+        });
+        expect(result).toEqual([]);
+      });
     });
   });
 
@@ -267,6 +359,13 @@ describe('listFilters', () => {
 
     it('should return true when genres are set', () => {
       expect(hasActiveFilters({ ...DEFAULT_WATCH_STATUS_FILTERS, genres: [28] })).toBe(true);
+    });
+
+    it('should return true when runtime or your rating is set', () => {
+      expect(hasActiveFilters({ ...DEFAULT_WATCH_STATUS_FILTERS, runtime: '60to90' })).toBe(true);
+      expect(hasActiveFilters({ ...DEFAULT_WATCH_STATUS_FILTERS, userRating: 'unrated' })).toBe(
+        true
+      );
     });
 
     it('should return true when year is set', () => {

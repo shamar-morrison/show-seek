@@ -1,4 +1,4 @@
-import { normalizeListItemsMap } from '@/src/utils/listItemKeys';
+import { getStoredListItemKeys, normalizeListItemsMap } from '@/src/utils/listItemKeys';
 
 describe('listItemKeys utilities', () => {
   it('normalizes valid integer ids into composite keys', () => {
@@ -71,5 +71,41 @@ describe('listItemKeys utilities', () => {
         title: 'Fractional Movie',
       },
     });
+  });
+
+  describe('runtime-only leftovers', () => {
+    const legacyItem = { id: 123, media_type: 'movie' as const, title: 'Legacy Movie' };
+
+    it('keeps the real legacy item instead of a leftover saved under its new-style key', () => {
+      const normalized = normalizeListItemsMap({
+        '123': legacyItem,
+        'movie-123': { runtimeMinutes: 95 },
+      } as any);
+
+      expect(normalized).toEqual({ 'movie-123': { ...legacyItem, runtimeMinutes: 95 } });
+    });
+
+    it("doesn't overwrite a runtime the real item already has", () => {
+      const normalized = normalizeListItemsMap({
+        '123': { ...legacyItem, runtimeMinutes: 100 },
+        'movie-123': { runtimeMinutes: 95 },
+      } as any);
+
+      expect(normalized['movie-123']).toEqual({ ...legacyItem, runtimeMinutes: 100 });
+    });
+
+    it('drops a leftover with no real item', () => {
+      expect(normalizeListItemsMap({ 'movie-9': { runtimeMinutes: 95 } } as any)).toEqual({});
+    });
+  });
+
+  it('maps normalized keys to the legacy keys items are stored under', () => {
+    expect(
+      getStoredListItemKeys({
+        '123': { id: 123, media_type: 'movie' },
+        'tv-7': { id: 7, media_type: 'tv' },
+        'movie-123': { runtimeMinutes: 95 },
+      } as any)
+    ).toEqual({ 'movie-123': '123' });
   });
 });

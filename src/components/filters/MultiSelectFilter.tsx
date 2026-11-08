@@ -112,6 +112,13 @@ export function MultiSelectFilter({
     );
   };
 
+  // Nothing to apply when the draft matches the committed selection; the AND/OR
+  // operator only matters once something is selected.
+  const canApply =
+    draftIds.length !== selectedIds.length ||
+    draftIds.some((id) => !selectedIds.includes(id)) ||
+    (draftIds.length > 0 && draftOperator !== operator);
+
   const handleClearDraft = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setDraftIds([]);
@@ -265,9 +272,17 @@ export function MultiSelectFilter({
                   <Text style={styles.clearButtonText}>{t('common.clear')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.footerApplyButton, { backgroundColor: accentColor }]}
+                  style={[
+                    styles.footerApplyButton,
+                    { backgroundColor: accentColor },
+                    !canApply && styles.footerApplyButtonDisabled,
+                  ]}
                   onPress={handleApply}
                   activeOpacity={ACTIVE_OPACITY}
+                  disabled={!canApply}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !canApply }}
+                  testID="multi-select-apply-button"
                 >
                   <Text style={styles.footerApplyButtonText}>{t('common.apply')}</Text>
                 </TouchableOpacity>

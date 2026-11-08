@@ -114,6 +114,22 @@ describe('CalendarSourceFilterModal', () => {
     jest.clearAllMocks();
   });
 
+  it('disables Apply until the chosen sources change, ignoring order', () => {
+    const { onApply } = renderModal();
+
+    const apply = () => screen.getByTestId('calendar-source-apply-button');
+    expect(apply().props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.press(apply());
+    expect(onApply).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByText('Road Trip'));
+    expect(apply().props.accessibilityState).toMatchObject({ disabled: false });
+
+    // Toggling back to the original set makes Apply pointless again.
+    fireEvent.press(screen.getByText('Road Trip'));
+    expect(apply().props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
   it('renders default and custom list options', () => {
     renderModal();
 

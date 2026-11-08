@@ -9,6 +9,8 @@ import {
   buildListItemKey,
   getLegacyListItemKey,
   getListItemCandidateKeys,
+  getStoredListItemKeys,
+  isRuntimeStampLeftover,
   normalizeListItemsMap,
 } from '@/src/utils/listItemKeys';
 import {
@@ -74,6 +76,12 @@ export interface UserList {
   pageSizes?: number[];
   /** Item key → overflow page holding it. Only set when `pageCount` > 0. */
   overflowItemPages?: Record<string, number>;
+  /**
+   * Normalized item key → the key the item is stored under, where they differ (legacy numeric
+   * keys). Set on every list loaded with normalized keys, so writes by field path can target
+   * the real entry. Absent on lists cached before this field existed.
+   */
+  storedItemKeys?: Record<string, string>;
 }
 
 /** Firestore's error when a write would push a document past 1 MiB. */
@@ -347,11 +355,59 @@ class ListService {
   }
 
   private normalizeList<T extends Partial<UserList>>(list: T): T {
-    const items = normalizeListItemsMap(list.items as Record<string, ListMediaItem> | undefined);
+    const rawItems = list.items as Record<string, ListMediaItem> | undefined;
     return {
       ...list,
-      items,
+      items: normalizeListItemsMap(rawItems),
+      storedItemKeys: getStoredListItemKeys(rawItems),
     };
+  }
+
+  /**
+   * Removes entries left by an earlier runtime save that wrote under an item's new-style key
+   * (`movie-123`) while the item was stored under its legacy key (`123`), creating an entry
+   * holding only `runtimeMinutes`. Such entries sit in the list document. The runtime moves
+   * onto the real item when it is in the same document. Runs only when one is found, without
+   * blocking the load.
+   */
+  private repairRuntimeStampLeftovers(
+    userId: string,
+    records: { id: string; items: Record<string, ListMediaItem>; layout: ListPageLayout }[]
+  ): void {
+    records.forEach((record) => {
+      const updates: Record<string, unknown> = {};
+      Object.entries(record.items).forEach(([key, value]) => {
+        if (!isRuntimeStampLeftover(value)) return;
+        if ((record.layout.overflowItemPages[key] ?? 0) !== 0) return;
+        const match = /^(movie|tv)-(\d+)$/.exec(key);
+        if (!match) return;
+        const legacyKey = getLegacyListItemKey(Number(match[2]));
+        const realItem = record.items[legacyKey];
+        // Only clean up when the real item is there to keep; never remove anything else.
+        if (!realItem || realItem.media_type !== match[1] || realItem.id !== Number(match[2])) {
+          return;
+        }
+        updates[`items.${key}`] = deleteField();
+        const minutes = value.runtimeMinutes;
+        const realItemInDocument = (record.layout.overflowItemPages[legacyKey] ?? 0) === 0;
+        if (
+          realItemInDocument &&
+          !(realItem.runtimeMinutes != null && realItem.runtimeMinutes > 0) &&
+          minutes != null &&
+          minutes > 0
+        ) {
+          updates[`items.${legacyKey}.runtimeMinutes`] = minutes;
+        }
+      });
+      if (Object.keys(updates).length === 0) return;
+      console.warn('[ListService] Removing stray runtime entries', {
+        listId: record.id,
+        count: Object.keys(updates).filter((path) => !path.endsWith('.runtimeMinutes')).length,
+      });
+      void updateDoc(this.getUserListRef(userId, record.id), updates).catch((error) => {
+        console.warn('[ListService] Stray runtime cleanup failed:', error);
+      });
+    });
   }
 
   private isCreateFallbackEligibleError(error: unknown): boolean {
@@ -389,6 +445,7 @@ class ListService {
         timeout.cancel();
       });
 
+      this.repairRuntimeStampLeftovers(userId, records);
       const lists: UserList[] = records.map((record) => this.toUserList(record));
 
       const mergedLists = [...lists];
