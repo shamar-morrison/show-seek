@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
+import { planEpisodeWrites, readEpisodeTracking, stageEpisodeWrites } from '../episodePagesAdmin';
 import {
   planPagedListWrites,
   readPagedList,
@@ -121,29 +122,35 @@ export async function writeStremioWatch(
 
     const { show, episode } = title;
     const trackingRef = userRef.collection('episode_tracking').doc(String(show.id));
-    const tracking = await transaction.get(trackingRef);
+    // Includes episodes in overflow pages (very long shows).
+    const tracking = await readEpisodeTracking(trackingRef, transaction);
     const episodeKey = `${episode.season_number}_${episode.episode_number}`;
-    if (Object.prototype.hasOwnProperty.call(asMap(tracking.data()?.episodes), episodeKey)) {
+    if (Object.prototype.hasOwnProperty.call(tracking.items, episodeKey)) {
       return { outcome: 'skipped_duplicate' };
     }
     const watching = preferenceEnabled(userData, 'autoAddToWatching')
       ? await readPagedList(lists.doc('currently-watching'), transaction) : null;
 
-    transaction.set(trackingRef, {
-      episodes: {
-        [episodeKey]: {
-          episodeId: episode.id,
-          tvShowId: show.id,
-          seasonNumber: episode.season_number,
-          episodeNumber: episode.episode_number,
-          watchedAt: receivedAt,
-          episodeName: episode.name,
-          episodeAirDate: episode.air_date,
-          ...(episode.runtime !== null && episode.runtime > 0 ? { runtimeMinutes: episode.runtime } : {}),
+    stageEpisodeWrites(
+      transaction,
+      tracking,
+      planEpisodeWrites(tracking, {
+        set: {
+          [episodeKey]: {
+            episodeId: episode.id,
+            tvShowId: show.id,
+            seasonNumber: episode.season_number,
+            episodeNumber: episode.episode_number,
+            watchedAt: receivedAt,
+            episodeName: episode.name,
+            episodeAirDate: episode.air_date,
+            ...(episode.runtime !== null && episode.runtime > 0 ? { runtimeMinutes: episode.runtime } : {}),
+          },
         },
-      },
-      metadata: { tvShowName: show.name, posterPath: show.poster_path, lastUpdated: receivedAt },
-    }, { merge: true });
+      }),
+      { metadata: { tvShowName: show.name, posterPath: show.poster_path, lastUpdated: receivedAt } },
+      receivedAt
+    );
     const listOutcome = watching ? addListItem(transaction, watching, 'Watching', {
       id: show.id,
       title: show.name,

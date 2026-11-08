@@ -2,6 +2,7 @@ import { tmdbApi } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
 import { toMillis } from '@/src/utils/timestamps';
 import { getSignedInUser } from '@/src/services/serviceSupport';
+import { EPISODE_PAGES_COLLECTION } from '@/functions/src/shared/episodePages';
 import {
   getListItemPageDocId,
   LIST_ITEM_PAGES_COLLECTION,
@@ -38,6 +39,8 @@ export const BACKFILL_BATCH_GAP_MS = 250;
 export interface UnstampedEpisode {
   tvShowId: number;
   episodeKey: string;
+  /** Overflow page holding the episode (0 or absent = the show's document). */
+  page?: number;
   watchedAt: number;
 }
 
@@ -70,6 +73,8 @@ export interface BackfillDeps {
 export interface RuntimeStamps {
   /** showId -> (episodeKey -> measured minutes) */
   episodesByShow: Map<number, Map<string, number>>;
+  /** `${showId}/${episodeKey}` -> overflow page holding the episode; absent = the show's document. */
+  episodePages?: Map<string, number>;
   /** listId -> (itemKey -> measured minutes) */
   itemsByList: Map<string, Map<string, number>>;
   /** `${listId}/${itemKey}` -> overflow page holding the item; absent = the list document. */
@@ -102,15 +107,33 @@ function defaultStampRuntimes(stamps: RuntimeStamps): void {
   const writes: Promise<unknown>[] = [];
 
   stamps.episodesByShow.forEach((episodes, tvShowId) => {
-    writes.push(
-      setDoc(
-        doc(db, 'users', user.uid, 'episode_tracking', String(tvShowId)),
-        { episodes: Object.fromEntries([...episodes].map(([key, minutes]) => [key, { runtimeMinutes: minutes }])) },
-        { merge: true }
-      ).catch((error) => {
-        console.warn('[WatchTimeBackfill] Episode stamp failed:', error);
-      })
-    );
+    // Stamp each episode in the document that holds it: the show's document or an overflow page.
+    const episodesByPage = new Map<number, Record<string, { runtimeMinutes: number }>>();
+    episodes.forEach((minutes, key) => {
+      const page = stamps.episodePages?.get(`${tvShowId}/${key}`) ?? 0;
+      const pageEpisodes = episodesByPage.get(page) ?? {};
+      pageEpisodes[key] = { runtimeMinutes: minutes };
+      episodesByPage.set(page, pageEpisodes);
+    });
+    episodesByPage.forEach((pageEpisodes, page) => {
+      const ref =
+        page > 0
+          ? doc(
+              db,
+              'users',
+              user.uid,
+              'episode_tracking',
+              String(tvShowId),
+              EPISODE_PAGES_COLLECTION,
+              getListItemPageDocId(page)
+            )
+          : doc(db, 'users', user.uid, 'episode_tracking', String(tvShowId));
+      writes.push(
+        setDoc(ref, { episodes: pageEpisodes }, { merge: true }).catch((error) => {
+          console.warn('[WatchTimeBackfill] Episode stamp failed:', error);
+        })
+      );
+    });
   });
 
   stamps.itemsByList.forEach((items, listId) => {
@@ -290,6 +313,7 @@ export async function resolveMissingRuntimes(
 
   // Build in-memory minutes + measured-only stamps.
   const stamps: RuntimeStamps = {
+    episodePages: new Map(),
     episodesByShow: new Map(),
     itemPages: new Map(),
     itemsByList: new Map(),
@@ -308,6 +332,9 @@ export async function resolveMissingRuntimes(
         stamps.episodesByShow.set(ep.tvShowId, showStamps);
       }
       showStamps.set(ep.episodeKey, measured);
+      if (ep.page) {
+        stamps.episodePages?.set(`${ep.tvShowId}/${ep.episodeKey}`, ep.page);
+      }
     }
   });
 

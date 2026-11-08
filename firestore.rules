@@ -234,8 +234,27 @@ service cloud.firestore {
           && request.resource.data.metadata.keys().hasAll(['tvShowName', 'lastUpdated'])
           && request.resource.data.episodes is map;
         allow update: if canWriteUserData(userId)
-          && request.resource.data.keys().hasAll(['episodes', 'metadata']);
+          && request.resource.data.keys().hasAll(['episodes', 'metadata'])
+          // pageCount (overflow pages in use) only ever grows; see functions/src/shared/episodePages.ts.
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['pageCount'])
+            || (
+              request.resource.data.pageCount is int
+              && request.resource.data.pageCount >= ('pageCount' in resource.data ? resource.data.pageCount : 0)
+              && request.resource.data.pageCount <= 1000
+            )
+          );
         allow delete: if canWriteUserData(userId);
+
+        // Overflow pages: watched episodes beyond what fits in the show's document.
+        match /episode_pages/{pageId} {
+          allow read: if isNonAnonymousOwner(userId);
+          allow create, update: if canWriteUserData(userId)
+            && pageId.matches('^[1-9][0-9]{0,3}$')
+            && request.resource.data.keys().hasOnly(['episodes', 'createdAt', 'updatedAt'])
+            && request.resource.data.episodes is map;
+          allow delete: if canWriteUserData(userId);
+        }
       }
 
       // Collection tracking (movie collections like Lord of the Rings, Marvel, etc.)

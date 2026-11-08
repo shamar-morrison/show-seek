@@ -14,6 +14,11 @@ import {
   readPagedList,
   type PagedList,
 } from '@/functions/src/listPagesAdmin';
+import {
+  commitEpisodeWrites,
+  planEpisodeWrites,
+  readEpisodeTracking,
+} from '@/functions/src/episodePagesAdmin';
 import { LIST_PAGE_CAPACITY } from '@/functions/src/shared/listPages';
 
 type Store = Map<string, Record<string, unknown>>;
@@ -46,20 +51,23 @@ function createDb(store: Store) {
     id: path.split('/').at(-1),
     ref: ref(path),
   });
-  const write = (path: string, data: Record<string, unknown>, merge?: boolean) => {
-    const current = merge ? { ...(store.get(path) ?? {}) } : {};
-    Object.entries(data).forEach(([key, value]) => {
-      if (key === 'items' && merge) {
-        const items = { ...((current.items as Record<string, unknown>) ?? {}) };
-        Object.entries(value as Record<string, unknown>).forEach(([itemKey, itemValue]) => {
-          if (itemValue === DELETE) delete items[itemKey];
-          else items[itemKey] = itemValue;
-        });
-        current.items = items;
+  // Like Firestore's set(..., { merge: true }): maps merge field by field, DELETE removes a key.
+  const mergeInto = (target: Record<string, unknown>, patch: Record<string, unknown>) => {
+    Object.entries(patch).forEach(([key, value]) => {
+      if (value === DELETE) {
+        delete target[key];
+      } else if (value && typeof value === 'object' && !Array.isArray(value) && key !== 'metadata') {
+        const nested = { ...((target[key] as Record<string, unknown>) ?? {}) };
+        mergeInto(nested, value as Record<string, unknown>);
+        target[key] = nested;
       } else {
-        current[key] = value;
+        target[key] = value;
       }
     });
+  };
+  const write = (path: string, data: Record<string, unknown>, merge?: boolean) => {
+    const current = merge ? { ...(store.get(path) ?? {}) } : {};
+    mergeInto(current, data);
     store.set(path, current);
   };
   const db: any = {
@@ -156,5 +164,32 @@ describe('paged list writes (server)', () => {
 
     expect(Object.keys(list.items)).toHaveLength(3);
     expect(collectionSpy).not.toHaveBeenCalled();
+  });
+
+  it('pages watched episodes under their own field and subcollection', async () => {
+    const SHOW = 'users/u/episode_tracking/42';
+    const episodes = (count: number) =>
+      Object.fromEntries(
+        Array.from({ length: count }, (_, i) => [`1_${i + 1}`, { episodeNumber: i + 1, seasonNumber: 1 }])
+      );
+    const store: Store = new Map([
+      [SHOW, { episodes: episodes(LIST_PAGE_CAPACITY), metadata: { tvShowName: 'Soap' } }],
+    ]);
+    const { db, ref } = createDb(store);
+    const tracking = await readEpisodeTracking(ref(SHOW));
+
+    await commitEpisodeWrites(
+      db,
+      tracking,
+      planEpisodeWrites(tracking, { set: { '2_1': { episodeNumber: 1, seasonNumber: 2 } } }),
+      { metadata: { tvShowName: 'Soap', lastUpdated: 5 } }
+    );
+
+    expect(store.get(SHOW)!.pageCount).toBe(1);
+    expect(store.get(`${SHOW}/episode_pages/1`)!.episodes).toEqual({
+      '2_1': { episodeNumber: 1, seasonNumber: 2 },
+    });
+    const reread = await readEpisodeTracking(ref(SHOW));
+    expect(Object.keys(reread.items)).toHaveLength(LIST_PAGE_CAPACITY + 1);
   });
 });

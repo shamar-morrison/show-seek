@@ -2,6 +2,12 @@ import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
+  commitEpisodeWrites,
+  emptyEpisodeTracking,
+  planEpisodeWrites,
+  withEpisodePages,
+} from '../episodePagesAdmin';
+import {
   commitPagedListWrites,
   deletePagedList,
   planPagedListWrites,
@@ -302,6 +308,37 @@ export const reconcileManagedList = async (
   };
 };
 
+/**
+ * A write batch that commits every 400 writes, staying under Firestore's 500-writes-per-batch
+ * limit however many shows or ratings a sync touches. `commit()` flushes the rest.
+ */
+const createChunkedBatch = (db: FirebaseFirestore.Firestore) => {
+  let batch = db.batch();
+  let size = 0;
+  const commits: Promise<unknown>[] = [];
+  return {
+    set(
+      ref: FirebaseFirestore.DocumentReference,
+      data: FirebaseFirestore.DocumentData,
+      options: FirebaseFirestore.SetOptions
+    ) {
+      batch.set(ref, data, options);
+      size += 1;
+      if (size >= 400) {
+        commits.push(batch.commit());
+        batch = db.batch();
+        size = 0;
+      }
+    },
+    async commit() {
+      if (size > 0) {
+        commits.push(batch.commit());
+      }
+      await Promise.all(commits);
+    },
+  };
+};
+
 export const reconcileEpisodeTracking = async (
   userId: string,
   traktShows: TraktWatchedShow[]
@@ -310,8 +347,7 @@ export const reconcileEpisodeTracking = async (
   const collectionRef = db.collection('users').doc(userId).collection('episode_tracking');
   const existingSnapshot = await collectionRef.get();
   const existingDocs = new Map(existingSnapshot.docs.map((doc) => [doc.id, doc]));
-  const batch = db.batch();
-  let writeCount = 0;
+  const batch = createChunkedBatch(db);
   let changedEpisodes = 0;
   let importedEpisodes = 0;
 
@@ -355,10 +391,12 @@ export const reconcileEpisodeTracking = async (
     }
 
     importedEpisodes += Object.keys(remoteDoc.episodes).length;
-    const existingData = (existingDoc?.data() ?? {}) as Record<string, unknown>;
-    const existingEpisodes = isPlainObject(existingData.episodes)
-      ? (existingData.episodes as Record<string, Record<string, unknown>>)
-      : {};
+    // Very long shows keep their episodes across overflow pages; compare against all of them.
+    const tracking = existingDoc
+      ? await withEpisodePages(existingDoc)
+      : emptyEpisodeTracking(collectionRef.doc(remoteDoc.showId));
+    const existingData = tracking.data as Record<string, unknown>;
+    const existingEpisodes = tracking.items;
     const episodeChanges: Record<string, unknown> = {};
     let docChanged = !existingDoc;
 
@@ -383,35 +421,41 @@ export const reconcileEpisodeTracking = async (
     const metadataChanged = !existingDoc || hasManagedFieldChanges(existingMetadata, metadataBase);
 
     if (docChanged || metadataChanged) {
-      batch.set(
-        collectionRef.doc(remoteDoc.showId),
-        stripUndefinedDeep(
-          {
-            episodes:
-              Object.keys(episodeChanges).length > 0
-                ? episodeChanges
-                : !existingDoc
-                  ? {}
-                  : undefined,
-            metadata: {
-              ...existingMetadata,
-              ...metadataBase,
-              lastUpdated: Timestamp.now(),
+      const metadata = { ...existingMetadata, ...metadataBase, lastUpdated: Timestamp.now() };
+      const plan = planEpisodeWrites(tracking, {
+        set: stripUndefinedDeep(episodeChanges, true) as Record<string, Record<string, unknown>>,
+      });
+
+      if (tracking.layout.pageCount === 0 && !plan.createsPages) {
+        // Fits in the show's document: batched as before.
+        batch.set(
+          tracking.ref,
+          stripUndefinedDeep(
+            {
+              episodes: plan.pageItems.get(0) ?? (!existingDoc ? {} : undefined),
+              metadata,
             },
-          },
-          true
-        ) as FirebaseFirestore.DocumentData,
-        { merge: true }
-      );
-      writeCount += 1;
+            true
+          ) as FirebaseFirestore.DocumentData,
+          { merge: true }
+        );
+      } else {
+        await commitEpisodeWrites(
+          db,
+          tracking,
+          plan,
+          stripUndefinedDeep(
+            { ...(!existingDoc ? { episodes: {} } : {}), metadata },
+            true
+          ) as Record<string, unknown>
+        );
+      }
     }
 
     existingDocs.delete(remoteDoc.showId);
   }
 
-  if (writeCount > 0) {
-    await batch.commit();
-  }
+  await batch.commit();
 
   return {
     changedCount: changedEpisodes,
@@ -433,8 +477,7 @@ export const reconcileRatings = async (
   );
   const remoteRatings = buildRatingsMap(traktRatings);
 
-  const batch = db.batch();
-  let writeCount = 0;
+  const batch = createChunkedBatch(db);
   let changedCount = 0;
 
   Object.entries(remoteRatings).forEach(([docId, remoteRating]) => {
@@ -448,15 +491,12 @@ export const reconcileRatings = async (
         { merge: false }
       );
       changedCount += 1;
-      writeCount += 1;
     }
 
     existingDocs.delete(docId);
   });
 
-  if (writeCount > 0) {
-    await batch.commit();
-  }
+  await batch.commit();
 
   return {
     changedCount,

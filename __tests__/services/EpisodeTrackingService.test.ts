@@ -23,6 +23,7 @@ describe('EpisodeTrackingService', () => {
     jest.clearAllMocks();
     mockUserId = 'test-user-id';
     mockIsAnonymous = false;
+    episodeTrackingService.clearEpisodeLayouts();
   });
 
   it('does not call updateDoc when unwatching a missing document', async () => {
@@ -45,7 +46,7 @@ describe('EpisodeTrackingService', () => {
   });
 
   it('uses a single updateDoc call to bulk unwatch all episodes in a season', async () => {
-    (getDoc as jest.Mock).mockResolvedValue({ exists: () => true });
+    (getDoc as jest.Mock).mockResolvedValue({ exists: () => true, data: () => ({}) });
 
     await episodeTrackingService.markAllEpisodesUnwatched(123, 2, [
       { id: 10, episode_number: 1 } as any,
@@ -182,7 +183,7 @@ describe('markMultipleEpisodesUnwatched', () => {
     }));
 
   beforeEach(() => {
-    (getDoc as jest.Mock).mockResolvedValue({ exists: () => true });
+    (getDoc as jest.Mock).mockResolvedValue({ exists: () => true, data: () => ({}) });
   });
 
   it('chunks N episodes into ceil(N/batchSize) updateDoc calls with cumulative progress', async () => {

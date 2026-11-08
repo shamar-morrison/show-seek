@@ -104,6 +104,7 @@ import {
   isRunFatalSyncError,
   needsMediaEnrichment,
   normalizeSyncError,
+  reconcileRatings,
   refreshAccessToken,
   requestOAuthToken,
   runTraktSync,
@@ -6738,5 +6739,44 @@ describe('Trakt list item enrichment', () => {
     const enriched = await enrichMediaItem({ id: 155, media_type: 'movie', title: 'The Dark Knight' });
 
     expect(enriched).toMatchObject({ genre_ids: [18, 80], poster_path: '/p.jpg', vote_average: 8.5 });
+  });
+});
+
+describe('Trakt sync batching', () => {
+  it('splits large rating syncs into batches under the 500-write limit', async () => {
+    const commits: number[] = [];
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => {
+        let writes = 0;
+        return {
+          set: jest.fn(() => {
+            writes += 1;
+          }),
+          commit: jest.fn(async () => {
+            commits.push(writes);
+          }),
+        };
+      }),
+      collection: jest.fn(() => ({
+        doc: jest.fn(() => ({
+          collection: jest.fn(() => ({
+            doc: jest.fn((id: string) => ({ id })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          })),
+        })),
+      })),
+    }));
+    const ratings = Array.from({ length: 950 }, (_, i) => ({
+      movie: { ids: { tmdb: i + 1, trakt: i + 1 }, title: `Movie ${i}`, year: 2000 },
+      rated_at: '2024-01-01T00:00:00.000Z',
+      rating: 7,
+      type: 'movie',
+    }));
+
+    const result = await reconcileRatings('user-1', ratings as any);
+
+    expect(result.changedCount).toBe(950);
+    expect(commits.every((size) => size <= 400)).toBe(true);
+    expect(commits.reduce((total, size) => total + size, 0)).toBe(950);
   });
 });

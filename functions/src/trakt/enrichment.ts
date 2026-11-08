@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
 import type { TaskOptions } from 'firebase-admin/functions';
 import { Timestamp } from 'firebase-admin/firestore';
+import { commitEpisodeWrites, planEpisodeWrites, withEpisodePages } from '../episodePagesAdmin';
 import { commitPagedListWrites, planPagedListWrites, readPagedList } from '../listPagesAdmin';
 import {
   ACTIVE_RUN_STATUSES,
@@ -239,6 +240,10 @@ export const enrichMediaItems = async (
   return enrichedItems;
 };
 
+/** True for watched episodes TMDB enrichment has never filled in (e.g. fresh from Trakt). */
+export const needsEpisodeEnrichment = (episode: Record<string, unknown> | undefined): boolean =>
+  !!episode && (typeof episode.episodeId !== 'number' || typeof episode.episodeName !== 'string');
+
 export const enrichEpisodeTracking = async (
   showId: number,
   episodes: Record<string, Record<string, unknown>>
@@ -385,23 +390,23 @@ export const runTraktEnrichmentJob = async (
       continue;
     }
 
-    const episodeData = episodeDoc.data();
-    const currentEpisodes = (episodeData.episodes ?? {}) as Record<string, Record<string, unknown>>;
-    if (Object.keys(currentEpisodes).length === 0) {
+    // Long shows keep episodes across overflow pages; each is written back to its own page.
+    const tracking = await withEpisodePages(episodeDoc);
+    // Only episodes never enriched (straight from Trakt) are looked up on TMDB.
+    const pendingEpisodes = Object.fromEntries(
+      Object.entries(tracking.items).filter(([, episode]) => needsEpisodeEnrichment(episode))
+    ) as Record<string, Record<string, unknown>>;
+    if (Object.keys(pendingEpisodes).length === 0) {
       continue;
     }
 
-    const enrichedEpisodes = await enrichEpisodeTracking(showId, currentEpisodes);
-    await episodeDoc.ref.set(
-      {
-        episodes: enrichedEpisodes,
-        metadata: {
-          ...(episodeData.metadata ?? {}),
-          lastEnriched: Timestamp.now(),
-        },
+    const enrichedEpisodes = await enrichEpisodeTracking(showId, pendingEpisodes);
+    await commitEpisodeWrites(db, tracking, planEpisodeWrites(tracking, { set: enrichedEpisodes }), {
+      metadata: {
+        ...(tracking.data.metadata ?? {}),
+        lastEnriched: Timestamp.now(),
       },
-      { merge: true }
-    );
+    });
 
     enrichedCounts.episodes += Object.keys(enrichedEpisodes).length;
   }
