@@ -59,7 +59,7 @@ import type {
   TraktWatchedShow,
   TraktWatchlistItem,
 } from './types';
-import { TraktSyncError } from './types';
+import { TraktOAuthError, TraktSyncError } from './types';
 
 export const maybeRefreshAccessToken = async (userId: string, userData: TraktUserDoc): Promise<string> => {
   const currentAccessToken = typeof userData.traktAccessToken === 'string' ? userData.traktAccessToken : '';
@@ -588,6 +588,20 @@ export const reconcileCustomLists = async (
   };
 };
 
+/**
+ * Errors from Trakt itself (auth, rate limits, outages) would fail every remaining sync step,
+ * so they end the run immediately. Anything else (a Firestore write, TMDB) only fails its step.
+ */
+export const isRunFatalSyncError = (error: unknown): boolean => {
+  if (error instanceof TraktOAuthError) {
+    return true;
+  }
+  if (error instanceof TraktSyncError) {
+    return error.category !== 'internal' && error.category !== 'storage_limit';
+  }
+  return false;
+};
+
 export const syncTraktImport = async (
   userId: string,
   accessToken: string,
@@ -620,6 +634,15 @@ export const syncTraktImport = async (
     bootstrap || hasActivityGroupChanged(previousActivities?.lists, lastActivities.lists);
   const listsToEnrich: string[] = [];
   let customListsState = currentIncrementalState?.customLists ?? {};
+  // A step that fails for a ShowSeek-side reason (e.g. a Firestore write) must not stop the
+  // others from syncing. Trakt-side failures stop the run: every later step would hit them too.
+  const stepFailures: unknown[] = [];
+  const recordStepFailure = (error: unknown): void => {
+    if (isRunFatalSyncError(error)) {
+      throw error;
+    }
+    stepFailures.push(error);
+  };
 
   if (shouldSyncWatched) {
     try {
@@ -661,7 +684,7 @@ export const syncTraktImport = async (
         error,
         userId,
       });
-      throw error;
+      recordStepFailure(error);
     }
   }
 
@@ -675,7 +698,7 @@ export const syncTraktImport = async (
         error,
         userId,
       });
-      throw error;
+      recordStepFailure(error);
     }
   }
 
@@ -693,7 +716,7 @@ export const syncTraktImport = async (
         error,
         userId,
       });
-      throw error;
+      recordStepFailure(error);
     }
   }
 
@@ -710,7 +733,7 @@ export const syncTraktImport = async (
         error,
         userId,
       });
-      throw error;
+      recordStepFailure(error);
     }
   }
 
@@ -738,8 +761,14 @@ export const syncTraktImport = async (
         error,
         userId,
       });
-      throw error;
+      recordStepFailure(error);
     }
+  }
+
+  if (stepFailures.length > 0) {
+    // Fail the run so the incremental state isn't advanced: the next sync retries every step,
+    // and the steps that already succeeded are no-ops the second time.
+    throw stepFailures[0];
   }
 
   return {

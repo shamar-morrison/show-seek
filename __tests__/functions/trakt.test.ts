@@ -100,6 +100,7 @@ import {
   clearTraktTokensIfRefreshTokenUnchanged,
   createOAuthState,
   exchangeAuthorizationCode,
+  isRunFatalSyncError,
   normalizeSyncError,
   refreshAccessToken,
   requestOAuthToken,
@@ -107,6 +108,7 @@ import {
   TRAKT_INVALID_GRANT_MESSAGE,
   TRAKT_OAUTH_STATE_TTL_MS,
   TraktOAuthError,
+  TraktSyncError,
   traktApi,
   traktCallback,
 } from '@/functions/src/trakt';
@@ -5046,7 +5048,12 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      throw new Error(`Unexpected fetch URL ${url}`);
+      // Later sync steps still run after the failed list write; give them empty Trakt data.
+      return Promise.resolve({
+        json: jest.fn().mockResolvedValue([]),
+        ok: true,
+        status: 200,
+      });
     });
 
     await expect(
@@ -5074,6 +5081,128 @@ describe('Trakt sync Firestore sanitization', () => {
     );
     expect(failedWrite?.nextRetryAt).toBeUndefined();
     expect(failedWrite?.nextAllowedSyncAt).toBeUndefined();
+  });
+
+  it('keeps syncing the other steps when one list write fails, then fails the run as storage_limit', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const sizeLimitError = new Error(
+      "3 INVALID_ARGUMENT: Document 'projects/p/databases/(default)/documents/users/user-1/lists/already-watched' cannot be written because its size (1,100,000 bytes) exceeds the maximum allowed size of 1,048,576 bytes."
+    );
+    const writtenListIds: string[] = [];
+    const listSet = jest.fn((data: Record<string, unknown>) => {
+      if (data.id === 'already-watched') {
+        return Promise.reject(sizeLimitError);
+      }
+      writtenListIds.push(String(data.id));
+      return Promise.resolve(undefined);
+    });
+    const emptyCollection = (name: string) => ({
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/${name}/${id}`,
+        get: jest.fn().mockResolvedValue({ data: () => undefined, exists: false }),
+        set: listSet,
+      })),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+    });
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return { doc: jest.fn((id: string) => ({ id, path: `users/user-1/traktSyncRuns/${id}` })) };
+        }
+        if (['lists', 'episode_tracking', 'ratings'].includes(name)) {
+          return emptyCollection(name);
+        }
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: { runId: 'run-1' },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({ commit: batchCommit, set: batchSet })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+        return { doc: jest.fn(() => userRef) };
+      }),
+    }));
+
+    const fetchedPaths: string[] = [];
+    (global.fetch as jest.Mock).mockImplementation((input: any) => {
+      const url = String(input);
+      fetchedPaths.push(new URL(url).pathname);
+      const json = (body: unknown) =>
+        Promise.resolve({ json: jest.fn().mockResolvedValue(body), ok: true, status: 200 });
+
+      if (url.endsWith('/users/settings')) {
+        return json({ user: { ids: { slug: 'tester' }, username: 'tester' } });
+      }
+      if (url.includes('/sync/watched/movies')) {
+        return json([
+          {
+            last_watched_at: '2024-01-01T00:00:00.000Z',
+            movie: { ids: { slug: 'movie-1', tmdb: 101, trakt: 201 }, title: 'Movie One', year: 2024 },
+            plays: 1,
+          },
+        ]);
+      }
+      if (url.includes('/sync/watchlist')) {
+        return json([
+          {
+            listed_at: '2024-02-01T00:00:00.000Z',
+            movie: { ids: { slug: 'movie-2', tmdb: 102, trakt: 202 }, title: 'Movie Two', year: 2023 },
+            type: 'movie',
+          },
+        ]);
+      }
+      if (url.includes('/sync/last_activities')) {
+        return json({});
+      }
+      return json([]);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: 'size-limit',
+      })
+    ).resolves.toBeUndefined();
+
+    // The steps after the failed Already Watched write still ran and wrote.
+    expect(fetchedPaths).toEqual(
+      expect.arrayContaining(['/sync/ratings', '/sync/watchlist', '/sync/favorites'])
+    );
+    expect(writtenListIds).toContain('watchlist');
+
+    const failedWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'failed') as Record<string, unknown> | undefined;
+
+    expect(failedWrite).toMatchObject({ errorCategory: 'storage_limit', status: 'failed' });
+    expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  it('only treats Trakt-side errors as fatal to the whole sync run', () => {
+    expect(isRunFatalSyncError(new TraktSyncError('slow down', 'rate_limited', true))).toBe(true);
+    expect(isRunFatalSyncError(new TraktSyncError('reconnect', 'auth_invalid', false))).toBe(true);
+    expect(
+      isRunFatalSyncError(new TraktOAuthError('invalid grant', 'invalid_grant'))
+    ).toBe(true);
+    expect(isRunFatalSyncError(new TraktSyncError('write failed', 'internal', false))).toBe(false);
+    expect(isRunFatalSyncError(new TraktSyncError('too big', 'storage_limit', false))).toBe(false);
+    expect(isRunFatalSyncError(new Error('Firestore write failed'))).toBe(false);
   });
 
   it('omits undefined release_date from already-watched items when Trakt movies are missing year', async () => {
