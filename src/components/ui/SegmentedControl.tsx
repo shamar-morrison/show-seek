@@ -21,6 +21,11 @@ interface SegmentedControlProps<K extends string> {
   onChange: (key: K) => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Smaller labels that stay on one line, shrinking slightly if a label still
+   * doesn't fit. For controls with several tabs on narrow screens.
+   */
+  compact?: boolean;
 }
 
 export function SegmentedControl<K extends string>({
@@ -29,6 +34,7 @@ export function SegmentedControl<K extends string>({
   onChange,
   testID,
   style,
+  compact = false,
 }: SegmentedControlProps<K>) {
   const { accentColor } = useAccentColor();
 
@@ -40,7 +46,11 @@ export function SegmentedControl<K extends string>({
         return (
           <TouchableOpacity
             key={option.key}
-            style={[styles.button, isActive && { backgroundColor: accentColor }]}
+            style={[
+              styles.button,
+              compact && styles.compactButton,
+              isActive && { backgroundColor: accentColor },
+            ]}
             onPress={() => onChange(option.key)}
             activeOpacity={ACTIVE_OPACITY}
             accessibilityRole="tab"
@@ -48,7 +58,14 @@ export function SegmentedControl<K extends string>({
             accessibilityState={{ selected: isActive }}
             testID={testID ? `${testID}-tab-${option.key}` : undefined}
           >
-            <Text style={[styles.text, isActive && styles.activeText]}>{option.label}</Text>
+            <Text
+              style={[styles.text, compact && styles.compactText, isActive && styles.activeText]}
+              numberOfLines={compact ? 1 : undefined}
+              adjustsFontSizeToFit={compact}
+              minimumFontScale={compact ? 0.8 : undefined}
+            >
+              {option.label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -68,10 +85,16 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surface,
   },
+  compactButton: {
+    paddingHorizontal: SPACING.xs,
+  },
   text: {
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.textSecondary,
+  },
+  compactText: {
+    fontSize: FONT_SIZE.s,
   },
   activeText: {
     color: COLORS.white,

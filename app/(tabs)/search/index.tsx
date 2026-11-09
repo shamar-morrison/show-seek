@@ -451,10 +451,11 @@ export default function SearchScreen() {
 
         <View style={styles.segmentedControlContainer}>
           <SegmentedControl<MediaType>
+            compact
             options={[
               { key: 'all', label: t('search.all') },
               { key: 'movie', label: t('media.movies') },
-              { key: 'tv', label: t('media.tvShows') },
+              { key: 'tv', label: t('search.tv') },
               { key: 'person', label: t('search.people') },
             ]}
             activeKey={mediaType}
@@ -546,6 +547,8 @@ const styles = StyleSheet.create({
   },
   segmentedControlContainer: {
     padding: SPACING.m,
+    // searchContainer already adds SPACING.s below the input
+    paddingTop: 0,
   },
   centerContainer: {
     flex: 1,
