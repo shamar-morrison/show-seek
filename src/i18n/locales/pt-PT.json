@@ -1622,7 +1622,8 @@
     "stopTrackingTitle": "Parar de acompanhar?"
   },
   "credits": {
-    "failedToLoad": "Falha ao carregar créditos"
+    "failedToLoad": "Falha ao carregar créditos",
+    "searchPlaceholder": "Pesquisar por nome ou papel…"
   },
   "datePicker": {
     "month": "Mês",

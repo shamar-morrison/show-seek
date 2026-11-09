@@ -1821,7 +1821,8 @@
     "stopTrackingTitle": "Arrêter le suivi ?"
   },
   "credits": {
-    "failedToLoad": "Échec du chargement des crédits"
+    "failedToLoad": "Échec du chargement des crédits",
+    "searchPlaceholder": "Rechercher par nom ou rôle…"
   },
   "datePicker": {
     "month": "Mois",

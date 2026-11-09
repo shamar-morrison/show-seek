@@ -1588,7 +1588,8 @@
     "stopTrackingTitle": "Parar de acompanhar?"
   },
   "credits": {
-    "failedToLoad": "Falha ao carregar créditos"
+    "failedToLoad": "Falha ao carregar créditos",
+    "searchPlaceholder": "Buscar por nome ou papel…"
   },
   "datePicker": {
     "month": "Mês",

@@ -1787,7 +1787,8 @@
     "stopTrackingTitle": "Stop Tracking?"
   },
   "credits": {
-    "failedToLoad": "Failed to load credits"
+    "failedToLoad": "Failed to load credits",
+    "searchPlaceholder": "Search by name or role…"
   },
   "datePicker": {
     "month": "Month",

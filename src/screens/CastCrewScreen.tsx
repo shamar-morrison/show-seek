@@ -1,9 +1,11 @@
 import { CastMember, tmdbApi } from '@/src/api/tmdb';
 import { PersonCard } from '@/src/components/library/PersonCard';
 import { PersonListCard } from '@/src/components/library/PersonListCard';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -13,6 +15,7 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import {
   type PersonFavoriteTarget,
@@ -22,11 +25,12 @@ import ListActionsModal from '@/src/components/ListActionsModal';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { mergeCrewMembersByPerson } from '@/src/utils/credits';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
+import { foldForSearch } from '@/src/utils/searchText';
 import { FlashList, FlashListRef, ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { ArrowLeft01Icon, GridIcon, Menu01Icon } from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, GridIcon, Menu01Icon, Search01Icon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -55,6 +59,17 @@ interface DisplayCreditItem {
   role: string;
   profilePath: string | null;
 }
+
+// Search state comes from useHeaderSearch; filtering happens here so both tabs share one
+// accent-insensitive matcher, so the hook gets no items of its own.
+const NO_ITEMS: DisplayCreditItem[] = [];
+const getNoSearchText = () => '';
+
+/** Matches the person's name or role (character for cast, job for crew). */
+const filterCredits = (items: DisplayCreditItem[], foldedQuery: string) =>
+  foldedQuery
+    ? items.filter((item) => foldForSearch(`${item.name} ${item.role}`).includes(foldedQuery))
+    : items;
 
 const displayItemToPerson = (item: DisplayCreditItem) => ({
   id: item.id,
@@ -140,28 +155,52 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
     }));
   }, [creditsQuery.data?.crew]);
 
-  const activeData = useMemo(
-    () => (activeTab === 'cast' ? castItems : crewItems),
-    [activeTab, castItems, crewItems]
+  const {
+    searchQuery,
+    debouncedQuery,
+    isSearchActive,
+    activateSearch,
+    deactivateSearch,
+    setSearchQuery,
+  } = useHeaderSearch({ items: NO_ITEMS, getSearchableText: getNoSearchText, debounceMs: 150 });
+
+  const foldedQuery = useMemo(() => foldForSearch(debouncedQuery), [debouncedQuery]);
+  const isFiltering = foldedQuery.length > 0;
+
+  const filteredCast = useMemo(
+    () => filterCredits(castItems, foldedQuery),
+    [castItems, foldedQuery]
   );
+  const filteredCrew = useMemo(
+    () => filterCredits(crewItems, foldedQuery),
+    [crewItems, foldedQuery]
+  );
+
+  const activeData = activeTab === 'cast' ? filteredCast : filteredCrew;
 
   const activeListKey = useMemo(() => `${activeTab}:${viewMode}`, [activeTab, viewMode]);
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // Search results are short-lived, so they don't overwrite the full list's position.
+      if (isFiltering) return;
       scrollOffsetsRef.current[activeListKey] = event.nativeEvent.contentOffset.y;
     },
-    [activeListKey]
+    [activeListKey, isFiltering]
   );
 
+  // Results start at the top; clearing the search returns to where the full list was.
   useEffect(() => {
-    const nextOffset = scrollOffsetsRef.current[activeListKey] ?? 0;
+    const nextOffset = isFiltering ? 0 : (scrollOffsetsRef.current[activeListKey] ?? 0);
     const frameId = requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: nextOffset, animated: false });
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [activeData.length, activeListKey]);
+  }, [activeData.length, activeListKey, foldedQuery, isFiltering]);
+
+  const getTabLabel = (label: string, count: number) =>
+    isFiltering ? `${label} (${count})` : label;
 
   const handleCastTabPress = useCallback(() => {
     setActiveTab((current) => (current === 'cast' ? current : 'cast'));
@@ -228,32 +267,49 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
     <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => router.back()}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>{t('media.castAndCrew')}</Text>
-          {mediaTitle && (
-            <Text style={styles.headerSubtitle} numberOfLines={1}>
-              {mediaTitle}
-            </Text>
-          )}
-        </View>
-        <View style={styles.headerActions}>
-          <HeaderIconButton onPress={toggleViewMode}>
-            {viewMode === 'grid' ? (
-              <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
-            ) : (
-              <AppIcon icon={GridIcon} size={24} color={COLORS.text} />
+      {isSearchActive ? (
+        <SearchableHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onClose={deactivateSearch}
+          placeholder={t('credits.searchPlaceholder')}
+          includeTopInset={false}
+        />
+      ) : (
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => router.back()}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>{t('media.castAndCrew')}</Text>
+            {mediaTitle && (
+              <Text style={styles.headerSubtitle} numberOfLines={1}>
+                {mediaTitle}
+              </Text>
             )}
-          </HeaderIconButton>
+          </View>
+          <View style={styles.headerActions}>
+            <HeaderIconButton
+              onPress={activateSearch}
+              accessibilityLabel={t('common.search')}
+              testID="cast-crew-search-button"
+            >
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
+            </HeaderIconButton>
+            <HeaderIconButton onPress={toggleViewMode}>
+              {viewMode === 'grid' ? (
+                <AppIcon icon={Menu01Icon} size={24} color={COLORS.text} />
+              ) : (
+                <AppIcon icon={GridIcon} size={24} color={COLORS.text} />
+              )}
+            </HeaderIconButton>
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -265,7 +321,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.tabText, activeTab === 'cast' && styles.activeTabText]}>
-            {t('media.cast')}
+            {getTabLabel(t('media.cast'), filteredCast.length)}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -277,29 +333,33 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.tabText, activeTab === 'crew' && styles.activeTabText]}>
-            {t('media.crew')}
+            {getTabLabel(t('media.crew'), filteredCrew.length)}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <FlashList
-        ref={listRef}
-        key={viewMode}
-        data={activeData}
-        renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={
-          viewMode === 'grid'
-            ? [styles.gridContent, { paddingHorizontal: listPaddingHorizontal }]
-            : styles.listContent
-        }
-        numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
-        drawDistance={400}
-        removeClippedSubviews={true}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      />
+      {isFiltering && activeData.length === 0 ? (
+        <SearchEmptyState />
+      ) : (
+        <FlashList
+          ref={listRef}
+          key={viewMode}
+          data={activeData}
+          renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={
+            viewMode === 'grid'
+              ? [styles.gridContent, { paddingHorizontal: listPaddingHorizontal }]
+              : styles.listContent
+          }
+          numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
+          drawDistance={400}
+          removeClippedSubviews={true}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        />
+      )}
       <ListActionsModal ref={personSheetRef} actions={personSheetActions} />
     </SafeAreaView>
   );

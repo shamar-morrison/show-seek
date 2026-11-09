@@ -1787,7 +1787,8 @@
     "stopTrackingTitle": "Takip bırakılsın mı?"
   },
   "credits": {
-    "failedToLoad": "Katkı bilgileri yüklenemedi"
+    "failedToLoad": "Katkı bilgileri yüklenemedi",
+    "searchPlaceholder": "Ad veya role göre ara…"
   },
   "datePicker": {
     "month": "Ay",
