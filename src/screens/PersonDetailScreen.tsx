@@ -52,8 +52,8 @@ import {
   InstagramIcon,
   MapPinIcon,
   MusicNote02Icon,
+  NewTwitterIcon,
   StarIcon,
-  TwitterIcon,
   YoutubeIcon,
 } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -368,8 +368,8 @@ export default function PersonDetailScreen() {
         ? {
             key: 'twitter',
             label: t('media.twitter'),
-            url: `https://twitter.com/${twitterId}`,
-            icon: <AppIcon icon={TwitterIcon} size={20} color={COLORS.text} />,
+            url: `https://x.com/${twitterId}`,
+            icon: <AppIcon icon={NewTwitterIcon} size={20} color={COLORS.text} />,
           }
         : null,
       facebookId
