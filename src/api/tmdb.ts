@@ -637,6 +637,14 @@ export const tmdbApi = {
     );
   },
 
+  searchPerson: async (query: string, page: number = 1) => {
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<Person>>('/search/person', {
+        params: { query, page },
+      })
+    );
+  },
+
   searchMulti: async (query: string, page: number = 1) => {
     const { data } = await tmdbClient.get<PaginatedResponse<Movie | TVShow | Person>>(
       '/search/multi',
