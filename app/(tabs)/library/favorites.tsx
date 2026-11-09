@@ -353,7 +353,6 @@ export default function FavoritesScreen() {
           defaultSortState={DEFAULT_SORT_STATE}
           onSortChange={setSortState}
           genreMap={genreMap}
-          onEditFilters={() => setFilterModalVisible(true)}
           onEditSort={() => setSortModalVisible(true)}
         />
         <View style={styles.content}>

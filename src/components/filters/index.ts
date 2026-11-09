@@ -1,11 +1,15 @@
-export { FilterSelect } from './FilterSelect';
-export type { FilterSelectProps, SelectOption } from './FilterSelect';
-export { SearchableFilterSelect } from './SearchableFilterSelect';
-export type { SearchableFilterSelectProps } from './SearchableFilterSelect';
-export { MultiSelectFilter } from './MultiSelectFilter';
+export { FilterSelect, FilterSelectModal } from './FilterSelect';
+export type { FilterSelectModalProps, FilterSelectProps, SelectOption } from './FilterSelect';
+export { SearchableFilterSelect, SearchableSelectModal } from './SearchableFilterSelect';
+export type {
+  SearchableFilterSelectProps,
+  SearchableSelectModalProps,
+} from './SearchableFilterSelect';
+export { MultiSelectFilter, MultiSelectModal } from './MultiSelectFilter';
 export type {
   GenreOperator,
   MultiSelectFilterProps,
+  MultiSelectModalProps,
   MultiSelectOption,
 } from './MultiSelectFilter';
 export { FilterLoadingSkeleton } from './FilterLoadingSkeleton';

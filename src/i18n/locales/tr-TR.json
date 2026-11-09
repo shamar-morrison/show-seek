@@ -300,7 +300,7 @@
     "metacritic": "Metacritic",
     "letterboxd": "Letterboxd",
     "instagram": "Instagram",
-    "twitter": "Twitter",
+    "twitter": "X",
     "facebook": "Facebook",
     "tiktok": "TikTok",
     "youtube": "YouTube",
@@ -1787,7 +1787,8 @@
     "stopTrackingTitle": "Takip bırakılsın mı?"
   },
   "credits": {
-    "failedToLoad": "Katkı bilgileri yüklenemedi"
+    "failedToLoad": "Katkı bilgileri yüklenemedi",
+    "searchPlaceholder": "Ad veya role göre ara…"
   },
   "datePicker": {
     "month": "Ay",
@@ -1822,7 +1823,7 @@
     "matchCount_other": "{{count}} yapım eşleşiyor",
     "noMatches": "Bu filtrelerle eşleşen yapım yok",
     "removeFilter": "{{name}} kaldır",
-    "editFilters": "Filtreleri açar"
+    "editFilterValue": "{{name}} seçeneklerini açar"
   },
   "lists": {
     "alreadyWatched": "Daha önce izlenenler",

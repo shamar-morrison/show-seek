@@ -483,6 +483,16 @@ export interface Review {
   url: string;
 }
 
+/**
+ * `/discover/tv` has no `primary_release_date` sort (its date sort is `first_air_date`), and
+ * TMDB quietly falls back to popularity for unknown sorts. Map the movie date sort across so
+ * a shared "Newest" sort works for both.
+ */
+export function toTVSortBy(sortBy?: string): string {
+  if (!sortBy) return 'popularity.desc';
+  return sortBy.replace(/^primary_release_date\./, 'first_air_date.');
+}
+
 export const tmdbApi = {
   getTrendingMovies: async (timeWindow: 'day' | 'week' = 'week', page: number = 1) => {
     return tmdbRequest(() =>
@@ -735,6 +745,9 @@ export const tmdbApi = {
     withWatchProviders?: number | string;
     watchRegion?: string;
     hideUnreleased?: boolean;
+    /** Minutes, inclusive. For TV this is episode length. */
+    runtimeGte?: number;
+    runtimeLte?: number;
   }) => {
     return tmdbRequest(() =>
       tmdbClient.get<PaginatedResponse<Movie>>('/discover/movie', {
@@ -744,6 +757,8 @@ export const tmdbApi = {
           primary_release_year: params?.year,
           sort_by: params?.sortBy || 'popularity.desc',
           'vote_average.gte': params?.voteAverageGte,
+          'with_runtime.gte': params?.runtimeGte,
+          'with_runtime.lte': params?.runtimeLte,
           with_original_language: params?.withOriginalLanguage,
           with_watch_providers: params?.withWatchProviders,
           watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
@@ -765,6 +780,9 @@ export const tmdbApi = {
     withWatchProviders?: number | string;
     watchRegion?: string;
     hideUnreleased?: boolean;
+    /** Minutes, inclusive. For TV this is episode length. */
+    runtimeGte?: number;
+    runtimeLte?: number;
   }) => {
     return tmdbRequest(() =>
       tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
@@ -772,8 +790,10 @@ export const tmdbApi = {
           page: params?.page || 1,
           with_genres: params?.genre,
           first_air_date_year: params?.year,
-          sort_by: params?.sortBy || 'popularity.desc',
+          sort_by: toTVSortBy(params?.sortBy),
           'vote_average.gte': params?.voteAverageGte,
+          'with_runtime.gte': params?.runtimeGte,
+          'with_runtime.lte': params?.runtimeLte,
           with_original_language: params?.withOriginalLanguage,
           with_watch_providers: params?.withWatchProviders,
           watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,

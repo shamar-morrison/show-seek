@@ -29,3 +29,15 @@ export function getUserRatingLabel(t: TFunction, value: UserRatingFilter): strin
 export function getRuntimeLabel(t: TFunction, value: RuntimeFilter): string {
   return value === 'any' ? t('filters.anyRuntime') : t(`filters.runtimeOptions.${value}`);
 }
+
+/** "Any year", then every year from this one back to 1950. */
+export function getYearOptions(t: TFunction): { label: string; value: number | null }[] {
+  const currentYear = new Date().getFullYear();
+  return [
+    { label: t('discover.anyYear'), value: null },
+    ...Array.from({ length: currentYear - 1949 }, (_, i) => {
+      const year = currentYear - i;
+      return { label: String(year), value: year };
+    }),
+  ];
+}

@@ -1,6 +1,9 @@
 import { getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
-import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
+import { DiscoverFilterChips } from '@/src/components/discover/DiscoverFilterChips';
+import DiscoverFiltersSheet, {
+  DiscoverFiltersSheetRef,
+} from '@/src/components/discover/DiscoverFiltersSheet';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineListIndicators, ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
@@ -26,6 +29,12 @@ import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
+import {
+  DEFAULT_DISCOVER_FILTERS,
+  getDiscoverRuntimeParams,
+  hasActiveDiscoverFilters,
+  type DiscoverFilterState,
+} from '@/src/utils/discoverFilters';
 import { dedupeMediaById } from '@/src/utils/mediaUtils';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList } from '@shopify/flash-list';
@@ -51,15 +60,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type MediaType = 'movie' | 'tv';
 type ViewMode = 'list' | 'grid';
 
-const DEFAULT_FILTERS: FilterState = {
-  sortBy: 'popularity.desc',
-  genres: [],
-  genreOperator: 'or',
-  year: null,
-  rating: 0,
-  language: null,
-  watchProviders: [],
-};
 const VIEW_MODE_STORAGE_KEY = 'discoverViewMode';
 
 export default function DiscoverScreen() {
@@ -67,8 +67,8 @@ export default function DiscoverScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const [mediaType, setMediaType] = useState<MediaType>('movie');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<DiscoverFilterState>(DEFAULT_DISCOVER_FILTERS);
+  const filtersSheetRef = useRef<DiscoverFiltersSheetRef>(null);
   const { t } = useTranslation();
   const { preferences } = usePreferences();
   const { resolvePosterPath } = usePosterOverrides();
@@ -99,6 +99,7 @@ export default function DiscoverScreen() {
         year: filters.year || undefined,
         sortBy: filters.sortBy,
         voteAverageGte: filters.rating,
+        ...getDiscoverRuntimeParams(filters.runtime),
         withOriginalLanguage: filters.language || undefined,
         withWatchProviders:
           filters.watchProviders.length > 0 ? filters.watchProviders.join('|') : undefined,
@@ -152,20 +153,11 @@ export default function DiscoverScreen() {
     }
   }, [viewMode]);
 
-  const hasActiveFilters = () => {
-    return (
-      filters.sortBy !== DEFAULT_FILTERS.sortBy ||
-      filters.genres.length > 0 ||
-      filters.year !== DEFAULT_FILTERS.year ||
-      filters.rating !== DEFAULT_FILTERS.rating ||
-      filters.language !== DEFAULT_FILTERS.language ||
-      filters.watchProviders.length > 0
-    );
-  };
+  const hasActiveFilters = hasActiveDiscoverFilters(filters);
 
-  const clearFilters = () => {
-    setFilters(DEFAULT_FILTERS);
-  };
+  const openFilters = useCallback(() => {
+    void filtersSheetRef.current?.present();
+  }, []);
 
   const handleItemPress = useCallback(
     (item: Movie | TVShow) => {
@@ -409,14 +401,18 @@ export default function DiscoverScreen() {
               )}
             </HeaderIconButton>
             <View style={styles.filterButtonWrapper}>
-              <HeaderIconButton onPress={() => setShowFilters(!showFilters)}>
+              <HeaderIconButton
+                onPress={openFilters}
+                accessibilityLabel={t('discover.filters')}
+                testID="discover-filters-button"
+              >
                 <AppIcon
                   icon={SlidersHorizontalIcon}
                   size={24}
-                  color={showFilters ? accentColor : COLORS.textSecondary}
+                  color={hasActiveFilters ? accentColor : COLORS.textSecondary}
                 />
               </HeaderIconButton>
-              {hasActiveFilters() && (
+              {hasActiveFilters && (
                 <View style={[styles.filterBadge, { backgroundColor: accentColor }]} />
               )}
             </View>
@@ -444,15 +440,12 @@ export default function DiscoverScreen() {
           </TouchableOpacity>
         </View>
 
-        {showFilters && (
-          <DiscoverFilters
-            filters={filters}
-            onChange={setFilters}
-            mediaType={mediaType}
-            onClearFilters={clearFilters}
-            genreMap={genreMap}
-          />
-        )}
+        <DiscoverFilterChips
+          filters={filters}
+          onFiltersChange={setFilters}
+          mediaType={mediaType}
+          genreMap={genreMap}
+        />
 
         {discoverQuery.isLoading ? (
           <View style={styles.centerContainer}>
@@ -503,6 +496,13 @@ export default function DiscoverScreen() {
           onShowToast={handleShowToast}
         />
       )}
+      <DiscoverFiltersSheet
+        ref={filtersSheetRef}
+        filters={filters}
+        onApply={setFilters}
+        mediaType={mediaType}
+        genreMap={genreMap}
+      />
       <Toast ref={toastRef} />
     </>
   );

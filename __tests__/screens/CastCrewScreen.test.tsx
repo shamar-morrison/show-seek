@@ -1,5 +1,5 @@
 import CastCrewScreen from '@/src/screens/CastCrewScreen';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 
 const mockUseQuery = jest.fn();
@@ -63,6 +63,26 @@ jest.mock('@/src/hooks/useFavoritePersons', () => ({
 jest.mock('@/src/components/ui/MediaImage', () => ({
   MediaImage: () => null,
 }));
+
+// The real header needs safe-area insets; a plain input is enough to drive the search.
+jest.mock('@/src/components/ui/SearchableHeader', () => {
+  const { Pressable, Text, TextInput, View } = require('react-native');
+  return {
+    SearchableHeader: ({ searchQuery, onSearchChange, onClose, placeholder }: any) => (
+      <View>
+        <TextInput
+          testID="cast-crew-search-input"
+          value={searchQuery}
+          onChangeText={onSearchChange}
+          placeholder={placeholder}
+        />
+        <Pressable testID="cast-crew-search-close" onPress={onClose}>
+          <Text>close</Text>
+        </Pressable>
+      </View>
+    ),
+  };
+});
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
@@ -221,5 +241,115 @@ describe('CastCrewScreen', () => {
 
     fireEvent.press(getByText('Cast'));
     expect(mockScrollToOffset).toHaveBeenLastCalledWith({ offset: 180, animated: false });
+  });
+
+  describe('search', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      mockUseQuery.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: {
+          cast: [
+            { id: 101, name: 'Penélope Cruz', character: 'Raimunda', profile_path: null, order: 0 },
+            { id: 102, name: 'Actor Two', character: 'Support', profile_path: null, order: 1 },
+          ],
+          crew: [
+            { id: 501, name: 'Pedro Almodóvar', job: 'Director', profile_path: null },
+            { id: 502, name: 'Crew Two', job: 'Editor', profile_path: null },
+          ],
+        },
+        error: null,
+        refetch: jest.fn(),
+      });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const renderAndSearch = (query: string) => {
+      const utils = render(<CastCrewScreen id={100} type="movie" mediaTitle="Sample" />);
+      fireEvent.press(utils.getByTestId('cast-crew-search-button'));
+      fireEvent.changeText(utils.getByTestId('cast-crew-search-input'), query);
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      return utils;
+    };
+
+    it('opens a search field with a name-or-role placeholder', () => {
+      const { getByTestId } = render(<CastCrewScreen id={100} type="movie" mediaTitle="Sample" />);
+      fireEvent.press(getByTestId('cast-crew-search-button'));
+      expect(getByTestId('cast-crew-search-input').props.placeholder).toBe(
+        'Search by name or role…'
+      );
+    });
+
+    it('matches names regardless of accents and case', () => {
+      const { getByText, queryByText } = renderAndSearch('PENELOPE');
+      expect(getByText('Penélope Cruz')).toBeTruthy();
+      expect(queryByText('Actor Two')).toBeNull();
+    });
+
+    it('matches a character name, and a crew job on the Crew tab', () => {
+      const { getByText, queryByText } = renderAndSearch('raimunda');
+      expect(getByText('Penélope Cruz')).toBeTruthy();
+
+      fireEvent.changeText(screen.getByTestId('cast-crew-search-input'), 'director');
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      fireEvent.press(getByText('Crew (1)'));
+      expect(getByText('Pedro Almodóvar')).toBeTruthy();
+      expect(queryByText('Crew Two')).toBeNull();
+    });
+
+    it('shows match counts on both tabs while searching', () => {
+      const { getByText } = renderAndSearch('almodovar');
+      expect(getByText('Cast (0)')).toBeTruthy();
+      expect(getByText('Crew (1)')).toBeTruthy();
+    });
+
+    it('shows the empty state when the tab has no matches', () => {
+      const { getByText, queryByTestId } = renderAndSearch('nobody here');
+      expect(queryByTestId('mock-flash-list')).toBeNull();
+      expect(getByText('No results found')).toBeTruthy();
+    });
+
+    it('closing search brings back the full list and plain tab labels', () => {
+      const { getByTestId, getByText } = renderAndSearch('penelope');
+      fireEvent.press(getByTestId('cast-crew-search-close'));
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      expect(getByText('Actor Two')).toBeTruthy();
+      expect(getByText('Cast')).toBeTruthy();
+      expect(getByTestId('cast-crew-search-button')).toBeTruthy();
+    });
+
+    it('starts results at the top and returns to the saved position afterwards', () => {
+      const utils = render(<CastCrewScreen id={100} type="movie" mediaTitle="Sample" />);
+      fireEvent.scroll(utils.getByTestId('mock-flash-list'), {
+        nativeEvent: { contentOffset: { x: 0, y: 300 } },
+      });
+
+      fireEvent.press(utils.getByTestId('cast-crew-search-button'));
+      fireEvent.changeText(utils.getByTestId('cast-crew-search-input'), 'actor');
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      expect(mockScrollToOffset).toHaveBeenLastCalledWith({ offset: 0, animated: false });
+
+      // Scrolling the results doesn't replace the full list's saved position.
+      fireEvent.scroll(utils.getByTestId('mock-flash-list'), {
+        nativeEvent: { contentOffset: { x: 0, y: 40 } },
+      });
+      fireEvent.press(utils.getByTestId('cast-crew-search-close'));
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      expect(mockScrollToOffset).toHaveBeenLastCalledWith({ offset: 300, animated: false });
+    });
   });
 });

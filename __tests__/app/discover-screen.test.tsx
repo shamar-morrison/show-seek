@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 
@@ -15,6 +15,10 @@ let mockDiscoverPages: any[] = [];
 let mockDiscoverLoading = false;
 let mockDiscoverError = false;
 let capturedFlashListProps: any = null;
+let capturedDiscoverQuery: any = null;
+let capturedSheetProps: any = null;
+const mockSheetPresent = jest.fn();
+const mockDiscoverMovies = jest.fn(async () => ({ page: 1, total_pages: 1, results: [] }));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -30,17 +34,22 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('@tanstack/react-query', () => ({
-  useInfiniteQuery: () => ({
-    data: { pages: mockDiscoverPages },
-    isLoading: mockDiscoverLoading,
-    isError: mockDiscoverError,
-    error: mockDiscoverError ? new Error('discover failed') : null,
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    fetchNextPage: mockFetchNextPage,
-    refetch: mockDiscoverRefetch,
-  }),
+  useInfiniteQuery: (options: any) => {
+    capturedDiscoverQuery = options;
+    return mockInfiniteQueryResult();
+  },
 }));
+
+const mockInfiniteQueryResult = () => ({
+  data: { pages: mockDiscoverPages },
+  isLoading: mockDiscoverLoading,
+  isError: mockDiscoverError,
+  error: mockDiscoverError ? new Error('discover failed') : null,
+  hasNextPage: false,
+  isFetchingNextPage: false,
+  fetchNextPage: mockFetchNextPage,
+  refetch: mockDiscoverRefetch,
+});
 
 jest.mock('@shopify/flash-list', () => {
   const React = require('react');
@@ -116,15 +125,35 @@ jest.mock('@/src/hooks/useContentFilter', () => ({
   useContentFilter: (items: any[]) => items,
 }));
 
-jest.mock('@/src/components/DiscoverFilters', () => ({
-  __esModule: true,
-  default: () => null,
+jest.mock('@/src/api/tmdb', () => ({
+  ...jest.requireActual('@/src/api/tmdb'),
+  tmdbApi: {
+    discoverMovies: (...args: unknown[]) => mockDiscoverMovies(...(args as [])),
+    discoverTV: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/components/discover/DiscoverFiltersSheet', () => {
+  const React = require('react');
+  const DiscoverFiltersSheet = React.forwardRef((props: any, ref: any) => {
+    capturedSheetProps = props;
+    React.useImperativeHandle(ref, () => ({ present: mockSheetPresent, dismiss: jest.fn() }));
+    return null;
+  });
+  DiscoverFiltersSheet.displayName = 'DiscoverFiltersSheet';
+  return { __esModule: true, default: DiscoverFiltersSheet };
+});
+
+jest.mock('@/src/components/discover/DiscoverFilterChips', () => ({
+  DiscoverFilterChips: () => null,
 }));
 
 jest.mock('@/src/components/ui/HeaderIconButton', () => {
   const React = require('react');
+  const { TouchableOpacity } = require('react-native');
   return {
-    HeaderIconButton: ({ children }: any) => React.createElement(React.Fragment, null, children),
+    HeaderIconButton: ({ children, onPress, testID }: any) =>
+      React.createElement(TouchableOpacity, { onPress, testID }, children),
   };
 });
 
@@ -201,6 +230,8 @@ describe('DiscoverScreen stability', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedFlashListProps = null;
+    capturedDiscoverQuery = null;
+    capturedSheetProps = null;
     mockDiscoverLoading = false;
     mockDiscoverError = false;
     mockDiscoverPages = [];
@@ -266,5 +297,27 @@ describe('DiscoverScreen stability', () => {
 
     fireEvent.press(getByTestId('discover-error-retry'));
     expect(mockDiscoverRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the filter sheet from the header button', () => {
+    const { getByTestId } = render(<DiscoverScreen />);
+    fireEvent.press(getByTestId('discover-filters-button'));
+    expect(mockSheetPresent).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends an applied runtime filter to TMDB', async () => {
+    render(<DiscoverScreen />);
+
+    act(() => {
+      capturedSheetProps.onApply({ ...capturedSheetProps.filters, runtime: '90to120' });
+    });
+    expect(capturedDiscoverQuery.queryKey[2]).toEqual(
+      expect.objectContaining({ runtime: '90to120' })
+    );
+
+    await capturedDiscoverQuery.queryFn({ pageParam: 1 });
+    expect(mockDiscoverMovies).toHaveBeenCalledWith(
+      expect.objectContaining({ runtimeGte: 90, runtimeLte: 119 })
+    );
   });
 });

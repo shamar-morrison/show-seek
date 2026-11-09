@@ -1,5 +1,5 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { FilterSelect, MultiSelectFilter, SelectOption } from '@/src/components/filters';
+import { FilterSelect, MultiSelectFilter } from '@/src/components/filters';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -11,20 +11,10 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
-import {
-  getMediaTypeLabel,
-  getRuntimeLabel,
-  getTmdbRatingLabel,
-  getUserRatingLabel,
-  RATING_THRESHOLDS,
-} from '@/src/utils/listFilterLabels';
+import { useListFilterFieldOptions } from '@/src/hooks/useListFilterFieldOptions';
 import {
   areWatchStatusFiltersEqual,
   DEFAULT_WATCH_STATUS_FILTERS,
-  MediaTypeFilter,
-  RUNTIME_FILTER_VALUES,
-  RuntimeFilter,
-  UserRatingFilter,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -107,37 +97,14 @@ export default function WatchStatusFiltersModal({
     setLocalFilters(DEFAULT_WATCH_STATUS_FILTERS);
   };
 
-  // Genre options (multi-select, matching Discover)
-  const genreOptions = Object.entries(genreMap)
-    .map(([id, name]) => ({ label: name, value: Number(id) }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-
-  // Year options
-  const currentYear = new Date().getFullYear();
-  const yearOptions = [
-    { label: t('discover.anyYear'), value: null },
-    ...Array.from({ length: currentYear - 1949 }, (_, i) => {
-      const year = currentYear - i;
-      return { label: String(year), value: year };
-    }),
-  ];
-
-  const ratingOptions: SelectOption[] = [0, ...RATING_THRESHOLDS].map((value) => ({
-    label: getTmdbRatingLabel(t, value),
-    value,
-  }));
-
-  const userRatingOptions: SelectOption[] = (
-    ['any', 'rated', 'unrated', ...RATING_THRESHOLDS] as UserRatingFilter[]
-  ).map((value) => ({ label: getUserRatingLabel(t, value), value }));
-
-  const runtimeOptions: SelectOption[] = (['any', ...RUNTIME_FILTER_VALUES] as RuntimeFilter[]).map(
-    (value) => ({ label: getRuntimeLabel(t, value), value })
-  );
-
-  const mediaTypeOptions: SelectOption[] = (['all', 'movie', 'tv'] as MediaTypeFilter[]).map(
-    (value) => ({ label: getMediaTypeLabel(t, value), value })
-  );
+  const {
+    mediaTypeOptions,
+    genreOptions,
+    ratingOptions,
+    userRatingOptions,
+    yearOptions,
+    runtimeOptions,
+  } = useListFilterFieldOptions(genreMap);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

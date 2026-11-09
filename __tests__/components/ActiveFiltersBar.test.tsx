@@ -18,14 +18,31 @@ jest.mock('@/src/components/ui/ModalBackground', () => ({
   ModalBackground: () => null,
 }));
 
+jest.mock('expo-image', () => ({ Image: 'Image' }));
+
 // The project's react-native mock renders ScrollView as a plain host element with no methods,
-// so swap in one whose scrollTo can be observed.
+// so swap in one whose scrollTo can be observed. FlatList is a bare host element there too, so
+// render its rows for the pickers.
 const mockScrollTo = jest.fn();
 jest.mock('react-native', () => {
   const actual = jest.requireActual('react-native');
   const mockReact = jest.requireActual('react');
+  const FlatList = ({ data = [], renderItem, keyExtractor, ...props }: any) =>
+    mockReact.createElement(
+      actual.View,
+      props,
+      data.map((item: any, index: number) =>
+        mockReact.createElement(
+          actual.View,
+          { key: keyExtractor ? keyExtractor(item, index) : String(index) },
+          renderItem({ item, index })
+        )
+      )
+    );
+  FlatList.displayName = 'MockFlatList';
   return {
     ...actual,
+    FlatList,
     ScrollView: mockReact.forwardRef((props: object, ref: unknown) => {
       mockReact.useImperativeHandle(ref, () => ({ scrollTo: mockScrollTo }));
       return mockReact.createElement(actual.View, { ...props, testID: 'chip-strip-scroll' });
@@ -39,7 +56,6 @@ const renderBar = (filters: WatchStatusFilterState, sortState: SortState = DEFAU
   const handlers = {
     onFiltersChange: jest.fn(),
     onSortChange: jest.fn(),
-    onEditFilters: jest.fn(),
     onEditSort: jest.fn(),
   };
   const utils = render(
@@ -108,17 +124,41 @@ describe('ActiveFiltersBar', () => {
     expect(onFiltersChange).toHaveBeenLastCalledWith(DEFAULT_WATCH_STATUS_FILTERS);
   });
 
-  it('opens the filter or sort modal when a chip is tapped', () => {
-    const { getByTestId, onEditFilters, onEditSort } = renderBar(
-      { ...DEFAULT_WATCH_STATUS_FILTERS, year: 2024 },
-      { option: 'runtime', direction: 'desc' }
-    );
+  it('a genre chip opens the genre checklist, and Apply updates the genres', () => {
+    const filters = { ...DEFAULT_WATCH_STATUS_FILTERS, genres: [28] };
+    const { getByTestId, getByText, queryByTestId, onFiltersChange } = renderBar(filters);
 
-    fireEvent.press(getByTestId('active-filter-chip-year-edit'));
-    expect(onEditFilters).toHaveBeenCalledTimes(1);
+    const chip = getByTestId('active-filter-chip-genre-28-edit');
+    expect(chip.props.accessibilityHint).toBe('Opens the Genres options');
+    fireEvent.press(chip);
+    expect(getByTestId('list-filter-picker-genres')).toBeTruthy();
+
+    fireEvent.press(getByText('Drama'));
+    fireEvent.press(getByTestId('multi-select-apply-button'));
+    expect(onFiltersChange).toHaveBeenCalledWith({ ...filters, genres: [28, 18] });
+    expect(queryByTestId('list-filter-picker-genres')).toBeNull();
+  });
+
+  it('the TMDB rating chip opens its list, and a tap changes only the rating', () => {
+    const filters = { ...DEFAULT_WATCH_STATUS_FILTERS, rating: 7, year: 2024 };
+    const { getByTestId, getByText, onFiltersChange } = renderBar(filters);
+
+    fireEvent.press(getByTestId('active-filter-chip-rating-edit'));
+    expect(getByTestId('list-filter-picker-rating')).toBeTruthy();
+    fireEvent.press(getByText('5+ stars'));
+
+    expect(onFiltersChange).toHaveBeenCalledWith({ ...filters, rating: 5 });
+  });
+
+  it('the sort chip still opens the sort modal', () => {
+    const { getByTestId, queryByTestId, onEditSort } = renderBar(DEFAULT_WATCH_STATUS_FILTERS, {
+      option: 'runtime',
+      direction: 'desc',
+    });
 
     fireEvent.press(getByTestId('active-sort-chip-edit'));
     expect(onEditSort).toHaveBeenCalledTimes(1);
+    expect(queryByTestId(/^list-filter-picker-/)).toBeNull();
   });
 
   it('shows a custom sort in plain words and resets it with its ✕', () => {

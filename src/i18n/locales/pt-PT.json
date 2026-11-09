@@ -300,7 +300,7 @@
     "metacritic": "Metacritic",
     "letterboxd": "Letterboxd",
     "instagram": "Instagram",
-    "twitter": "Twitter",
+    "twitter": "X",
     "facebook": "Facebook",
     "tiktok": "TikTok",
     "youtube": "YouTube",
@@ -1622,7 +1622,8 @@
     "stopTrackingTitle": "Parar de acompanhar?"
   },
   "credits": {
-    "failedToLoad": "Falha ao carregar créditos"
+    "failedToLoad": "Falha ao carregar créditos",
+    "searchPlaceholder": "Pesquisar por nome ou papel…"
   },
   "datePicker": {
     "month": "Mês",
@@ -1657,7 +1658,7 @@
     "matchCount_other": "{{count}} títulos correspondem",
     "noMatches": "Nenhum título corresponde a estes filtros",
     "removeFilter": "Remover {{name}}",
-    "editFilters": "Abre os filtros"
+    "editFilterValue": "Abre as opções de {{name}}"
   },
   "lists": {
     "alreadyWatched": "Já vistos",
