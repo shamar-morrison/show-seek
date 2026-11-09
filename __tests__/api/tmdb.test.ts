@@ -80,6 +80,30 @@ describe('tmdb api client', () => {
     });
   });
 
+  // TV has no primary_release_date sort; TMDB would silently fall back to popularity.
+  it('sorts TV discover by first air date when "newest" is chosen', async () => {
+    const { tmdbApi } = loadTmdbModule();
+    mockAxiosClient.get.mockResolvedValue({ data: { page: 1, results: [] } });
+
+    await tmdbApi.discoverTV({ sortBy: 'primary_release_date.desc', runtimeGte: 30 });
+    expect(mockAxiosClient.get).toHaveBeenLastCalledWith('/discover/tv', {
+      params: expect.objectContaining({
+        sort_by: 'first_air_date.desc',
+        'with_runtime.gte': 30,
+      }),
+    });
+
+    await tmdbApi.discoverTV({ sortBy: 'vote_average.desc' });
+    expect(mockAxiosClient.get).toHaveBeenLastCalledWith('/discover/tv', {
+      params: expect.objectContaining({ sort_by: 'vote_average.desc' }),
+    });
+
+    await tmdbApi.discoverTV({});
+    expect(mockAxiosClient.get).toHaveBeenLastCalledWith('/discover/tv', {
+      params: expect.objectContaining({ sort_by: 'popularity.desc' }),
+    });
+  });
+
   // Verifies discover filters are translated into TMDB parameter names for personalized browse results.
   it('passes discover filter params through to TMDB', async () => {
     const { tmdbApi } = loadTmdbModule();
@@ -95,6 +119,8 @@ describe('tmdb api client', () => {
       withWatchProviders: 8,
       watchRegion: 'MX',
       hideUnreleased: true,
+      runtimeGte: 90,
+      runtimeLte: 119,
     });
 
     expect(mockAxiosClient.get).toHaveBeenCalledWith('/discover/movie', {
@@ -104,6 +130,8 @@ describe('tmdb api client', () => {
         primary_release_year: 2024,
         sort_by: 'vote_average.desc',
         'vote_average.gte': 7,
+        'with_runtime.gte': 90,
+        'with_runtime.lte': 119,
         with_original_language: 'es',
         with_watch_providers: 8,
         watch_region: 'MX',

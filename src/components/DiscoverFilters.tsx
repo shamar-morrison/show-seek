@@ -1,4 +1,4 @@
-import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
+import { WatchProvider } from '@/src/api/tmdb';
 import {
   FilterLoadingSkeleton,
   FilterSelect,
@@ -6,102 +6,80 @@ import {
   SearchableFilterSelect,
   SelectOption,
 } from '@/src/components/filters';
+import { SPACING } from '@/src/constants/theme';
+import { useDiscoverFilterOptions } from '@/src/hooks/useDiscoverFilterOptions';
 import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_FAMILY,
-  FONT_SIZE,
-  SPACING,
-} from '@/src/constants/theme';
-import { useQuery } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
-import { AppIcon } from '@/src/components/ui/AppIcon';
-import { Cancel01Icon } from '@hugeicons/core-free-icons';
+  DEFAULT_DISCOVER_FILTERS,
+  DISCOVER_SORT_OPTIONS,
+  type DiscoverFilterState,
+} from '@/src/utils/discoverFilters';
+import { getRuntimeLabel } from '@/src/utils/listFilterLabels';
+import { RUNTIME_FILTER_VALUES, type RuntimeFilter } from '@/src/utils/listFilters';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-export interface FilterState {
-  sortBy: string;
-  genres: number[];
-  genreOperator: 'and' | 'or';
-  year: number | null;
-  rating: number;
-  language: string | null;
-  watchProviders: number[];
-}
+/** @deprecated Use `DiscoverFilterState` from `@/src/utils/discoverFilters`. */
+export type FilterState = DiscoverFilterState;
 
 interface DiscoverFiltersProps {
-  filters: FilterState;
-  onChange: (filters: FilterState) => void;
+  filters: DiscoverFilterState;
+  onChange: (filters: DiscoverFilterState) => void;
   mediaType: 'movie' | 'tv';
-  onClearFilters: () => void;
   genreMap: Record<number, string>;
 }
 
 const RATING_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+const RUNTIME_VALUES: RuntimeFilter[] = ['any', ...RUNTIME_FILTER_VALUES];
 
+/** The Discover filter fields, two per row. Shown inside `DiscoverFiltersSheet`. */
 export default function DiscoverFilters({
   filters,
   onChange,
   mediaType,
-  onClearFilters,
   genreMap,
 }: DiscoverFiltersProps) {
   const { t } = useTranslation();
-  const watchProvidersQuery = useQuery({
-    queryKey: ['watchProviders', mediaType],
-    queryFn: () => tmdbApi.getWatchProviders(mediaType),
-    staleTime: 1000 * 60 * 60 * 24 * 30, // 30 days
-    gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days
-  });
+  const { languages, watchProviders, isLoadingWatchProviders } =
+    useDiscoverFilterOptions(mediaType);
 
-  const languagesQuery = useQuery({
-    queryKey: ['languages'],
-    queryFn: () => tmdbApi.getLanguages(),
-    staleTime: 1000 * 60 * 60 * 24 * 30, // 30 days
-    gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days
-  });
-
-  const languages = languagesQuery.data || [];
-  const watchProviders = watchProvidersQuery.data || [];
-
-  // Convert genreMap to array
-  const genres = Object.entries(genreMap).map(([id, name]) => ({
-    id: Number(id),
-    name,
-  }));
-
-  const updateFilter = (key: keyof FilterState, value: any) => {
+  const updateFilter = <K extends keyof DiscoverFilterState>(
+    key: K,
+    value: DiscoverFilterState[K]
+  ) => {
     onChange({ ...filters, [key]: value });
   };
 
-  const sortOptions: SelectOption[] = [
-    { label: t('discover.popularity'), value: 'popularity.desc' },
-    { label: t('discover.topRated'), value: 'vote_average.desc' },
-    { label: t('discover.newest'), value: 'primary_release_date.desc' },
-  ];
+  const sortOptions: SelectOption[] = DISCOVER_SORT_OPTIONS.map((option) => ({
+    label: t(option.labelKey),
+    value: option.value,
+  }));
 
   const ratingOptions: SelectOption[] = RATING_VALUES.map((value) => {
     if (value === 0) return { label: t('filters.anyRating'), value: 0 };
     return { label: t('filters.starsPlus', { count: value }), value };
   });
 
-  const genreOptions = genres.map((g) => ({ label: g.name, value: g.id }));
+  const runtimeOptions: SelectOption[] = RUNTIME_VALUES.map((value) => ({
+    label: getRuntimeLabel(t, value),
+    value,
+  }));
+
+  const genreOptions = Object.entries(genreMap).map(([id, name]) => ({
+    label: name,
+    value: Number(id),
+  }));
 
   const languageOptions = [
     { label: t('discover.anyLanguage'), value: null },
     ...languages.map((l) => ({ label: l.english_name, value: l.iso_639_1 })),
   ];
 
-  const watchProviderOptions = [
-    ...watchProviders.map((p: WatchProvider) => ({
-      label: p.provider_name,
-      value: p.provider_id,
-      logoPath: p.logo_path,
-    })),
-  ];
+  const watchProviderOptions = watchProviders.map((p: WatchProvider) => ({
+    label: p.provider_name,
+    value: p.provider_id,
+    logoPath: p.logo_path,
+  }));
 
   // Generate year options from current year down to 1950
   const currentYear = new Date().getFullYear();
@@ -122,7 +100,8 @@ export default function DiscoverFilters({
             value={filters.sortBy}
             options={sortOptions}
             onSelect={(val) => updateFilter('sortBy', val)}
-            isActive={filters.sortBy !== 'popularity.desc'}
+            isActive={filters.sortBy !== DEFAULT_DISCOVER_FILTERS.sortBy}
+            testID="discover-sort-select"
           />
         </View>
         <View style={styles.col}>
@@ -148,6 +127,31 @@ export default function DiscoverFilters({
             options={ratingOptions}
             onSelect={(val) => updateFilter('rating', val)}
             isActive={filters.rating !== 0}
+            testID="discover-rating-select"
+          />
+        </View>
+        <View style={styles.col}>
+          <FilterSelect
+            label={t('filters.runtime')}
+            value={filters.runtime}
+            options={runtimeOptions}
+            onSelect={(val) => updateFilter('runtime', val)}
+            isActive={filters.runtime !== 'any'}
+            testID="discover-runtime-select"
+          />
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <FilterSelect
+            label={t('discover.releaseYear')}
+            value={filters.year}
+            options={yearOptions}
+            onSelect={(val) => updateFilter('year', val)}
+            placeholder={t('discover.anyYear')}
+            isActive={filters.year !== null}
+            testID="discover-year-select"
           />
         </View>
         <View style={styles.col}>
@@ -163,53 +167,27 @@ export default function DiscoverFilters({
         </View>
       </View>
 
-      <View style={styles.row}>
-        <View style={styles.col}>
-          <FilterSelect
-            label={t('discover.releaseYear')}
-            value={filters.year}
-            options={yearOptions}
-            onSelect={(val) => updateFilter('year', val)}
-            placeholder={t('discover.anyYear')}
-            isActive={filters.year !== null}
-          />
-        </View>
-        <View style={styles.col}>
-          {watchProvidersQuery.isLoading ? (
-            <FilterLoadingSkeleton label={t('discover.streamingService')} />
-          ) : (
-            <MultiSelectFilter
-              label={t('discover.streamingService')}
-              selectedIds={filters.watchProviders}
-              options={watchProviderOptions}
-              onApply={(ids) => onChange({ ...filters, watchProviders: ids })}
-              placeholder={t('discover.anyStreamingService')}
-              isActive={filters.watchProviders.length > 0}
-              searchable
-              searchPlaceholder={t('discover.searchStreamingServices')}
-            />
-          )}
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={styles.clearButton}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onClearFilters();
-        }}
-        activeOpacity={ACTIVE_OPACITY}
-      >
-        <AppIcon icon={Cancel01Icon} size={18} color={COLORS.textSecondary} />
-        <Text style={styles.clearButtonText}>{t('common.clearFilters')}</Text>
-      </TouchableOpacity>
+      {/* Provider names run long, so this one gets the full width. */}
+      {isLoadingWatchProviders ? (
+        <FilterLoadingSkeleton label={t('discover.streamingService')} />
+      ) : (
+        <MultiSelectFilter
+          label={t('discover.streamingService')}
+          selectedIds={filters.watchProviders}
+          options={watchProviderOptions}
+          onApply={(ids) => onChange({ ...filters, watchProviders: ids })}
+          placeholder={t('discover.anyStreamingService')}
+          isActive={filters.watchProviders.length > 0}
+          searchable
+          searchPlaceholder={t('discover.searchStreamingServices')}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: SPACING.m,
     gap: SPACING.m,
   },
   row: {
@@ -218,22 +196,5 @@ const styles = StyleSheet.create({
   },
   col: {
     flex: 1,
-  },
-  clearButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    padding: SPACING.m,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    marginTop: SPACING.xs,
-  },
-  clearButtonText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
   },
 });
