@@ -1,20 +1,12 @@
-import { WatchProvider } from '@/src/api/tmdb';
 import {
   FilterLoadingSkeleton,
   FilterSelect,
   MultiSelectFilter,
   SearchableFilterSelect,
-  SelectOption,
 } from '@/src/components/filters';
 import { SPACING } from '@/src/constants/theme';
-import { useDiscoverFilterOptions } from '@/src/hooks/useDiscoverFilterOptions';
-import {
-  DEFAULT_DISCOVER_FILTERS,
-  DISCOVER_SORT_OPTIONS,
-  type DiscoverFilterState,
-} from '@/src/utils/discoverFilters';
-import { getRuntimeLabel } from '@/src/utils/listFilterLabels';
-import { RUNTIME_FILTER_VALUES, type RuntimeFilter } from '@/src/utils/listFilters';
+import { useDiscoverFieldOptions } from '@/src/hooks/useDiscoverFilterOptions';
+import { DEFAULT_DISCOVER_FILTERS, type DiscoverFilterState } from '@/src/utils/discoverFilters';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
@@ -29,9 +21,6 @@ interface DiscoverFiltersProps {
   genreMap: Record<number, string>;
 }
 
-const RATING_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
-const RUNTIME_VALUES: RuntimeFilter[] = ['any', ...RUNTIME_FILTER_VALUES];
-
 /** The Discover filter fields, two per row. Shown inside `DiscoverFiltersSheet`. */
 export default function DiscoverFilters({
   filters,
@@ -40,8 +29,16 @@ export default function DiscoverFilters({
   genreMap,
 }: DiscoverFiltersProps) {
   const { t } = useTranslation();
-  const { languages, watchProviders, isLoadingWatchProviders } =
-    useDiscoverFilterOptions(mediaType);
+  const {
+    sortOptions,
+    ratingOptions,
+    runtimeOptions,
+    yearOptions,
+    genreOptions,
+    languageOptions,
+    watchProviderOptions,
+    isLoadingWatchProviders,
+  } = useDiscoverFieldOptions(mediaType, genreMap);
 
   const updateFilter = <K extends keyof DiscoverFilterState>(
     key: K,
@@ -49,47 +46,6 @@ export default function DiscoverFilters({
   ) => {
     onChange({ ...filters, [key]: value });
   };
-
-  const sortOptions: SelectOption[] = DISCOVER_SORT_OPTIONS.map((option) => ({
-    label: t(option.labelKey),
-    value: option.value,
-  }));
-
-  const ratingOptions: SelectOption[] = RATING_VALUES.map((value) => {
-    if (value === 0) return { label: t('filters.anyRating'), value: 0 };
-    return { label: t('filters.starsPlus', { count: value }), value };
-  });
-
-  const runtimeOptions: SelectOption[] = RUNTIME_VALUES.map((value) => ({
-    label: getRuntimeLabel(t, value),
-    value,
-  }));
-
-  const genreOptions = Object.entries(genreMap).map(([id, name]) => ({
-    label: name,
-    value: Number(id),
-  }));
-
-  const languageOptions = [
-    { label: t('discover.anyLanguage'), value: null },
-    ...languages.map((l) => ({ label: l.english_name, value: l.iso_639_1 })),
-  ];
-
-  const watchProviderOptions = watchProviders.map((p: WatchProvider) => ({
-    label: p.provider_name,
-    value: p.provider_id,
-    logoPath: p.logo_path,
-  }));
-
-  // Generate year options from current year down to 1950
-  const currentYear = new Date().getFullYear();
-  const yearOptions = [
-    { label: t('discover.anyYear'), value: null },
-    ...Array.from({ length: currentYear - 1949 }, (_, i) => {
-      const year = currentYear - i;
-      return { label: String(year), value: year };
-    }),
-  ];
 
   return (
     <View style={styles.container}>

@@ -1857,7 +1857,7 @@
     "matchCount_other": "{{count}} titres correspondent",
     "noMatches": "Aucun titre ne correspond à ces filtres",
     "removeFilter": "Retirer {{name}}",
-    "editFilters": "Ouvre les filtres"
+    "editFilterValue": "Ouvre les options : {{name}}"
   },
   "lists": {
     "alreadyWatched": "Déjà vus",

@@ -416,7 +416,6 @@ export default function WatchStatusDetailScreen() {
         defaultSortState={DEFAULT_SORT_STATE}
         onSortChange={setSortState}
         genreMap={genreMap}
-        onEditFilters={() => setFilterModalVisible(true)}
         onEditSort={() => setSortModalVisible(true)}
       />
 

@@ -445,7 +445,6 @@ export default function DiscoverScreen() {
           onFiltersChange={setFilters}
           mediaType={mediaType}
           genreMap={genreMap}
-          onEditFilters={openFilters}
         />
 
         {discoverQuery.isLoading ? (

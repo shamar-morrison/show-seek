@@ -1823,7 +1823,7 @@
     "matchCount_other": "{{count}} yapım eşleşiyor",
     "noMatches": "Bu filtrelerle eşleşen yapım yok",
     "removeFilter": "{{name}} kaldır",
-    "editFilters": "Filtreleri açar"
+    "editFilterValue": "{{name}} seçeneklerini açar"
   },
   "lists": {
     "alreadyWatched": "Daha önce izlenenler",

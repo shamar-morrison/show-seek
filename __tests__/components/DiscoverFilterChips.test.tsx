@@ -12,8 +12,10 @@ jest.mock('react-i18next', () => ({
         'discover.language': 'Language',
         'filters.runtime': 'Runtime',
         'filters.runtimeOptions.60to90': '1–1.5 h',
+        'discover.streamingService': 'Streaming Service',
       };
       if (key === 'filters.removeFilter') return `Remove ${options?.name}`;
+      if (key === 'filters.editFilterValue') return `Opens the ${options?.name} options`;
       return labels[key] ?? key;
     },
   }),
@@ -29,26 +31,66 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'Light' },
 }));
 
+jest.mock('expo-image', () => ({ Image: 'Image' }));
+
+// The project's react-native mock renders FlatList as a bare host element, so render its rows.
+jest.mock('react-native', () => {
+  const actual = jest.requireActual('react-native');
+  const FlatList = ({ data = [], renderItem, keyExtractor, ...props }: any) => {
+    const { View } = actual;
+    return (
+      <View {...props}>
+        {data.map((item: any, index: number) => (
+          <View key={keyExtractor ? keyExtractor(item, index) : String(index)}>
+            {renderItem({ item, index })}
+          </View>
+        ))}
+      </View>
+    );
+  };
+  FlatList.displayName = 'MockFlatList';
+  return { ...actual, FlatList };
+});
+
 jest.mock('@/src/hooks/useDiscoverFilterOptions', () => ({
   useDiscoverFilterOptions: () => ({
     languageNames: { ko: 'Korean' },
     providerNames: { 8: 'Netflix', 337: 'Disney Plus' },
   }),
+  useDiscoverFieldOptions: () => ({
+    sortOptions: [
+      { label: 'Popular', value: 'popularity.desc' },
+      { label: 'Top Rated', value: 'vote_average.desc' },
+    ],
+    ratingOptions: [{ label: 'Any rating', value: 0 }],
+    runtimeOptions: [
+      { label: 'Any runtime', value: 'any' },
+      { label: '1–1.5 h', value: '60to90' },
+      { label: '1.5–2 h', value: '90to120' },
+    ],
+    yearOptions: [{ label: 'Any year', value: null }],
+    genreOptions: [{ label: 'Action', value: 28 }],
+    languageOptions: [{ label: 'Korean', value: 'ko' }],
+    watchProviderOptions: [
+      { label: 'Netflix', value: 8, logoPath: null },
+      { label: 'Disney Plus', value: 337, logoPath: null },
+      { label: 'Max', value: 1899, logoPath: null },
+    ],
+    isLoadingWatchProviders: false,
+  }),
 }));
 
 const renderChips = (filters: DiscoverFilterState) => {
   const onFiltersChange = jest.fn();
-  const onEditFilters = jest.fn();
   const utils = render(
     <DiscoverFilterChips
       filters={filters}
       onFiltersChange={onFiltersChange}
       mediaType="movie"
       genreMap={{ 28: 'Action' }}
-      onEditFilters={onEditFilters}
     />
   );
-  return { ...utils, onFiltersChange, onEditFilters };
+  return { ...utils, onFiltersChange };
 };
 
 describe('DiscoverFilterChips', () => {
@@ -96,10 +138,58 @@ describe('DiscoverFilterChips', () => {
     expect(onFiltersChange).toHaveBeenLastCalledWith({ ...filters, watchProviders: [337] });
   });
 
-  it('opens the sheet when a chip is tapped', () => {
-    const { getByTestId, onEditFilters } = renderChips({ ...DEFAULT_DISCOVER_FILTERS, year: 2024 });
-    fireEvent.press(getByTestId('discover-filter-chip-year-edit'));
-    expect(onEditFilters).toHaveBeenCalledTimes(1);
+  it('opens no picker until a chip is tapped', () => {
+    const { queryByTestId } = renderChips({ ...DEFAULT_DISCOVER_FILTERS, runtime: '60to90' });
+    expect(queryByTestId('discover-filter-picker-runtime')).toBeNull();
+  });
+
+  it('a streaming service chip opens the Streaming Service checklist, and Apply updates it', () => {
+    const filters = { ...DEFAULT_DISCOVER_FILTERS, watchProviders: [8] };
+    const { getByTestId, getByText, queryByTestId, onFiltersChange } = renderChips(filters);
+
+    const chip = getByTestId('discover-filter-chip-provider-8-edit');
+    expect(chip.props.accessibilityHint).toBe('Opens the Streaming Service options');
+    fireEvent.press(chip);
+    expect(getByTestId('discover-filter-picker-providers')).toBeTruthy();
+
+    fireEvent.press(getByText('Max'));
+    fireEvent.press(getByTestId('multi-select-apply-button'));
+    expect(onFiltersChange).toHaveBeenCalledWith({ ...filters, watchProviders: [8, 1899] });
+    expect(queryByTestId('discover-filter-picker-providers')).toBeNull();
+  });
+
+  it('the runtime chip opens the Runtime list, and a tap changes only the runtime', () => {
+    const filters = { ...DEFAULT_DISCOVER_FILTERS, runtime: '60to90' as const, rating: 7 };
+    const { getByTestId, getByText, queryByTestId, onFiltersChange } = renderChips(filters);
+
+    fireEvent.press(getByTestId('discover-filter-chip-runtime-edit'));
+    fireEvent.press(getByText('1.5–2 h'));
+
+    expect(onFiltersChange).toHaveBeenCalledWith({ ...filters, runtime: '90to120' });
+    expect(queryByTestId('discover-filter-picker-runtime')).toBeNull();
+  });
+
+  it('the sort chip opens the Sort By list', () => {
+    const { getByTestId } = renderChips({
+      ...DEFAULT_DISCOVER_FILTERS,
+      sortBy: 'vote_average.desc',
+    });
+    fireEvent.press(getByTestId('discover-filter-chip-sort-edit'));
+    expect(getByTestId('discover-filter-picker-sort')).toBeTruthy();
+  });
+
+  it('closing a picker without choosing changes nothing', () => {
+    const { getByTestId, getByText, queryByTestId, onFiltersChange } = renderChips({
+      ...DEFAULT_DISCOVER_FILTERS,
+      watchProviders: [8],
+    });
+    fireEvent.press(getByTestId('discover-filter-chip-provider-8-edit'));
+    fireEvent.press(getByText('Max'));
+    // The Android back button / swipe-to-dismiss path.
+    fireEvent(getByTestId('discover-filter-picker-providers'), 'requestClose');
+
+    expect(queryByTestId('discover-filter-picker-providers')).toBeNull();
+    expect(onFiltersChange).not.toHaveBeenCalled();
   });
 
   it('Clear All resets every filter and the sort', () => {

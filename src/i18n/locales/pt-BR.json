@@ -1624,7 +1624,7 @@
     "matchCount_other": "{{count}} títulos correspondem",
     "noMatches": "Nenhum título corresponde a estes filtros",
     "removeFilter": "Remover {{name}}",
-    "editFilters": "Abre os filtros"
+    "editFilterValue": "Abre as opções de {{name}}"
   },
   "lists": {
     "alreadyWatched": "Já vistos",

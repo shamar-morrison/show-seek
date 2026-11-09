@@ -16,6 +16,9 @@ export type RuntimeFilter =
 /** 'rated' / 'unrated' check for a rating; a number N (1-9) matches ratings of N or higher. */
 export type UserRatingFilter = 'any' | 'rated' | 'unrated' | number;
 
+/** A list filter field that has its own picker. */
+export type ListFilterField = 'mediaType' | 'genres' | 'rating' | 'userRating' | 'year' | 'runtime';
+
 export interface WatchStatusFilterState {
   genres: number[];
   genreOperator: GenreOperator;

@@ -11,6 +11,16 @@ export interface DiscoverFilterState {
   watchProviders: number[];
 }
 
+/** A Discover filter field that has its own picker. */
+export type DiscoverFilterField =
+  | 'sort'
+  | 'genres'
+  | 'rating'
+  | 'runtime'
+  | 'year'
+  | 'language'
+  | 'providers';
+
 export const DEFAULT_DISCOVER_FILTERS: DiscoverFilterState = {
   sortBy: 'popularity.desc',
   genres: [],

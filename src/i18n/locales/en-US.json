@@ -1823,7 +1823,7 @@
     "matchCount_other": "{{count}} titles match",
     "noMatches": "No titles match these filters",
     "removeFilter": "Remove {{name}}",
-    "editFilters": "Opens the filters"
+    "editFilterValue": "Opens the {{name}} options"
   },
   "lists": {
     "alreadyWatched": "Already Watched",
