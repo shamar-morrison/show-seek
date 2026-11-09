@@ -8,7 +8,6 @@ import {
   type DiscoverFilterState,
 } from '@/src/utils/discoverFilters';
 import { getRuntimeLabel, getTmdbRatingLabel } from '@/src/utils/listFilterLabels';
-import { ArrowUpDownIcon } from '@hugeicons/core-free-icons';
 import type { TFunction } from 'i18next';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +16,6 @@ export interface DiscoverFilterChipDescription {
   key: string;
   /** The field whose picker the chip opens when tapped. */
   field: DiscoverFilterField;
-  isSort?: boolean;
   label?: string;
   value: string;
   /** The filters with only this one removed. */
@@ -43,7 +41,6 @@ export function describeDiscoverFilters(
     chips.push({
       key: 'sort',
       field: 'sort',
-      isSort: true,
       label: t('discover.sortBy'),
       value: t(getDiscoverSortLabelKey(filters.sortBy)),
       remove: (f) => ({ ...f, sortBy: defaults.sortBy }),
@@ -154,7 +151,6 @@ export function DiscoverFilterChips({
   }).map((chip) => ({
     key: chip.key,
     testID: `discover-filter-chip-${chip.key}`,
-    icon: chip.isSort ? ArrowUpDownIcon : undefined,
     label: chip.label,
     value: chip.value,
     onPress: () => setEditingField(chip.field),

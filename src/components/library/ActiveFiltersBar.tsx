@@ -19,7 +19,6 @@ import {
   type ListFilterField,
   type WatchStatusFilterState,
 } from '@/src/utils/listFilters';
-import { ArrowUpDownIcon } from '@hugeicons/core-free-icons';
 import type { TFunction } from 'i18next';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -149,7 +148,6 @@ export function ActiveFiltersBar({
     chips.push({
       key: 'sort',
       testID: 'active-sort-chip',
-      icon: ArrowUpDownIcon,
       label: t('sort.title'),
       value: sortValue,
       onPress: onEditSort,

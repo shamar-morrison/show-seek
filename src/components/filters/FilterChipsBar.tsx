@@ -10,7 +10,6 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Cancel01Icon, FilterRemoveIcon } from '@hugeicons/core-free-icons';
-import type { IconSvgElement } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +28,6 @@ export interface FilterChip {
   key: string;
   /** Base test ID; the tappable body gets `-edit` and the ✕ gets `-remove`. */
   testID: string;
-  icon?: IconSvgElement;
   /** Field name shown muted before the value; omitted when the value speaks for itself. */
   label?: string;
   value: string;
@@ -145,7 +143,7 @@ function Chip({
   accentColor: string;
   onRemove: () => void;
 }) {
-  const { testID, icon, label, value, onPress, editLabel, removeLabel } = chip;
+  const { testID, label, value, onPress, editLabel, removeLabel } = chip;
   return (
     <View
       style={[
@@ -165,7 +163,6 @@ function Chip({
         accessibilityHint={editLabel}
         testID={`${testID}-edit`}
       >
-        {icon && <AppIcon icon={icon} size={14} color={accentColor} />}
         <Text style={styles.chipText} numberOfLines={1}>
           {label ? <Text style={styles.chipLabel}>{`${label} `}</Text> : null}
           {value}
