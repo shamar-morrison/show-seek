@@ -1,5 +1,4 @@
 import type { IconSvgElement } from '@/src/components/ui/AppIcon';
-import { Bookmark02Icon } from '@hugeicons/core-free-icons';
 
 export type WhatsNewVisual =
   /** A 3:2 screenshot or artwork from `assets/images/whats-new`. */
@@ -34,7 +33,7 @@ export const CURRENT_WHATS_NEW: WhatsNewAnnouncement | null = {
       id: 'filter-presets',
       titleKey: 'whatsNew.filterPresets.title',
       descriptionKey: 'whatsNew.filterPresets.description',
-      visual: { type: 'icon', icon: Bookmark02Icon },
+      visual: { type: 'image', source: require('@/assets/images/whats-new/saved-filters.png') },
     },
   ],
 };
