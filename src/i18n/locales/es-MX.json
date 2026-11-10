@@ -2050,9 +2050,9 @@
   },
   "whatsNew": {
     "title": "¿Qué hay de nuevo en ShowSeek?",
-    "simklImport": {
-      "title": "Importa desde Simkl",
-      "description": "¿Vienes de Simkl? Con Premium, trae tu historial, calificaciones y pendientes de series, anime y películas. Lo encontrarás en Configuración > Integraciones."
+    "filterPresets": {
+      "title": "Filtros guardados",
+      "description": "Guarda los filtros que más usas en Descubrir y en tus listas, y vuelve a aplicarlos con un toque. Los encontrarás hasta arriba en los filtros."
     }
   },
   "share": {

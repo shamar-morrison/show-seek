@@ -1,4 +1,5 @@
 import type { IconSvgElement } from '@/src/components/ui/AppIcon';
+import { Bookmark02Icon } from '@hugeicons/core-free-icons';
 
 export type WhatsNewVisual =
   /** A 3:2 screenshot or artwork from `assets/images/whats-new`. */
@@ -27,13 +28,13 @@ export interface WhatsNewAnnouncement {
  * strings in every locale. Set it to null to show nothing.
  */
 export const CURRENT_WHATS_NEW: WhatsNewAnnouncement | null = {
-  id: '2026-11-simkl-import',
+  id: '2026-11-filter-presets',
   sections: [
     {
-      id: 'simkl-import',
-      titleKey: 'whatsNew.simklImport.title',
-      descriptionKey: 'whatsNew.simklImport.description',
-      visual: { type: 'syncLogos', source: require('@/assets/images/simkl.png') },
+      id: 'filter-presets',
+      titleKey: 'whatsNew.filterPresets.title',
+      descriptionKey: 'whatsNew.filterPresets.description',
+      visual: { type: 'icon', icon: Bookmark02Icon },
     },
   ],
 };

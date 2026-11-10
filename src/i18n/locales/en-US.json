@@ -1684,9 +1684,9 @@
   },
   "whatsNew": {
     "title": "What's New in ShowSeek?",
-    "simklImport": {
-      "title": "Import from Simkl",
-      "description": "Moving from Simkl? With Premium, bring your watch history, ratings and watchlist for shows, anime and movies. Find it in Settings > Integrations."
+    "filterPresets": {
+      "title": "Saved filters",
+      "description": "Save the filters you use most on Discover and in your lists, then apply them again in one tap. Find them at the top of the filters."
     }
   },
   "share": {

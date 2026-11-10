@@ -1832,9 +1832,9 @@
   },
   "whatsNew": {
     "title": "Quoi de neuf sur ShowSeek ?",
-    "simklImport": {
-      "title": "Importez depuis Simkl",
-      "description": "Vous quittez Simkl ? Avec Premium, emportez votre historique, vos notes et vos titres à voir pour les séries, les anime et les films. Rendez-vous dans Paramètres > Intégrations."
+    "filterPresets": {
+      "title": "Filtres enregistrés",
+      "description": "Enregistrez les filtres que vous utilisez le plus dans Découvrir et dans vos listes, puis réappliquez-les en un geste. Ils se trouvent en haut des filtres."
     }
   },
   "share": {

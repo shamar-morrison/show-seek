@@ -2102,9 +2102,9 @@
   },
   "whatsNew": {
     "title": "O que há de novo no ShowSeek?",
-    "simklImport": {
-      "title": "Importe do Simkl",
-      "description": "Vem do Simkl? Com o Premium, traga o seu histórico, classificações e títulos para ver de séries, anime e filmes. Encontra esta opção em Definições > Integrações."
+    "filterPresets": {
+      "title": "Filtros guardados",
+      "description": "Guarde os filtros que mais utiliza no Descobrir e nas suas listas e volte a aplicá-los com um toque. Encontra-os no topo dos filtros."
     }
   },
   "shuffle": {
