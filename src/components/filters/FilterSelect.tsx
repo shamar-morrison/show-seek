@@ -1,3 +1,4 @@
+import { SHEET_SAFE_PRESS_RETENTION } from '@/src/constants/sheetTouch';
 import {
   ACTIVE_OPACITY,
   COLORS,
@@ -61,6 +62,8 @@ export function FilterSelect({
       <Text style={styles.selectLabel}>{label}</Text>
       <TouchableOpacity
         style={[styles.selectButton, isActive && { borderColor: accentBorder(accentColor) }]}
+        // Taps inside a bottom sheet would otherwise be cancelled on Android (see the constant).
+        pressRetentionOffset={SHEET_SAFE_PRESS_RETENTION}
         onPress={() => setVisible(true)}
         activeOpacity={ACTIVE_OPACITY}
         accessibilityRole="button"

@@ -8,6 +8,7 @@ import {
   hexToRGBA,
   SPACING,
 } from '@/src/constants/theme';
+import { SHEET_SAFE_PRESS_RETENTION } from '@/src/constants/sheetTouch';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import {
   MAX_FILTER_PRESETS_PER_SCOPE,
@@ -78,6 +79,7 @@ export function SavedPresetsStrip({
       accessibilityLabel={t('filterPresets.saveCurrent')}
       accessibilityState={{ disabled: !canSave }}
       testID={`${testID}-save`}
+      pressRetentionOffset={SHEET_SAFE_PRESS_RETENTION}
     >
       <AppIcon icon={BookmarkAdd02Icon} size={14} color={COLORS.text} />
       <Text style={styles.chipText}>{t('common.save')}</Text>
@@ -139,6 +141,7 @@ export function SavedPresetsStrip({
                   if (event.nativeEvent.actionName === 'longpress') onLongPress(preset);
                 }}
                 testID={`${testID}-chip-${preset.id}`}
+                pressRetentionOffset={SHEET_SAFE_PRESS_RETENTION}
               >
                 {icon ? (
                   <AppIcon
@@ -163,6 +166,7 @@ export function SavedPresetsStrip({
             accessibilityRole="button"
             accessibilityLabel={t('filterPresets.manage')}
             testID={`${testID}-manage`}
+            pressRetentionOffset={SHEET_SAFE_PRESS_RETENTION}
           >
             <AppIcon icon={Settings02Icon} size={14} color={COLORS.textSecondary} />
             <Text style={[styles.chipText, styles.secondaryText]}>{t('filterPresets.manage')}</Text>

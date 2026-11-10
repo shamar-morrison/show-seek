@@ -1,8 +1,9 @@
 import { FilterSelect, isUnsetSelectValue } from '@/src/components/filters/FilterSelect';
+import { SHEET_SAFE_PRESS_RETENTION } from '@/src/constants/sheetTouch';
 import { COLORS } from '@/src/constants/theme';
 import { render } from '@testing-library/react-native';
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -71,5 +72,29 @@ describe('FilterSelect', () => {
       />
     );
     expect(textColor((t) => getAllByText(t)[0], 'Descending')).not.toBe(COLORS.textSecondary);
+  });
+
+  it('keeps a jittery tap from being cancelled inside a bottom sheet', () => {
+    const { UNSAFE_getAllByType } = render(
+      <FilterSelect
+        label="Runtime"
+        value="any"
+        options={runtimeOptions}
+        onSelect={jest.fn()}
+        isActive={false}
+      />
+    );
+    // The first touchable is the button that opens the options.
+    expect(UNSAFE_getAllByType(TouchableOpacity)[0].props.pressRetentionOffset).toBe(
+      SHEET_SAFE_PRESS_RETENTION
+    );
+  });
+});
+
+describe('SHEET_SAFE_PRESS_RETENTION', () => {
+  it('reaches well past any on-screen offset between a sheet and the screen', () => {
+    for (const side of Object.values(SHEET_SAFE_PRESS_RETENTION)) {
+      expect(side).toBeGreaterThanOrEqual(4000);
+    }
   });
 });
