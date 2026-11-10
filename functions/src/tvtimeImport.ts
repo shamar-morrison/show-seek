@@ -23,6 +23,9 @@ export const TVTIME_IMPORT_SOURCE: ImportSourceConfig = {
   limitDocId: 'tvtime',
   logTag: '[tvtimeImport]',
   movieWatchDocPrefix: 'tvtime-',
+  // Off: TV Time's behaviour is pinned by __tests__/utils/tvtimeImportGolden.test.ts.
+  episodeGroupFallback: false,
+  reportUnmatchedEpisodeTitles: false,
 };
 
 export const importTvTimeChunk = createFileImportCallable(TVTIME_IMPORT_SOURCE);

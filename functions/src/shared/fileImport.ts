@@ -80,10 +80,34 @@ export interface FileImportEpisodePlay {
   watchedAt: number;
 }
 
+/**
+ * Episodes known only as "watched up to here" (a Simkl entry without an episode list):
+ * `all` = every aired regular-season episode, `through` = up to and including S/E.
+ * For anime entities the coordinates are in the entry's own numbering (season 1).
+ */
+export type FileImportWatchedThrough =
+  | { kind: 'all' }
+  | { kind: 'through'; season: number; episode: number };
+
+/**
+ * Set on anime entities, whose plays use the source entry's own numbering (season 1,
+ * episodes 1…n) rather than TMDB seasons. See `mapAnimePlays` in the server core.
+ */
+export interface FileImportAnimeNumbering {
+  /** The entry's total episode count, used to check it lines up with TMDB. */
+  entryEpisodeTotal: number | null;
+  /** How many source entries (e.g. broadcast cours) were grouped into this show. */
+  groupedEntries: number;
+}
+
 export interface FileImportShowEntity {
+  /** Tried before tvdbId/imdbId when present (Simkl). */
+  tmdbId?: number;
   tvdbId: number | null;
   imdbId: string | null;
   title: string;
+  /** First-air year, used by title search when the title has no "(YYYY)" suffix (Simkl). */
+  year?: number | null;
   status: FileImportShowStatus | null;
   favorite: boolean;
   rating: FileImportRating | null;
@@ -93,6 +117,11 @@ export interface FileImportShowEntity {
   plays: FileImportEpisodePlay[];
   /** Set when a long show is split across chunks; list/status/rating are written for part 0 only. */
   part?: { index: number; total: number };
+  /** Episodes known only as a "watched up to" point; expanded on the server. Explicit plays win. */
+  watchedThrough?: FileImportWatchedThrough;
+  /** The one date stamped on expanded episodes. Without it, `watchedThrough` is ignored. */
+  watchedThroughAt?: number;
+  anime?: FileImportAnimeNumbering;
 }
 
 export interface FileImportMovieEntity {
@@ -132,6 +161,8 @@ export type FileImportSkipReason =
   | 'unresolved_movie'
   | 'ambiguous_title'
   | 'unmatched_episode'
+  /** Anime episode that can't be placed on TMDB's seasons without an unlicensed mapping. */
+  | 'unmatched_anime_episode'
   // Server-side (existing ShowSeek data is never overwritten)
   | 'already_tracked_episode'
   | 'already_tracked_movie'
@@ -143,7 +174,13 @@ export type FileImportIgnoredReason =
   /** Client-side: identical plays (same episode, same timestamp) collapsed. */
   | 'duplicate_plays'
   /** Client-side: episode rows with no usable show ids (e.g. TV Time Data Extractor). */
-  | 'unsupported_episodes';
+  | 'unsupported_episodes'
+  /** Client-side (Simkl): OVA/ONA/special/music-video anime entries. */
+  | 'anime_extras'
+  /** Client-side (Simkl): dropped movies (the contract has no movie status). */
+  | 'dropped_movies'
+  /** Client-side (Simkl): shows whose episodes are known only as a "watched up to" point. */
+  | 'summary_only_episodes';
 
 export interface FileImportCounts {
   shows: number;
@@ -160,6 +197,11 @@ export interface FileImportStats {
   skipped: Partial<Record<FileImportSkipReason, number>>;
   ignored: Partial<Record<FileImportIgnoredReason, number>>;
   unresolvedTitles: string[];
+  /**
+   * Shows that had episodes the server couldn't place, so the summary can name them.
+   * Only sources with `reportUnmatchedEpisodeTitles` set it; absent otherwise.
+   */
+  unmatchedEpisodeTitles?: string[];
   processedEntities: number;
 }
 
@@ -192,7 +234,7 @@ export const mergeFileImportStats = (
     imported[key] += incoming.imported[key] ?? 0;
   });
 
-  return {
+  const merged: FileImportStats = {
     ignored: mergeCountMaps(base.ignored, incoming.ignored),
     imported,
     processedEntities: base.processedEntities + incoming.processedEntities,
@@ -201,6 +243,13 @@ export const mergeFileImportStats = (
       new Set([...base.unresolvedTitles, ...incoming.unresolvedTitles])
     ).slice(0, FILE_IMPORT_MAX_UNRESOLVED_TITLES_TOTAL),
   };
+  // Only present when a side reported it, so TV Time's stats keep their exact shape.
+  if (base.unmatchedEpisodeTitles || incoming.unmatchedEpisodeTitles) {
+    merged.unmatchedEpisodeTitles = Array.from(
+      new Set([...(base.unmatchedEpisodeTitles ?? []), ...(incoming.unmatchedEpisodeTitles ?? [])])
+    ).slice(0, FILE_IMPORT_MAX_UNRESOLVED_TITLES_TOTAL);
+  }
+  return merged;
 };
 
 export const incrementFileImportStat = <T extends string>(

@@ -7,6 +7,7 @@ admin.initializeApp();
 export const deleteAccount = onCall({}, deleteAccountHandler);
 
 export { importImdbChunk } from './imdbImport';
+export { importSimklChunk } from './simklImport';
 export { importTvTimeChunk } from './tvtimeImport';
 // Polar webhook intentionally not exported (web app decommissioned). Re-add this export and recreate the POLAR_* secrets to restore.
 export { revenuecatWebhook } from './revenuecatWebhook';

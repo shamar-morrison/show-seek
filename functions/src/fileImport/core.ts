@@ -45,7 +45,9 @@ import {
   FILE_IMPORT_SESSION_STALE_MS,
   createEmptyFileImportStats,
   incrementFileImportStat,
+  type FileImportAnimeNumbering,
   type FileImportEpisodePlay,
+  type FileImportWatchedThrough,
   type FileImportIgnoredReason,
   type FileImportChunkRequest,
   type FileImportChunkResult,
@@ -85,7 +87,19 @@ export interface ImportSourceConfig {
   movieWatchDocPrefix: string;
   /** Prefix of the per-chunk log line, e.g. "[tvtimeImport]". */
   logTag: string;
+  /**
+   * When a show has plays TMDB's numbering can't place, retry them through TMDB's
+   * community "TVDB order" episode group. Off for TV Time (its behaviour is pinned).
+   */
+  episodeGroupFallback: boolean;
+  /** Return `unmatchedEpisodeTitles` so the summary can name shows with unplaced episodes. */
+  reportUnmatchedEpisodeTitles: boolean;
 }
+
+/** Per-call budget of shows retried through a TMDB episode group (2 requests each). */
+const MAX_EPISODE_GROUP_LOOKUPS = 10;
+/** An episode can be watched on the day it airs, whatever the time zones. */
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const SHOW_STATUSES: readonly FileImportShowStatus[] = [
   'watchlist',
@@ -116,6 +130,30 @@ interface TmdbSeason {
 
 type TmdbTvDetailsWithSeasons = TmdbTvDetails & Record<string, unknown>;
 
+/** The parts of a `/tv/{id}` response the Simkl paths read (not in `TmdbTvDetails`). */
+type TmdbShowDetails = TmdbTvDetails & {
+  genres?: { id: number }[];
+  seasons?: { episode_count?: number; season_number: number }[];
+};
+
+interface TmdbEpisodeGroupList {
+  results?: { id: string; name?: string }[];
+}
+
+interface TmdbEpisodeGroup {
+  groups?: {
+    name?: string;
+    order?: number;
+    episodes?: (TmdbSeasonEpisode & { order?: number })[];
+  }[];
+}
+
+interface MappedPlays {
+  episodes: Map<string, MappedEpisode>;
+  rewatches: number;
+  unmatched: number;
+}
+
 interface TmdbSearchResponse<T> {
   results?: T[];
 }
@@ -133,6 +171,7 @@ interface FileImportContext extends ImportWriteContext {
   detailsCache: Map<number, Promise<TmdbTvDetails | null>>;
   seasonCache: Map<string, Promise<SeasonIndex | null>>;
   fallbackLookupsRemaining: number;
+  episodeGroupLookupsRemaining: number;
 }
 
 interface MappedEpisode {
@@ -158,6 +197,8 @@ type ShowResolution =
       episodes: Map<string, MappedEpisode>;
       rewatches: number;
       unmatched: number;
+      /** Anime plays that couldn't be placed (always 0 for non-anime entities). */
+      animeUnmatched: number;
     }
   | { kind: 'ambiguous' }
   | { kind: 'unresolved' };
@@ -204,6 +245,7 @@ async function handleFileImportChunk(
   const context: FileImportContext = {
     ...(await createImportWriteContext(db, userId)),
     detailsCache: new Map(),
+    episodeGroupLookupsRemaining: MAX_EPISODE_GROUP_LOOKUPS,
     fallbackLookupsRemaining: MAX_EPISODE_FALLBACK_LOOKUPS,
     findCache: new Map(),
     seasonCache: new Map(),
@@ -434,14 +476,61 @@ async function resolveShow(
     return resolution;
   }
 
-  const mapped = await mapPlays(context, resolution.value.id, entity.plays);
-  return { kind: 'resolved', show: resolution.value, ...mapped };
+  const showId = resolution.value.id;
+  if (entity.anime) {
+    return {
+      kind: 'resolved',
+      show: resolution.value,
+      ...(await mapAnimePlays(context, showId, entity)),
+    };
+  }
+
+  let mapped = await mapPlays(context, showId, entity.plays);
+  if (mapped.unmatched > 0 && context.source.episodeGroupFallback) {
+    const regrouped = await mapPlaysThroughEpisodeGroup(context, showId, entity.plays);
+    // Only when the group places more plays; otherwise TMDB's own numbering stands.
+    if (regrouped && regrouped.unmatched < mapped.unmatched) {
+      mapped = regrouped;
+    }
+  }
+  if (entity.watchedThrough && entity.watchedThroughAt !== undefined && isFirstPart(entity)) {
+    await expandWatchedThrough(
+      context,
+      showId,
+      entity.watchedThrough,
+      entity.watchedThroughAt,
+      mapped.episodes
+    );
+  }
+  return { kind: 'resolved', show: resolution.value, ...mapped, animeUnmatched: 0 };
+}
+
+function isFirstPart(entity: FileImportShowEntity): boolean {
+  return !entity.part || entity.part.index === 0;
 }
 
 async function resolveTmdbShow(
   context: FileImportContext,
   entity: FileImportShowEntity
 ): Promise<TitleResolution<TmdbTvResult>> {
+  if (entity.tmdbId !== undefined) {
+    // A stale TMDB id (404) falls through to the other ids.
+    const details = (await getShowDetails(context, entity.tmdbId)) as TmdbShowDetails | null;
+    if (details) {
+      return {
+        kind: 'resolved',
+        value: {
+          first_air_date: details.first_air_date,
+          genre_ids: details.genre_ids ?? details.genres?.map((genre) => genre.id),
+          id: details.id,
+          name: details.name,
+          poster_path: details.poster_path,
+          vote_average: details.vote_average,
+        },
+      };
+    }
+  }
+
   if (entity.tvdbId !== null) {
     // Only tv_results: TVDB show and episode ids overlap, so an episode hit here is a false match.
     const found = await findByExternalId(context, 'tvdb_id', String(entity.tvdbId));
@@ -463,7 +552,9 @@ async function resolveTmdbShow(
     return { kind: 'unresolved' };
   }
 
-  const { title, year } = splitTitleYear(entity.title);
+  const { title, year: titleYear } = splitTitleYear(entity.title);
+  // A "(YYYY)" suffix wins; otherwise the entity's own year (Simkl), which may be off by one.
+  const year = titleYear ?? entity.year ?? null;
   const response = await requestTmdb<TmdbSearchResponse<TmdbTvSearchResult>>(
     `/search/tv?query=${encodeURIComponent(title)}`,
     context.tmdbApiKey
@@ -475,7 +566,7 @@ async function resolveTmdbShow(
     (result) => [result.name, result.original_name],
     (result) => parseYear(result.first_air_date),
     year,
-    0
+    titleYear === null && year !== null ? 1 : 0
   );
 }
 
@@ -739,6 +830,275 @@ async function getShowDetails(
   return context.detailsCache.get(showId)!;
 }
 
+/** A season's episodes by number (cached per call), or null when TMDB doesn't have the season. */
+async function getSeasonIndex(
+  context: FileImportContext,
+  showId: number,
+  season: number
+): Promise<SeasonIndex | null> {
+  const key = seasonKey(showId, season);
+  if (!context.seasonCache.has(key)) {
+    context.seasonCache.set(
+      key,
+      handled(
+        requestTmdbOrNull<TmdbSeason>(`/tv/${showId}/season/${season}`, context.tmdbApiKey).then(
+          (data) => indexSeason(data ?? undefined)
+        )
+      )
+    );
+  }
+  return context.seasonCache.get(key)!;
+}
+
+/** TMDB's regular seasons (season ≥ 1), in order, with their episode counts. */
+async function getRegularSeasons(
+  context: FileImportContext,
+  showId: number
+): Promise<{ episodeCount: number; seasonNumber: number }[]> {
+  const details = (await getShowDetails(context, showId)) as TmdbShowDetails | null;
+  return (details?.seasons ?? [])
+    .filter((season) => season.season_number >= 1)
+    .map((season) => ({
+      episodeCount: season.episode_count ?? 0,
+      seasonNumber: season.season_number,
+    }))
+    .sort((left, right) => left.seasonNumber - right.seasonNumber);
+}
+
+function toMappedEpisode(
+  showId: number,
+  episode: TmdbSeasonEpisode,
+  watchedAt: number
+): MappedEpisode {
+  return {
+    episodeAirDate: episode.air_date ?? null,
+    episodeId: episode.id,
+    episodeName: episode.name,
+    episodeNumber: episode.episode_number,
+    runtimeMinutes:
+      typeof episode.runtime === 'number' && episode.runtime > 0 ? episode.runtime : undefined,
+    seasonNumber: episode.season_number,
+    tvShowId: showId,
+    watchedAt,
+  };
+}
+
+/** Adds a play to the mapped set; a repeat of the same episode keeps the latest watch. */
+function addMappedPlay(
+  result: MappedPlays,
+  showId: number,
+  episode: TmdbSeasonEpisode,
+  watchedAt: number
+): void {
+  const key = `${episode.season_number}_${episode.episode_number}`;
+  const existing = result.episodes.get(key);
+  if (existing) {
+    result.rewatches += 1;
+    existing.watchedAt = Math.max(existing.watchedAt, watchedAt);
+    return;
+  }
+  result.episodes.set(key, toMappedEpisode(showId, episode, watchedAt));
+}
+
+/**
+ * Retries a show's plays through TMDB's community "TVDB order" episode group, for shows
+ * whose TVDB numbering (TV Time, Simkl) doesn't match TMDB's. Every play goes through the
+ * group so the whole show uses one numbering. Null when there's no such group or the
+ * per-call budget is spent.
+ */
+async function mapPlaysThroughEpisodeGroup(
+  context: FileImportContext,
+  showId: number,
+  plays: FileImportEpisodePlay[]
+): Promise<MappedPlays | null> {
+  if (context.episodeGroupLookupsRemaining <= 0) {
+    return null;
+  }
+  context.episodeGroupLookupsRemaining -= 1;
+
+  const list = await requestTmdbOrNull<TmdbEpisodeGroupList>(
+    `/tv/${showId}/episode_groups`,
+    context.tmdbApiKey
+  );
+  const group = list?.results?.find((candidate) => /tvdb/i.test(candidate.name ?? ''));
+  if (!group) {
+    return null;
+  }
+  const detail = await requestTmdbOrNull<TmdbEpisodeGroup>(
+    `/tv/episode_group/${encodeURIComponent(group.id)}`,
+    context.tmdbApiKey
+  );
+  if (!detail?.groups?.length) {
+    return null;
+  }
+
+  // TVDB coordinate → TMDB episode. A group is one TVDB season ("Season 3", "Specials").
+  const byTvdbCoordinate = new Map<string, TmdbSeasonEpisode>();
+  [...detail.groups]
+    .sort((left, right) => (left.order ?? 0) - (right.order ?? 0))
+    .forEach((season, index) => {
+      const name = season.name ?? '';
+      const numbered = name.match(/season\s*(\d+)/i);
+      const seasonNumber = numbered
+        ? Number(numbered[1])
+        : /special/i.test(name)
+          ? 0
+          : (season.order ?? index);
+      [...(season.episodes ?? [])]
+        .sort((left, right) => (left.order ?? 0) - (right.order ?? 0))
+        .forEach((episode, position) => {
+          byTvdbCoordinate.set(`${seasonNumber}_${position + 1}`, episode);
+        });
+    });
+
+  const result: MappedPlays = { episodes: new Map(), rewatches: 0, unmatched: 0 };
+  for (const play of plays) {
+    const episode = byTvdbCoordinate.get(`${play.season}_${play.episode}`);
+    if (!episode) {
+      result.unmatched += 1;
+      continue;
+    }
+    addMappedPlay(result, showId, episode, play.watchedAt);
+  }
+  return result;
+}
+
+/**
+ * Marks the episodes behind a "watched up to" point (a Simkl entry without an episode
+ * list), stamped with its one date. `all`: every aired regular-season episode up to that
+ * date. `through`: every regular-season episode up to S/E (unless TMDB says it aired
+ * after that date). Episodes already in `episodes` (explicit plays) are left alone.
+ */
+async function expandWatchedThrough(
+  context: FileImportContext,
+  showId: number,
+  through: FileImportWatchedThrough,
+  watchedAt: number,
+  episodes: Map<string, MappedEpisode>
+): Promise<void> {
+  const cutoff = watchedAt + DAY_MS;
+  const seasons = (await getRegularSeasons(context, showId))
+    .map((season) => season.seasonNumber)
+    .filter((season) => through.kind === 'all' || season <= through.season);
+  prefetchSeasons(context, showId, seasons);
+
+  for (const seasonNumber of seasons) {
+    const index = await getSeasonIndex(context, showId, seasonNumber);
+    if (!index) {
+      continue;
+    }
+    const seasonEpisodes = [...index.values()].sort(
+      (left, right) => left.episode_number - right.episode_number
+    );
+    for (const episode of seasonEpisodes) {
+      if (
+        through.kind === 'through' &&
+        seasonNumber === through.season &&
+        episode.episode_number > through.episode
+      ) {
+        continue;
+      }
+      const airedAt = episode.air_date ? Date.parse(episode.air_date) : NaN;
+      const aired = Number.isFinite(airedAt) && airedAt <= cutoff;
+      const airedLater = Number.isFinite(airedAt) && airedAt > cutoff;
+      if (through.kind === 'all' ? !aired : airedLater) {
+        continue;
+      }
+      const key = `${episode.season_number}_${episode.episode_number}`;
+      if (!episodes.has(key)) {
+        episodes.set(key, toMappedEpisode(showId, episode, watchedAt));
+      }
+    }
+  }
+}
+
+/**
+ * Anime plays use the source entry's own numbering (season 1, episodes 1…n). Without a
+ * licensed cour → TMDB-season mapping we only place them when it's unambiguous: a single
+ * source entry whose episode total equals TMDB's regular-season total, numbered straight
+ * through TMDB's seasons (single-season shows, One Piece-style absolute numbering).
+ * Everything else is reported as `unmatched_anime_episode`, never guessed.
+ */
+async function mapAnimePlays(
+  context: FileImportContext,
+  showId: number,
+  entity: FileImportShowEntity
+): Promise<MappedPlays & { animeUnmatched: number }> {
+  const anime = entity.anime!;
+  const empty = { episodes: new Map<string, MappedEpisode>(), rewatches: 0, unmatched: 0 };
+  let plays = entity.plays;
+
+  // "Watched up to" in entry numbering → explicit plays 1…n stamped with its one date.
+  if (
+    entity.watchedThrough &&
+    entity.watchedThroughAt !== undefined &&
+    anime.entryEpisodeTotal &&
+    isFirstPart(entity)
+  ) {
+    const last =
+      entity.watchedThrough.kind === 'all'
+        ? anime.entryEpisodeTotal
+        : Math.min(entity.watchedThrough.episode, anime.entryEpisodeTotal);
+    const listed = new Set(plays.map((play) => `${play.season}_${play.episode}`));
+    const expanded: FileImportEpisodePlay[] = [];
+    for (let episode = 1; episode <= last; episode += 1) {
+      if (!listed.has(`1_${episode}`)) {
+        expanded.push({ episode, season: 1, watchedAt: entity.watchedThroughAt });
+      }
+    }
+    plays = [...plays, ...expanded];
+  }
+
+  if (plays.length === 0) {
+    return { ...empty, animeUnmatched: 0 };
+  }
+  if (anime.groupedEntries > 1 || !anime.entryEpisodeTotal) {
+    return { ...empty, animeUnmatched: plays.length };
+  }
+
+  const seasons = await getRegularSeasons(context, showId);
+  const tmdbTotal = seasons.reduce((total, season) => total + season.episodeCount, 0);
+  if (tmdbTotal !== anime.entryEpisodeTotal) {
+    return { ...empty, animeUnmatched: plays.length };
+  }
+
+  /** Entry episode n → TMDB (season, episode), counting straight through the seasons. */
+  const toTmdb = (absolute: number): { episode: number; season: number } | null => {
+    let remaining = absolute;
+    for (const season of seasons) {
+      if (remaining <= season.episodeCount) {
+        return { episode: remaining, season: season.seasonNumber };
+      }
+      remaining -= season.episodeCount;
+    }
+    return null;
+  };
+
+  const coordinates = plays.map((play) => (play.season === 1 ? toTmdb(play.episode) : null));
+  prefetchSeasons(
+    context,
+    showId,
+    Array.from(
+      new Set(coordinates.flatMap((coordinate) => (coordinate ? [coordinate.season] : [])))
+    ).sort((left, right) => left - right)
+  );
+
+  const result: MappedPlays = { ...empty };
+  let animeUnmatched = 0;
+  for (let index = 0; index < plays.length; index += 1) {
+    const coordinate = coordinates[index];
+    const episode = coordinate
+      ? await getSeasonEpisode(context, showId, coordinate.season, coordinate.episode)
+      : null;
+    if (!episode) {
+      animeUnmatched += 1;
+      continue;
+    }
+    addMappedPlay(result, showId, episode, plays[index].watchedAt);
+  }
+  return { ...result, animeUnmatched };
+}
+
 function findByExternalId(
   context: FileImportContext,
   source: 'imdb_id' | 'tvdb_id',
@@ -792,6 +1152,15 @@ async function writeShow(
 
   if (resolution.unmatched > 0) {
     skip(stats, 'unmatched_episode', resolution.unmatched);
+  }
+  if (resolution.animeUnmatched > 0) {
+    skip(stats, 'unmatched_anime_episode', resolution.animeUnmatched);
+  }
+  if (
+    context.source.reportUnmatchedEpisodeTitles &&
+    resolution.unmatched + resolution.animeUnmatched > 0
+  ) {
+    addUnmatchedEpisodeTitle(stats, show.name);
   }
   if (resolution.rewatches > 0) {
     ignore(stats, 'rewatched_episodes', resolution.rewatches);
@@ -1059,6 +1428,17 @@ function addUnresolvedTitle(stats: FileImportStats, title: string): void {
   }
 }
 
+function addUnmatchedEpisodeTitle(stats: FileImportStats, title: string): void {
+  const titles = (stats.unmatchedEpisodeTitles ??= []);
+  if (
+    title &&
+    titles.length < FILE_IMPORT_MAX_UNRESOLVED_TITLES_PER_CHUNK &&
+    !titles.includes(title)
+  ) {
+    titles.push(title);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Payload validation
 // ---------------------------------------------------------------------------
@@ -1134,8 +1514,59 @@ function parseShow(raw: unknown, path: string): FileImportShowEntity {
     entity.part = { index: parseIntInRange(part.index, `${path}.part.index`, 0, total - 1), total };
   }
 
-  assertHasIdentifier(entity, path);
+  // Optional fields only Simkl sends; absent fields leave the entity exactly as before.
+  if (show.tmdbId !== undefined && show.tmdbId !== null) {
+    entity.tmdbId = parseIntInRange(show.tmdbId, `${path}.tmdbId`, 1, Number.MAX_SAFE_INTEGER);
+  }
+  if (show.year !== undefined && show.year !== null) {
+    entity.year = parseIntInRange(show.year, `${path}.year`, 1870, 2100);
+  }
+  if (show.watchedThrough !== undefined) {
+    entity.watchedThrough = parseWatchedThrough(show.watchedThrough, `${path}.watchedThrough`);
+  }
+  if (show.watchedThroughAt !== undefined) {
+    entity.watchedThroughAt = parseTimestamp(show.watchedThroughAt, `${path}.watchedThroughAt`);
+  }
+  if (show.anime !== undefined) {
+    entity.anime = parseAnimeNumbering(show.anime, `${path}.anime`);
+  }
+
+  // A TMDB id identifies the show on its own; otherwise the original rule applies.
+  if (entity.tmdbId === undefined) {
+    assertHasIdentifier(entity, path);
+  }
   return entity;
+}
+
+function parseWatchedThrough(raw: unknown, path: string): FileImportWatchedThrough {
+  const through = parseObject(raw, path);
+  if (through.kind === 'all') {
+    return { kind: 'all' };
+  }
+  if (through.kind === 'through') {
+    return {
+      episode: parseIntInRange(through.episode, `${path}.episode`, 1, MAX_EPISODE_NUMBER),
+      kind: 'through',
+      season: parseIntInRange(through.season, `${path}.season`, 1, MAX_EPISODE_NUMBER),
+    };
+  }
+  throw new HttpsError('invalid-argument', `${path}.kind must be "all" or "through".`);
+}
+
+function parseAnimeNumbering(raw: unknown, path: string): FileImportAnimeNumbering {
+  const anime = parseObject(raw, path);
+  return {
+    entryEpisodeTotal:
+      anime.entryEpisodeTotal === null || anime.entryEpisodeTotal === undefined
+        ? null
+        : parseIntInRange(
+            anime.entryEpisodeTotal,
+            `${path}.entryEpisodeTotal`,
+            1,
+            MAX_EPISODE_NUMBER
+          ),
+    groupedEntries: parseIntInRange(anime.groupedEntries, `${path}.groupedEntries`, 1, 100),
+  };
 }
 
 function parseMovie(raw: unknown, path: string): FileImportMovieEntity {

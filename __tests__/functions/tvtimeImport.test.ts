@@ -869,9 +869,12 @@ describe('claimTvTimeChunkSlot — rate limiting', () => {
   it('pins the TV Time source configuration (stored ids and messages depend on it)', () => {
     expect(TVTIME_IMPORT_SOURCE).toEqual({
       displayName: 'TV Time',
+      // Simkl-only behaviours stay off for TV Time.
+      episodeGroupFallback: false,
       limitDocId: 'tvtime',
       logTag: '[tvtimeImport]',
       movieWatchDocPrefix: 'tvtime-',
+      reportUnmatchedEpisodeTitles: false,
     });
   });
 

@@ -133,6 +133,7 @@ All optional and backward compatible; the TV Time client never sets them.
 interface FileImportShowEntity {
   // existing: tvdbId, imdbId, title, status, favorite, rating, lists, addedAt, plays, part
   tmdbId?: number; // tried first when present
+  year?: number | null; // first-air year for title search when the title has no "(YYYY)" (±1)
   /** Episodes known only as "watched up to here" (CSV, summary-only JSON, completed without seasons). */
   watchedThrough?: { kind: 'all' } | { kind: 'through'; season: number; episode: number };
   watchedThroughAt?: number; // epoch ms, the one date to stamp on expanded episodes
@@ -219,18 +220,18 @@ The summary screen tells the user how many anime episodes couldn't be placed, so
 
 Same `onCall` settings as `importTvTimeChunk` (`concurrency: 1`, `maxInstances: 10`, `memory: '512MiB'`, `timeoutSeconds: 300`, `TMDB_API_KEY`), same auth → validate → premium → rate-limit order.
 
-Differences from TV Time, all in the shared core behind optional fields:
+Differences from TV Time, all in the shared core behind optional entity fields (which only the Simkl client sends) or per-source flags (`episodeGroupFallback`, `reportUnmatchedEpisodeTitles`; both off for TV Time). TV Time's behaviour is pinned by `__tests__/utils/tvtimeImportGolden.test.ts` and must not change:
 
 1. **Resolution order** `tmdbId` → `tvdbId` → `imdbId` → title (+ year). A `tmdbId` that 404s falls through to the next ID.
 2. **`watchedThrough` expansion.** Fetch TMDB seasons (already cached per call). Mark every regular-season episode (season ≥ 1) with an air date on or before `watchedThroughAt` (or before now when there's no date), and, for `through`, up to the given episode. Explicit `plays` win over expanded ones. Expanded episodes follow never-overwrite like any other. If there's no date at all, the show gets status only.
 3. **Anime mapping** as above.
 4. **Episode-numbering fallback.** Simkl numbers TV like TVDB; TMDB sometimes differs (Futurama, Doctor Who, reordered specials). For each show:
-   1. **Detect** a mismatch from season data the server already fetched: a play whose season/episode doesn't exist on TMDB, or more watched episodes in a season than TMDB's season has.
+   1. **Detect** a mismatch: a play whose season/episode doesn't exist on TMDB (after step 2).
    2. **TVDB episode IDs first.** Plays with `tvdbEpisodeId` go through TV Time's existing `/find` repair (capped per call).
-   3. **TMDB episode groups.** For a still-flagged show, fetch `/tv/{id}/episode_groups` and look for a group named like "TVDB order". If there is one, map **every** play of that show through it, not only the missing ones, so numbering stays consistent. Two extra requests per flagged show, under a per-call cap like the existing lookup cap.
+   3. **TMDB episode groups.** For a still-flagged show, fetch `/tv/{id}/episode_groups` and look for a group named like "TVDB order". If there is one, map **every** play of that show through it, not only the missing ones, so numbering stays consistent, and use that result only if it places more plays than TMDB's own numbering. Two extra requests per flagged show, at most 10 shows per call.
    4. **Report the rest** as `unmatched_episode`, with the show name in `unmatchedEpisodeTitles`.
 
-   Built into the shared core, this also helps TV Time's Refract and Liberator imports, which have TVDB numbering without episode IDs.
+   This could also help TV Time's Refract and Liberator imports (TVDB numbering without episode IDs), but it's off for TV Time: turning it on would be a deliberate TV Time change with re-recorded golden files.
 
 5. **Notes (phase 2, CSV only).** Write `users/{uid}/notes/{tv|movie}-{tmdbId}` with the same fields `NoteService` writes (`userId`, `mediaType`, `mediaId`, `content`, `posterPath`, `mediaTitle`, `createdAt`, `updatedAt`). Skip as `existing_note` if the doc exists.
 6. **Movie watch docs** use the `simkl-` prefix: `watched_movies/{id}/watches/simkl-{tmdbId}-{watchedAt}`.

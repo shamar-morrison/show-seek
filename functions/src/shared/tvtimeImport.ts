@@ -5,6 +5,7 @@
  * The contract is shared by every file import and lives in `./fileImport`; this
  * module keeps the original TV Time names so existing code is unchanged.
  */
+import type { FileImportIgnoredReason, FileImportSkipReason } from './fileImport';
 
 export {
   FILE_IMPORT_COOLDOWN_MS as TVTIME_IMPORT_COOLDOWN_MS,
@@ -31,7 +32,6 @@ export type {
   FileImportChunkResult as TvTimeImportChunkResult,
   FileImportCounts as TvTimeImportCounts,
   FileImportEpisodePlay as TvTimeEpisodePlay,
-  FileImportIgnoredReason as TvTimeIgnoredReason,
   FileImportLimitDoc as TvTimeImportLimitDoc,
   FileImportListMembership as TvTimeListMembership,
   FileImportMovieEntity as TvTimeMovieEntity,
@@ -39,6 +39,12 @@ export type {
   FileImportRating as TvTimeRating,
   FileImportShowEntity as TvTimeShowEntity,
   FileImportShowStatus as TvTimeShowStatus,
-  FileImportSkipReason as TvTimeSkipReason,
   FileImportStats as TvTimeImportStats,
 } from './fileImport';
+
+/** The reasons a TV Time import can report (the Simkl-only ones are left out). */
+export type TvTimeSkipReason = Exclude<FileImportSkipReason, 'unmatched_anime_episode'>;
+export type TvTimeIgnoredReason = Exclude<
+  FileImportIgnoredReason,
+  'anime_extras' | 'dropped_movies' | 'summary_only_episodes'
+>;
