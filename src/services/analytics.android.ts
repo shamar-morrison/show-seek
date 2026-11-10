@@ -19,6 +19,7 @@ import {
   type TraktSyncCompleteParams,
   type TraktSyncFailureParams,
   type TrackCreateListParams,
+  type TrackFilterPresetParams,
   type TrackAddToListParams,
   type TrackCreateReminderParams,
   type TrackSaveRatingParams,
@@ -51,6 +52,8 @@ export type {
   TrackAddToListParams,
   TrackCreateListParams,
   TrackCreateReminderParams,
+  TrackFilterPresetParams,
+  AnalyticsFilterPresetScope,
   TrackSaveRatingParams,
   TraktSyncCompleteParams,
   TraktSyncFailureParams,
@@ -239,6 +242,16 @@ const trackNamedEvent = async (
 
 export const trackSignOut = async (): Promise<void> => {
   await trackNamedEvent('sign_out', 'sign_out');
+};
+
+export const trackFilterPresetSaved = async ({ scope }: TrackFilterPresetParams): Promise<void> => {
+  await trackNamedEvent('filter_preset_saved', 'filter_preset_saved', { scope });
+};
+
+export const trackFilterPresetApplied = async ({
+  scope,
+}: TrackFilterPresetParams): Promise<void> => {
+  await trackNamedEvent('filter_preset_applied', 'filter_preset_applied', { scope });
 };
 
 export const trackPurchaseSuccess = async ({

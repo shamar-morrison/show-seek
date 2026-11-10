@@ -62,6 +62,7 @@ export default function FavoritesScreen() {
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const openFilterModal = useCallback(() => setFilterModalVisible(true), []);
   const [filterState, setFilterState] = useState<WatchStatusFilterState>(
     DEFAULT_WATCH_STATUS_FILTERS
   );
@@ -354,6 +355,7 @@ export default function FavoritesScreen() {
           onSortChange={setSortState}
           genreMap={genreMap}
           onEditSort={() => setSortModalVisible(true)}
+          onOpenFilters={openFilterModal}
         />
         <View style={styles.content}>
           {viewMode === 'grid' ? (

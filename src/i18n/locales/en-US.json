@@ -1684,9 +1684,9 @@
   },
   "whatsNew": {
     "title": "What's New in ShowSeek?",
-    "simklImport": {
-      "title": "Import from Simkl",
-      "description": "Moving from Simkl? With Premium, bring your watch history, ratings and watchlist for shows, anime and movies. Find it in Settings > Integrations."
+    "filterPresets": {
+      "title": "Saved filters",
+      "description": "Save the filters you use most on Discover and in your lists, then apply them again in one tap. Find them at the top of the filters."
     }
   },
   "share": {
@@ -1939,6 +1939,38 @@
     "noMatches": "No titles match these filters",
     "removeFilter": "Remove {{name}}",
     "editFilterValue": "Opens the {{name}} options"
+  },
+  "filterPresets": {
+    "title": "Saved filters",
+    "emptyHint": "Save filters you use often to apply them in one tap.",
+    "saveCurrent": "Save current filters",
+    "namePlaceholder": "Name these filters",
+    "rename": "Rename",
+    "updateWithCurrent": "Use current filters",
+    "chipHint": "Applies these filters. Long press for more options.",
+    "options": "Options",
+    "limitReached": "You can save up to {{count}} filters. Delete one to save another.",
+    "hiddenCount_one": "{{count}} saved filter doesn't apply here",
+    "hiddenCount_other": "{{count}} saved filters don't apply here",
+    "activePresetLabel": "Saved filters: {{name}}",
+    "activePresetHint": "Opens filters, where you can edit or delete it",
+    "errors": {
+      "empty": "Enter a name",
+      "tooLong": "Use {{count}} characters or fewer",
+      "duplicate": "You already have saved filters with this name",
+      "saveFailed": "Couldn't update your saved filters. Please try again."
+    },
+    "manage": "Manage",
+    "manageTitle": "Saved filters",
+    "manageEmpty": "No saved filters yet.",
+    "saveTitle": "Save filters",
+    "renameTitle": "Rename saved filters",
+    "renameNamed": "Rename {{name}}",
+    "deleteNamed": "Delete {{name}}",
+    "applyHint": "Applies these filters",
+    "deleteConfirmTitle": "Delete saved filters?",
+    "deleteConfirmMessage": "“{{name}}” will be deleted.",
+    "longPressHint": "Long press a saved filter for more options."
   },
   "lists": {
     "alreadyWatched": "Already Watched",

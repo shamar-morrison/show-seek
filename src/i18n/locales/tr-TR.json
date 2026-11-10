@@ -1684,9 +1684,9 @@
   },
   "whatsNew": {
     "title": "ShowSeek'te neler yeni?",
-    "simklImport": {
-      "title": "Simkl'den içe aktarın",
-      "description": "Simkl'den mi geçiyorsunuz? Premium ile diziler, anime ve filmler için izleme geçmişinizi, puanlarınızı ve izleme listenizi getirin. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
+    "filterPresets": {
+      "title": "Kayıtlı filtreler",
+      "description": "Keşfet'te ve listelerinizde en çok kullandığınız filtreleri kaydedin, ardından tek dokunuşla yeniden uygulayın. Filtrelerin en üstünde bulabilirsiniz."
     }
   },
   "share": {
@@ -1939,6 +1939,38 @@
     "noMatches": "Bu filtrelerle eşleşen yapım yok",
     "removeFilter": "{{name}} kaldır",
     "editFilterValue": "{{name}} seçeneklerini açar"
+  },
+  "filterPresets": {
+    "title": "Kayıtlı filtreler",
+    "emptyHint": "Sık kullandığınız filtreleri kaydedin, tek dokunuşla uygulayın.",
+    "saveCurrent": "Mevcut filtreleri kaydet",
+    "namePlaceholder": "Bu filtrelere bir ad verin",
+    "rename": "Yeniden adlandır",
+    "updateWithCurrent": "Mevcut filtreleri kullan",
+    "chipHint": "Bu filtreleri uygular. Diğer seçenekler için basılı tutun.",
+    "options": "Seçenekler",
+    "limitReached": "En fazla {{count}} filtre kaydedebilirsiniz. Yenisini kaydetmek için birini silin.",
+    "hiddenCount_one": "{{count}} kayıtlı filtre burada geçerli değil",
+    "hiddenCount_other": "{{count}} kayıtlı filtre burada geçerli değil",
+    "activePresetLabel": "Kayıtlı filtreler: {{name}}",
+    "activePresetHint": "Filtreleri açar; buradan düzenleyebilir veya silebilirsiniz",
+    "errors": {
+      "empty": "Bir ad girin",
+      "tooLong": "En fazla {{count}} karakter kullanın",
+      "duplicate": "Bu adla kayıtlı filtreleriniz zaten var",
+      "saveFailed": "Kayıtlı filtreleriniz güncellenemedi. Lütfen tekrar deneyin."
+    },
+    "manage": "Yönet",
+    "manageTitle": "Kayıtlı filtreler",
+    "manageEmpty": "Henüz kayıtlı filtreniz yok.",
+    "saveTitle": "Filtreleri kaydet",
+    "renameTitle": "Kayıtlı filtreleri yeniden adlandır",
+    "renameNamed": "{{name}} adını değiştir",
+    "deleteNamed": "{{name}} filtresini sil",
+    "applyHint": "Bu filtreleri uygular",
+    "deleteConfirmTitle": "Kayıtlı filtreler silinsin mi?",
+    "deleteConfirmMessage": "“{{name}}” silinecek.",
+    "longPressHint": "Diğer seçenekler için kayıtlı bir filtreyi basılı tutun."
   },
   "lists": {
     "alreadyWatched": "Daha önce izlenenler",

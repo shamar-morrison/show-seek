@@ -404,6 +404,7 @@ export default function MovieRatingsScreen() {
         }}
         genreMap={genreMap}
         showMediaTypeFilter={false}
+        screenMediaType="movie"
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />

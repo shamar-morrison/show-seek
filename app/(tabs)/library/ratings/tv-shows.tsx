@@ -396,6 +396,7 @@ export default function TVShowRatingsScreen() {
         }}
         genreMap={genreMap}
         showMediaTypeFilter={false}
+        screenMediaType="tv"
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />

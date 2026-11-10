@@ -37,10 +37,14 @@ export interface ListActionsModalRef {
 interface ListActionsModalProps {
   /** Array of actions to display in the modal */
   actions: ListAction[];
+  /** Optional heading above the actions, e.g. the name of what they act on */
+  title?: string;
+  /** Called once the sheet has fully closed */
+  onDidDismiss?: () => void;
 }
 
 const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
-  ({ actions }, ref) => {
+  ({ actions, title, onDidDismiss }, ref) => {
     const iconBadgeStyles = useIconBadgeStyles();
     const sheetRef = useRef<TrueSheet>(null);
     const { width } = useWindowDimensions();
@@ -70,8 +74,14 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
         grabber={false}
+        onDidDismiss={onDidDismiss}
       >
         <GestureHandlerRootView style={[styles.content, { width }]}>
+          {title ? (
+            <Text style={styles.title} numberOfLines={1}>
+              {title}
+            </Text>
+          ) : null}
           {actions.map((action, index) => {
             const IconComponent = action.icon;
             const isDisabled = action.disabled ?? false;
@@ -136,5 +146,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.medium,
     flex: 1,
+  },
+  title: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: FONT_SIZE.s,
+    paddingBottom: SPACING.s,
+    paddingTop: SPACING.xs,
   },
 });

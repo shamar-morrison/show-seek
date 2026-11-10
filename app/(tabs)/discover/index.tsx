@@ -21,6 +21,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
+import { useDiscoverPresets } from '@/src/hooks/useFilterPresets';
 import { useGenres } from '@/src/hooks/useGenres';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
@@ -35,6 +36,7 @@ import {
   hasActiveDiscoverFilters,
   type DiscoverFilterState,
 } from '@/src/utils/discoverFilters';
+import { findMatchingDiscoverPreset, type DiscoverFilterPreset } from '@/src/utils/filterPresets';
 import { dedupeMediaById } from '@/src/utils/mediaUtils';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList } from '@shopify/flash-list';
@@ -122,10 +124,17 @@ export default function DiscoverScreen() {
     initialPageParam: 1,
   });
 
-  // Reset genres when media type changes
-  useEffect(() => {
-    setFilters((prev) => ({ ...prev, genres: [] }));
-  }, [mediaType]);
+  // Movie and TV genre IDs differ, so switching tabs by hand drops the chosen genres. Done here
+  // rather than in an effect on mediaType, so applying a preset can set the tab and its genres
+  // in one go without the genres being wiped afterwards.
+  const changeMediaType = useCallback(
+    (next: MediaType) => {
+      if (next === mediaType) return;
+      setMediaType(next);
+      setFilters((prev) => (prev.genres.length === 0 ? prev : { ...prev, genres: [] }));
+    },
+    [mediaType]
+  );
 
   useEffect(() => {
     const loadViewMode = async () => {
@@ -157,6 +166,15 @@ export default function DiscoverScreen() {
 
   const openFilters = useCallback(() => {
     void filtersSheetRef.current?.present();
+  }, []);
+
+  const discoverPresets = useDiscoverPresets();
+  const activePreset = findMatchingDiscoverPreset(discoverPresets, mediaType, filters);
+
+  // A preset belongs to one tab, so applying it sets the tab and its filters together.
+  const handleApplyPreset = useCallback((preset: DiscoverFilterPreset) => {
+    setMediaType(preset.mediaType);
+    setFilters(preset.filters);
   }, []);
 
   const handleItemPress = useCallback(
@@ -422,7 +440,7 @@ export default function DiscoverScreen() {
         <View style={styles.typeToggleContainer}>
           <TouchableOpacity
             style={[styles.typeButton, mediaType === 'movie' && { backgroundColor: accentColor }]}
-            onPress={() => setMediaType('movie')}
+            onPress={() => changeMediaType('movie')}
             activeOpacity={ACTIVE_OPACITY}
           >
             <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
@@ -431,7 +449,7 @@ export default function DiscoverScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.typeButton, mediaType === 'tv' && { backgroundColor: accentColor }]}
-            onPress={() => setMediaType('tv')}
+            onPress={() => changeMediaType('tv')}
             activeOpacity={ACTIVE_OPACITY}
           >
             <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
@@ -445,6 +463,8 @@ export default function DiscoverScreen() {
           onFiltersChange={setFilters}
           mediaType={mediaType}
           genreMap={genreMap}
+          presetName={activePreset?.name}
+          onPresetPress={openFilters}
         />
 
         {discoverQuery.isLoading ? (
@@ -500,6 +520,7 @@ export default function DiscoverScreen() {
         ref={filtersSheetRef}
         filters={filters}
         onApply={setFilters}
+        onApplyPreset={handleApplyPreset}
         mediaType={mediaType}
         genreMap={genreMap}
       />

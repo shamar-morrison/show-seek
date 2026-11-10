@@ -1753,6 +1753,38 @@
     "removeFilter": "Remover {{name}}",
     "editFilterValue": "Abre as opções de {{name}}"
   },
+  "filterPresets": {
+    "title": "Filtros salvos",
+    "emptyHint": "Salve os filtros que você mais usa para aplicá-los com um toque.",
+    "saveCurrent": "Salvar filtros atuais",
+    "namePlaceholder": "Dê um nome a estes filtros",
+    "rename": "Renomear",
+    "updateWithCurrent": "Usar filtros atuais",
+    "chipHint": "Aplica estes filtros. Toque e segure para mais opções.",
+    "options": "Opções",
+    "limitReached": "Você pode salvar até {{count}} filtros. Exclua um para salvar outro.",
+    "hiddenCount_one": "{{count}} filtro salvo não se aplica aqui",
+    "hiddenCount_other": "{{count}} filtros salvos não se aplicam aqui",
+    "activePresetLabel": "Filtros salvos: {{name}}",
+    "activePresetHint": "Abre os filtros, onde você pode editá-lo ou excluí-lo",
+    "errors": {
+      "empty": "Digite um nome",
+      "tooLong": "Use até {{count}} caracteres",
+      "duplicate": "Você já tem filtros salvos com este nome",
+      "saveFailed": "Não foi possível atualizar seus filtros salvos. Tente novamente."
+    },
+    "manage": "Gerenciar",
+    "manageTitle": "Filtros salvos",
+    "manageEmpty": "Nenhum filtro salvo ainda.",
+    "saveTitle": "Salvar filtros",
+    "renameTitle": "Renomear filtros salvos",
+    "renameNamed": "Renomear {{name}}",
+    "deleteNamed": "Excluir {{name}}",
+    "applyHint": "Aplica estes filtros",
+    "deleteConfirmTitle": "Excluir filtros salvos?",
+    "deleteConfirmMessage": "“{{name}}” será excluído.",
+    "longPressHint": "Toque e segure um filtro salvo para mais opções."
+  },
   "lists": {
     "alreadyWatched": "Já vistos",
     "dropped": "Abandonados",
@@ -2036,9 +2068,9 @@
   },
   "whatsNew": {
     "title": "O que há de novo no ShowSeek?",
-    "simklImport": {
-      "title": "Importe do Simkl",
-      "description": "Vindo do Simkl? Com o Premium, traga seu histórico, avaliações e títulos para assistir de séries, anime e filmes. Você encontra isso em Configurações > Integrações."
+    "filterPresets": {
+      "title": "Filtros salvos",
+      "description": "Salve os filtros que você mais usa no Descobrir e nas suas listas e aplique-os de novo com um toque. Eles ficam no topo dos filtros."
     }
   },
   "shuffle": {

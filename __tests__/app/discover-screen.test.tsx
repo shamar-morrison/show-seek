@@ -133,6 +133,10 @@ jest.mock('@/src/api/tmdb', () => ({
   },
 }));
 
+jest.mock('@/src/hooks/useFilterPresets', () => ({
+  useDiscoverPresets: () => [],
+}));
+
 jest.mock('@/src/components/discover/DiscoverFiltersSheet', () => {
   const React = require('react');
   const DiscoverFiltersSheet = React.forwardRef((props: any, ref: any) => {
@@ -319,5 +323,29 @@ describe('DiscoverScreen stability', () => {
     expect(mockDiscoverMovies).toHaveBeenCalledWith(
       expect.objectContaining({ runtimeGte: 90, runtimeLte: 119 })
     );
+  });
+
+  it('applies a preset from the other tab without losing its genres', () => {
+    const { getByText } = render(<DiscoverScreen />);
+    const presetFilters = { ...capturedSheetProps.filters, genres: [9648], rating: 7 };
+
+    act(() => {
+      capturedSheetProps.onApplyPreset({
+        id: 'p1',
+        scope: 'discover',
+        name: 'TV mysteries',
+        mediaType: 'tv',
+        filters: presetFilters,
+        createdAt: new Date(),
+      });
+    });
+
+    expect(capturedDiscoverQuery.queryKey[1]).toBe('tv');
+    expect(capturedDiscoverQuery.queryKey[2]).toEqual(presetFilters);
+
+    // Switching tabs by hand still drops genres, since movie and TV genre IDs differ.
+    fireEvent.press(getByText('media.movies'));
+    expect(capturedDiscoverQuery.queryKey[1]).toBe('movie');
+    expect(capturedDiscoverQuery.queryKey[2]).toEqual({ ...presetFilters, genres: [] });
   });
 });

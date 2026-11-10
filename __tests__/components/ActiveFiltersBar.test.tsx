@@ -4,6 +4,30 @@ import { DEFAULT_WATCH_STATUS_FILTERS, type WatchStatusFilterState } from '@/src
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
+let mockListPresets: any[] = [];
+const mockPresetActions = {
+  createDiscoverPreset: jest.fn(),
+  createListPreset: jest.fn(),
+  renamePreset: jest.fn(),
+  replacePreset: jest.fn(),
+  deletePreset: jest.fn(),
+  recordApplied: jest.fn(),
+};
+
+jest.mock('@/src/hooks/useFilterPresets', () => {
+  const { partitionListPresets } = jest.requireActual('@/src/utils/filterPresets');
+  return {
+    useListPresets: (caps: any) => ({
+      all: mockListPresets,
+      ...partitionListPresets(mockListPresets, caps),
+    }),
+  };
+});
+
+jest.mock('@/src/hooks/useFilterPresetActions', () => ({
+  useFilterPresetActions: () => mockPresetActions,
+}));
+
 jest.mock('@/src/context/AccentColorProvider', () => ({
   useAccentColor: () => ({ accentColor: '#ff5500' }),
 }));
@@ -211,5 +235,61 @@ describe('ActiveFiltersBar', () => {
     // Content now fits on screen: back to the start.
     fireEvent(scrollView, 'contentSizeChange', 300, 34);
     expect(scrollTo).toHaveBeenLastCalledWith({ x: 0, animated: true });
+  });
+
+  describe('saved presets', () => {
+    const preset = {
+      id: 'p1',
+      scope: 'list' as const,
+      name: 'Short dramas',
+      filters: { ...DEFAULT_WATCH_STATUS_FILTERS, genres: [18], runtime: 'under30' as const },
+      createdAt: new Date(2026, 0, 1),
+    };
+
+    afterEach(() => {
+      mockListPresets = [];
+    });
+
+    const renderWithPresets = (filters: WatchStatusFilterState) => {
+      const onOpenFilters = jest.fn();
+      const utils = render(
+        <ActiveFiltersBar
+          filters={filters}
+          sortState={DEFAULT_SORT_STATE}
+          defaultSortState={DEFAULT_SORT_STATE}
+          genreMap={genreMap}
+          onFiltersChange={jest.fn()}
+          onSortChange={jest.fn()}
+          onEditSort={jest.fn()}
+          onOpenFilters={onOpenFilters}
+        />
+      );
+      return { ...utils, onOpenFilters };
+    };
+
+    it('names the matching preset first and opens the filters from it', () => {
+      mockListPresets = [preset];
+      const { getByTestId, queryByTestId, onOpenFilters } = renderWithPresets(preset.filters);
+
+      expect(getByTestId('active-filters-preset-chip')).toBeTruthy();
+      expect(queryByTestId('active-filters-save-preset')).toBeNull();
+
+      fireEvent.press(getByTestId('active-filters-preset-chip'));
+      expect(onOpenFilters).toHaveBeenCalled();
+    });
+
+    it('has no Save chip; saving happens in the filters sheet', () => {
+      mockListPresets = [preset];
+      const { queryByTestId } = renderWithPresets({ ...DEFAULT_WATCH_STATUS_FILTERS, rating: 7 });
+      expect(queryByTestId('active-filters-preset-chip')).toBeNull();
+      expect(queryByTestId('active-filters-save-preset')).toBeNull();
+    });
+
+    it('shows no preset chips without onOpenFilters', () => {
+      mockListPresets = [preset];
+      const { queryByTestId } = renderBar(preset.filters);
+      expect(queryByTestId('active-filters-preset-chip')).toBeNull();
+      expect(queryByTestId('active-filters-save-preset')).toBeNull();
+    });
   });
 });
