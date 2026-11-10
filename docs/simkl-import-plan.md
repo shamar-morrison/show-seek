@@ -288,12 +288,12 @@ Same approach as `__tests__/fixtures/tvtime/`:
 ## Rollout order
 
 0. ~~**Real export.**~~ Done 2026-11-10; findings are under [Format quirks](#format-quirks). Still open: measure how many Futurama / Doctor Who episodes end up unmatched or misplaced, which needs the importer (step 3). The CSV backup and VIP rewatch rows stay unseen unless a Pro/VIP account is used. A free account's backup can only be downloaded once every 30 days, so don't probe the download URL (even a `HEAD` request counts).
-1. Refactor: neutral contract, server core, generalised client screens (TV Time tests green).
-2. Contract additions + `importSimklChunk` + function tests.
-3. Fixture generator, JSON parser, prepare/chunking + parser tests.
-4. Simkl config for the generalised screens, service, entry point, i18n.
-5. CSV parser (phase 2) + fixtures.
-6. Real-file QA, then deploy the function before releasing the app.
+1. ~~Refactor: neutral contract and server core (TV Time tests green).~~ Done; the client screens were left alone and Simkl got its own in step 4. A golden comparison test (`__tests__/utils/tvtimeImportGolden.test.ts`) pins TV Time's behaviour to the pre-refactor code.
+2. ~~Contract additions + `importSimklChunk` + function tests.~~ Done.
+3. ~~JSON parser, prepare/chunking + parser tests and real fixtures.~~ Done.
+4. ~~Integrations entry, Simkl screens, service, i18n.~~ Done (Simkl's own screens and service; TV Time's unchanged).
+5. **CSV parser — deferred**, see [Later](#later).
+6. Deploy the functions, then real-file QA on a device (the real backup, plus one TV Time import to confirm the shared core), before releasing the app.
 
 ## Decisions (recommended defaults)
 
@@ -303,9 +303,9 @@ Same approach as `__tests__/fixtures/tvtime/`:
 4. **Never overwrite** existing ShowSeek data (episodes, ratings, notes, list memberships), as with TV Time.
 5. **`hold` → Watching.** **`completed` → the existing Ended/Canceled split.**
 6. **Summary-only entries are expanded** to every aired episode up to the watched point, stamped with the one date we have. Without a date, status only.
-7. **JSON first; CSV in phase 2.** The JSON is free and complete; the CSV is Pro-only and holds only "watched up to".
+7. **JSON only for now; the CSV is deferred.** The JSON is free for every account (Pro included) and complete; the CSV is Pro-only and holds only "watched up to". Picking a CSV shows a message pointing to the JSON backup.
 8. **Anime: licence-free rules only.** Movies, single-entry shows whose episode total matches TMDB, and status/rating/notes for everything else. No unlicensed mapping lists.
-9. **Memos become ShowSeek notes, in phase 2 with the CSV.** The JSON backup doesn't include memos.
+9. **Memos become ShowSeek notes, with the CSV (deferred).** The JSON backup doesn't include memos.
 10. **Per-source rate limits** (`import_limits/simkl`).
 11. **Dropped movies and anime extras are counted, not imported.**
 12. **Numbering fallback in v1:** TVDB episode IDs when present, then TMDB "TVDB order" episode groups, then name the show in the summary. No TVDB API in v1.
@@ -316,11 +316,14 @@ Same approach as `__tests__/fixtures/tvtime/`:
 - **Episode numbering.** Mitigated by the fallback in [Server](#server--importsimklchunk), step 4. The real backup has no TVDB episode IDs, so for Simkl it rests on TMDB "TVDB order" episode groups. Shows with a mismatch and no such group are named in the summary. Measure with the real backup once the importer exists.
 - **Anime cours without TMDB/TVDB IDs** will mostly come out unresolved. Visible in the summary; the TVDB API wouldn't fix this either.
 - **Memory.** Low risk at realistic sizes (see the 50MB cap). Verified with the `--stress` file on a low-end Android phone. If that struggles, read the picked file straight into bytes instead of base64 (`TvTimeImportService.ts` decodes a base64 string today); that would help the TV Time import too, so it's a follow-up rather than a v1 requirement.
-- **CSV date order.** A file whose dates never exceed 12 in either position can't be told apart; we default to month-first and say so in the preview.
-- **To confirm with the real export:** see step 0. The CSV stays synthetic plus one small real-looking sample unless a Pro user shares a file.
+- **To confirm with the real export:** see step 0.
 
 ## Later
 
+- **Simkl CSV backup (was step 5).** Deferred on 2026-11-10 because it adds little: every Simkl account, Pro included, can download the free JSON backup, which has every episode with its own date; the CSV is Pro-only and holds only the last episode watched per title. Picking a CSV today shows `csv_not_supported` pointing to the JSON. Build it if users ask. The spec is under [CSV specifics](#csv-specifics-phase-2) (header aliases, per-file date order, "watched up to" from `LastEpWatched`, memos → notes). How to test it:
+  - **Without a real file:** the "Simkl v1" header that several independent tools agree on, the `Mormani/movies-list-csv-converter` sample, and Simkl's official import sample (`__tests__/fixtures/simkl/source/`; add a `.gitattributes` `-text` rule first so its CRLF line endings stay byte-exact). Use Simkl's own CSV importer as a check: import a CSV into a fresh free account, download that account's free JSON backup, and compare what the CSV parser produces against what the (tested) JSON parser reads from Simkl's result. One fresh account per check, because of the 30-day download limit.
+  - **What only a real file proves:** the exact header and date format of the CSV Simkl's export page produces (sources disagree on day- vs month-first). Get one with a month of Simkl Pro on the test account, or an anonymised file from Simkl's Discord or subreddit, before release.
+  - **Risk to keep in mind:** a file whose dates never exceed 12 in either position can't be told apart; default to month-first and say so in the preview.
 - **TVDB API for numbering.** Simkl's numbering is TVDB's, so TVDB's episode list (season, number, air date, episode ID) maps every Simkl episode exactly: match to TMDB by air date (episode order breaks same-day ties), falling back to the TVDB episode ID. It would slot into the same detection point as the v1 fallback and help the TV Time import too. It does little for anime: TVDB doesn't know Simkl's cour splits; only shows numbered straight through (One Piece) gain, because TVDB's absolute numbers would line up even when episode totals drift.
   - **Cost:** TVDB has no public commercial pricing ("Contact Us", discounts for open-source projects); attribution "with a direct link to TheTVDB.com" is required wherever its metadata is shown, which may not apply to matching-only use but needs confirming with them. Another API key in Functions, another rate limit, and 1–2 extra requests per flagged show.
   - **Decide on it when** step 0 or post-launch numbers show either: more than ~2% of imported TV episodes ending unmatched or misplaced after the v1 fallback, or more than ~5% of imported shows named in the unmatched summary. Ask TVDB for pricing in parallel so the decision isn't blocked on a quote.
