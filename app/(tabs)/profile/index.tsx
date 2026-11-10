@@ -86,6 +86,7 @@ export default function ProfileScreen() {
     handleCloseWebAppModal,
     handleImdbImport,
     handleTvTimeImport,
+    handleSimklImport,
     handleClearCache,
     handleSignOut,
     handleUpgradePress,
@@ -343,6 +344,7 @@ export default function ProfileScreen() {
             isTraktLoading={isTraktLoading}
             onImdbImport={() => handleGuardedContentAction(handleImdbImport)}
             onTvTimeImport={() => handleGuardedContentAction(handleTvTimeImport)}
+            onSimklImport={() => handleGuardedContentAction(handleSimklImport)}
             onTraktPress={() => handleGuardedContentAction(handleTraktPress)}
             isStremioConnected={isStremioConnected}
             onStremioPress={() => handleGuardedContentAction(handleStremioPress)}
