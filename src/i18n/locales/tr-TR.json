@@ -1684,21 +1684,9 @@
   },
   "whatsNew": {
     "title": "ShowSeek'te neler yeni?",
-    "shareCards": {
-      "title": "Yeni paylaşım kartları",
-      "description": "Filmler, diziler, bölümler, sezon ilerlemesi ve listeleriniz için kartlar paylaşın. Bir boyut ve stil seçin, not ekleyin, ardından paylaşın veya kaydedin."
-    },
-    "editProfile": {
-      "title": "Profilinizi güncelleyin",
-      "description": "Hesabınız var mı? Artık adınızı ve fotoğrafınızı profilinizden değiştirebilirsiniz."
-    },
-    "tvTimeImport": {
-      "title": "TV Time'dan içe aktarın",
-      "description": "TV Time'dan mı geçiyorsunuz? Premium ile izleme geçmişinizi, puanlarınızı, favorilerinizi, izleme listenizi ve listelerinizi getirin. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
-    },
-    "stremioAddon": {
-      "title": "Stremio Eklentisi",
-      "description": "Stremio'da izlediklerinizi ShowSeek'te izlendi olarak işaretleyin. Bir hesap ve bilgisayarda Stremio gerekir. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
+    "simklImport": {
+      "title": "Simkl'den içe aktarın",
+      "description": "Simkl'den mi geçiyorsunuz? Premium ile diziler, anime ve filmler için izleme geçmişinizi, puanlarınızı ve izleme listenizi getirin. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
     }
   },
   "share": {

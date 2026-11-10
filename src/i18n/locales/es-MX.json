@@ -2018,21 +2018,9 @@
   },
   "whatsNew": {
     "title": "¿Qué hay de nuevo en ShowSeek?",
-    "shareCards": {
-      "title": "Nuevas tarjetas para compartir",
-      "description": "Comparte tarjetas de películas, series, episodios, progreso de temporada y tus listas. Elige un tamaño y un estilo, agrega una nota y compártela o guárdala."
-    },
-    "editProfile": {
-      "title": "Actualiza tu perfil",
-      "description": "¿Tienes una cuenta? Ahora puedes cambiar tu nombre y tu foto desde tu perfil."
-    },
-    "tvTimeImport": {
-      "title": "Importa desde TV Time",
-      "description": "¿Vienes de TV Time? Con Premium, trae tu historial, calificaciones, favoritos, pendientes y listas. Lo encontrarás en Configuración > Integraciones."
-    },
-    "stremioAddon": {
-      "title": "Addon de Stremio",
-      "description": "Marca como visto en ShowSeek lo que ves en Stremio. Necesitas una cuenta y Stremio en una computadora. Lo encontrarás en Configuración > Integraciones."
+    "simklImport": {
+      "title": "Importa desde Simkl",
+      "description": "¿Vienes de Simkl? Con Premium, trae tu historial, calificaciones y pendientes de series, anime y películas. Lo encontrarás en Configuración > Integraciones."
     }
   },
   "share": {

@@ -27,31 +27,13 @@ export interface WhatsNewAnnouncement {
  * strings in every locale. Set it to null to show nothing.
  */
 export const CURRENT_WHATS_NEW: WhatsNewAnnouncement | null = {
-  id: '2026-11-share-cards',
+  id: '2026-11-simkl-import',
   sections: [
     {
-      id: 'share-cards',
-      titleKey: 'whatsNew.shareCards.title',
-      descriptionKey: 'whatsNew.shareCards.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/share-cards.webp') },
-    },
-    {
-      id: 'edit-profile',
-      titleKey: 'whatsNew.editProfile.title',
-      descriptionKey: 'whatsNew.editProfile.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/edit-profile.png') },
-    },
-    {
-      id: 'tv-time-import',
-      titleKey: 'whatsNew.tvTimeImport.title',
-      descriptionKey: 'whatsNew.tvTimeImport.description',
-      visual: { type: 'syncLogos', source: require('@/assets/images/tvtime.png') },
-    },
-    {
-      id: 'stremio-addon',
-      titleKey: 'whatsNew.stremioAddon.title',
-      descriptionKey: 'whatsNew.stremioAddon.description',
-      visual: { type: 'syncLogos', source: require('@/assets/images/stremio.png') },
+      id: 'simkl-import',
+      titleKey: 'whatsNew.simklImport.title',
+      descriptionKey: 'whatsNew.simklImport.description',
+      visual: { type: 'syncLogos', source: require('@/assets/images/simkl.png') },
     },
   ],
 };

@@ -2070,21 +2070,9 @@
   },
   "whatsNew": {
     "title": "O que há de novo no ShowSeek?",
-    "shareCards": {
-      "title": "Novos cartões para partilhar",
-      "description": "Partilhe cartões de filmes, séries, episódios, progresso da temporada e as suas listas. Escolha um tamanho e um estilo, adicione uma nota e partilhe ou guarde."
-    },
-    "editProfile": {
-      "title": "Atualize o seu perfil",
-      "description": "Tem uma conta? Agora pode alterar o seu nome e a sua foto no seu perfil."
-    },
-    "tvTimeImport": {
-      "title": "Importe do TV Time",
-      "description": "Vem do TV Time? Com o Premium, traga o seu histórico, classificações, favoritos, títulos para ver e listas. Encontra esta opção em Definições > Integrações."
-    },
-    "stremioAddon": {
-      "title": "Addon do Stremio",
-      "description": "Marque como visto no ShowSeek o que vê no Stremio. Precisa de uma conta e do Stremio num computador. Encontra esta opção em Definições > Integrações."
+    "simklImport": {
+      "title": "Importe do Simkl",
+      "description": "Vem do Simkl? Com o Premium, traga o seu histórico, classificações e títulos para ver de séries, anime e filmes. Encontra esta opção em Definições > Integrações."
     }
   },
   "shuffle": {
