@@ -200,4 +200,36 @@ describe('useFilterPresets', () => {
     );
     expect(mockMarkPresetUsed).toHaveBeenCalledWith('user-1', 'older');
   });
+
+  it('leaves an unloaded list alone and reloads it once a write settles', async () => {
+    mockSavePreset.mockResolvedValue(undefined);
+    const client = createClient();
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useFilterPresetMutations(), {
+      wrapper: wrapperFor(client),
+    });
+
+    await act(async () => {
+      await result.current.save.mutateAsync(listPreset('new'));
+    });
+
+    // Writing just the new preset would pass for the whole list until the next refetch.
+    expect(client.getQueryData(['filterPresets', 'user-1'])).toBeUndefined();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['filterPresets', 'user-1'] });
+  });
+
+  it('does not reload when the cached list was updated in place', async () => {
+    mockGetUserPresets.mockResolvedValue([listPreset('l1')]);
+    mockRenamePreset.mockResolvedValue(undefined);
+    const client = createClient();
+    const { result } = renderHook(usePresetsAndMutations, { wrapper: wrapperFor(client) });
+    await waitFor(() => expect(result.current.presets).toHaveLength(1));
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+
+    await act(async () => {
+      await result.current.mutations.rename.mutateAsync({ id: 'l1', name: 'Renamed' });
+    });
+
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
 });

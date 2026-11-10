@@ -73,29 +73,44 @@ export function useListPresets(caps: ListPresetScreenCaps) {
 
 type PresetsUpdater = (presets: FilterPreset[]) => FilterPreset[];
 
+type OptimisticContext = { previous: FilterPreset[] | undefined };
+
 /**
  * Applies a change to the cached presets straight away and returns what to restore if the
- * write fails.
+ * write fails. With nothing cached yet, the cache is left alone: writing a partial list would
+ * pass for the full one until the next refetch. `settle` loads the real list instead.
  */
 async function applyOptimistic(
   queryClient: QueryClient,
   userId: string,
   update: PresetsUpdater
-): Promise<{ previous: FilterPreset[] | undefined }> {
+): Promise<OptimisticContext> {
   const key = getFilterPresetsQueryKey(userId);
   await queryClient.cancelQueries({ queryKey: key });
   const previous = queryClient.getQueryData<FilterPreset[]>(key);
-  queryClient.setQueryData<FilterPreset[]>(key, (current) => update(current ?? []));
+  if (previous) {
+    queryClient.setQueryData<FilterPreset[]>(key, update(previous));
+  }
   return { previous };
 }
 
 function rollback(
   queryClient: QueryClient,
   userId: string | undefined,
-  context: { previous: FilterPreset[] | undefined } | undefined
+  context: OptimisticContext | undefined
 ) {
-  if (!userId || !context) return;
+  if (!userId || !context?.previous) return;
   queryClient.setQueryData(getFilterPresetsQueryKey(userId), context.previous);
+}
+
+/** Loads the saved list once a write settles, when there was no cached list to update. */
+function settle(
+  queryClient: QueryClient,
+  userId: string | undefined,
+  context: OptimisticContext | undefined
+) {
+  if (!userId || !context || context.previous) return;
+  void queryClient.invalidateQueries({ queryKey: getFilterPresetsQueryKey(userId) });
 }
 
 function requireUserId(userId: string | undefined): string {
@@ -121,6 +136,7 @@ export function useFilterPresetMutations() {
         ...presets.filter((existing) => existing.id !== preset.id),
       ]),
     onError: (_error, _preset, context) => rollback(queryClient, userId, context),
+    onSettled: (_data, _error, _vars, context) => settle(queryClient, userId, context),
   });
 
   const rename = useMutation({
@@ -131,6 +147,7 @@ export function useFilterPresetMutations() {
         presets.map((preset) => (preset.id === id ? { ...preset, name } : preset))
       ),
     onError: (_error, _vars, context) => rollback(queryClient, userId, context),
+    onSettled: (_data, _error, _vars, context) => settle(queryClient, userId, context),
   });
 
   const updateFilters = useMutation({
@@ -141,6 +158,7 @@ export function useFilterPresetMutations() {
         presets.map((existing) => (existing.id === preset.id ? preset : existing))
       ),
     onError: (_error, _vars, context) => rollback(queryClient, userId, context),
+    onSettled: (_data, _error, _vars, context) => settle(queryClient, userId, context),
   });
 
   const remove = useMutation({
@@ -151,6 +169,7 @@ export function useFilterPresetMutations() {
         presets.filter((existing) => existing.id !== preset.id)
       ),
     onError: (_error, _preset, context) => rollback(queryClient, userId, context),
+    onSettled: (_data, _error, _vars, context) => settle(queryClient, userId, context),
   });
 
   // Not worth an alert if this fails; the order just stays as it was.
@@ -164,6 +183,7 @@ export function useFilterPresetMutations() {
         )
       ),
     onError: (_error, _preset, context) => rollback(queryClient, userId, context),
+    onSettled: (_data, _error, _vars, context) => settle(queryClient, userId, context),
   });
 
   return { save, rename, updateFilters, remove, markUsed, userId };
