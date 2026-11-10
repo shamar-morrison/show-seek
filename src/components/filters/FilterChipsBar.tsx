@@ -9,7 +9,7 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Cancel01Icon, FilterRemoveIcon } from '@hugeicons/core-free-icons';
+import { Bookmark02Icon, Cancel01Icon, FilterRemoveIcon } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,21 +40,31 @@ export interface FilterChip {
   removeLabel: string;
 }
 
+/** The saved preset the active filters match, shown by name before the filter chips. */
+export interface PresetNameChip {
+  name: string;
+  /** Opens the filter sheet, where the preset can be managed. */
+  onPress: () => void;
+  testID: string;
+}
+
 interface FilterChipsBarProps {
   chips: FilterChip[];
   onClearAll: () => void;
+  presetChip?: PresetNameChip;
   testID?: string;
   clearAllTestID?: string;
 }
 
 /**
  * A horizontal strip of removable chips for active filters. Each chip clears itself with its ✕
- * or runs `onPress` when tapped; "Clear All" appears with two or more chips. Renders nothing
- * without chips.
+ * or runs `onPress` when tapped; "Clear All" appears with two or more chips. A matching saved
+ * preset is named first. Renders nothing without chips.
  */
 export function FilterChipsBar({
   chips,
   onClearAll,
+  presetChip,
   testID = 'active-filters-bar',
   clearAllTestID = 'active-filters-clear-all',
 }: FilterChipsBarProps) {
@@ -118,6 +128,26 @@ export function FilterChipsBar({
           >
             <AppIcon icon={FilterRemoveIcon} size={14} color={COLORS.textSecondary} />
             <Text style={styles.clearChipText}>{t('common.clearAll')}</Text>
+          </Pressable>
+        )}
+
+        {presetChip && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.clearChip,
+              { borderColor: accentColor },
+              pressed && styles.pressed,
+            ]}
+            onPress={presetChip.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={t('filterPresets.activePresetLabel', { name: presetChip.name })}
+            accessibilityHint={t('filterPresets.activePresetHint')}
+            testID={presetChip.testID}
+          >
+            <AppIcon icon={Bookmark02Icon} size={14} color={accentColor} />
+            <Text style={styles.presetChipText} numberOfLines={1}>
+              {presetChip.name}
+            </Text>
           </Pressable>
         )}
 
@@ -242,6 +272,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: FONT_SIZE.s,
+  },
+  presetChipText: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: FONT_SIZE.s,
+    maxWidth: 200,
   },
   pressed: {
     opacity: 0.7,

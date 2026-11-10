@@ -1753,6 +1753,38 @@
     "removeFilter": "Quitar {{name}}",
     "editFilterValue": "Abre las opciones de {{name}}"
   },
+  "filterPresets": {
+    "title": "Filtros guardados",
+    "emptyHint": "Guarda los filtros que más usas para aplicarlos con un toque.",
+    "saveCurrent": "Guardar filtros actuales",
+    "namePlaceholder": "Ponle nombre a estos filtros",
+    "rename": "Cambiar nombre",
+    "updateWithCurrent": "Usar filtros actuales",
+    "chipHint": "Aplica estos filtros. Mantén presionado para ver más opciones.",
+    "options": "Opciones",
+    "limitReached": "Puedes guardar hasta {{count}} filtros. Elimina uno para guardar otro.",
+    "hiddenCount_one": "{{count}} filtro guardado no aplica aquí",
+    "hiddenCount_other": "{{count}} filtros guardados no aplican aquí",
+    "activePresetLabel": "Filtros guardados: {{name}}",
+    "activePresetHint": "Abre los filtros, donde puedes editarlo o eliminarlo",
+    "errors": {
+      "empty": "Escribe un nombre",
+      "tooLong": "Usa {{count}} caracteres o menos",
+      "duplicate": "Ya tienes filtros guardados con este nombre",
+      "saveFailed": "No se pudieron actualizar tus filtros guardados. Inténtalo de nuevo."
+    },
+    "manage": "Administrar",
+    "manageTitle": "Filtros guardados",
+    "manageEmpty": "Aún no tienes filtros guardados.",
+    "saveTitle": "Guardar filtros",
+    "renameTitle": "Cambiar nombre de filtros guardados",
+    "renameNamed": "Cambiar nombre de {{name}}",
+    "deleteNamed": "Eliminar {{name}}",
+    "applyHint": "Aplica estos filtros",
+    "deleteConfirmTitle": "¿Eliminar filtros guardados?",
+    "deleteConfirmMessage": "Se eliminará “{{name}}”.",
+    "longPressHint": "Mantén presionado un filtro guardado para ver más opciones."
+  },
   "lists": {
     "alreadyWatched": "Ya vistos",
     "dropped": "Abandonadas",

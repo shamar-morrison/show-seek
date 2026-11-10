@@ -3,120 +3,27 @@ import { DiscoverFilterPicker } from '@/src/components/discover/DiscoverFilterPi
 import { useDiscoverFilterOptions } from '@/src/hooks/useDiscoverFilterOptions';
 import {
   DEFAULT_DISCOVER_FILTERS,
-  getDiscoverSortLabelKey,
   type DiscoverFilterField,
   type DiscoverFilterState,
 } from '@/src/utils/discoverFilters';
-import { getRuntimeLabel, getTmdbRatingLabel } from '@/src/utils/listFilterLabels';
-import type { TFunction } from 'i18next';
+import { describeDiscoverFilters } from '@/src/utils/filterDescriptions';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export interface DiscoverFilterChipDescription {
-  key: string;
-  /** The field whose picker the chip opens when tapped. */
-  field: DiscoverFilterField;
-  label?: string;
-  value: string;
-  /** The filters with only this one removed. */
-  remove: (filters: DiscoverFilterState) => DiscoverFilterState;
-}
-
-interface Names {
-  genreMap: Record<number, string>;
-  languageNames: Record<string, string>;
-  providerNames: Record<number, string>;
-}
-
-/** One chip per active filter (one per genre and per streaming service), in the sheet's order. */
-export function describeDiscoverFilters(
-  filters: DiscoverFilterState,
-  t: TFunction,
-  { genreMap, languageNames, providerNames }: Names
-): DiscoverFilterChipDescription[] {
-  const defaults = DEFAULT_DISCOVER_FILTERS;
-  const chips: DiscoverFilterChipDescription[] = [];
-
-  if (filters.sortBy !== defaults.sortBy) {
-    chips.push({
-      key: 'sort',
-      field: 'sort',
-      label: t('discover.sortBy'),
-      value: t(getDiscoverSortLabelKey(filters.sortBy)),
-      remove: (f) => ({ ...f, sortBy: defaults.sortBy }),
-    });
-  }
-  filters.genres.forEach((genreId) => {
-    chips.push({
-      key: `genre-${genreId}`,
-      field: 'genres',
-      value: genreMap[genreId] ?? t('discover.genres'),
-      remove: (f) => {
-        const genres = f.genres.filter((id) => id !== genreId);
-        return {
-          ...f,
-          genres,
-          genreOperator: genres.length === 0 ? defaults.genreOperator : f.genreOperator,
-        };
-      },
-    });
-  });
-  if (filters.rating !== defaults.rating) {
-    chips.push({
-      key: 'rating',
-      field: 'rating',
-      label: t('discover.rating'),
-      value: getTmdbRatingLabel(t, filters.rating),
-      remove: (f) => ({ ...f, rating: defaults.rating }),
-    });
-  }
-  if (filters.runtime !== defaults.runtime) {
-    chips.push({
-      key: 'runtime',
-      field: 'runtime',
-      label: t('filters.runtime'),
-      value: getRuntimeLabel(t, filters.runtime),
-      remove: (f) => ({ ...f, runtime: defaults.runtime }),
-    });
-  }
-  if (filters.year !== defaults.year) {
-    chips.push({
-      key: 'year',
-      field: 'year',
-      label: t('discover.releaseYear'),
-      value: String(filters.year),
-      remove: (f) => ({ ...f, year: defaults.year }),
-    });
-  }
-  if (filters.language !== null && filters.language !== defaults.language) {
-    const code = filters.language;
-    chips.push({
-      key: 'language',
-      field: 'language',
-      label: t('discover.language'),
-      value: languageNames[code] ?? code.toUpperCase(),
-      remove: (f) => ({ ...f, language: defaults.language }),
-    });
-  }
-  filters.watchProviders.forEach((providerId) => {
-    chips.push({
-      key: `provider-${providerId}`,
-      field: 'providers',
-      value: providerNames[providerId] ?? t('discover.streamingService'),
-      remove: (f) => ({
-        ...f,
-        watchProviders: f.watchProviders.filter((id) => id !== providerId),
-      }),
-    });
-  });
-  return chips;
-}
+export {
+  describeDiscoverFilters,
+  type DiscoverFilterChipDescription,
+} from '@/src/utils/filterDescriptions';
 
 interface DiscoverFilterChipsProps {
   filters: DiscoverFilterState;
   onFiltersChange: (filters: DiscoverFilterState) => void;
   mediaType: 'movie' | 'tv';
   genreMap: Record<number, string>;
+  /** Name of the saved preset the filters match, shown first. */
+  presetName?: string;
+  /** Opens the filter sheet from the preset chip. */
+  onPresetPress?: () => void;
 }
 
 /** Name of each field, as its picker's title and in its chip's accessibility hint. */
@@ -139,6 +46,8 @@ export function DiscoverFilterChips({
   onFiltersChange,
   mediaType,
   genreMap,
+  presetName,
+  onPresetPress,
 }: DiscoverFilterChipsProps) {
   const { t } = useTranslation();
   const { languageNames, providerNames } = useDiscoverFilterOptions(mediaType);
@@ -166,6 +75,11 @@ export function DiscoverFilterChips({
       <FilterChipsBar
         chips={chips}
         onClearAll={() => onFiltersChange(DEFAULT_DISCOVER_FILTERS)}
+        presetChip={
+          presetName && onPresetPress
+            ? { name: presetName, onPress: onPresetPress, testID: 'discover-preset-chip' }
+            : undefined
+        }
         testID="discover-active-filters"
         clearAllTestID="discover-filters-clear-all"
       />

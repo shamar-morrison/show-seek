@@ -1,4 +1,6 @@
 import { type FilterChip, FilterChipsBar } from '@/src/components/filters/FilterChipsBar';
+import { useListPresets } from '@/src/hooks/useFilterPresets';
+import { findMatchingListPreset, FULL_LIST_PRESET_CAPS } from '@/src/utils/filterPresets';
 import {
   LIST_FILTER_FIELD_LABEL_KEYS,
   ListFilterPicker,
@@ -8,103 +10,16 @@ import {
   getSortOrderLabelKey,
   type SortState,
 } from '@/src/components/MediaSortModal';
-import {
-  getMediaTypeLabel,
-  getRuntimeLabel,
-  getTmdbRatingLabel,
-  getUserRatingLabel,
-} from '@/src/utils/listFilterLabels';
+import { describeActiveFilters } from '@/src/utils/filterDescriptions';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   type ListFilterField,
   type WatchStatusFilterState,
 } from '@/src/utils/listFilters';
-import type { TFunction } from 'i18next';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export interface ActiveFilterChip {
-  key: string;
-  /** The field whose picker the chip opens when tapped. */
-  field: ListFilterField;
-  /** Field name shown muted before the value; omitted when the value speaks for itself. */
-  label?: string;
-  value: string;
-  /** The filters with only this one removed. */
-  remove: (filters: WatchStatusFilterState) => WatchStatusFilterState;
-}
-
-/** One chip per active filter (one per genre), in the filter modal's order. */
-export function describeActiveFilters(
-  filters: WatchStatusFilterState,
-  t: TFunction,
-  genreMap: Record<number, string>
-): ActiveFilterChip[] {
-  const defaults = DEFAULT_WATCH_STATUS_FILTERS;
-  const chips: ActiveFilterChip[] = [];
-
-  if (filters.mediaType !== defaults.mediaType) {
-    chips.push({
-      key: 'mediaType',
-      field: 'mediaType',
-      label: t('filters.type'),
-      value: getMediaTypeLabel(t, filters.mediaType),
-      remove: (f) => ({ ...f, mediaType: defaults.mediaType }),
-    });
-  }
-  filters.genres.forEach((genreId) => {
-    chips.push({
-      key: `genre-${genreId}`,
-      field: 'genres',
-      value: genreMap[genreId] ?? t('discover.genres'),
-      remove: (f) => {
-        const genres = f.genres.filter((id) => id !== genreId);
-        return {
-          ...f,
-          genres,
-          genreOperator: genres.length === 0 ? defaults.genreOperator : f.genreOperator,
-        };
-      },
-    });
-  });
-  if (filters.rating !== defaults.rating) {
-    chips.push({
-      key: 'rating',
-      field: 'rating',
-      label: t('filters.tmdbRating'),
-      value: getTmdbRatingLabel(t, filters.rating),
-      remove: (f) => ({ ...f, rating: defaults.rating }),
-    });
-  }
-  if (filters.userRating !== defaults.userRating) {
-    chips.push({
-      key: 'userRating',
-      field: 'userRating',
-      label: t('filters.yourRating'),
-      value: getUserRatingLabel(t, filters.userRating),
-      remove: (f) => ({ ...f, userRating: defaults.userRating }),
-    });
-  }
-  if (filters.year !== defaults.year) {
-    chips.push({
-      key: 'year',
-      field: 'year',
-      label: t('discover.releaseYear'),
-      value: String(filters.year),
-      remove: (f) => ({ ...f, year: defaults.year }),
-    });
-  }
-  if (filters.runtime !== defaults.runtime) {
-    chips.push({
-      key: 'runtime',
-      field: 'runtime',
-      label: t('filters.runtime'),
-      value: getRuntimeLabel(t, filters.runtime),
-      remove: (f) => ({ ...f, runtime: defaults.runtime }),
-    });
-  }
-  return chips;
-}
+export { describeActiveFilters, type ActiveFilterChip } from '@/src/utils/filterDescriptions';
 
 interface ActiveFiltersBarProps {
   filters: WatchStatusFilterState;
@@ -115,6 +30,11 @@ interface ActiveFiltersBarProps {
   genreMap: Record<number, string>;
   /** Opens the sort modal. */
   onEditSort: () => void;
+  /**
+   * Opens the filters sheet. When given, a matching saved preset is named first and opens the
+   * sheet when tapped (for screens with every list filter).
+   */
+  onOpenFilters?: () => void;
 }
 
 /**
@@ -131,9 +51,14 @@ export function ActiveFiltersBar({
   onSortChange,
   genreMap,
   onEditSort,
+  onOpenFilters,
 }: ActiveFiltersBarProps) {
   const { t } = useTranslation();
   const [editingField, setEditingField] = useState<ListFilterField | null>(null);
+  const { all: listPresets } = useListPresets(FULL_LIST_PRESET_CAPS);
+  const activePreset = onOpenFilters
+    ? findMatchingListPreset(listPresets, filters, FULL_LIST_PRESET_CAPS)
+    : undefined;
 
   const hasCustomSort =
     sortState.option !== defaultSortState.option ||
@@ -181,7 +106,19 @@ export function ActiveFiltersBar({
 
   return (
     <>
-      <FilterChipsBar chips={chips} onClearAll={handleClearAll} />
+      <FilterChipsBar
+        chips={chips}
+        onClearAll={handleClearAll}
+        presetChip={
+          activePreset && onOpenFilters
+            ? {
+                name: activePreset.name,
+                onPress: () => onOpenFilters(),
+                testID: 'active-filters-preset-chip',
+              }
+            : undefined
+        }
+      />
       <ListFilterPicker
         field={editingField}
         filters={filters}

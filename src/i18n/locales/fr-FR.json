@@ -1974,6 +1974,38 @@
     "removeFilter": "Retirer {{name}}",
     "editFilterValue": "Ouvre les options : {{name}}"
   },
+  "filterPresets": {
+    "title": "Filtres enregistrés",
+    "emptyHint": "Enregistrez vos filtres favoris pour les appliquer en un geste.",
+    "saveCurrent": "Enregistrer les filtres actuels",
+    "namePlaceholder": "Nommez ces filtres",
+    "rename": "Renommer",
+    "updateWithCurrent": "Utiliser les filtres actuels",
+    "chipHint": "Applique ces filtres. Appui long pour plus d'options.",
+    "options": "Options",
+    "limitReached": "Vous pouvez enregistrer jusqu'à {{count}} filtres. Supprimez-en un pour en enregistrer un autre.",
+    "hiddenCount_one": "{{count}} filtre enregistré ne s'applique pas ici",
+    "hiddenCount_other": "{{count}} filtres enregistrés ne s'appliquent pas ici",
+    "activePresetLabel": "Filtres enregistrés : {{name}}",
+    "activePresetHint": "Ouvre les filtres, où vous pouvez le modifier ou le supprimer",
+    "errors": {
+      "empty": "Saisissez un nom",
+      "tooLong": "{{count}} caractères maximum",
+      "duplicate": "Vous avez déjà des filtres enregistrés avec ce nom",
+      "saveFailed": "Impossible de mettre à jour vos filtres enregistrés. Veuillez réessayer."
+    },
+    "manage": "Gérer",
+    "manageTitle": "Filtres enregistrés",
+    "manageEmpty": "Aucun filtre enregistré pour l'instant.",
+    "saveTitle": "Enregistrer les filtres",
+    "renameTitle": "Renommer les filtres enregistrés",
+    "renameNamed": "Renommer {{name}}",
+    "deleteNamed": "Supprimer {{name}}",
+    "applyHint": "Applique ces filtres",
+    "deleteConfirmTitle": "Supprimer les filtres enregistrés ?",
+    "deleteConfirmMessage": "« {{name}} » sera supprimé.",
+    "longPressHint": "Appui long sur un filtre enregistré pour plus d'options."
+  },
   "lists": {
     "alreadyWatched": "Déjà vus",
     "dropped": "Abandonnés",

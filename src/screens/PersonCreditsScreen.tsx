@@ -511,6 +511,7 @@ export default function PersonCreditsScreen() {
         }}
         genreMap={genreMap}
         showMediaTypeFilter={false}
+        screenMediaType={mediaType === 'tv' ? 'tv' : 'movie'}
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
