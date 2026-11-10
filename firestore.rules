@@ -238,6 +238,33 @@ service cloud.firestore {
         allow delete: if canWriteUserData(userId);
       }
 
+      // Saved filter presets (Discover and library lists). The 25-per-scope cap is enforced
+      // in the app; rules can't count documents.
+      function isValidFilterPresetData() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(['scope', 'name', 'mediaType', 'filters', 'createdAt', 'updatedAt', 'lastUsedAt'])
+          && data.keys().hasAll(['scope', 'name', 'filters', 'createdAt', 'updatedAt'])
+          && data.scope in ['discover', 'list']
+          && data.name is string
+          && data.name.size() >= 1
+          && data.name.size() <= 40
+          && data.filters is map
+          && data.filters.size() <= 20
+          && data.createdAt is timestamp
+          && data.updatedAt is timestamp
+          && (!('lastUsedAt' in data) || data.lastUsedAt is timestamp)
+          && (data.scope == 'list'
+            ? !('mediaType' in data)
+            : (data.mediaType in ['movie', 'tv']));
+      }
+
+      match /filterPresets/{presetId} {
+        allow read: if isNonAnonymousOwner(userId);
+        allow create: if canWriteUserData(userId) && isValidFilterPresetData();
+        allow update: if canWriteUserData(userId) && isValidFilterPresetData();
+        allow delete: if canWriteUserData(userId);
+      }
+
       // Episode tracking collection
       match /episode_tracking/{tvShowId} {
         allow read: if isNonAnonymousOwner(userId);

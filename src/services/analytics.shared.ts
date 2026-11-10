@@ -43,6 +43,12 @@ export interface TrackCreateListParams {
   hasDescription: boolean;
 }
 
+export type AnalyticsFilterPresetScope = 'discover' | 'list';
+
+export interface TrackFilterPresetParams {
+  scope: AnalyticsFilterPresetScope;
+}
+
 export interface PurchaseSuccessParams {
   plan: 'monthly' | 'yearly' | 'weekly' | 'winback';
   productId: string;

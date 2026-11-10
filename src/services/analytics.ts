@@ -14,6 +14,7 @@ import type {
   RestoreSuccessParams,
   TrackAddToListParams,
   TrackCreateListParams,
+  TrackFilterPresetParams,
   TrackCreateReminderParams,
   TrackSaveRatingParams,
   TraktSyncCompleteParams,
@@ -47,6 +48,8 @@ export type {
   TrackAddToListParams,
   TrackCreateListParams,
   TrackCreateReminderParams,
+  TrackFilterPresetParams,
+  AnalyticsFilterPresetScope,
   TrackSaveRatingParams,
   TraktSyncCompleteParams,
   TraktSyncFailureParams,
@@ -73,6 +76,12 @@ export const trackSaveRating = async (_params: TrackSaveRatingParams): Promise<v
 export const trackCreateReminder = async (_params: TrackCreateReminderParams): Promise<void> => {};
 
 export const trackCreateList = async (_params: TrackCreateListParams): Promise<void> => {};
+
+export const trackFilterPresetSaved = async (_params: TrackFilterPresetParams): Promise<void> => {};
+
+export const trackFilterPresetApplied = async (
+  _params: TrackFilterPresetParams
+): Promise<void> => {};
 
 export const trackPremiumPaywallView = async (): Promise<void> => {};
 
