@@ -255,6 +255,7 @@ export default function FavoritesScreen() {
         icon: SlidersHorizontalIcon,
         label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
+        opensSheet: true,
         showBadge: hasActiveFilterState,
       },
       createSortAction({

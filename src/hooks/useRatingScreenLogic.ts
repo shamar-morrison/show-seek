@@ -198,6 +198,7 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
         icon: SlidersHorizontalIcon,
         label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
+        opensSheet: true,
         showBadge: hasActiveFilterState,
       },
       createSortAction({

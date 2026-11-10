@@ -366,6 +366,7 @@ export default function PersonCreditsScreen() {
         icon: SlidersHorizontalIcon,
         label: 'Filter Items',
         onPress: () => setFilterModalVisible(true),
+        opensSheet: true,
         showBadge: hasActiveFilterState,
       },
       createSortAction({

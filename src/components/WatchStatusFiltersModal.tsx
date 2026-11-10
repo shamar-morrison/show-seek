@@ -80,6 +80,9 @@ export default function WatchStatusFiltersModal({
   const presetSheetsRef = useRef<FilterPresetSheetsRef>(null);
   // True while the sheet is hidden for a preset sheet, so closing it isn't treated as Close.
   const steppedAsideRef = useRef(false);
+  // Whether the sheet is open (or opening). On Android, dismissing a sheet that isn't open
+  // leaves TrueSheet stuck in "dismissing", so its X and swipe no longer close it next time.
+  const isOpenRef = useRef(false);
   const [localFilters, setLocalFilters] = useState<WatchStatusFilterState>(filters);
 
   // Update local filters when the sheet opens
@@ -89,28 +92,41 @@ export default function WatchStatusFiltersModal({
     }
   }, [visible, filters]);
 
+  const openSheet = useCallback(async () => {
+    isOpenRef.current = true;
+    await sheetRef.current?.present();
+  }, []);
+
+  const closeSheet = useCallback(async () => {
+    if (!isOpenRef.current) return;
+    isOpenRef.current = false;
+    await sheetRef.current?.dismiss();
+  }, []);
+
   useEffect(() => {
     if (visible) {
       steppedAsideRef.current = false;
-      void sheetRef.current?.present();
+      void openSheet();
     } else {
-      sheetRef.current?.dismiss().catch(() => {});
+      // Usually already closed by the time the screen hides it (X, swipe, Apply).
+      void closeSheet();
     }
-  }, [visible]);
+  }, [closeSheet, openSheet, visible]);
 
   const handleDidDismiss = () => {
+    isOpenRef.current = false;
     if (!steppedAsideRef.current) onClose();
   };
 
   const hideForPresetSheet = useCallback(async () => {
     steppedAsideRef.current = true;
-    await sheetRef.current?.dismiss();
-  }, []);
+    await closeSheet();
+  }, [closeSheet]);
 
   const showAfterPresetSheet = useCallback(async () => {
     steppedAsideRef.current = false;
-    await sheetRef.current?.present();
-  }, []);
+    await openSheet();
+  }, [openSheet]);
 
   const presetCaps = useMemo<ListPresetScreenCaps>(
     () => ({

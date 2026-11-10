@@ -208,6 +208,26 @@ describe('WatchStatusFiltersModal', () => {
       expect(mockSheetDismiss).toHaveBeenCalled();
     });
 
+    it('never dismisses a sheet that is not open', () => {
+      // On Android that leaves TrueSheet stuck "dismissing", so X stops closing it.
+      const onClose = jest.fn();
+      const props = {
+        onClose,
+        filters: DEFAULT_WATCH_STATUS_FILTERS,
+        onApplyFilters: jest.fn(),
+        genreMap,
+      };
+      const { rerender } = render(<WatchStatusFiltersModal visible={false} {...props} />);
+      expect(mockSheetDismiss).not.toHaveBeenCalled();
+
+      // Closed with X or a swipe; the screen then hides it.
+      rerender(<WatchStatusFiltersModal visible {...props} />);
+      act(() => mockSheetProps.onDidDismiss());
+      expect(onClose).toHaveBeenCalled();
+      rerender(<WatchStatusFiltersModal visible={false} {...props} />);
+      expect(mockSheetDismiss).not.toHaveBeenCalled();
+    });
+
     it('reports a swipe-down as Close', () => {
       const onClose = jest.fn();
       renderModal({ onClose });

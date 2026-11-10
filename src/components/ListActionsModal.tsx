@@ -27,6 +27,11 @@ export interface ListAction {
   showBadge?: boolean;
   /** Whether the action is disabled */
   disabled?: boolean;
+  /**
+   * Set when the action opens another bottom sheet. It then runs once this sheet has closed,
+   * since a sheet opening while another is still closing can leave taps unanswered on Android.
+   */
+  opensSheet?: boolean;
 }
 
 export interface ListActionsModalRef {
@@ -48,24 +53,45 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
     const iconBadgeStyles = useIconBadgeStyles();
     const sheetRef = useRef<TrueSheet>(null);
     const { width } = useWindowDimensions();
+    // Whether the sheet is open (or opening). On Android, dismissing a sheet that isn't open
+    // leaves TrueSheet stuck "dismissing": it stops closing and its dismiss never resolves.
+    const isOpenRef = useRef(false);
+
+    const dismissIfOpen = useCallback(async () => {
+      if (!isOpenRef.current) return;
+      isOpenRef.current = false;
+      await sheetRef.current?.dismiss();
+    }, []);
 
     useImperativeHandle(ref, () => ({
       present: async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        isOpenRef.current = true;
         await sheetRef.current?.present();
       },
-      dismiss: async () => {
-        await sheetRef.current?.dismiss();
-      },
+      dismiss: dismissIfOpen,
     }));
 
-    const handleActionPress = useCallback((action: ListAction) => {
-      if (action.disabled) return;
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // Execute action first, then dismiss modal
-      action.onPress();
-      sheetRef.current?.dismiss();
-    }, []);
+    const handleDidDismiss = useCallback(() => {
+      isOpenRef.current = false;
+      onDidDismiss?.();
+    }, [onDidDismiss]);
+
+    const handleActionPress = useCallback(
+      async (action: ListAction) => {
+        if (action.disabled) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (action.opensSheet) {
+          await dismissIfOpen();
+          action.onPress();
+          return;
+        }
+        // Execute action first, then dismiss modal
+        action.onPress();
+        void dismissIfOpen();
+      },
+      [dismissIfOpen]
+    );
 
     return (
       <TrueSheet
@@ -74,7 +100,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
         grabber={false}
-        onDidDismiss={onDidDismiss}
+        onDidDismiss={handleDidDismiss}
       >
         <GestureHandlerRootView style={[styles.content, { width }]}>
           {title ? (
