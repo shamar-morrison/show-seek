@@ -166,7 +166,7 @@ Validation follows the existing rules in `parseTvTimeImportChunk` (strict types,
   - CSV whose header has `simkl_id` and `Title` (any case) → `csv`.
   - A TV Time or Trakt export, or `{}` → a specific error, not "unknown format".
 - `parsers/json.ts`, `parsers/csv.ts` → normalized entities.
-- `prepare.ts`: dedupe, anime grouping, chunking (reuse the TV Time chunker and the split for >1,500-play shows).
+- `prepare.ts`: chunking with its own chunker (TV Time's is left untouched): ≤ 15 entities, ≤ 1,500 listed plays, and ≤ ~1,500 _expected_ episode writes, counting "watched up to" expansion from `watched_episodes_count`. Long shows split by season into parts, "watched up to" on part 0 only. (Deduping and anime grouping live in `parsers/json.ts`.)
 
 ### Mapping
 
@@ -213,7 +213,9 @@ The summary screen tells the user how many anime episodes couldn't be placed, so
 
 ### Dates
 
-- Unparseable, more than a day in the future, or at/below `1970-01-02` (placeholder) → no date. An episode play without a date is dropped and counted `invalid_date`; an item-level date falls back as in the table.
+- Unparseable, more than a day in the future, or at/below `1970-01-02` (placeholder) → no date.
+- A watched episode without a usable date (none, or Simkl's "I don't remember") is kept and stamped with the entry's `last_watched_at`, falling back to `added_to_watchlist_at`; only with neither is it dropped and counted `invalid_date`. Dropping it would lose real watch progress.
+- Item-level dates fall back as in the table.
 - No lower floor otherwise.
 
 ## Server — `importSimklChunk`
@@ -251,7 +253,8 @@ Everything else (never-overwrite episodes and ratings, list writes, `up_to_date`
 
 Same approach as `__tests__/fixtures/tvtime/`:
 
-- `scripts/generate-simkl-fixtures.mjs` renders one synthetic library into every format, plus `expected.json` (what a correct parser recovers, in the shared contract) and a `README.md` with the sources table and what's still inferred. `--zip <dir>` writes importable files for manual QA. `--stress` adds a heavy library (~3,000 titles, ~100k episodes, a 1,100-episode One Piece) for the on-device memory test.
+- **Built in step 3:** `__tests__/fixtures/simkl/` holds the two real files (`real-backup-2026/`, `real-api-2020/`) and the CSVs used to make the backup (`source/`), with a README. Edge cases the real files don't cover are inline in `__tests__/utils/simklImport.test.ts`; `__tests__/utils/simklImportEndToEnd.test.ts` runs the real backup through the parser, chunker and `importSimklChunk`.
+- **Deferred to phase 2 (CSV):** `scripts/generate-simkl-fixtures.mjs`, which renders one synthetic library into every CSV variant (and the JSON) with an `expected.json`. `--zip <dir>` writes importable files for manual QA; `--stress` adds a heavy library (~3,000 titles, ~100k episodes, a 1,100-episode One Piece) for the on-device memory test.
 - Folders: `backup/` (`SimklBackup.json` + a profile file holding `FIXTURE-SECRET-MUST-NOT-BE-READ`), `backup-summary/` (third-party, no `seasons`), `csv-backup/` ("Simkl v1", month-first dashed dates), `csv-import/`, `csv-import-docs/` (day-first and slash dates).
 - `real-backup-2026/`: **the real `SimklBackup.zip` from our test account** (2026-11-10), committed as is. It contains only titles, IDs, statuses, ratings and dates from a throwaway account, no personal data. Hand-check its `expected.json` entry rather than generating it. The synthetic `backup/` fixture should mirror its exact shape (key order, 4-space indent, escaped slashes, completed entries without `seasons`).
 - `real-api-2020/`: the real captured library from `srgsf/simkl-client`, committed as is (Unlicense, public domain) with its source noted. Hand-check its `expected.json` entry. It covers the date-less episode lists, extra ID keys, escaped slashes, a `hold` movie and many empty `watching` shows.
