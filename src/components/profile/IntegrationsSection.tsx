@@ -13,7 +13,7 @@ import { StyleSheet, Text, View } from 'react-native';
 /** Stored (not rendered) category keys for integration items. */
 export type IntegrationCategoryKey = 'import' | 'sync';
 
-export type IntegrationItemId = 'imdbImport' | 'tvtimeImport' | 'trakt' | 'stremio';
+export type IntegrationItemId = 'imdbImport' | 'tvtimeImport' | 'simklImport' | 'trakt' | 'stremio';
 
 export interface IntegrationConfigItem {
   /** Stable id (also used as the search/scroll id) */
@@ -26,6 +26,7 @@ export interface IntegrationConfigItem {
 export const INTEGRATION_ITEMS: IntegrationConfigItem[] = [
   { id: 'imdbImport', titleKey: 'profile.importFromImdb', category: 'import' },
   { id: 'tvtimeImport', titleKey: 'profile.importFromTvTime', category: 'import' },
+  { id: 'simklImport', titleKey: 'profile.importFromSimkl', category: 'import' },
   { id: 'trakt', titleKey: 'profile.traktIntegration', category: 'sync' },
   { id: 'stremio', titleKey: 'profile.stremioIntegration', category: 'sync' },
 ];
@@ -39,6 +40,8 @@ export interface IntegrationsSectionProps {
   onImdbImport: () => void;
   /** Handler for TV Time import button */
   onTvTimeImport: () => void;
+  /** Handler for Simkl import button */
+  onSimklImport: () => void;
   /** Handler for Trakt settings button press */
   onTraktPress: () => void;
   /** Whether a Stremio addon link is active (null while unknown) */
@@ -61,6 +64,7 @@ export function IntegrationsSection({
   isTraktLoading,
   onImdbImport,
   onTvTimeImport,
+  onSimklImport,
   onTraktPress,
   isStremioConnected = null,
   onStremioPress,
@@ -157,6 +161,21 @@ export function IntegrationsSection({
             onPress={onTvTimeImport}
           />
         );
+      case 'simklImport':
+        return (
+          <ActionButton
+            customIcon={
+              <Image
+                source={require('@/assets/images/simkl.png')}
+                contentFit="cover"
+                style={styles.simklLogo}
+                testID="integrations-simkl-icon"
+              />
+            }
+            label={t('profile.importFromSimkl')}
+            onPress={onSimklImport}
+          />
+        );
       case 'trakt':
         return (
           <ActionButton
@@ -239,6 +258,11 @@ const styles = StyleSheet.create({
     width: 35,
   },
   tvTimeLogo: {
+    borderRadius: 5,
+    height: 22,
+    width: 22,
+  },
+  simklLogo: {
     borderRadius: 5,
     height: 22,
     width: 22,

@@ -59,7 +59,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type MediaType = 'all' | 'movie' | 'tv';
+type MediaType = 'all' | 'movie' | 'tv' | 'person';
 type ViewMode = 'list' | 'grid';
 const SEARCH_VIEW_MODE_STORAGE_KEY = 'searchViewMode';
 
@@ -73,6 +73,7 @@ function resolveSearchResultMediaType(
 
   if (selectedMediaType === 'movie') return 'movie';
   if (selectedMediaType === 'tv') return 'tv';
+  if (selectedMediaType === 'person') return 'person';
 
   if ('first_air_date' in item && !('release_date' in item)) return 'tv';
   if ('release_date' in item && !('first_air_date' in item)) return 'movie';
@@ -157,6 +158,8 @@ export default function SearchScreen() {
           return await tmdbApi.searchMovies(debouncedQuery);
         case 'tv':
           return await tmdbApi.searchTV(debouncedQuery);
+        case 'person':
+          return await tmdbApi.searchPerson(debouncedQuery);
         default:
           return await tmdbApi.searchMulti(debouncedQuery);
       }
@@ -166,8 +169,11 @@ export default function SearchScreen() {
 
   // Filter out watched content (but keep person results)
   const allResults = searchResultsQuery.data?.results || [];
-  const mediaResults = allResults.filter((item: any) => item.media_type !== 'person');
-  const personResults = allResults.filter((item: any) => item.media_type === 'person');
+  // /search/person results have no media_type, so resolve against the active segment
+  const isPersonResult = (item: any) =>
+    resolveSearchResultMediaType(item, mediaType) === 'person';
+  const mediaResults = allResults.filter((item: any) => !isPersonResult(item));
+  const personResults = allResults.filter(isPersonResult);
   const filteredMediaResults = useContentFilter(mediaResults);
   const filteredResults = [...personResults, ...filteredMediaResults];
   const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
@@ -445,10 +451,12 @@ export default function SearchScreen() {
 
         <View style={styles.segmentedControlContainer}>
           <SegmentedControl<MediaType>
+            compact
             options={[
               { key: 'all', label: t('search.all') },
               { key: 'movie', label: t('media.movies') },
-              { key: 'tv', label: t('media.tvShows') },
+              { key: 'tv', label: t('search.tv') },
+              { key: 'person', label: t('search.people') },
             ]}
             activeKey={mediaType}
             onChange={setMediaType}
@@ -539,6 +547,8 @@ const styles = StyleSheet.create({
   },
   segmentedControlContainer: {
     padding: SPACING.m,
+    // searchContainer already adds SPACING.s below the input
+    paddingTop: 0,
   },
   centerContainer: {
     flex: 1,

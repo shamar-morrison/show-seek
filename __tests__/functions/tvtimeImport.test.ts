@@ -46,6 +46,7 @@ import {
   normalizeTitle,
   pickExactTitleMatch,
   splitTitleYear,
+  TVTIME_IMPORT_SOURCE,
 } from '@/functions/src/tvtimeImport';
 
 type Store = Map<string, Record<string, unknown>>;
@@ -852,6 +853,29 @@ describe('claimTvTimeChunkSlot — rate limiting', () => {
     await expect(
       claimTvTimeChunkSlot(db(), 'user-1', 'import-A1', T0 + 60_000)
     ).resolves.toBeUndefined();
+  });
+
+  it('keeps the exact TV Time refusal messages', async () => {
+    await claimTvTimeChunkSlot(db(), 'user-1', 'import-A1', T0);
+
+    await expect(
+      claimTvTimeChunkSlot(db(), 'user-1', 'import-B1', T0 + 60_000)
+    ).rejects.toMatchObject({ message: 'A TV Time import is already in progress.' });
+    await expect(
+      claimTvTimeChunkSlot(db(), 'user-1', 'import-B1', T0 + TVTIME_IMPORT_SESSION_STALE_MS + 1)
+    ).rejects.toMatchObject({ message: 'Please wait before starting another TV Time import.' });
+  });
+
+  it('pins the TV Time source configuration (stored ids and messages depend on it)', () => {
+    expect(TVTIME_IMPORT_SOURCE).toEqual({
+      displayName: 'TV Time',
+      // Simkl-only behaviours stay off for TV Time.
+      episodeGroupFallback: false,
+      limitDocId: 'tvtime',
+      logTag: '[tvtimeImport]',
+      movieWatchDocPrefix: 'tvtime-',
+      reportUnmatchedEpisodeTitles: false,
+    });
   });
 
   it('uses the short test cooldown for the emulator and allowlisted testers', () => {

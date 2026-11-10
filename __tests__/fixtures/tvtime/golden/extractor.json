@@ -1,0 +1,191 @@
+{
+  "chunks": 1,
+  "run1": {
+    "results": [
+      {
+        "ok": {
+          "ignored": {},
+          "imported": {
+            "customListsCreated": 0,
+            "listItems": 6,
+            "movies": 6,
+            "ratings": 0,
+            "shows": 0,
+            "watchedEpisodes": 0,
+            "watchedMovies": 6
+          },
+          "processedEntities": 7,
+          "skipped": {
+            "ambiguous_title": 1
+          },
+          "unresolvedTitles": ["The Lion King"]
+        }
+      }
+    ],
+    "tmdbRequests": {
+      "/3/find/1435?external_source=tvdb_id": 1,
+      "/3/find/tt1396484?external_source=imdb_id": 1,
+      "/3/find/tt27554389?external_source=imdb_id": 1,
+      "/3/movie/27205?": 1,
+      "/3/movie/496243?": 1,
+      "/3/movie/603?": 1,
+      "/3/search/movie?query=Space Sweepers": 1,
+      "/3/search/movie?query=The Lion King": 1
+    }
+  },
+  "run2": {
+    "results": [
+      {
+        "ok": {
+          "ignored": {},
+          "imported": {
+            "customListsCreated": 0,
+            "listItems": 0,
+            "movies": 0,
+            "ratings": 0,
+            "shows": 0,
+            "watchedEpisodes": 0,
+            "watchedMovies": 0
+          },
+          "processedEntities": 7,
+          "skipped": {
+            "ambiguous_title": 1
+          },
+          "unresolvedTitles": ["The Lion King"]
+        }
+      }
+    ],
+    "tmdbRequests": {
+      "/3/find/1435?external_source=tvdb_id": 1,
+      "/3/find/tt1396484?external_source=imdb_id": 1,
+      "/3/find/tt27554389?external_source=imdb_id": 1,
+      "/3/movie/27205?": 1,
+      "/3/movie/496243?": 1,
+      "/3/movie/603?": 1,
+      "/3/search/movie?query=Space Sweepers": 1,
+      "/3/search/movie?query=The Lion King": 1
+    }
+  },
+  "store": {
+    "users/user-1": {
+      "premium": {
+        "isPremium": true
+      }
+    },
+    "users/user-1/import_limits/tvtime": {
+      "recentCalls": [1783105200000],
+      "session": {
+        "chunks": 1,
+        "finishedAt": 1783105200000,
+        "id": "golden-run-2",
+        "lastChunkAt": 1783105200000,
+        "nextAllowedImportAt": 1783126800000,
+        "startedAt": 1783105200000
+      },
+      "updatedAt": 1783105200000
+    },
+    "users/user-1/lists/already-watched": {
+      "createdAt": 1783080000000,
+      "items": {
+        "movie-106000": {
+          "addedAt": 1568102489000,
+          "genre_ids": [28],
+          "id": 106000,
+          "media_type": "movie",
+          "poster_path": "/movie106000.jpg",
+          "release_date": "2019-06-01",
+          "title": "Movie 1435",
+          "vote_average": 6.5
+        },
+        "movie-150698": {
+          "addedAt": 1739295298000,
+          "genre_ids": [28],
+          "id": 150698,
+          "media_type": "movie",
+          "poster_path": "/movie150698.jpg",
+          "release_date": "1990-06-01",
+          "title": "Movie tt27554389",
+          "vote_average": 6.5
+        },
+        "movie-186247": {
+          "addedAt": 1612616400000,
+          "genre_ids": [28],
+          "id": 186247,
+          "media_type": "movie",
+          "poster_path": "/movie186247.jpg",
+          "release_date": "2023-06-01",
+          "title": "Space Sweepers",
+          "vote_average": 6.5
+        },
+        "movie-27205": {
+          "addedAt": 1520712000000,
+          "genre_ids": [18],
+          "id": 27205,
+          "media_type": "movie",
+          "poster_path": "/movie27205.jpg",
+          "release_date": "2024-06-01",
+          "title": "Movie 27205",
+          "vote_average": 6.5
+        },
+        "movie-496243": {
+          "addedAt": 1581793200000,
+          "genre_ids": [18],
+          "id": 496243,
+          "media_type": "movie",
+          "poster_path": "/movie496243.jpg",
+          "release_date": "2021-06-01",
+          "title": "Movie 496243",
+          "vote_average": 6.5
+        },
+        "movie-603": {
+          "addedAt": 1433194200000,
+          "genre_ids": [18],
+          "id": 603,
+          "media_type": "movie",
+          "poster_path": "/movie603.jpg",
+          "release_date": "2005-06-01",
+          "title": "Movie 603",
+          "vote_average": 6.5
+        }
+      },
+      "name": "Already Watched",
+      "updatedAt": 1783080000000
+    },
+    "users/user-1/watched_movies/106000/watches/tvtime-106000-1568102489000": {
+      "movieId": 106000,
+      "watchedAt": {
+        "_ms": 1568102489000
+      }
+    },
+    "users/user-1/watched_movies/150698/watches/tvtime-150698-1739295298000": {
+      "movieId": 150698,
+      "watchedAt": {
+        "_ms": 1739295298000
+      }
+    },
+    "users/user-1/watched_movies/186247/watches/tvtime-186247-1612616400000": {
+      "movieId": 186247,
+      "watchedAt": {
+        "_ms": 1612616400000
+      }
+    },
+    "users/user-1/watched_movies/27205/watches/tvtime-27205-1520712000000": {
+      "movieId": 27205,
+      "watchedAt": {
+        "_ms": 1520712000000
+      }
+    },
+    "users/user-1/watched_movies/496243/watches/tvtime-496243-1581793200000": {
+      "movieId": 496243,
+      "watchedAt": {
+        "_ms": 1581793200000
+      }
+    },
+    "users/user-1/watched_movies/603/watches/tvtime-603-1433194200000": {
+      "movieId": 603,
+      "watchedAt": {
+        "_ms": 1433194200000
+      }
+    }
+  }
+}

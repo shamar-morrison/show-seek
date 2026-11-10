@@ -208,6 +208,32 @@ describe('SearchScreen routing and auth guard', () => {
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/search/tv/77');
   });
 
+  it('routes People segment results to person detail even without media_type', async () => {
+    // /search/person results carry no media_type and look like TV items by shape
+    mockQueryResults = [
+      {
+        id: 2037,
+        name: 'Cillian Murphy',
+        known_for_department: 'Acting',
+        profile_path: null,
+        known_for: [],
+      },
+    ];
+
+    const { getByPlaceholderText, getByText } = render(<SearchScreen />);
+
+    fireEvent.press(getByText('People'));
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Cillian Murphy')).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Cillian Murphy'));
+
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/search/person/2037');
+  });
+
   it('blocks unauthenticated long press from opening AddToListModal', async () => {
     mockAuthState.user = null;
     mockQueryResults = [
