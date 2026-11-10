@@ -243,10 +243,14 @@ function toShow(
   };
   if (identity.tmdbId !== null) entity.tmdbId = identity.tmdbId;
   if (identity.year !== null) entity.year = identity.year;
-  if (watchedThrough) {
+  // The server only expands "watched up to" with a date to stamp, so without one the
+  // show is imported for its status alone (and isn't counted or weighted as expanded).
+  const watchedThroughAt = watchedThrough
+    ? (parseSimklDate(main.last_watched_at, now) ?? parseSimklDate(main.added_to_watchlist_at, now))
+    : null;
+  if (watchedThrough && watchedThroughAt !== null) {
     entity.watchedThrough = watchedThrough;
-    const watchedThroughAt = parseSimklDate(main.last_watched_at, now);
-    if (watchedThroughAt !== null) entity.watchedThroughAt = watchedThroughAt;
+    entity.watchedThroughAt = watchedThroughAt;
     tally.ignore('summary_only_episodes');
   }
   if (isAnime) {
@@ -256,7 +260,7 @@ function toShow(
     };
   }
 
-  const expected = watchedThrough ? Math.max(0, (watchedCount ?? 0) - plays.length) : 0;
+  const expected = entity.watchedThrough ? Math.max(0, (watchedCount ?? 0) - plays.length) : 0;
   return { entity, weight: plays.length + expected };
 }
 

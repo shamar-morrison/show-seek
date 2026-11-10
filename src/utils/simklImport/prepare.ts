@@ -34,9 +34,10 @@ export interface PreparedSimklImport {
 }
 
 /**
- * Episodes the server may write per chunk, counting "watched up to" expansion. Expansion
- * has no hard server cap (only listed plays do), so this keeps a chunk's work, and its
- * TMDB season fetches, to roughly what a TV Time chunk does.
+ * Episodes the server may write per chunk, counting "watched up to" expansion. The
+ * server's own expansion cap (MAX_EXPANDED_EPISODES_PER_CALL) is a safety net far above
+ * this; this keeps a chunk's work, and its TMDB season fetches, to roughly what a TV
+ * Time chunk does.
  */
 const MAX_EPISODE_WEIGHT_PER_CHUNK = FILE_IMPORT_MAX_PLAYS_PER_CHUNK;
 

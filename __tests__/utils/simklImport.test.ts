@@ -412,6 +412,48 @@ describe('Simkl import — edge cases', () => {
     expect(stats.ignored.summary_only_episodes).toBe(2);
   });
 
+  it('dates "watched up to" from added_to_watchlist_at when last_watched_at is unusable, and drops it with no date', () => {
+    const json = backupJson({
+      shows: [
+        row(
+          'show',
+          { ids: { simkl: 6, tmdb: 1399 }, title: 'Forgot When' },
+          {
+            added_to_watchlist_at: '2023-03-03T00:00:00Z',
+            last_watched_at: '1970-01-01T00:00:01Z', // Simkl's "I don't remember"
+            status: 'completed',
+            watched_episodes_count: 73,
+          }
+        ),
+        row(
+          'show',
+          { ids: { simkl: 7, tmdb: 1400 }, title: 'No Dates' },
+          {
+            added_to_watchlist_at: null,
+            status: 'completed',
+            watched_episodes_count: 180,
+          }
+        ),
+      ],
+    });
+    const { shows, showWeights, stats } = parseSimklBackupJson(json, NOW);
+
+    expect(show(shows, 'Forgot When')).toMatchObject({
+      watchedThrough: { kind: 'all' },
+      watchedThroughAt: at('2023-03-03T00:00:00Z'),
+    });
+    const noDates = show(shows, 'No Dates');
+    expect(noDates.watchedThrough).toBeUndefined();
+    expect(noDates.watchedThroughAt).toBeUndefined();
+    expect(noDates.status).toBe('up_to_date');
+    // Only the dated show is counted and weighted as "watched up to".
+    expect(stats.ignored.summary_only_episodes).toBe(1);
+    expect(showWeights[shows.indexOf(noDates)]).toBe(0);
+    expect(prepareSimklImport([file('SimklBackup.json', json)], NOW).summary.summaryOnlyShows).toBe(
+      1
+    );
+  });
+
   it('groups anime cours that share a TMDB id, at show level only', () => {
     const { shows } = parseSimklBackupJson(
       backupJson({

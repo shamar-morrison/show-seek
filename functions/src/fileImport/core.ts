@@ -74,6 +74,14 @@ const MAX_APPENDED_SEASONS = 20;
 const ENDED_SHOW_STATUSES = new Set(['Ended', 'Canceled']);
 const MAX_TITLE_LENGTH = 500;
 const MAX_EPISODE_NUMBER = 10_000;
+/**
+ * "Watched up to" episodes one call may expand, across all its shows. Listed plays are
+ * capped by FILE_IMPORT_MAX_PLAYS_PER_CHUNK; this caps expansion, which a crafted chunk
+ * could otherwise push to every episode of 15 long-running shows. It sits above the
+ * longest daily soaps (~15,000 episodes), so the client's chunks (≤ ~1,500 expected
+ * writes, or one heavy show on its own) never reach it.
+ */
+const MAX_EXPANDED_EPISODES_PER_CALL = 20_000;
 
 const MINUTE_MS = 60 * 1000;
 
@@ -172,6 +180,8 @@ interface FileImportContext extends ImportWriteContext {
   seasonCache: Map<string, Promise<SeasonIndex | null>>;
   fallbackLookupsRemaining: number;
   episodeGroupLookupsRemaining: number;
+  /** "Watched up to" episodes this call may still expand (MAX_EXPANDED_EPISODES_PER_CALL). */
+  expansionBudget: number;
 }
 
 interface MappedEpisode {
@@ -246,6 +256,7 @@ async function handleFileImportChunk(
     ...(await createImportWriteContext(db, userId)),
     detailsCache: new Map(),
     episodeGroupLookupsRemaining: MAX_EPISODE_GROUP_LOOKUPS,
+    expansionBudget: MAX_EXPANDED_EPISODES_PER_CALL,
     fallbackLookupsRemaining: MAX_EPISODE_FALLBACK_LOOKUPS,
     findCache: new Map(),
     seasonCache: new Map(),
@@ -977,9 +988,20 @@ async function expandWatchedThrough(
   episodes: Map<string, MappedEpisode>
 ): Promise<void> {
   const cutoff = watchedAt + DAY_MS;
-  const seasons = (await getRegularSeasons(context, showId))
-    .map((season) => season.seasonNumber)
-    .filter((season) => through.kind === 'all' || season <= through.season);
+  const regular = (await getRegularSeasons(context, showId)).filter(
+    (season) => through.kind === 'all' || season.seasonNumber <= through.season
+  );
+  // Only fetch the seasons the call's remaining expansion budget can still cover.
+  const seasons: number[] = [];
+  let covered = 0;
+  for (const season of regular) {
+    if (covered >= context.expansionBudget) {
+      warnExpansionBudgetSpent(context, showId);
+      break;
+    }
+    seasons.push(season.seasonNumber);
+    covered += Math.max(1, season.episodeCount);
+  }
   prefetchSeasons(context, showId, seasons);
 
   for (const seasonNumber of seasons) {
@@ -1006,10 +1028,23 @@ async function expandWatchedThrough(
       }
       const key = `${episode.season_number}_${episode.episode_number}`;
       if (!episodes.has(key)) {
+        if (context.expansionBudget <= 0) {
+          warnExpansionBudgetSpent(context, showId);
+          return;
+        }
         episodes.set(key, toMappedEpisode(showId, episode, watchedAt));
+        context.expansionBudget -= 1;
       }
     }
   }
+}
+
+/** Only a crafted chunk gets here: the client's chunks stay far below the budget. */
+function warnExpansionBudgetSpent(context: FileImportContext, showId: number): void {
+  console.warn(`${context.source.logTag} "watched up to" expansion budget spent`, {
+    limit: MAX_EXPANDED_EPISODES_PER_CALL,
+    showId,
+  });
 }
 
 /**
@@ -1043,7 +1078,12 @@ async function mapAnimePlays(
     const expanded: FileImportEpisodePlay[] = [];
     for (let episode = 1; episode <= last; episode += 1) {
       if (!listed.has(`1_${episode}`)) {
+        if (context.expansionBudget <= 0) {
+          warnExpansionBudgetSpent(context, showId);
+          break;
+        }
         expanded.push({ episode, season: 1, watchedAt: entity.watchedThroughAt });
+        context.expansionBudget -= 1;
       }
     }
     plays = [...plays, ...expanded];

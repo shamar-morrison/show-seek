@@ -517,6 +517,76 @@ describe('importSimklChunk — "watched up to" expansion', () => {
     expect(stats.skipped.already_tracked_episode).toBe(1);
     expect(stats.imported.watchedEpisodes).toBe(4);
   });
+
+  it('caps expansion per call at 20,000 episodes, and stops fetching seasons past the cap', async () => {
+    seedPremiumUser();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // 25 seasons × 1,000 aired episodes: more than one call may expand.
+    const bigSeason = (seasonNumber: number) => ({
+      episodes: Array.from({ length: 1000 }, (_, index) => ({
+        air_date: '2000-01-01',
+        episode_number: index + 1,
+        id: seasonNumber * 10_000 + index + 1,
+        name: `S${seasonNumber}E${index + 1}`,
+        runtime: 30,
+        season_number: seasonNumber,
+      })),
+    });
+    const numbers = Array.from({ length: 25 }, (_, index) => index + 1);
+    routeTmdb(
+      tvRoutes(
+        800,
+        tvDetails(
+          800,
+          'Endless Soap',
+          numbers.map((n) => ({ episode_count: 1000, season_number: n }))
+        ),
+        Object.fromEntries(numbers.map((n) => [n, bigSeason(n)]))
+      )
+    );
+
+    const stats = await callImport(
+      authed(
+        chunk({
+          shows: [
+            showEntity({
+              tmdbId: 800,
+              watchedThrough: { kind: 'all' },
+              watchedThroughAt: WATCHED_AT,
+            }),
+          ],
+        })
+      )
+    );
+
+    expect(stats.imported.watchedEpisodes).toBe(20_000);
+    expect(tmdbCalls(/season\/2[1-5]\b/)).toEqual([]);
+    expect(warn).toHaveBeenCalledWith(
+      '[simklImport] "watched up to" expansion budget spent',
+      expect.objectContaining({ showId: 800 })
+    );
+  });
+
+  it('counts anime "watched up to" against the same per-call cap', async () => {
+    seedPremiumUser();
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // TMDB's total (3) never equals the entry total, so every expanded play is unmatched.
+    routeTmdb(
+      tvRoutes(900, tvDetails(900, 'Long Anime', [{ episode_count: 3, season_number: 1 }]), {
+        1: season(900, 1, 3),
+      })
+    );
+    const longEntry = showEntity({
+      anime: { entryEpisodeTotal: 10_000, groupedEntries: 1 },
+      tmdbId: 900,
+      watchedThrough: { kind: 'all' },
+      watchedThroughAt: WATCHED_AT,
+    });
+
+    const stats = await callImport(authed(chunk({ shows: [longEntry, longEntry, longEntry] })));
+
+    expect(stats.skipped.unmatched_anime_episode).toBe(20_000);
+  });
 });
 
 describe('importSimklChunk — episode-group fallback for TVDB numbering', () => {
