@@ -28,6 +28,16 @@ export interface FilterSelectProps {
 }
 
 /**
+ * Whether a select shows its "nothing chosen" look (muted text). Filters say so through
+ * `isActive`, since defaults like "Any runtime" are real options rather than empty values.
+ * Selects without `isActive` (e.g. sort order) fall back to treating null and 0 as unset.
+ */
+export function isUnsetSelectValue(value: unknown, isActive: boolean | undefined): boolean {
+  if (isActive !== undefined) return !isActive;
+  return value == null || value === 0;
+}
+
+/**
  * Single-select dropdown with a modal option list.
  * Shared by Discover and watchlist/custom-list filter UIs.
  * The modal header renders the field `label` directly.
@@ -38,7 +48,7 @@ export function FilterSelect({
   options,
   onSelect,
   placeholder,
-  isActive = false,
+  isActive,
   testID,
 }: FilterSelectProps) {
   const { t } = useTranslation();
@@ -60,7 +70,7 @@ export function FilterSelect({
         <Text
           style={[
             styles.selectButtonText,
-            (value == null || value === 0) && { color: COLORS.textSecondary },
+            isUnsetSelectValue(value, isActive) && { color: COLORS.textSecondary },
           ]}
           numberOfLines={1}
         >

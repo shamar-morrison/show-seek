@@ -16,7 +16,7 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { filterSelectStyles as styles, FILTER_SELECT_ITEM_HEIGHT } from './filterSelectStyles';
-import { FilterSelectProps, SelectOption } from './FilterSelect';
+import { FilterSelectProps, isUnsetSelectValue, SelectOption } from './FilterSelect';
 
 export interface SearchableFilterSelectProps extends FilterSelectProps {
   searchPlaceholder?: string;
@@ -32,7 +32,7 @@ export function SearchableFilterSelect({
   options,
   onSelect,
   placeholder,
-  isActive = false,
+  isActive,
   searchPlaceholder,
 }: SearchableFilterSelectProps) {
   const { t } = useTranslation();
@@ -51,7 +51,7 @@ export function SearchableFilterSelect({
         <Text
           style={[
             styles.selectButtonText,
-            (value == null || value === 0) && { color: COLORS.textSecondary },
+            isUnsetSelectValue(value, isActive) && { color: COLORS.textSecondary },
           ]}
           numberOfLines={1}
         >
