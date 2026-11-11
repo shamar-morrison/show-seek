@@ -1,8 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { CollectionScreenSkeleton } from '@/src/components/collection/CollectionScreenSkeleton';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
-import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
   ACTIVE_OPACITY,
@@ -25,6 +25,7 @@ import {
 } from '@/src/hooks/useCollectionTracking';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
@@ -192,8 +193,12 @@ export default function CollectionScreen() {
       .map(({ movie }) => movie);
   }, [collectionQuery.data?.parts]);
 
-  if (collectionQuery.isLoading) {
-    return <FullScreenLoading />;
+  // The page draws every movie at once, so when the collection is cached the first render is a
+  // light skeleton: the page slides in straight away and the list follows a tick later.
+  const { isReady } = useProgressiveRender();
+
+  if (!isReady || collectionQuery.isLoading) {
+    return <CollectionScreenSkeleton />;
   }
 
   if (collectionQuery.isError || !collectionQuery.data) {
