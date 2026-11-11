@@ -3,6 +3,7 @@ import { ActionButton } from '@/src/components/profile/ActionButton';
 import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
+import { useProfileBackground } from '@/src/hooks/useProfileBackground';
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
 import { screenStyles } from '@/src/styles/screenStyles';
 import {
@@ -21,6 +22,7 @@ export default function AccountScreen() {
   const { t } = useTranslation();
   const { user, isGuest } = useAuth();
   const router = useRouter();
+  const { profileBackground } = useProfileBackground();
   const {
     isPremium,
     isPremiumLoading,
@@ -35,7 +37,12 @@ export default function AccountScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <UserInfoSection user={user} isGuest={isGuest} isPremium={isPremium} />
+        <UserInfoSection
+          user={user}
+          isGuest={isGuest}
+          isPremium={isPremium}
+          background={isGuest ? null : profileBackground}
+        />
 
         <AccountPrompt
           isGuest={isGuest}

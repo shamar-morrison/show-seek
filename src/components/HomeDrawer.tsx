@@ -1,3 +1,4 @@
+import { ProfileBackgroundImage } from '@/src/components/profile/ProfileBackgroundImage';
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import {
   ACTIVE_OPACITY,
@@ -10,6 +11,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useProfileBackground } from '@/src/hooks/useProfileBackground';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -57,6 +59,8 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const { user, isGuest, signOut } = useAuth();
+  const { profileBackground } = useProfileBackground();
+  const background = isGuest ? null : profileBackground;
   const { isPremium } = usePremium();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -169,17 +173,29 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
           style={[
             styles.drawerContainer,
             drawerAnimatedStyle,
-            { paddingTop: insets.top, paddingBottom: insets.bottom },
+            // With a background, the profile card takes the status bar's space so the image runs
+            // up behind it, like a header.
+            { paddingTop: background ? 0 : insets.top, paddingBottom: insets.bottom },
           ]}
         >
           {/* User Profile Section */}
           <Pressable
-            style={({ pressed }) => [styles.userSection, pressed && styles.navigationCardPressed]}
+            style={({ pressed }) => [
+              styles.userSection,
+              background && [
+                styles.userSectionWithBackground,
+                { paddingTop: insets.top + SPACING.xl },
+              ],
+              pressed && styles.navigationCardPressed,
+            ]}
             onPress={handleProfilePress}
             accessibilityRole="button"
             accessibilityLabel={t('settings.account')}
             testID="home-drawer-profile"
           >
+            {background ? (
+              <ProfileBackgroundImage background={background} fadeTo={COLORS.surface} />
+            ) : null}
             <UserAvatar
               photoURL={user?.photoURL}
               displayName={user?.displayName}
@@ -301,6 +317,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.l,
     gap: SPACING.m,
+  },
+  userSectionWithBackground: {
+    overflow: 'hidden',
+    position: 'relative',
   },
   userInfo: {
     flex: 1,

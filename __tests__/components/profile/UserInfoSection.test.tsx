@@ -4,6 +4,14 @@ import React from 'react';
 
 const mockUserAvatar = jest.fn((_props: Record<string, unknown>) => null);
 
+// Its image component pulls in expo-image's native module.
+jest.mock('@/src/components/profile/ProfileBackgroundImage', () => ({
+  ProfileBackgroundImage: () => {
+    const { View } = require('react-native');
+    return <View testID="profile-background" />;
+  },
+}));
+
 jest.mock('@/src/components/ui/UserAvatar', () => ({
   UserAvatar: (props: Record<string, unknown>) => mockUserAvatar(props),
 }));

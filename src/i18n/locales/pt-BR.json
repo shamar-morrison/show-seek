@@ -894,7 +894,13 @@
     "clearCacheTitle": "Limpar cache de imagens?",
     "clearCacheMessage": "Isso limpa apenas pôsteres/fundos baixados e outras imagens em cache. Suas listas, conta e configurações não são afetadas.",
     "cacheCleared": "Cache de imagens limpo com sucesso.",
-    "clearCacheFailed": "Não foi possível limpar o cache de imagens. Tente novamente."
+    "clearCacheFailed": "Não foi possível limpar o cache de imagens. Tente novamente.",
+    "useAsBackground": "Usar como fundo do perfil",
+    "backgroundSet": "Definido como fundo do seu perfil",
+    "backgroundFailed": "Não foi possível definir o fundo do perfil",
+    "profileBackground": "Fundo do perfil",
+    "removeBackground": "Remover fundo",
+    "backgroundHint": "Abra as fotos de um filme ou série e toque em Usar como fundo do perfil para usar aqui um pôster ou plano de fundo."
   },
   "dataExport": {
     "title": "Exporte seus dados do ShowSeek",
@@ -2350,6 +2356,10 @@
         "title": "Organize os botões de ação",
         "description": "Coloque os botões das páginas de filmes e séries na ordem que preferir em Configurações › Conteúdo › Reordenar botões de ação."
       },
+      "profileBackground": {
+        "title": "Escolha um fundo para o perfil",
+        "description": "Ao ver os pôsteres ou planos de fundo de um filme ou série, toque em Usar como fundo do perfil para exibi-lo atrás do seu perfil."
+      },
       "favoritePeople": {
         "title": "Salve pessoas favoritas",
         "description": "Toque e segure qualquer pessoa do elenco ou da equipe para adicioná-la às suas favoritas."
@@ -2387,5 +2397,8 @@
         "description": "Use a busca em Configurações para ir direto a qualquer opção."
       }
     }
+  },
+  "imageViewer": {
+    "download": "Baixar"
   }
 }

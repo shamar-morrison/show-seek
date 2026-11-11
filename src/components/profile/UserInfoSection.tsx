@@ -1,3 +1,4 @@
+import { ProfileBackgroundImage } from '@/src/components/profile/ProfileBackgroundImage';
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import {
   BORDER_RADIUS,
@@ -7,6 +8,7 @@ import {
   hexToRGBA,
   SPACING,
 } from '@/src/constants/theme';
+import type { ProfileBackground } from '@/src/utils/profileBackground';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { User } from 'firebase/auth';
 import React from 'react';
@@ -20,12 +22,14 @@ export interface UserInfoSectionProps {
   isGuest: boolean;
   /** Whether the user has premium status */
   isPremium: boolean;
+  /** Their chosen poster or backdrop, shown behind this block and fading into the screen. */
+  background?: ProfileBackground | null;
 }
 
 /**
  * Account screen identity block: avatar, display name, email, and premium status.
  */
-export function UserInfoSection({ user, isGuest, isPremium }: UserInfoSectionProps) {
+export function UserInfoSection({ user, isGuest, isPremium, background }: UserInfoSectionProps) {
   const { t } = useTranslation();
   const displayName = isGuest
     ? t('profile.guestUser')
@@ -33,7 +37,10 @@ export function UserInfoSection({ user, isGuest, isPremium }: UserInfoSectionPro
   const email = user?.email || t('profile.noEmail');
 
   return (
-    <View style={styles.userSection}>
+    <View style={[styles.userSection, background && styles.userSectionWithBackground]}>
+      {background ? (
+        <ProfileBackgroundImage background={background} fadeTo={COLORS.background} />
+      ) : null}
       <UserAvatar
         photoURL={user?.photoURL}
         displayName={user?.displayName}
@@ -63,6 +70,12 @@ const styles = StyleSheet.create({
   userSection: {
     alignItems: 'center',
     paddingVertical: SPACING.l,
+  },
+  // Room above the avatar so the image shows, and full width past the screen's side padding.
+  userSectionWithBackground: {
+    marginHorizontal: -SPACING.l,
+    paddingTop: SPACING.xxl + SPACING.l,
+    position: 'relative',
   },
   displayName: {
     fontSize: FONT_SIZE.xl,

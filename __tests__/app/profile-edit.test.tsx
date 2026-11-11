@@ -35,6 +35,17 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('@/src/context/auth', () => ({ useAuth: () => mockAuth }));
+
+let mockProfileBackground: { path: string; kind: 'backdrop' | 'poster' } | null = null;
+const mockSetProfileBackground = jest.fn(() => Promise.resolve());
+jest.mock('@/src/hooks/useProfileBackground', () => ({
+  useProfileBackground: () => ({
+    profileBackground: mockProfileBackground,
+    setProfileBackground: mockSetProfileBackground,
+    isSaving: false,
+  }),
+}));
+
 jest.mock('@/src/services/ProfileService', () => ({
   DISPLAY_NAME_MAX_LENGTH: 50,
   updateUserProfile: jest.fn(() => Promise.resolve()),
@@ -58,6 +69,37 @@ describe('EditProfileScreen', () => {
       email: 'sam@example.com',
       photoURL: 'https://example.com/me.jpg',
     };
+    mockProfileBackground = null;
+    mockSetProfileBackground.mockClear();
+  });
+
+  describe('profile background', () => {
+    it('explains how to set one when there is none', () => {
+      const { getByTestId, queryByTestId } = render(<EditProfileScreen />);
+
+      expect(getByTestId('edit-profile-background-hint')).toBeTruthy();
+      expect(queryByTestId('edit-profile-remove-background')).toBeNull();
+    });
+
+    it('previews the background and removes it on Save, without touching the profile', async () => {
+      mockProfileBackground = { path: '/backdrop.jpg', kind: 'backdrop' };
+      (updateUserProfile as jest.Mock).mockClear();
+      const { getByTestId, queryByTestId } = render(<EditProfileScreen />);
+
+      expect(getByTestId('edit-profile-background-preview').props.source.uri).toContain(
+        '/backdrop.jpg'
+      );
+      fireEvent.press(getByTestId('edit-profile-remove-background'));
+      expect(queryByTestId('edit-profile-background-preview')).toBeNull();
+      expect(getByTestId('edit-profile-background-hint')).toBeTruthy();
+      expect(mockSetProfileBackground).not.toHaveBeenCalled();
+
+      fireEvent.press(getByTestId('edit-profile-save'));
+
+      await waitFor(() => expect(mockSetProfileBackground).toHaveBeenCalledWith(null));
+      expect(updateUserProfile).not.toHaveBeenCalled();
+      await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    });
   });
 
   it.each([

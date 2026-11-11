@@ -7,6 +7,7 @@ import {
   toFirestoreError,
 } from '@/src/services/serviceSupport';
 import { sanitizePosterOverrides } from '@/src/utils/posterOverrides';
+import { sanitizeProfileBackground } from '@/src/utils/profileBackground';
 import { raceWithTimeout } from '@/src/utils/timeout';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -78,6 +79,7 @@ class PreferencesService {
         typeof data?.preferences?.use24HourTime === 'boolean'
           ? data.preferences.use24HourTime
           : undefined,
+      profileBackground: sanitizeProfileBackground(data?.preferences?.profileBackground),
     };
   }
 

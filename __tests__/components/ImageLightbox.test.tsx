@@ -2,7 +2,7 @@ import ImageLightbox from '@/src/components/ImageLightbox';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
 const mockToastShow = jest.fn();
 let mockAttachToastRef = true;
@@ -29,6 +29,13 @@ jest.mock('react-native-safe-area-context', () => {
       React.createElement(React.Fragment, null, children),
   };
 });
+
+jest.mock('@/src/components/profile/ProfileBackgroundButton', () => ({
+  ProfileBackgroundButton: ({ image }: any) => {
+    const { View } = require('react-native');
+    return <View testID="profile-background-button" image={image} />;
+  },
+}));
 
 jest.mock('@/src/components/ui/Toast', () => {
   const React = require('react');
@@ -107,17 +114,18 @@ describe('ImageLightbox', () => {
     expect(loaded).toEqual([8, 9, 10, 11, 12].map((index) => `https://example.com/${index}.jpg`));
   });
 
-  it('drops the dots for long sets and keeps the counter', () => {
+  it('shows the counter at the top and the actions in a labelled bar at the bottom', () => {
     const images = Array.from({ length: 30 }, (_, index) => `https://example.com/${index}.jpg`);
-    const { getByTestId, queryByTestId, rerender } = render(
+    const { getByTestId, getByText, queryByTestId } = render(
       <ImageLightbox visible onClose={mockOnClose} images={images} />
     );
 
     expect(getByTestId('image-lightbox-counter').props.children.join('')).toBe('1 / 30');
     expect(queryByTestId('image-lightbox-dots')).toBeNull();
-
-    rerender(<ImageLightbox visible onClose={mockOnClose} images={images.slice(0, 3)} />);
-    expect(getByTestId('image-lightbox-dots')).toBeTruthy();
+    expect(
+      within(getByTestId('image-lightbox-actions')).getByTestId('image-lightbox-download-button')
+    ).toBeTruthy();
+    expect(getByText('Download')).toBeTruthy();
   });
 
   it('opens on the tapped image again after being closed and reopened', () => {
@@ -136,6 +144,60 @@ describe('ImageLightbox', () => {
     rerender(<ImageLightbox visible onClose={mockOnClose} images={images} initialIndex={1} />);
 
     expect(getByTestId('image-lightbox-counter').props.children.join('')).toBe('2 / 2');
+  });
+
+  it('puts the profile backdrop button in the bottom bar, only for images given a TMDB path', () => {
+    const images = ['https://example.com/a.jpg', 'https://example.com/b.jpg'];
+    const backgrounds = [{ path: '/a.jpg', kind: 'poster' as const }, null];
+    const { getByTestId, queryByTestId, rerender } = render(
+      <ImageLightbox
+        visible
+        onClose={mockOnClose}
+        images={images}
+        profileBackgrounds={backgrounds}
+      />
+    );
+
+    expect(
+      within(getByTestId('image-lightbox-actions')).getByTestId('profile-background-button').props
+        .image
+    ).toEqual(backgrounds[0]);
+
+    rerender(
+      <ImageLightbox
+        visible
+        onClose={mockOnClose}
+        images={images}
+        profileBackgrounds={backgrounds}
+        initialIndex={1}
+      />
+    );
+    rerender(
+      <ImageLightbox
+        visible={false}
+        onClose={mockOnClose}
+        images={images}
+        profileBackgrounds={backgrounds}
+        initialIndex={1}
+      />
+    );
+    rerender(
+      <ImageLightbox
+        visible
+        onClose={mockOnClose}
+        images={images}
+        profileBackgrounds={backgrounds}
+        initialIndex={1}
+      />
+    );
+    expect(queryByTestId('profile-background-button')).toBeNull();
+  });
+
+  it('has no profile background button without TMDB paths', () => {
+    const { queryByTestId } = render(
+      <ImageLightbox visible onClose={mockOnClose} images={['https://example.com/a.jpg']} />
+    );
+    expect(queryByTestId('profile-background-button')).toBeNull();
   });
 
   it('hides the position counter for a single image', () => {

@@ -35,6 +35,16 @@ jest.mock('@/src/hooks/useProfileLogic', () => ({
   useProfileLogic: () => mockLogic,
 }));
 
+let mockProfileBackground: { path: string; kind: 'backdrop' | 'poster' } | null = null;
+const mockSetProfileBackground = jest.fn(() => Promise.resolve());
+jest.mock('@/src/hooks/useProfileBackground', () => ({
+  useProfileBackground: () => ({
+    profileBackground: mockProfileBackground,
+    setProfileBackground: mockSetProfileBackground,
+    isSaving: false,
+  }),
+}));
+
 describe('AccountScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -43,6 +53,29 @@ describe('AccountScreen', () => {
     mockLogic.isPremium = false;
     mockLogic.isDeletingAccount = false;
     mockLogic.isSigningOut = false;
+    mockProfileBackground = null;
+  });
+
+  it('shows the profile background behind the identity block when one is set', () => {
+    mockProfileBackground = { path: '/backdrop.jpg', kind: 'backdrop' };
+    const { getByTestId } = render(<AccountScreen />);
+
+    expect(getByTestId('profile-background-image').props.source.uri).toContain('/backdrop.jpg');
+  });
+
+  it('crops a poster background from the top', () => {
+    mockProfileBackground = { path: '/poster.jpg', kind: 'poster' };
+    const { getByTestId } = render(<AccountScreen />);
+
+    expect(getByTestId('profile-background-image').props.contentPosition).toBe('top');
+  });
+
+  it('shows no background when none is set, or to guests', () => {
+    expect(render(<AccountScreen />).queryByTestId('profile-background')).toBeNull();
+
+    mockProfileBackground = { path: '/backdrop.jpg', kind: 'backdrop' };
+    mockAuth.isGuest = true;
+    expect(render(<AccountScreen />).queryByTestId('profile-background')).toBeNull();
   });
 
   it('shows identity and all account actions to a signed-in user', () => {

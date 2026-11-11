@@ -89,6 +89,15 @@ service cloud.firestore {
           && (!('copyInsteadOfMove' in request.resource.data.preferences) || request.resource.data.preferences.copyInsteadOfMove is bool)
           && (!('showOriginalTitles' in request.resource.data.preferences) || request.resource.data.preferences.showOriginalTitles is bool)
           && (!('use24HourTime' in request.resource.data.preferences) || request.resource.data.preferences.use24HourTime is bool)
+          && (!('profileBackground' in request.resource.data.preferences)
+            || request.resource.data.preferences.profileBackground == null
+            || (
+              request.resource.data.preferences.profileBackground is map
+              && request.resource.data.preferences.profileBackground.keys().hasOnly(['path', 'kind'])
+              && request.resource.data.preferences.profileBackground.path is string
+              && request.resource.data.preferences.profileBackground.path.matches('^/[A-Za-z0-9_-]+[.](jpg|jpeg|png|webp)$')
+              && request.resource.data.preferences.profileBackground.kind in ['backdrop', 'poster']
+            ))
           && (!('detailActionOrder' in request.resource.data.preferences) || (
             request.resource.data.preferences.detailActionOrder is list
             && request.resource.data.preferences.detailActionOrder.size() <= 10

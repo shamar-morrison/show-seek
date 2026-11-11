@@ -89,6 +89,14 @@ export default function MediaPhotosScreen({ mediaType }: MediaPhotosScreenProps)
       ),
     [activeImages]
   );
+  const lightboxProfileBackgrounds = useMemo(
+    () =>
+      activeImages.map((image) => ({
+        path: image.file_path,
+        kind: activeTab === 'posters' ? ('poster' as const) : ('backdrop' as const),
+      })),
+    [activeImages, activeTab]
+  );
 
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<ImageData>) => (
@@ -221,6 +229,7 @@ export default function MediaPhotosScreen({ mediaType }: MediaPhotosScreenProps)
         onClose={() => setLightboxIndex(null)}
         images={lightboxImages}
         downloadImages={lightboxDownloadImages}
+        profileBackgrounds={lightboxProfileBackgrounds}
         initialIndex={lightboxIndex ?? 0}
       />
     </SafeAreaView>

@@ -1,3 +1,4 @@
+import { MediaImage } from '@/src/components/ui/MediaImage';
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import {
   ACTIVE_OPACITY,
@@ -9,12 +10,14 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
+import { useProfileBackground } from '@/src/hooks/useProfileBackground';
 import {
   DISPLAY_NAME_MAX_LENGTH,
   ProfilePhotoChange,
   updateUserProfile,
 } from '@/src/services/ProfileService';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getProfileBackgroundUrl } from '@/src/utils/profileBackground';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
@@ -41,6 +44,9 @@ export default function EditProfileScreen() {
   const [name, setName] = useState(user?.displayName ?? '');
   const [photo, setPhoto] = useState<ProfilePhotoChange>({ type: 'keep' });
   const [isSaving, setIsSaving] = useState(false);
+  // The background is set from the image viewer; here it can only be removed, on Save.
+  const { profileBackground, setProfileBackground } = useProfileBackground();
+  const [removeBackground, setRemoveBackground] = useState(false);
   const isFocusedRef = useRef(true);
 
   useFocusEffect(
@@ -59,7 +65,10 @@ export default function EditProfileScreen() {
   const trimmedName = name.trim();
   const previewPhoto =
     photo.type === 'replace' ? photo.uri : photo.type === 'remove' ? null : user.photoURL;
-  const hasChanges = photo.type !== 'keep' || trimmedName !== (user.displayName?.trim() ?? '');
+  const hasProfileChanges =
+    photo.type !== 'keep' || trimmedName !== (user.displayName?.trim() ?? '');
+  const previewBackground = removeBackground ? null : profileBackground;
+  const hasChanges = hasProfileChanges || (removeBackground && !!profileBackground);
   const canSave = !!trimmedName && hasChanges && !isSaving;
 
   const handlePickPhoto = async () => {
@@ -87,14 +96,20 @@ export default function EditProfileScreen() {
     setIsSaving(true);
 
     try {
-      await updateUserProfile(user, { displayName: trimmedName, photo });
-      await refreshProfile();
+      if (hasProfileChanges) {
+        await updateUserProfile(user, { displayName: trimmedName, photo });
+        await refreshProfile();
+      }
+      if (removeBackground && profileBackground) {
+        await setProfileBackground(null);
+      }
 
       // A save can outlast the screen, and going back then would pop wherever the user went next.
       if (isFocusedRef.current) {
         router.back();
       } else {
         setPhoto({ type: 'keep' });
+        setRemoveBackground(false);
         setIsSaving(false);
       }
     } catch (error) {
@@ -170,6 +185,36 @@ export default function EditProfileScreen() {
           />
         </View>
 
+        <View style={styles.field}>
+          <Text style={styles.label}>{t('profile.profileBackground')}</Text>
+          {previewBackground ? (
+            <>
+              <MediaImage
+                source={{ uri: getProfileBackgroundUrl(previewBackground) }}
+                style={styles.backgroundPreview}
+                contentFit="cover"
+                contentPosition={previewBackground.kind === 'poster' ? 'top' : 'center'}
+                testID="edit-profile-background-preview"
+              />
+              <TouchableOpacity
+                onPress={() => setRemoveBackground(true)}
+                disabled={isSaving}
+                activeOpacity={ACTIVE_OPACITY}
+                style={styles.removeBackground}
+                testID="edit-profile-remove-background"
+              >
+                <Text style={[styles.photoAction, styles.removePhoto]}>
+                  {t('profile.removeBackground')}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.backgroundHint} testID="edit-profile-background-hint">
+              {t('profile.backgroundHint')}
+            </Text>
+          )}
+        </View>
+
         <TouchableOpacity
           style={[styles.saveButton, { backgroundColor: accentColor }, !canSave && styles.disabled]}
           onPress={handleSave}
@@ -228,6 +273,26 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.regular,
     color: COLORS.text,
+  },
+  backgroundPreview: {
+    aspectRatio: 16 / 9,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    width: '100%',
+  },
+  removeBackground: {
+    alignSelf: 'center',
+  },
+  backgroundHint: {
+    backgroundColor: COLORS.surface,
+    borderColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: FONT_SIZE.s,
+    lineHeight: 20,
+    padding: SPACING.m,
   },
   saveButton: {
     alignSelf: 'stretch',

@@ -10,6 +10,7 @@ import {
   SlidersHorizontalIcon,
   StarIcon,
   TaskDone01Icon,
+  UserSquareIcon,
   UserStar01Icon,
   ViewOffIcon,
   WorkHistoryIcon,
@@ -41,6 +42,7 @@ export const TIP_SECTIONS: TipSection[] = [
       { id: 'copyTitle', icon: Copy01Icon },
       { id: 'poster', icon: ImageCompositionIcon },
       { id: 'actionButtons', icon: DragDropVerticalIcon },
+      { id: 'profileBackground', icon: UserSquareIcon },
     ],
   },
   {

@@ -394,6 +394,10 @@ export default function TVDetailScreen() {
     images?.backdrops
       .slice(0, 10)
       .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.original) || '') || [];
+  const lightboxProfileBackgrounds =
+    images?.backdrops
+      .slice(0, 10)
+      .map((img) => ({ path: img.file_path, kind: 'backdrop' as const })) || [];
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
 
   const handleTrailerPress = () => {
@@ -767,6 +771,7 @@ export default function TVDetailScreen() {
         onClose={() => setLightboxVisible(false)}
         images={lightboxDisplayImages}
         downloadImages={lightboxDownloadImages}
+        profileBackgrounds={lightboxProfileBackgrounds}
         onShowToast={(message) => toastRef.current?.show(message)}
         initialIndex={lightboxIndex}
       />

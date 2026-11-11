@@ -107,8 +107,23 @@ describe('MediaPhotosScreen', () => {
       expect.stringContaining('/b2.jpg'),
     ]);
     expect(capturedLightboxProps.downloadImages[1]).toContain('/original/b2.jpg');
+    expect(capturedLightboxProps.profileBackgrounds).toEqual([
+      { path: '/b1.jpg', kind: 'backdrop' },
+      { path: '/b2.jpg', kind: 'backdrop' },
+    ]);
 
     capturedLightboxProps.onClose();
+  });
+
+  it('lets posters be used as a profile background, as posters', () => {
+    const { getByTestId } = render(<MediaPhotosScreen mediaType="movie" />);
+
+    fireEvent.press(getByTestId('media-photo-0'));
+
+    expect(capturedLightboxProps.profileBackgrounds[0]).toEqual({
+      path: '/p1.jpg',
+      kind: 'poster',
+    });
   });
 
   it('says so when a tab has no photos', () => {

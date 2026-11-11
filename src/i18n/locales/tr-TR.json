@@ -894,7 +894,13 @@
       "title": "Web uygulamasını aç"
     },
     "defaultBulkAction": "Varsayılan toplu işlem: {{mode}}",
-    "defaultBulkActionDescription": "Bir listeden toplu öğe eklerken ne olacağını seçin."
+    "defaultBulkActionDescription": "Bir listeden toplu öğe eklerken ne olacağını seçin.",
+    "useAsBackground": "Profil arka planı yap",
+    "backgroundSet": "Profil arka planın olarak ayarlandı",
+    "backgroundFailed": "Profil arka planı ayarlanamadı",
+    "profileBackground": "Profil arka planı",
+    "removeBackground": "Arka planı kaldır",
+    "backgroundHint": "Bir film ya da dizinin fotoğraflarını açın ve bir afişi ya da arka planı burada kullanmak için Profil arka planı yap'a dokunun."
   },
   "dataExport": {
     "title": "ShowSeek verilerini dışa aktar",
@@ -2350,6 +2356,10 @@
         "title": "Eylem düğmelerini düzenleyin",
         "description": "Film ve dizi sayfalarındaki düğmeleri Ayarlar › İçerik › Eylem düğmelerini yeniden sırala bölümünden istediğiniz sıraya koyun."
       },
+      "profileBackground": {
+        "title": "Bir profil arka planı seçin",
+        "description": "Bir film ya da dizinin afişlerine veya arka planlarına bakarken, onu profilinizin arkasında göstermek için Profil arka planı yap'a dokunun."
+      },
       "favoritePeople": {
         "title": "Favori kişilerinizi kaydedin",
         "description": "Oyuncu ya da ekipten birine uzun basarak onu favori kişilerinize ekleyin."
@@ -2387,5 +2397,8 @@
         "description": "Herhangi bir seçeneğe doğrudan gitmek için Ayarlar'daki aramayı kullanın."
       }
     }
+  },
+  "imageViewer": {
+    "download": "İndir"
   }
 }

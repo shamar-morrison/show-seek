@@ -894,7 +894,13 @@
     "webAppModal": {
       "description": "Continuer vers l’application web ShowSeek ?",
       "title": "Ouvrir l’application web"
-    }
+    },
+    "useAsBackground": "Définir comme fond du profil",
+    "backgroundSet": "Défini comme fond de votre profil",
+    "backgroundFailed": "Impossible de définir le fond du profil",
+    "profileBackground": "Fond du profil",
+    "removeBackground": "Retirer le fond",
+    "backgroundHint": "Ouvrez les photos d'un film ou d'une série et touchez Définir comme fond du profil pour utiliser ici une affiche ou un arrière-plan."
   },
   "dataExport": {
     "title": "Exportez vos données ShowSeek",
@@ -2350,6 +2356,10 @@
         "title": "Organisez les boutons d'action",
         "description": "Rangez les boutons des pages de films et de séries dans l'ordre voulu dans Paramètres › Contenu › Réorganiser les boutons d'action."
       },
+      "profileBackground": {
+        "title": "Choisissez un fond de profil",
+        "description": "En regardant les affiches ou arrière-plans d'un film ou d'une série, touchez Définir comme fond du profil pour l'afficher derrière votre profil."
+      },
       "favoritePeople": {
         "title": "Enregistrez vos personnes favorites",
         "description": "Appuyez longuement sur n'importe qui dans la distribution ou l'équipe pour l'ajouter à vos favoris."
@@ -2387,5 +2397,8 @@
         "description": "Utilisez la recherche des Paramètres pour aller directement à n'importe quelle option."
       }
     }
+  },
+  "imageViewer": {
+    "download": "Télécharger"
   }
 }
