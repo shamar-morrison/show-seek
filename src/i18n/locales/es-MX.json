@@ -2097,9 +2097,25 @@
   },
   "whatsNew": {
     "title": "¿Qué hay de nuevo en ShowSeek?",
-    "filterPresets": {
-      "title": "Filtros guardados",
-      "description": "Guarda los filtros que más usas en Descubrir y en tus listas, y vuelve a aplicarlos con un toque. Los encontrarás hasta arriba en los filtros."
+    "profileBackdrop": {
+      "title": "Fondo del perfil",
+      "description": "Pon el póster o un fondo de cualquier película o serie detrás de tu perfil y arrástralo para elegir qué parte se ve. Abre las fotos de un título y toca Usar como fondo del perfil."
+    },
+    "ratings": {
+      "title": "Calificaciones de Letterboxd y Trakt",
+      "description": "Las páginas de películas y series ahora muestran las calificaciones de Letterboxd y Trakt junto a IMDb, Rotten Tomatoes y Metacritic. Toca una calificación para abrir ese sitio."
+    },
+    "seeAll": {
+      "title": "Ve todo",
+      "description": "Toca Ver todo en Fotos, Vídeos, Similares y También te puede gustar para explorarlo todo: pósters y fondos, videos por tipo y muchos más títulos."
+    },
+    "moreLikeThis": {
+      "title": "Similares más acertados",
+      "description": "Similares ahora busca títulos con los mismos géneros y temas, para que de verdad se parezcan."
+    },
+    "actionOrder": {
+      "title": "Tus botones, en tu orden",
+      "description": "Pon los botones de las páginas de películas y series en el orden que prefieras en Configuración › Contenido › Reordenar botones de acción."
     }
   },
   "posterPicker": {

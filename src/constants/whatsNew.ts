@@ -27,13 +27,37 @@ export interface WhatsNewAnnouncement {
  * strings in every locale. Set it to null to show nothing.
  */
 export const CURRENT_WHATS_NEW: WhatsNewAnnouncement | null = {
-  id: '2026-11-filter-presets',
+  id: '2026-11-profile-backdrop',
   sections: [
     {
-      id: 'filter-presets',
-      titleKey: 'whatsNew.filterPresets.title',
-      descriptionKey: 'whatsNew.filterPresets.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/saved-filters.png') },
+      id: 'profile-backdrop',
+      titleKey: 'whatsNew.profileBackdrop.title',
+      descriptionKey: 'whatsNew.profileBackdrop.description',
+      visual: { type: 'image', source: require('@/assets/images/whats-new/profile-backdrop.png') },
+    },
+    {
+      id: 'ratings',
+      titleKey: 'whatsNew.ratings.title',
+      descriptionKey: 'whatsNew.ratings.description',
+      visual: { type: 'image', source: require('@/assets/images/whats-new/ratings.png') },
+    },
+    {
+      id: 'see-all',
+      titleKey: 'whatsNew.seeAll.title',
+      descriptionKey: 'whatsNew.seeAll.description',
+      visual: { type: 'image', source: require('@/assets/images/whats-new/see-all.png') },
+    },
+    {
+      id: 'more-like-this',
+      titleKey: 'whatsNew.moreLikeThis.title',
+      descriptionKey: 'whatsNew.moreLikeThis.description',
+      visual: { type: 'image', source: require('@/assets/images/whats-new/more-like-this.png') },
+    },
+    {
+      id: 'action-order',
+      titleKey: 'whatsNew.actionOrder.title',
+      descriptionKey: 'whatsNew.actionOrder.description',
+      visual: { type: 'image', source: require('@/assets/images/whats-new/action-order.png') },
     },
   ],
 };

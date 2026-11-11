@@ -1724,9 +1724,25 @@
   },
   "whatsNew": {
     "title": "What's New in ShowSeek?",
-    "filterPresets": {
-      "title": "Saved filters",
-      "description": "Save the filters you use most on Discover and in your lists, then apply them again in one tap. Find them at the top of the filters."
+    "profileBackdrop": {
+      "title": "Profile backdrop",
+      "description": "Put any movie or show's poster or backdrop behind your profile, and drag to choose which part shows. Open a title's photos and tap Set as profile backdrop."
+    },
+    "ratings": {
+      "title": "Letterboxd and Trakt scores",
+      "description": "Movie and show pages now show Letterboxd and Trakt scores next to IMDb, Rotten Tomatoes and Metacritic. Tap a score to open that site."
+    },
+    "seeAll": {
+      "title": "See it all",
+      "description": "Tap See All on Photos, Videos, Similar and You May Also Like to browse everything: posters and backdrops, videos by type, and many more titles."
+    },
+    "moreLikeThis": {
+      "title": "Better similar picks",
+      "description": "Similar now finds titles that share the same genres and themes, so the picks actually feel alike."
+    },
+    "actionOrder": {
+      "title": "Your buttons, your order",
+      "description": "Put the buttons on movie and show pages in the order you like in Settings › Content › Reorder Action Buttons."
     }
   },
   "posterPicker": {
