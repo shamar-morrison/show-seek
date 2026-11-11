@@ -1,9 +1,11 @@
 import CollectionScreen from '@/src/screens/CollectionScreen';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 const mockUseQuery = jest.fn();
 let mockProgressiveReady = true;
+const mockOpenShareCard = jest.fn();
+let mockTracking = { isTracked: false, watchedCount: 0, totalMovies: 0 };
 
 jest.mock('@tanstack/react-query', () => ({
   useQuery: (args: any) => mockUseQuery(args),
@@ -31,9 +33,7 @@ jest.mock('@/src/hooks/usePosterOverrides', () => ({
 jest.mock('@/src/hooks/useCollectionTracking', () => ({
   useCollectionTracking: () => ({
     tracking: null,
-    isTracked: false,
-    watchedCount: 0,
-    totalMovies: 0,
+    ...mockTracking,
     percentage: 0,
     isLoading: false,
   }),
@@ -53,7 +53,11 @@ jest.mock('@/src/components/collection/CollectionScreenSkeleton', () => ({
   },
 }));
 jest.mock('@/src/components/ui/MediaImage', () => ({ MediaImage: () => null }));
-jest.mock('@/src/components/ui/AnimatedScrollHeader', () => ({ AnimatedScrollHeader: () => null }));
+jest.mock('@/src/hooks/useOpenShareCard', () => ({ useOpenShareCard: () => mockOpenShareCard }));
+// Renders only its right-hand button, which is all these tests need from it.
+jest.mock('@/src/components/ui/AnimatedScrollHeader', () => ({
+  AnimatedScrollHeader: ({ rightAction }: any) => rightAction ?? null,
+}));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -72,6 +76,7 @@ describe('CollectionScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockProgressiveReady = true;
+    mockTracking = { isTracked: false, watchedCount: 0, totalMovies: 0 };
     mockUseQuery.mockReturnValue({ data: collection, isLoading: false, isError: false });
   });
 
@@ -95,5 +100,35 @@ describe('CollectionScreen', () => {
 
     expect(queryByTestId('collection-skeleton')).toBeNull();
     expect(getByText('A New Hope')).toBeTruthy();
+  });
+
+  describe('share card', () => {
+    it('opens a collection card from the hero button, without progress when not tracked', () => {
+      const { getByTestId } = render(<CollectionScreen />);
+
+      fireEvent.press(getByTestId('collection-share-card'));
+
+      expect(mockOpenShareCard).toHaveBeenCalledWith([
+        {
+          kind: 'collection',
+          collectionName: 'Star Wars Collection',
+          movieCount: 1,
+          yearRange: '1977',
+          posterPaths: [],
+          backdropPath: '/b.jpg',
+        },
+      ]);
+    });
+
+    it('adds the watched progress for a tracked collection, also from the scrolled header', () => {
+      mockTracking = { isTracked: true, watchedCount: 1, totalMovies: 1 };
+      const { getByTestId } = render(<CollectionScreen />);
+
+      fireEvent.press(getByTestId('collection-share-card-scrolled'));
+
+      expect(mockOpenShareCard).toHaveBeenCalledWith([
+        expect.objectContaining({ kind: 'collection', progress: { watched: 1, total: 1 } }),
+      ]);
+    });
   });
 });
