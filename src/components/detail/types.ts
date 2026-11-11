@@ -76,6 +76,11 @@ export interface PhotosSectionProps {
   style?: ViewStyle;
   variant?: 'landscape' | 'portrait';
   onViewAll?: () => void;
+  /**
+   * How the header shows `onViewAll`: a round chevron button (default, as on person pages) or
+   * "See All" text (as on the cast row of movie and TV pages).
+   */
+  viewAllStyle?: 'button' | 'text';
 }
 
 export interface VideosSectionProps {

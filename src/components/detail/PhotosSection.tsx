@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import { SectionViewAllButton } from '@/src/components/ui/SectionViewAllButton';
 import React, { memo, useCallback } from 'react';
@@ -10,7 +10,7 @@ import { useDetailStyles } from './detailStyles';
 import type { PhotosSectionProps } from './types';
 
 export const PhotosSection = memo<PhotosSectionProps>(
-  ({ images, onPhotoPress, style, variant = 'landscape', onViewAll }) => {
+  ({ images, onPhotoPress, style, variant = 'landscape', onViewAll, viewAllStyle = 'button' }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
     const isPortrait = variant === 'portrait';
@@ -48,10 +48,16 @@ export const PhotosSection = memo<PhotosSectionProps>(
             style={[styles.sectionHeader, { paddingBottom: SPACING.s }]}
             onPress={onViewAll}
             activeOpacity={ACTIVE_OPACITY}
+            hitSlop={viewAllStyle === 'text' ? HIT_SLOP.m : undefined}
             accessibilityRole="button"
+            testID="photos-section-header"
           >
             <Text style={styles.sectionTitle}>{t('media.photos')}</Text>
-            <SectionViewAllButton onPress={onViewAll} />
+            {viewAllStyle === 'text' ? (
+              <Text style={styles.viewAll}>{t('common.seeAll')}</Text>
+            ) : (
+              <SectionViewAllButton onPress={onViewAll} />
+            )}
           </TouchableOpacity>
         ) : (
           <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
@@ -80,7 +86,8 @@ export const PhotosSection = memo<PhotosSectionProps>(
       prevProps.onPhotoPress === nextProps.onPhotoPress &&
       prevProps.style === nextProps.style &&
       (prevProps.variant ?? 'landscape') === (nextProps.variant ?? 'landscape') &&
-      prevProps.onViewAll === nextProps.onViewAll
+      prevProps.onViewAll === nextProps.onViewAll &&
+      prevProps.viewAllStyle === nextProps.viewAllStyle
     );
   }
 );

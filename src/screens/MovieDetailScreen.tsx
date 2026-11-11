@@ -527,6 +527,10 @@ export default function MovieDetailScreen() {
     navigateTo(`/movie/${movieId}/cast?title=${encodeURIComponent(displayMovieTitle)}`);
   };
 
+  const handlePhotosViewAll = () => {
+    navigateTo(`/movie/${movieId}/photos?title=${encodeURIComponent(displayMovieTitle)}`);
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -961,6 +965,8 @@ export default function MovieDetailScreen() {
                 setLightboxIndex(index);
                 setLightboxVisible(true);
               }}
+              onViewAll={handlePhotosViewAll}
+              viewAllStyle="text"
             />
           )}
 

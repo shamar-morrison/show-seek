@@ -97,6 +97,47 @@ describe('ImageLightbox', () => {
     expect(getByTestId('image-lightbox-counter').props.children.join('')).toBe('1 / 2');
   });
 
+  it('only loads images next to the current one', () => {
+    const images = Array.from({ length: 30 }, (_, index) => `https://example.com/${index}.jpg`);
+    const { UNSAFE_getAllByType } = render(
+      <ImageLightbox visible onClose={mockOnClose} images={images} initialIndex={10} />
+    );
+
+    const loaded = UNSAFE_getAllByType('Image' as any).map((node: any) => node.props.source.uri);
+    expect(loaded).toEqual([8, 9, 10, 11, 12].map((index) => `https://example.com/${index}.jpg`));
+  });
+
+  it('drops the dots for long sets and keeps the counter', () => {
+    const images = Array.from({ length: 30 }, (_, index) => `https://example.com/${index}.jpg`);
+    const { getByTestId, queryByTestId, rerender } = render(
+      <ImageLightbox visible onClose={mockOnClose} images={images} />
+    );
+
+    expect(getByTestId('image-lightbox-counter').props.children.join('')).toBe('1 / 30');
+    expect(queryByTestId('image-lightbox-dots')).toBeNull();
+
+    rerender(<ImageLightbox visible onClose={mockOnClose} images={images.slice(0, 3)} />);
+    expect(getByTestId('image-lightbox-dots')).toBeTruthy();
+  });
+
+  it('opens on the tapped image again after being closed and reopened', () => {
+    const images = ['https://example.com/a.jpg', 'https://example.com/b.jpg'];
+    const { getByTestId, rerender } = render(
+      <ImageLightbox visible onClose={mockOnClose} images={images} initialIndex={1} />
+    );
+    fireEvent(getByTestId('image-lightbox-scrollview'), 'momentumScrollEnd', {
+      nativeEvent: { contentOffset: { x: 0, y: 0 } },
+    });
+    expect(getByTestId('image-lightbox-counter').props.children.join('')).toBe('1 / 2');
+
+    rerender(
+      <ImageLightbox visible={false} onClose={mockOnClose} images={images} initialIndex={1} />
+    );
+    rerender(<ImageLightbox visible onClose={mockOnClose} images={images} initialIndex={1} />);
+
+    expect(getByTestId('image-lightbox-counter').props.children.join('')).toBe('2 / 2');
+  });
+
   it('hides the position counter for a single image', () => {
     const { queryByTestId } = render(
       <ImageLightbox visible onClose={mockOnClose} images={['https://example.com/image-1.jpg']} />
@@ -123,7 +164,9 @@ describe('ImageLightbox', () => {
         'https://example.com/image-1.jpg',
         'file:///cache/lightbox-image-0.jpg'
       );
-      expect(MediaLibrary.saveToLibraryAsync).toHaveBeenCalledWith('file:///cache/lightbox-image-0.jpg');
+      expect(MediaLibrary.saveToLibraryAsync).toHaveBeenCalledWith(
+        'file:///cache/lightbox-image-0.jpg'
+      );
       expect(mockToastShow).toHaveBeenCalledWith('Saved to gallery!');
       expect(mockOnShowToast).not.toHaveBeenCalled();
       expect(FileSystem.deleteAsync).toHaveBeenCalledWith('file:///cache/lightbox-image-0.jpg', {
@@ -176,7 +219,10 @@ describe('ImageLightbox', () => {
 
   it('uses the current index image from downloadImages when provided', async () => {
     const images = ['https://example.com/large-1.jpg', 'https://example.com/large-2.jpg'];
-    const downloadImages = ['https://example.com/original-1.jpg', 'https://example.com/original-2.jpg'];
+    const downloadImages = [
+      'https://example.com/original-1.jpg',
+      'https://example.com/original-2.jpg',
+    ];
 
     render(
       <ImageLightbox

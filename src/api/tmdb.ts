@@ -1,3 +1,8 @@
+import {
+  buildIncludeImageLanguage,
+  organizeMediaImages,
+  type MediaImages,
+} from '@/src/utils/mediaImages';
 import axios from 'axios';
 
 const TMDB_API_KEY = process.env.EXPO_PUBLIC_TMDB_API_KEY || 'YOUR_TMDB_API_KEY';
@@ -450,6 +455,10 @@ export interface ImageData {
   width: number;
   vote_average: number;
   vote_count: number;
+  /** The image's language, or null when it has no text. */
+  iso_639_1?: string | null;
+  /** The country of the image's language (e.g. BR for Brazilian Portuguese), when it has one. */
+  iso_3166_1?: string | null;
 }
 
 export interface WatchProvider {
@@ -869,18 +878,22 @@ export const tmdbApi = {
     return data;
   },
 
-  getMovieImages: async (id: number) => {
-    const { data } = await tmdbClient.get<{ backdrops: ImageData[]; posters: ImageData[] }>(
-      `/movie/${id}/images`
-    );
-    return data;
+  /** A movie's backdrops and posters for the app language (see organizeMediaImages). */
+  getMovieImages: async (id: number): Promise<MediaImages> => {
+    const language = currentLanguage;
+    const { data } = await tmdbClient.get<MediaImages>(`/movie/${id}/images`, {
+      params: { include_image_language: buildIncludeImageLanguage(language) },
+    });
+    return organizeMediaImages(data, language);
   },
 
-  getTVImages: async (id: number) => {
-    const { data } = await tmdbClient.get<{ backdrops: ImageData[]; posters: ImageData[] }>(
-      `/tv/${id}/images`
-    );
-    return data;
+  /** A TV show's backdrops and posters for the app language (see organizeMediaImages). */
+  getTVImages: async (id: number): Promise<MediaImages> => {
+    const language = currentLanguage;
+    const { data } = await tmdbClient.get<MediaImages>(`/tv/${id}/images`, {
+      params: { include_image_language: buildIncludeImageLanguage(language) },
+    });
+    return organizeMediaImages(data, language);
   },
 
   getPersonImages: async (id: number) => {

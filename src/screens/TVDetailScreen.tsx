@@ -424,6 +424,10 @@ export default function TVDetailScreen() {
     navigateTo(`/tv/${tvId}/cast?title=${encodeURIComponent(displayShowTitle)}`);
   };
 
+  const handlePhotosViewAll = () => {
+    navigateTo(`/tv/${tvId}/photos?title=${encodeURIComponent(displayShowTitle)}`);
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -667,6 +671,8 @@ export default function TVDetailScreen() {
                 setLightboxIndex(index);
                 setLightboxVisible(true);
               }}
+              onViewAll={handlePhotosViewAll}
+              viewAllStyle="text"
             />
           )}
 

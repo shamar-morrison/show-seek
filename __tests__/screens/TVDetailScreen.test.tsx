@@ -382,7 +382,16 @@ jest.mock('@/src/components/detail/MediaActionButtons', () => ({
 }));
 jest.mock('@/src/components/detail/MediaDetailsInfo', () => ({ MediaDetailsInfo: () => null }));
 jest.mock('@/src/components/detail/OpenWithDrawer', () => () => null);
-jest.mock('@/src/components/detail/PhotosSection', () => ({ PhotosSection: () => null }));
+jest.mock('@/src/components/detail/PhotosSection', () => ({
+  PhotosSection: ({ onViewAll, viewAllStyle }: any) => {
+    const { Pressable, Text } = require('react-native');
+    return onViewAll ? (
+      <Pressable testID="photos-see-all" onPress={onViewAll}>
+        <Text>{viewAllStyle}</Text>
+      </Pressable>
+    ) : null;
+  },
+}));
 jest.mock('@/src/components/detail/RecommendationsSection', () => ({
   RecommendationsSection: () => null,
 }));
@@ -1293,5 +1302,28 @@ describe('TVDetailScreen', () => {
         mockShow.seasons = originalSeasons;
       }
     });
+  });
+
+  it('opens all photos from See All on the Photos row', () => {
+    const defaultQuery = mockUseQuery.getMockImplementation()!;
+    mockUseQuery.mockImplementation((args: { queryKey: unknown[] }) =>
+      args.queryKey[2] === 'images'
+        ? {
+            data: { backdrops: [{ file_path: '/b.jpg' }], posters: [] },
+            isLoading: false,
+            isError: false,
+            refetch: jest.fn(),
+          }
+        : defaultQuery(args)
+    );
+
+    const { getByTestId, getByText } = render(<TVDetailScreen />);
+
+    expect(getByText('text')).toBeTruthy();
+    fireEvent.press(getByTestId('photos-see-all'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/\(tabs\)\/discover\/tv\/10\/photos\?title=/)
+    );
   });
 });

@@ -23,6 +23,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const FALLBACK_IMAGE_EXTENSION = '.jpg';
+/** Only images this many pages from the current one are loaded, so long sets stay light. */
+const RENDER_WINDOW = 2;
+/** Above this many images the dots are hidden and only the counter shows the position. */
+const MAX_DOTS = 15;
 
 interface ImageLightboxProps {
   visible: boolean;
@@ -47,9 +51,10 @@ export default function ImageLightbox({
   const [isDownloading, setIsDownloading] = useState(false);
   const lightboxToastRef = useRef<ToastRef>(null);
 
+  // Start from the tapped image each time it opens, even when that's the same index as last time.
   React.useEffect(() => {
-    setCurrentIndex(initialIndex);
-  }, [initialIndex]);
+    if (visible) setCurrentIndex(initialIndex);
+  }, [initialIndex, visible]);
 
   const getImageExtension = (url: string) => {
     const sanitizedUrl = url.split('?')[0].split('#')[0];
@@ -167,13 +172,15 @@ export default function ImageLightbox({
         >
           {images.map((imageUrl, index) => (
             <View key={index} style={styles.imageContainer}>
-              <Image source={{ uri: imageUrl }} style={styles.image} contentFit="contain" />
+              {Math.abs(index - currentIndex) <= RENDER_WINDOW ? (
+                <Image source={{ uri: imageUrl }} style={styles.image} contentFit="contain" />
+              ) : null}
             </View>
           ))}
         </ScrollView>
 
-        {images.length > 1 && (
-          <View style={styles.indicator}>
+        {images.length > 1 && images.length <= MAX_DOTS && (
+          <View style={styles.indicator} testID="image-lightbox-dots">
             {images.map((_, index) => (
               <View
                 key={index}
