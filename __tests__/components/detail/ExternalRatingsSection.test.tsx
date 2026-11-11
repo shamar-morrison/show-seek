@@ -1,10 +1,17 @@
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import type { ExternalRatings } from '@/src/api/mdblist';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Linking } from 'react-native';
 
 jest.mock('@/src/components/icons/TraktLogo', () => ({ TraktLogo: () => null }));
+
+const mockGetTraktSlug = jest.fn();
+jest.mock('@/src/api/trakt', () => ({
+  getTraktSlugByTmdbId: (...args: unknown[]) => mockGetTraktSlug(...args),
+}));
+
+const noLinks = { rottenTomatoes: null, metacritic: null, letterboxd: null };
 
 const none: ExternalRatings = {
   imdb: null,
@@ -13,6 +20,7 @@ const none: ExternalRatings = {
   letterboxd: null,
   trakt: null,
   imdbId: null,
+  links: noLinks,
 };
 
 const all: ExternalRatings = {
@@ -22,6 +30,11 @@ const all: ExternalRatings = {
   letterboxd: '4.3',
   trakt: '88%',
   imdbId: 'tt0137523',
+  links: {
+    rottenTomatoes: 'https://www.rottentomatoes.com/m/fight_club',
+    metacritic: 'https://www.metacritic.com/movie/fight-club',
+    letterboxd: 'https://letterboxd.com/film/fight-club/',
+  },
 };
 
 const renderFightClub = (ratings: ExternalRatings, extra: object = {}) =>
@@ -40,7 +53,13 @@ const renderFightClub = (ratings: ExternalRatings, extra: object = {}) =>
 describe('ExternalRatingsSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetTraktSlug.mockResolvedValue('fight-club-1999');
   });
+
+  const pressAndSettle = async (utils: ReturnType<typeof render>, testID: string) => {
+    fireEvent.press(utils.getByTestId(testID));
+    await waitFor(() => expect(Linking.openURL).toHaveBeenCalled());
+  };
 
   it('shows a five-score skeleton between two separators while loading', () => {
     const { getAllByTestId, getByTestId } = render(
@@ -93,42 +112,83 @@ describe('ExternalRatingsSection', () => {
     );
   });
 
-  it('opens each site for the title', () => {
-    const { getByTestId } = renderFightClub(all);
-
-    fireEvent.press(getByTestId('external-rating-imdb'));
-    fireEvent.press(getByTestId('external-rating-rotten-tomatoes'));
-    fireEvent.press(getByTestId('external-rating-metacritic'));
-    fireEvent.press(getByTestId('external-rating-letterboxd'));
-    fireEvent.press(getByTestId('external-rating-trakt'));
-
-    expect((Linking.openURL as jest.Mock).mock.calls.map(([url]) => url)).toEqual([
-      'https://www.imdb.com/title/tt0137523/',
-      'https://www.rottentomatoes.com/search?search=Fight%20Club%201999',
-      'https://www.metacritic.com/search/Fight%20Club%201999/',
-      'https://letterboxd.com/tmdb/550/',
-      'https://trakt.tv/search/movies?query=Fight%20Club%201999',
-    ]);
+  it.each([
+    ['external-rating-imdb', 'https://www.imdb.com/title/tt0137523/'],
+    ['external-rating-rotten-tomatoes', 'https://www.rottentomatoes.com/m/fight_club'],
+    ['external-rating-metacritic', 'https://www.metacritic.com/movie/fight-club'],
+    ['external-rating-letterboxd', 'https://letterboxd.com/film/fight-club/'],
+  ])("%s opens the title's own page", async (testID, url) => {
+    const utils = renderFightClub(all);
+    await pressAndSettle(utils, testID);
+    expect(Linking.openURL).toHaveBeenCalledWith(url);
   });
 
-  it('searches Letterboxd for TV shows, which it has no TMDB link for', () => {
-    const { getByTestId } = renderFightClub(all, {
+  it('searches a site when MDBList has no page for it', async () => {
+    const utils = renderFightClub({ ...all, links: noLinks });
+
+    await pressAndSettle(utils, 'external-rating-rotten-tomatoes');
+    expect(Linking.openURL).toHaveBeenCalledWith(
+      'https://www.rottentomatoes.com/search?search=Fight%20Club%201999'
+    );
+  });
+
+  it("opens Trakt's app on the title's page, found by its Trakt slug", async () => {
+    const utils = renderFightClub(all);
+
+    await pressAndSettle(utils, 'external-rating-trakt');
+    expect(mockGetTraktSlug).toHaveBeenCalledWith(550, 'movie');
+    expect(Linking.openURL).toHaveBeenCalledTimes(1);
+    expect(Linking.openURL).toHaveBeenCalledWith('trakt://movies/fight-club-1999');
+  });
+
+  it("opens Trakt's website when the app isn't installed", async () => {
+    (Linking.openURL as jest.Mock).mockRejectedValueOnce(new Error('no app'));
+    const utils = renderFightClub(all);
+
+    fireEvent.press(utils.getByTestId('external-rating-trakt'));
+    await waitFor(() =>
+      expect(Linking.openURL).toHaveBeenCalledWith('https://trakt.tv/movies/fight-club-1999')
+    );
+  });
+
+  it('uses the shows section for a TV show on Trakt', async () => {
+    mockGetTraktSlug.mockResolvedValue('game-of-thrones');
+    const utils = renderFightClub(all, {
       mediaType: 'tv',
       mediaId: 1399,
       title: 'Game of Thrones',
-      year: '2011',
     });
 
-    fireEvent.press(getByTestId('external-rating-letterboxd'));
+    await pressAndSettle(utils, 'external-rating-trakt');
+    expect(Linking.openURL).toHaveBeenCalledWith('trakt://shows/game-of-thrones');
+  });
+
+  it('falls back to a Trakt search when the slug lookup finds nothing', async () => {
+    mockGetTraktSlug.mockResolvedValue(null);
+    const utils = renderFightClub(all);
+
+    await pressAndSettle(utils, 'external-rating-trakt');
+    expect(Linking.openURL).toHaveBeenCalledWith(
+      'https://trakt.tv/search/movies?query=Fight%20Club%201999'
+    );
+  });
+
+  it('searches Letterboxd for TV shows without a Letterboxd page', async () => {
+    const utils = renderFightClub(
+      { ...all, links: noLinks },
+      { mediaType: 'tv', mediaId: 1399, title: 'Game of Thrones', year: '2011' }
+    );
+
+    await pressAndSettle(utils, 'external-rating-letterboxd');
     expect(Linking.openURL).toHaveBeenCalledWith(
       'https://letterboxd.com/search/Game%20of%20Thrones%202011/'
     );
   });
 
-  it('falls back to IMDb search when no IMDb ID is available', () => {
-    const { getByTestId } = renderFightClub({ ...all, imdbId: null }, { imdbId: null });
+  it('falls back to IMDb search when no IMDb ID is available', async () => {
+    const utils = renderFightClub({ ...all, imdbId: null }, { imdbId: null });
 
-    fireEvent.press(getByTestId('external-rating-imdb'));
+    await pressAndSettle(utils, 'external-rating-imdb');
     expect(Linking.openURL).toHaveBeenCalledWith(
       'https://www.imdb.com/find/?q=Fight%20Club%201999&s=tt'
     );
@@ -140,7 +200,6 @@ describe('ExternalRatingsSection', () => {
     const { getByTestId } = renderFightClub(all, { onOpenLinkError });
 
     fireEvent.press(getByTestId('external-rating-imdb'));
-    await Promise.resolve();
-    expect(onOpenLinkError).toHaveBeenCalled();
+    await waitFor(() => expect(onOpenLinkError).toHaveBeenCalled());
   });
 });

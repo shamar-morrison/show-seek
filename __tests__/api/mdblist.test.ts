@@ -16,12 +16,13 @@ const fightClubResponse = {
   imdb_id: 'tt0137523',
   ids: { imdb: 'tt0137523', tmdb: 550 },
   ratings: [
-    { source: 'imdb', value: 8.8, score: 88, votes: 2400000 },
-    { source: 'tomatoes', value: 79, score: 79, votes: 140 },
-    { source: 'metacritic', value: 67, score: 67, votes: 35 },
-    { source: 'letterboxd', value: 4.27, score: 85, votes: 900000 },
-    { source: 'trakt', value: 88, score: 88, votes: 60000 },
-    { source: 'popcorn', value: 96, score: 96, votes: 250000 },
+    // Shaped like MDBList's real response for Fight Club.
+    { source: 'imdb', value: 8.8, score: 88, votes: 2400000, url: 116 },
+    { source: 'tomatoes', value: 79, score: 79, votes: 140, url: '/m/fight_club' },
+    { source: 'metacritic', value: 67, score: 67, votes: 35, url: '/fight-club' },
+    { source: 'letterboxd', value: 4.27, score: 85, votes: 900000, url: '/film/fight-club/' },
+    { source: 'trakt', value: 88, score: 88, votes: 60000, url: null },
+    { source: 'popcorn', value: 96, score: 96, votes: 250000, url: '/m/fight_club' },
   ],
 };
 
@@ -52,7 +53,34 @@ describe('MDBList ratings', () => {
         letterboxd: '4.3',
         trakt: '88%',
         imdbId: 'tt0137523',
+        links: {
+          rottenTomatoes: 'https://www.rottentomatoes.com/m/fight_club',
+          metacritic: 'https://www.metacritic.com/movie/fight-club',
+          letterboxd: 'https://letterboxd.com/film/fight-club/',
+        },
       });
+    });
+
+    it("puts a show's Metacritic page in its TV section", () => {
+      const { parseMdblistRatings } = loadModule();
+      const ratings = parseMdblistRatings(
+        {
+          ratings: [
+            { source: 'metacritic', value: 86, score: 86, votes: 171, url: '/game-of-thrones' },
+          ],
+        },
+        'tv'
+      );
+      expect(ratings.links.metacritic).toBe('https://www.metacritic.com/tv/game-of-thrones');
+    });
+
+    it('leaves out page links MDBList has no path for', () => {
+      const { parseMdblistRatings } = loadModule();
+      const ratings = parseMdblistRatings({
+        ratings: [{ source: 'tomatoes', value: 90, score: 90, votes: 10, url: null }],
+      });
+      expect(ratings.rottenTomatoes).toBe('90%');
+      expect(ratings.links.rottenTomatoes).toBeNull();
     });
 
     it('treats empty sources as missing', () => {
@@ -95,7 +123,7 @@ describe('MDBList ratings', () => {
       );
       expect(ratings?.trakt).toBe('88%');
       expect(mockSetItem).toHaveBeenCalledWith(
-        '@mdblist_ratings_v1_show_1399',
+        '@mdblist_ratings_v2_show_1399',
         expect.stringContaining('"trakt":"88%"')
       );
     });
@@ -109,6 +137,7 @@ describe('MDBList ratings', () => {
         letterboxd: null,
         trakt: null,
         imdbId: 'tt1',
+        links: { rottenTomatoes: null, metacritic: null, letterboxd: null },
       };
       mockGetItem.mockResolvedValue(
         JSON.stringify({ data, timestamp: Date.now() - 6 * 24 * 60 * 60 * 1000 })

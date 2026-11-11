@@ -12,7 +12,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MDBLIST_API_KEY = process.env.EXPO_PUBLIC_MDBLIST_API_KEY;
 const BASE_URL = 'https://api.mdblist.com';
-const CACHE_KEY_PREFIX = '@mdblist_ratings_v1_';
+// v2 added `links`; older entries are ignored and fetched again.
+const CACHE_KEY_PREFIX = '@mdblist_ratings_v2_';
 export const MDBLIST_CACHE_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Scores ready to show, one string per site, null when that site has none. */
@@ -28,6 +29,12 @@ export interface ExternalRatings {
   /** Trakt, e.g. "85%". */
   trakt: string | null;
   imdbId: string | null;
+  /** The title's own page on each site, when MDBList knows it (else the app searches the site). */
+  links: {
+    rottenTomatoes: string | null;
+    metacritic: string | null;
+    letterboxd: string | null;
+  };
 }
 
 /** One entry of MDBList's `ratings` array. Only the fields read here. */
@@ -38,6 +45,8 @@ interface MdblistRating {
   /** The same score on a 0–100 scale. */
   score?: number | null;
   votes?: number | null;
+  /** The title's path on that site, e.g. "/m/fight_club" (IMDb's is a number, not a path). */
+  url?: string | number | null;
 }
 
 interface MdblistMediaResponse {
@@ -69,7 +78,17 @@ function scoreIn(rating: MdblistRating | undefined, outOf: number): number | nul
   return null;
 }
 
-export function parseMdblistRatings(response: MdblistMediaResponse): ExternalRatings {
+/** A site page from MDBList's path, or null when there's no usable path. */
+function pageUrl(rating: MdblistRating | undefined, base: string): string | null {
+  const path = rating?.url;
+  if (typeof path !== 'string' || !path.startsWith('/')) return null;
+  return `${base}${path}`;
+}
+
+export function parseMdblistRatings(
+  response: MdblistMediaResponse,
+  mediaType: 'movie' | 'tv' = 'movie'
+): ExternalRatings {
   const bySource = new Map<string, MdblistRating>();
   for (const rating of response.ratings ?? []) {
     if (rating?.source) bySource.set(rating.source.toLowerCase(), rating);
@@ -89,6 +108,22 @@ export function parseMdblistRatings(response: MdblistMediaResponse): ExternalRat
     letterboxd: letterboxd === null ? null : letterboxd.toFixed(1),
     trakt: trakt === null ? null : `${Math.round(trakt)}%`,
     imdbId,
+    links: {
+      // Rotten Tomatoes paths include the section ("/m/…", "/tv/…"); Metacritic's don't.
+      rottenTomatoes:
+        tomatoes === null
+          ? null
+          : pageUrl(bySource.get('tomatoes'), 'https://www.rottentomatoes.com'),
+      metacritic:
+        metacritic === null
+          ? null
+          : pageUrl(
+              bySource.get('metacritic'),
+              `https://www.metacritic.com/${mediaType === 'tv' ? 'tv' : 'movie'}`
+            ),
+      letterboxd:
+        letterboxd === null ? null : pageUrl(bySource.get('letterboxd'), 'https://letterboxd.com'),
+    },
   };
 }
 
@@ -140,7 +175,7 @@ export async function fetchExternalRatings(
       return null;
     }
 
-    const ratings = parseMdblistRatings((await response.json()) as MdblistMediaResponse);
+    const ratings = parseMdblistRatings((await response.json()) as MdblistMediaResponse, mediaType);
 
     try {
       await AsyncStorage.setItem(

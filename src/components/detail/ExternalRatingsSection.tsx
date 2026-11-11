@@ -6,10 +6,15 @@
  * Each one opens that site's page for the title. Hides when there are no scores.
  */
 import { ExternalRatings } from '@/src/api/mdblist';
+import { getTraktSlugByTmdbId } from '@/src/api/trakt';
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { buildOpenWithUrl, OpenWithServiceId } from '@/src/utils/openWithLinks';
+import {
+  buildOpenWithUrl,
+  buildTraktAppUrlFromWeb,
+  OpenWithServiceId,
+} from '@/src/utils/openWithLinks';
 import React, { memo, useCallback } from 'react';
 import { Image, ImageStyle, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -128,18 +133,38 @@ export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
     imdbId,
     onOpenLinkError,
   }) => {
-    const openServiceUrl = useCallback(
-      async (serviceId: OpenWithServiceId) => {
-        const url = buildOpenWithUrl({
-          serviceId,
-          mediaType,
-          mediaId,
-          title,
-          year,
-          imdbId: imdbId ?? ratings?.imdbId ?? null,
-        });
+    const openSite = useCallback(
+      async (serviceId: RatingSite) => {
+        const pageLink =
+          serviceId === 'rottenTomatoes' || serviceId === 'metacritic' || serviceId === 'letterboxd'
+            ? ratings?.links?.[serviceId]
+            : null;
+        // Like the Open With drawer: Trakt pages are addressed by slug, which only its API knows.
+        const traktSlug =
+          serviceId === 'trakt' && mediaId ? await getTraktSlugByTmdbId(mediaId, mediaType) : null;
+        const url =
+          pageLink ??
+          buildOpenWithUrl({
+            serviceId,
+            mediaType,
+            mediaId,
+            title,
+            year,
+            imdbId: imdbId ?? ratings?.imdbId ?? null,
+            traktSlug,
+          });
 
         try {
+          // Trakt opens in its app when installed, else on its website.
+          const appUrl = traktSlug ? buildTraktAppUrlFromWeb(url) : null;
+          if (appUrl) {
+            try {
+              await Linking.openURL(appUrl);
+              return;
+            } catch {
+              // No Trakt app: fall through to the website.
+            }
+          }
           await Linking.openURL(url);
         } catch (error) {
           console.error('[ExternalRatingsSection] Failed to open URL:', error);
@@ -174,7 +199,7 @@ export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
                   ? `${site.label} ${ratings![site.id]}. Open ${site.label} page for ${title}`
                   : `${site.label} ${ratings![site.id]}. Open ${site.label} page`
               }
-              onPress={() => void openServiceUrl(site.id)}
+              onPress={() => void openSite(site.id)}
             />
           ))}
         </View>
