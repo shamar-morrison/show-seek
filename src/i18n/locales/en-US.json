@@ -346,7 +346,8 @@
     "youMayAlsoLike": "You May Also Like",
     "moreTitlesFailedToLoad": "Couldn't load these titles",
     "noMoreTitles": "Nothing to show",
-    "noMoreTitlesDescription": "There are no titles to show here, or your content filters hide them all."
+    "noMoreTitlesDescription": "There are no titles to show here, or your content filters hide them all.",
+    "genreOpensDiscover": "Opens Discover filtered by {{genre}}"
   },
   "library": {
     "title": "Library",

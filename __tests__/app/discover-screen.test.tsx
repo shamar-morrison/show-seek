@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DEFAULT_DISCOVER_FILTERS } from '@/src/utils/discoverFilters';
 import React from 'react';
 
 const mockPush = jest.fn();
@@ -31,6 +32,11 @@ jest.mock('expo-router', () => ({
     push: (...args: unknown[]) => mockPush(...args),
   },
   useSegments: () => ['(tabs)', 'discover'],
+  // Runs as though the screen came into view.
+  useFocusEffect: (effect: () => void) => {
+    const { useEffect } = require('react');
+    useEffect(() => effect(), [effect]);
+  },
 }));
 
 jest.mock('@tanstack/react-query', () => ({
@@ -351,6 +357,30 @@ describe('DiscoverScreen stability', () => {
     fireEvent.press(getByText('media.movies'));
     expect(capturedDiscoverQuery.queryKey[1]).toBe('movie');
     expect(capturedDiscoverQuery.queryKey[2]).toEqual({ ...presetFilters, genres: [] });
+  });
+
+  it('opens on a genre from a movie or TV page, on its tab, with the other filters reset', () => {
+    const { requestDiscoverGenre } = require('@/src/utils/discoverGenreIntent');
+    requestDiscoverGenre({ mediaType: 'tv', genreId: 10765 });
+
+    render(<DiscoverScreen />);
+
+    expect(capturedDiscoverQuery.queryKey[1]).toBe('tv');
+    expect(capturedDiscoverQuery.queryKey[2]).toEqual({
+      ...DEFAULT_DISCOVER_FILTERS,
+      genres: [10765],
+    });
+  });
+
+  it('applies a genre request only once', () => {
+    const {
+      requestDiscoverGenre,
+      takeDiscoverGenreRequest,
+    } = require('@/src/utils/discoverGenreIntent');
+    requestDiscoverGenre({ mediaType: 'movie', genreId: 27 });
+    render(<DiscoverScreen />);
+
+    expect(takeDiscoverGenreRequest()).toBeNull();
   });
 
   it("filters streaming services in the user's region and refetches when it changes", async () => {

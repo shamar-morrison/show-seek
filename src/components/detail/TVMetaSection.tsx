@@ -1,7 +1,7 @@
 import type { TVShowDetails } from '@/src/api/tmdb';
+import { GenrePills } from './GenrePills';
 import { useDetailStyles } from '@/src/components/detail/detailStyles';
-import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
@@ -17,7 +17,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 export interface TVMetaSectionProps {
   /** The TV show details */
@@ -107,20 +107,7 @@ export const TVMetaSection = memo<TVMetaSectionProps>(
           )}
         </View>
 
-        <ScrollView
-          {...HORIZONTAL_SCROLL_PROPS}
-          showsHorizontalScrollIndicator={false}
-          style={{ marginHorizontal: -SPACING.l }}
-          contentContainerStyle={{ paddingHorizontal: SPACING.l }}
-        >
-          <View style={styles.genresContainer}>
-            {show.genres.map((genre) => (
-              <View key={genre.id} style={styles.genreTag}>
-                <Text style={styles.genreText}>{genre.name}</Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
+        <GenrePills genres={show.genres} mediaType="tv" />
       </>
     );
   }

@@ -346,7 +346,8 @@
     "youMayAlsoLike": "También te puede gustar",
     "moreTitlesFailedToLoad": "No se pudieron cargar estos títulos",
     "noMoreTitles": "Nada que mostrar",
-    "noMoreTitlesDescription": "No hay títulos que mostrar aquí, o tus filtros de contenido los ocultan todos."
+    "noMoreTitlesDescription": "No hay títulos que mostrar aquí, o tus filtros de contenido los ocultan todos.",
+    "genreOpensDiscover": "Abre Descubrir filtrado por {{genre}}"
   },
   "library": {
     "title": "Biblioteca",

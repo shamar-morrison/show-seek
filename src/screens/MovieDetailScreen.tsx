@@ -13,6 +13,7 @@ import ListActionsModal from '@/src/components/ListActionsModal';
 import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
 import { usePersonFavoriteSheet } from '@/src/hooks/usePersonFavoriteSheet';
 import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
+import { GenrePills } from '@/src/components/detail/GenrePills';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
@@ -34,7 +35,6 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { OpenWithButton } from '@/src/components/ui/OpenWithButton';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import AppErrorState from '@/src/components/ui/AppErrorState';
-import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
@@ -44,7 +44,7 @@ import {
 } from '@/src/components/WatchHistoryActionsModal';
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -111,7 +111,6 @@ import {
   Alert,
   Animated,
   RefreshControl,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -827,20 +826,7 @@ export default function MovieDetailScreen() {
             )}
           </View>
 
-          <ScrollView
-            {...HORIZONTAL_SCROLL_PROPS}
-            showsHorizontalScrollIndicator={false}
-            style={{ marginHorizontal: -SPACING.l }}
-            contentContainerStyle={{ paddingHorizontal: SPACING.l }}
-          >
-            <View style={styles.genresContainer}>
-              {movie.genres.map((genre) => (
-                <View key={genre.id} style={styles.genreTag}>
-                  <Text style={styles.genreText}>{genre.name}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+          <GenrePills genres={movie.genres} mediaType="movie" />
 
           {/* Action Buttons */}
           <MediaActionButtons

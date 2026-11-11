@@ -346,7 +346,8 @@
     "youMayAlsoLike": "Bunları da beğenebilirsin",
     "moreTitlesFailedToLoad": "Bu yapımlar yüklenemedi",
     "noMoreTitles": "Gösterilecek bir şey yok",
-    "noMoreTitlesDescription": "Burada gösterilecek yapım yok ya da içerik filtreleriniz hepsini gizliyor."
+    "noMoreTitlesDescription": "Burada gösterilecek yapım yok ya da içerik filtreleriniz hepsini gizliyor.",
+    "genreOpensDiscover": "Keşfet'i {{genre}} türüyle açar"
   },
   "library": {
     "title": "Kitaplık",

@@ -44,7 +44,8 @@ import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import { router, useSegments } from 'expo-router';
+import { takeDiscoverGenreRequest } from '@/src/utils/discoverGenreIntent';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { GridIcon, Menu01Icon, SlidersHorizontalIcon, StarIcon } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -173,6 +174,16 @@ export default function DiscoverScreen() {
 
   const discoverPresets = useDiscoverPresets();
   const activePreset = findMatchingDiscoverPreset(discoverPresets, mediaType, filters);
+
+  // A genre pill on a movie or TV page opens Discover on that genre alone (and that tab).
+  useFocusEffect(
+    useCallback(() => {
+      const request = takeDiscoverGenreRequest();
+      if (!request) return;
+      setMediaType(request.mediaType);
+      setFilters({ ...DEFAULT_DISCOVER_FILTERS, genres: [request.genreId] });
+    }, [])
+  );
 
   // A preset belongs to one tab, so applying it sets the tab and its filters together.
   const handleApplyPreset = useCallback((preset: DiscoverFilterPreset) => {
