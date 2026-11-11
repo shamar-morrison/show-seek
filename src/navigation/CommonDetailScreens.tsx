@@ -62,7 +62,8 @@ export const CommonDetailScreens = () => (
       name="person/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}
     />
-    <Stack.Screen name="person/[id]/credits" options={{ headerShown: true }} />
+    {/* Draws its own two-line header (name and section). */}
+    <Stack.Screen name="person/[id]/credits" options={{ headerShown: false }} />
     <Stack.Screen
       name="collection/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}

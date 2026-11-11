@@ -17,6 +17,7 @@ import ListActionsModal, {
 import { SortState } from '@/src/components/MediaSortModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
@@ -39,6 +40,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { createSortAction } from '@/src/utils/listActions';
@@ -60,7 +62,15 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { Film01Icon, SlidersHorizontalIcon, StarIcon, Tv01Icon } from '@hugeicons/core-free-icons';
+import {
+  ArrowLeft01Icon,
+  Film01Icon,
+  GridIcon,
+  Menu01Icon,
+  SlidersHorizontalIcon,
+  StarIcon,
+  Tv01Icon,
+} from '@hugeicons/core-free-icons';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -188,17 +198,12 @@ export default function PersonCreditsScreen() {
     : isTVCredits
       ? t('person.actingTV')
       : t('person.actingMovies');
-  const screenTitle = name ? `${name} - ${sectionTitle}` : sectionTitle;
-
-  // Set header options synchronously before first paint to prevent status bar overlap
+  // The screen draws its own header (like Cast & Crew) so the person's name and the section
+  // ("Acting (TV shows)" and so on) get a line each instead of being cut off on one line.
+  // Hidden synchronously before first paint so the native header never flashes.
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      title: screenTitle,
-      headerStyle: { backgroundColor: COLORS.background },
-      headerTintColor: COLORS.text,
-    });
-  }, [navigation, screenTitle]);
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   // Sort and filter state
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -222,20 +227,12 @@ export default function PersonCreditsScreen() {
     sortState.direction !== DEFAULT_CREDITS_SORT.direction;
   const hasActiveFilterState = hasActiveFilters(filterState);
 
-  const actionButton = useMemo(
-    () => ({
-      icon: ListActionsIcon,
-      onPress: () => listActionsModalRef.current?.present(),
-      showBadge: hasActiveSort || hasActiveFilterState,
-    }),
-    [hasActiveSort, hasActiveFilterState]
-  );
-
-  const { viewMode, isLoadingPreference } = useViewModeToggle({
+  const { viewMode, isLoadingPreference, toggleViewMode } = useViewModeToggle({
     storageKey: `person-credits-view-${mediaType}`,
     showSortButton: false,
-    actionButton,
+    manageHeader: false,
   });
+  const iconBadgeStyles = useIconBadgeStyles();
 
   type MovieCastCredit = Movie & { character?: string };
   type TVCastCredit = TVShow & { character?: string };
@@ -425,8 +422,51 @@ export default function PersonCreditsScreen() {
     ]
   );
 
+  const header = (
+    <View style={styles.header}>
+      <TouchableOpacity
+        style={styles.headerButton}
+        onPress={() => router.back()}
+        activeOpacity={ACTIVE_OPACITY}
+        accessibilityRole="button"
+        accessibilityLabel={t('common.goBack')}
+        testID="person-credits-back"
+      >
+        <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
+      </TouchableOpacity>
+      <View style={styles.headerTitleContainer}>
+        <Text style={styles.headerTitle} numberOfLines={1} testID="person-credits-title">
+          {name || sectionTitle}
+        </Text>
+        {name ? (
+          <Text style={styles.headerSubtitle} numberOfLines={1} testID="person-credits-subtitle">
+            {sectionTitle}
+          </Text>
+        ) : null}
+      </View>
+      <HeaderIconButton onPress={toggleViewMode} testID="person-credits-view-toggle">
+        <AppIcon icon={viewMode === 'grid' ? Menu01Icon : GridIcon} size={24} color={COLORS.text} />
+      </HeaderIconButton>
+      <HeaderIconButton
+        onPress={() => listActionsModalRef.current?.present()}
+        testID="person-credits-actions"
+      >
+        <View style={iconBadgeStyles.wrapper}>
+          <AppIcon icon={ListActionsIcon} size={22} color={COLORS.text} />
+          {(hasActiveSort || hasActiveFilterState) && <View style={iconBadgeStyles.badge} />}
+        </View>
+      </HeaderIconButton>
+    </View>
+  );
+
   if (creditsQuery.isLoading || isLoadingPreference) {
-    return <FullScreenLoading />;
+    // Keep the header (and its back button) while loading, as the native header did.
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['top', 'bottom']}>
+        {header}
+        <FullScreenLoading />
+      </SafeAreaView>
+    );
   }
 
   if (creditsQuery.isError) {
@@ -446,7 +486,9 @@ export default function PersonCreditsScreen() {
 
   return (
     <>
-      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['top', 'bottom']}>
+        {header}
+
         {credits.length === 0 ? (
           <View style={styles.emptyContainer}>
             {isTVCredits ? (
@@ -529,6 +571,32 @@ export default function PersonCreditsScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Header, matching Cast & Crew
+  header: {
+    alignItems: 'center',
+    borderBottomColor: COLORS.surfaceLight,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+  },
+  headerButton: {
+    marginRight: SPACING.s,
+    padding: SPACING.s,
+  },
+  headerTitleContainer: {
+    flex: 1,
+  },
+  headerTitle: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: FONT_SIZE.l,
+  },
+  headerSubtitle: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    marginTop: 2,
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
