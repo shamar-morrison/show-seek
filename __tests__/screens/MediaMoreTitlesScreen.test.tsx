@@ -22,6 +22,12 @@ jest.mock('@/src/hooks/useAccountRequired', () => ({
 jest.mock('@/src/hooks/useContentFilter', () => ({
   useContentFilter: (items: { id: number }[]) => items.filter((item) => item.id !== 999),
 }));
+const mockGetListsForMedia = jest.fn((id: number, _type: string) =>
+  id === 1 ? ['watchlist', 'favorites'] : []
+);
+jest.mock('@/src/hooks/useListMembership', () => ({
+  useListMembership: () => ({ getListsForMedia: mockGetListsForMedia }),
+}));
 jest.mock('@/src/hooks/useMoreTitles', () => ({
   useMoreTitles: (...args: unknown[]) => mockMoreTitles(...args),
 }));
@@ -111,6 +117,17 @@ describe('MediaMoreTitlesScreen', () => {
     capturedGridProps.onEndReached();
     expect(mockFetchNextPage).toHaveBeenCalledTimes(1);
     expect(capturedGridProps.isFetchingMore).toBe(true);
+  });
+
+  it('shows which of your lists each title is in, like the rows on the detail page', () => {
+    render(<MediaMoreTitlesScreen kind="recommendations" mediaType="movie" />);
+
+    expect(capturedGridProps.getListIds(capturedGridProps.items[0])).toEqual([
+      'watchlist',
+      'favorites',
+    ]);
+    expect(capturedGridProps.getListIds(capturedGridProps.items[1])).toEqual([]);
+    expect(mockGetListsForMedia).toHaveBeenCalledWith(1, 'movie');
   });
 
   it('opens a title in the current tab', () => {

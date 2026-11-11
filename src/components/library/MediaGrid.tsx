@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
+import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
@@ -45,6 +46,11 @@ interface MediaGridProps {
   onEndReached?: () => void;
   /** Shows a spinner after the last row while the next page loads. */
   isFetchingMore?: boolean;
+  /**
+   * The lists an item is in, for the list badge on its poster. For grids of titles from anywhere
+   * (See All); left out on a list's own screen, where every item is in that list.
+   */
+  getListIds?: (item: ListMediaItem) => string[];
 }
 
 export interface MediaGridRef {
@@ -57,6 +63,7 @@ const MediaGridItem = memo<{
   onLongPress: (item: ListMediaItem) => void;
   selectionMode?: boolean;
   isSelected?: boolean;
+  listIds?: string[];
   itemWidth: number;
   itemHorizontalMargin: number;
   resolvePosterPath: (
@@ -71,6 +78,7 @@ const MediaGridItem = memo<{
     onLongPress,
     selectionMode = false,
     isSelected = false,
+    listIds,
     itemWidth,
     itemHorizontalMargin,
     resolvePosterPath,
@@ -103,6 +111,7 @@ const MediaGridItem = memo<{
             style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
             contentFit="cover"
           />
+          {listIds && listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
           {selectionMode && (
             <View
               pointerEvents="none"
@@ -163,6 +172,7 @@ export const MediaGrid = memo(
         onRefresh,
         onEndReached,
         isFetchingMore = false,
+        getListIds,
       },
       ref
     ) => {
@@ -189,12 +199,14 @@ export const MediaGrid = memo(
             onLongPress={onItemLongPress}
             selectionMode={selectionMode}
             isSelected={isItemSelected?.(item) ?? false}
+            listIds={getListIds?.(item)}
             itemWidth={itemWidth}
             itemHorizontalMargin={itemHorizontalMargin}
             resolvePosterPath={resolvePosterPath}
           />
         ),
         [
+          getListIds,
           isItemSelected,
           itemHorizontalMargin,
           itemWidth,
@@ -203,6 +215,11 @@ export const MediaGrid = memo(
           resolvePosterPath,
           selectionMode,
         ]
+      );
+
+      const listExtraData = useMemo(
+        () => ({ isItemSelected, getListIds }),
+        [getListIds, isItemSelected]
       );
 
       const keyExtractor = useCallback(
@@ -252,7 +269,8 @@ export const MediaGrid = memo(
           showsVerticalScrollIndicator={false}
           keyExtractor={keyExtractor}
           drawDistance={400}
-          extraData={isItemSelected}
+          // Redraw when selection or list membership changes (e.g. after adding a title to a list).
+          extraData={listExtraData}
           ListEmptyComponent={listEmptyComponent}
           refreshing={refreshing}
           onRefresh={onRefresh}

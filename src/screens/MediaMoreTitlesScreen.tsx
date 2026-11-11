@@ -14,6 +14,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
+import { useListMembership } from '@/src/hooks/useListMembership';
 import { useMoreTitles, type MoreTitlesKind } from '@/src/hooks/useMoreTitles';
 import type { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -70,6 +71,12 @@ export default function MediaMoreTitlesScreen({ kind, mediaType }: MediaMoreTitl
     fetchNextPage,
   } = useMoreTitles(kind, mediaType, mediaId);
   const visibleItems = useContentFilter(items);
+  // List badges like the rows on the detail page ("Show list indicators" turns them off).
+  const { getListsForMedia } = useListMembership();
+  const getListIds = useCallback(
+    (item: ListMediaItem) => getListsForMedia(item.id, item.media_type),
+    [getListsForMedia]
+  );
   const gridItems = useMemo(
     () => visibleItems.map((item) => toListItem(item, mediaType)),
     [mediaType, visibleItems]
@@ -161,6 +168,7 @@ export default function MediaMoreTitlesScreen({ kind, mediaType }: MediaMoreTitl
           onItemLongPress={handleLongPress}
           onEndReached={handleEndReached}
           isFetchingMore={isFetchingNextPage}
+          getListIds={getListIds}
           contentBottomPadding={SPACING.xl}
         />
       </View>

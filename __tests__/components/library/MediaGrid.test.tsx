@@ -34,6 +34,13 @@ jest.mock('@/src/components/ui/AnimatedCheck', () => ({
   AnimatedCheck: () => null,
 }));
 
+jest.mock('@/src/components/ui/ListMembershipBadge', () => ({
+  ListMembershipBadge: ({ listIds }: { listIds: string[] }) => {
+    const { View } = require('react-native');
+    return <View testID="list-badge" listIds={listIds} />;
+  },
+}));
+
 jest.mock('@/src/components/ui/MediaImage', () => ({
   MediaImage: () => null,
 }));
@@ -105,5 +112,61 @@ describe('MediaGrid', () => {
 
     rerender(<MediaGrid {...props} isFetchingMore />);
     expect(capturedFlashListProps.ListFooterComponent).toBeTruthy();
+  });
+
+  describe('list badges', () => {
+    const EmptyIcon = (() => null) as any;
+    const items = [
+      {
+        id: 1,
+        title: 'In lists',
+        media_type: 'movie',
+        poster_path: null,
+        vote_average: 7,
+        release_date: '2020-01-01',
+        addedAt: 0,
+      },
+      {
+        id: 2,
+        title: 'In none',
+        media_type: 'movie',
+        poster_path: null,
+        vote_average: 7,
+        release_date: '2020-01-01',
+        addedAt: 0,
+      },
+    ] as any[];
+    const renderCell = (index: number, getListIds?: (item: any) => string[]) => {
+      render(
+        <MediaGrid
+          items={items}
+          isLoading={false}
+          emptyState={{ icon: EmptyIcon, title: 'No items', description: '' }}
+          onItemPress={jest.fn()}
+          onItemLongPress={jest.fn()}
+          getListIds={getListIds}
+        />
+      );
+      return render(capturedFlashListProps.renderItem({ item: items[index], index }));
+    };
+
+    it('shows the lists a title is in when asked to', () => {
+      const getListIds = (item: any) => (item.id === 1 ? ['watchlist'] : []);
+
+      expect(renderCell(0, getListIds).getByTestId('list-badge').props.listIds).toEqual([
+        'watchlist',
+      ]);
+      expect(renderCell(1, getListIds).queryByTestId('list-badge')).toBeNull();
+    });
+
+    it("shows none on a list's own screen (no getListIds)", () => {
+      expect(renderCell(0).queryByTestId('list-badge')).toBeNull();
+    });
+
+    it('redraws when list membership changes', () => {
+      const getListIds = () => [];
+      renderCell(0, getListIds);
+      expect(capturedFlashListProps.extraData).toEqual(expect.objectContaining({ getListIds }));
+    });
   });
 });
