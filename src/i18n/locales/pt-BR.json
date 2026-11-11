@@ -2304,5 +2304,74 @@
     "body": "Esta versão do ShowSeek não é mais compatível. Atualize para manter suas listas, seu histórico e suas avaliações sincronizados.",
     "updateButton": "Atualizar o ShowSeek",
     "storeUnavailable": "Não foi possível abrir a loja. Atualize o ShowSeek pela sua loja de aplicativos."
+  },
+  "tips": {
+    "title": "Dicas e recursos",
+    "intro": "Atalhos úteis que passam despercebidos. A maioria é de toque longo: toque e segure até sentir uma vibração.",
+    "sections": {
+      "titles": "Filmes e séries",
+      "people": "Pessoas",
+      "library": "Listas e biblioteca",
+      "filters": "Filtros",
+      "settings": "Configurações"
+    },
+    "items": {
+      "addToList": {
+        "title": "Adicione a uma lista de qualquer lugar",
+        "description": "Toque e segure o pôster de um filme ou série no Início, Descobrir, Busca e outras telas para adicioná-lo a uma lista."
+      },
+      "watchHistory": {
+        "title": "Veja ou limpe seu histórico",
+        "description": "Toque e segure o botão de assistido de um filme ou série que você já viu para ver cada vez que assistiu ou limpar o histórico."
+      },
+      "copyTitle": {
+        "title": "Copie um título",
+        "description": "Toque e segure o título na página de um filme ou série para copiá-lo."
+      },
+      "poster": {
+        "title": "Escolha outro pôster",
+        "description": "Toque no pôster na página de um filme ou série para escolher outro. Sua escolha é usada em todo o app."
+      },
+      "actionButtons": {
+        "title": "Organize os botões de ação",
+        "description": "Coloque os botões das páginas de filmes e séries na ordem que preferir em Configurações › Conteúdo › Reordenar botões de ação."
+      },
+      "favoritePeople": {
+        "title": "Salve pessoas favoritas",
+        "description": "Toque e segure qualquer pessoa do elenco ou da equipe para adicioná-la às suas favoritas."
+      },
+      "selectSeveral": {
+        "title": "Selecione vários de uma vez",
+        "description": "Toque e segure um título em uma das suas listas para começar a selecionar e depois adicione todos a outra lista ou remova-os."
+      },
+      "deleteLists": {
+        "title": "Exclua listas em massa",
+        "description": "Em Listas personalizadas, toque e segure uma lista para selecionar várias e excluí-las juntas."
+      },
+      "deleteListWhileAdding": {
+        "title": "Exclua uma lista ao adicionar",
+        "description": "Na tela Adicionar à lista, toque e segure uma das suas listas para excluí-la."
+      },
+      "hideShows": {
+        "title": "Organize seu progresso",
+        "description": "Toque e segure uma série em Progresso para selecionar séries e ocultá-las."
+      },
+      "removeRatings": {
+        "title": "Remova avaliações em massa",
+        "description": "Toque e segure uma avaliação para selecionar várias e removê-las de uma vez."
+      },
+      "savedFilters": {
+        "title": "Salve seus filtros favoritos",
+        "description": "Nos filtros, toque em Salvar para guardar uma combinação. Toque e segure um filtro salvo para renomear, atualizar ou excluir."
+      },
+      "filterChips": {
+        "title": "Mude um filtro rapidamente",
+        "description": "Toque em um chip de filtro abaixo do cabeçalho para mudar só esse filtro, ou no ✕ para removê-lo."
+      },
+      "searchSettings": {
+        "title": "Pesquise nas configurações",
+        "description": "Use a busca em Configurações para ir direto a qualquer opção."
+      }
+    }
   }
 }

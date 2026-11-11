@@ -2304,5 +2304,74 @@
     "body": "Esta versión de ShowSeek ya no es compatible. Actualiza para mantener sincronizadas tus listas, tu historial y tus valoraciones.",
     "updateButton": "Actualizar ShowSeek",
     "storeUnavailable": "No se pudo abrir la tienda. Actualiza ShowSeek desde tu tienda de aplicaciones."
+  },
+  "tips": {
+    "title": "Trucos y funciones",
+    "intro": "Atajos útiles que es fácil pasar por alto. Casi todos son pulsaciones largas: mantén pulsado hasta notar una vibración.",
+    "sections": {
+      "titles": "Películas y series",
+      "people": "Personas",
+      "library": "Listas y biblioteca",
+      "filters": "Filtros",
+      "settings": "Ajustes"
+    },
+    "items": {
+      "addToList": {
+        "title": "Añade a una lista desde cualquier sitio",
+        "description": "Mantén pulsado el póster de una película o serie en Inicio, Descubrir, Buscar y otras pantallas para añadirla a una lista."
+      },
+      "watchHistory": {
+        "title": "Consulta o borra tu historial",
+        "description": "Mantén pulsado el botón de visto de una película o serie que hayas visto para ver cada vez que la viste o borrar el historial."
+      },
+      "copyTitle": {
+        "title": "Copia un título",
+        "description": "Mantén pulsado el título en la página de una película o serie para copiarlo."
+      },
+      "poster": {
+        "title": "Elige otro póster",
+        "description": "Toca el póster en la página de una película o serie para elegir otro. Se usará en toda la app."
+      },
+      "actionButtons": {
+        "title": "Ordena los botones de acción",
+        "description": "Coloca los botones de las páginas de películas y series en el orden que prefieras en Ajustes › Contenido › Reordenar botones de acción."
+      },
+      "favoritePeople": {
+        "title": "Guarda tus personas favoritas",
+        "description": "Mantén pulsada a cualquier persona del reparto o del equipo para añadirla a tus favoritas."
+      },
+      "selectSeveral": {
+        "title": "Selecciona varios a la vez",
+        "description": "Mantén pulsado un título de una de tus listas para empezar a seleccionar y luego añádelos todos a otra lista o quítalos."
+      },
+      "deleteLists": {
+        "title": "Elimina listas en bloque",
+        "description": "En Listas personalizadas, mantén pulsada una lista para seleccionar varias y eliminarlas a la vez."
+      },
+      "deleteListWhileAdding": {
+        "title": "Elimina una lista al añadir",
+        "description": "En la hoja Añadir a la lista, mantén pulsada una de tus listas para eliminarla."
+      },
+      "hideShows": {
+        "title": "Ordena tu progreso",
+        "description": "Mantén pulsada una serie en Progreso para seleccionar series y ocultarlas."
+      },
+      "removeRatings": {
+        "title": "Quita valoraciones en bloque",
+        "description": "Mantén pulsada una valoración para seleccionar varias y quitarlas a la vez."
+      },
+      "savedFilters": {
+        "title": "Guarda tus filtros favoritos",
+        "description": "En los filtros, toca Guardar para conservar una combinación. Mantén pulsado uno guardado para renombrarlo, actualizarlo o eliminarlo."
+      },
+      "filterChips": {
+        "title": "Cambia un filtro rápidamente",
+        "description": "Toca un chip de filtro bajo la cabecera para cambiar solo ese filtro, o su ✕ para quitarlo."
+      },
+      "searchSettings": {
+        "title": "Busca en los ajustes",
+        "description": "Usa la búsqueda de Ajustes para ir directamente a cualquier opción."
+      }
+    }
   }
 }

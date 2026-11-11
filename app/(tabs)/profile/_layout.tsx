@@ -171,6 +171,15 @@ export default function ProfileLayout() {
                 headerTintColor: COLORS.text,
               }}
             />
+            <Stack.Screen
+              name="tips"
+              options={{
+                headerShown: true,
+                headerTitle: t('tips.title'),
+                headerStyle: { backgroundColor: COLORS.background },
+                headerTintColor: COLORS.text,
+              }}
+            />
           </Stack>
         </SimklImportFlowProvider>
       </TvTimeImportFlowProvider>

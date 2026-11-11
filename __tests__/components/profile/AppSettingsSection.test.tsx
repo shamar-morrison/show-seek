@@ -16,11 +16,21 @@ describe('AppSettingsSection', () => {
     onWebApp: jest.fn(),
     onAbout: jest.fn(),
     onDiscord: jest.fn(),
+    onTips: jest.fn(),
     ...overrides,
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('opens Tips & Features', () => {
+    const props = createProps();
+    const { getByTestId, getByText } = render(<AppSettingsSection {...props} />);
+
+    expect(getByText('Tips & Features')).toBeTruthy();
+    fireEvent.press(getByTestId('action-button-tips'));
+    expect(props.onTips).toHaveBeenCalledTimes(1);
   });
 
   it('renders clear cache action button', () => {

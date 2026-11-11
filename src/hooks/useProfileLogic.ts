@@ -269,6 +269,10 @@ export function useProfileLogic() {
     router.push('/(tabs)/profile/action-buttons' as any);
   }, [router]);
 
+  const handleTipsPress = useCallback(() => {
+    router.push('/(tabs)/profile/tips' as any);
+  }, [router]);
+
   const handleTraktPress = useCallback(() => {
     router.push('/(tabs)/profile/trakt-settings');
   }, [router]);
@@ -318,6 +322,7 @@ export function useProfileLogic() {
     handleColorPress,
     handleLaunchScreenPress,
     handleActionButtonsPress,
+    handleTipsPress,
     handleTraktPress,
     handleStremioPress,
     handleAboutPress,

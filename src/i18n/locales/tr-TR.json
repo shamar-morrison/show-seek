@@ -2304,5 +2304,74 @@
     "body": "ShowSeek'in bu sürümü artık desteklenmiyor. Listelerinizi, izleme geçmişinizi ve puanlarınızı senkronize tutmak için güncelleyin.",
     "updateButton": "ShowSeek'i güncelle",
     "storeUnavailable": "Mağaza açılamadı. Lütfen ShowSeek'i uygulama mağazanızdan güncelleyin."
+  },
+  "tips": {
+    "title": "İpuçları ve özellikler",
+    "intro": "Gözden kaçması kolay kullanışlı kısayollar. Çoğu uzun basmadır: titreşim hissedene kadar basılı tutun.",
+    "sections": {
+      "titles": "Filmler ve diziler",
+      "people": "Kişiler",
+      "library": "Listeler ve kütüphane",
+      "filters": "Filtreler",
+      "settings": "Ayarlar"
+    },
+    "items": {
+      "addToList": {
+        "title": "Her yerden listeye ekleyin",
+        "description": "Ana Sayfa, Keşfet, Arama ve diğer ekranlarda bir film ya da dizi afişine uzun basarak onu bir listeye ekleyin."
+      },
+      "watchHistory": {
+        "title": "İzleme geçmişini görün veya temizleyin",
+        "description": "İzlediğiniz bir film ya da dizinin izlendi düğmesine uzun basarak her izleyişinizi görün veya geçmişi temizleyin."
+      },
+      "copyTitle": {
+        "title": "Başlığı kopyalayın",
+        "description": "Film ya da dizi sayfasındaki başlığa uzun basarak kopyalayın."
+      },
+      "poster": {
+        "title": "Başka bir afiş seçin",
+        "description": "Film ya da dizi sayfasındaki afişe dokunarak başka bir afiş seçin. Seçiminiz uygulamanın her yerinde kullanılır."
+      },
+      "actionButtons": {
+        "title": "Eylem düğmelerini düzenleyin",
+        "description": "Film ve dizi sayfalarındaki düğmeleri Ayarlar › İçerik › Eylem düğmelerini yeniden sırala bölümünden istediğiniz sıraya koyun."
+      },
+      "favoritePeople": {
+        "title": "Favori kişilerinizi kaydedin",
+        "description": "Oyuncu ya da ekipten birine uzun basarak onu favori kişilerinize ekleyin."
+      },
+      "selectSeveral": {
+        "title": "Birden çok öğe seçin",
+        "description": "Listelerinizden birindeki bir yapıma uzun basarak seçmeye başlayın, sonra hepsini başka bir listeye ekleyin ya da kaldırın."
+      },
+      "deleteLists": {
+        "title": "Listeleri toplu silin",
+        "description": "Özel Listeler'de bir listeye uzun basarak birkaç liste seçin ve birlikte silin."
+      },
+      "deleteListWhileAdding": {
+        "title": "Eklerken liste silin",
+        "description": "Listeye Ekle sayfasında kendi listelerinizden birine uzun basarak onu silin."
+      },
+      "hideShows": {
+        "title": "İzleme ilerlemenizi düzenleyin",
+        "description": "İzleme İlerlemesi'nde bir diziye uzun basarak dizileri seçin ve gizleyin."
+      },
+      "removeRatings": {
+        "title": "Puanları toplu kaldırın",
+        "description": "Bir puana uzun basarak birkaçını seçin ve hepsini birden kaldırın."
+      },
+      "savedFilters": {
+        "title": "Favori filtrelerinizi kaydedin",
+        "description": "Filtrelerde Kaydet'e dokunarak bir filtre setini saklayın. Kayıtlı birine uzun basarak yeniden adlandırın, güncelleyin ya da silin."
+      },
+      "filterChips": {
+        "title": "Bir filtreyi hızlıca değiştirin",
+        "description": "Yalnızca o filtreyi değiştirmek için başlığın altındaki filtre çipine, kaldırmak için ✕ işaretine dokunun."
+      },
+      "searchSettings": {
+        "title": "Ayarlarda arayın",
+        "description": "Herhangi bir seçeneğe doğrudan gitmek için Ayarlar'daki aramayı kullanın."
+      }
+    }
   }
 }

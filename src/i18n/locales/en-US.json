@@ -2304,5 +2304,74 @@
     "body": "This version of ShowSeek is no longer supported. Update to keep your lists, watch history and ratings in sync.",
     "updateButton": "Update ShowSeek",
     "storeUnavailable": "Couldn't open the store. Please update ShowSeek from your app store."
+  },
+  "tips": {
+    "title": "Tips & Features",
+    "intro": "Handy shortcuts that are easy to miss. Most are long presses: press and hold until you feel a buzz.",
+    "sections": {
+      "titles": "Movies & TV shows",
+      "people": "People",
+      "library": "Lists & library",
+      "filters": "Filters",
+      "settings": "Settings"
+    },
+    "items": {
+      "addToList": {
+        "title": "Add to a list from anywhere",
+        "description": "Long-press a movie or show poster on Home, Discover, Search and other screens to add it to a list."
+      },
+      "watchHistory": {
+        "title": "See or clear your watch history",
+        "description": "Long-press the watched button on a movie or show you've watched to see each time you watched it, or to clear it."
+      },
+      "copyTitle": {
+        "title": "Copy a title",
+        "description": "Long-press the title on a movie or show page to copy it."
+      },
+      "poster": {
+        "title": "Pick a different poster",
+        "description": "Tap the poster on a movie or show page to choose another one. Your pick is used across the app."
+      },
+      "actionButtons": {
+        "title": "Arrange the action buttons",
+        "description": "Put the buttons on movie and show pages in the order you like in Settings › Content › Reorder Action Buttons."
+      },
+      "favoritePeople": {
+        "title": "Save favorite people",
+        "description": "Long-press anyone in the cast or crew to add them to your favorite people."
+      },
+      "selectSeveral": {
+        "title": "Select several at once",
+        "description": "Long-press a title in one of your lists to start selecting, then add them all to another list or remove them."
+      },
+      "deleteLists": {
+        "title": "Delete lists in bulk",
+        "description": "In Custom Lists, long-press a list to select several and delete them together."
+      },
+      "deleteListWhileAdding": {
+        "title": "Delete a list while adding",
+        "description": "In the Add to List sheet, long-press one of your own lists to delete it."
+      },
+      "hideShows": {
+        "title": "Tidy up Watch Progress",
+        "description": "Long-press a show in Watch Progress to select shows and hide them."
+      },
+      "removeRatings": {
+        "title": "Remove ratings in bulk",
+        "description": "Long-press a rating to select several and remove them at once."
+      },
+      "savedFilters": {
+        "title": "Save your favorite filters",
+        "description": "In the filters, tap Save to keep a set of filters. Long-press a saved one to rename, update or delete it."
+      },
+      "filterChips": {
+        "title": "Change one filter quickly",
+        "description": "Tap a filter chip under the header to change just that filter, or its ✕ to remove it."
+      },
+      "searchSettings": {
+        "title": "Search your settings",
+        "description": "Use the search in Settings to jump straight to any option."
+      }
+    }
   }
 }

@@ -2304,5 +2304,74 @@
     "body": "Cette version de ShowSeek n'est plus prise en charge. Mettez à jour pour garder vos listes, votre historique et vos notes synchronisés.",
     "updateButton": "Mettre à jour ShowSeek",
     "storeUnavailable": "Impossible d'ouvrir le store. Mettez ShowSeek à jour depuis votre magasin d'applications."
+  },
+  "tips": {
+    "title": "Astuces et fonctionnalités",
+    "intro": "Des raccourcis pratiques faciles à manquer. La plupart sont des appuis longs : maintenez jusqu'à sentir une vibration.",
+    "sections": {
+      "titles": "Films et séries",
+      "people": "Personnes",
+      "library": "Listes et bibliothèque",
+      "filters": "Filtres",
+      "settings": "Paramètres"
+    },
+    "items": {
+      "addToList": {
+        "title": "Ajoutez à une liste de partout",
+        "description": "Appuyez longuement sur l'affiche d'un film ou d'une série dans Accueil, Découvrir, Recherche et ailleurs pour l'ajouter à une liste."
+      },
+      "watchHistory": {
+        "title": "Consultez ou effacez votre historique",
+        "description": "Appuyez longuement sur le bouton vu d'un film ou d'une série déjà vu pour voir chaque visionnage, ou pour effacer l'historique."
+      },
+      "copyTitle": {
+        "title": "Copiez un titre",
+        "description": "Appuyez longuement sur le titre d'une page de film ou de série pour le copier."
+      },
+      "poster": {
+        "title": "Choisissez une autre affiche",
+        "description": "Touchez l'affiche d'une page de film ou de série pour en choisir une autre. Elle sera utilisée dans toute l'app."
+      },
+      "actionButtons": {
+        "title": "Organisez les boutons d'action",
+        "description": "Rangez les boutons des pages de films et de séries dans l'ordre voulu dans Paramètres › Contenu › Réorganiser les boutons d'action."
+      },
+      "favoritePeople": {
+        "title": "Enregistrez vos personnes favorites",
+        "description": "Appuyez longuement sur n'importe qui dans la distribution ou l'équipe pour l'ajouter à vos favoris."
+      },
+      "selectSeveral": {
+        "title": "Sélectionnez-en plusieurs",
+        "description": "Appuyez longuement sur un titre de l'une de vos listes pour commencer la sélection, puis ajoutez-les à une autre liste ou retirez-les."
+      },
+      "deleteLists": {
+        "title": "Supprimez des listes en lot",
+        "description": "Dans Listes personnalisées, appuyez longuement sur une liste pour en sélectionner plusieurs et les supprimer ensemble."
+      },
+      "deleteListWhileAdding": {
+        "title": "Supprimez une liste en ajoutant",
+        "description": "Dans la feuille Ajouter à une liste, appuyez longuement sur l'une de vos listes pour la supprimer."
+      },
+      "hideShows": {
+        "title": "Rangez votre progression",
+        "description": "Appuyez longuement sur une série dans Progression pour sélectionner des séries et les masquer."
+      },
+      "removeRatings": {
+        "title": "Retirez des notes en lot",
+        "description": "Appuyez longuement sur une note pour en sélectionner plusieurs et les retirer d'un coup."
+      },
+      "savedFilters": {
+        "title": "Enregistrez vos filtres favoris",
+        "description": "Dans les filtres, touchez Enregistrer pour garder une combinaison. Appuyez longuement sur un filtre enregistré pour le renommer, le mettre à jour ou le supprimer."
+      },
+      "filterChips": {
+        "title": "Modifiez un filtre rapidement",
+        "description": "Touchez une puce de filtre sous l'en-tête pour ne modifier que ce filtre, ou son ✕ pour le retirer."
+      },
+      "searchSettings": {
+        "title": "Cherchez dans les paramètres",
+        "description": "Utilisez la recherche des Paramètres pour aller directement à n'importe quelle option."
+      }
+    }
   }
 }

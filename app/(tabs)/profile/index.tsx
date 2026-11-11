@@ -96,6 +96,7 @@ export default function ProfileScreen() {
     handleColorPress,
     handleLaunchScreenPress,
     handleActionButtonsPress,
+    handleTipsPress,
     handleTraktPress,
     handleStremioPress,
     handleAboutPress,
@@ -365,6 +366,7 @@ export default function ProfileScreen() {
             onWebApp={handleOpenWebApp}
             onAbout={handleAboutPress}
             onDiscord={handleJoinDiscord}
+            onTips={handleTipsPress}
             showTitle={false}
           />
         );

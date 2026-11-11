@@ -2304,5 +2304,74 @@
     "body": "Esta versão do ShowSeek já não é suportada. Atualize para manter as suas listas, o histórico e as classificações sincronizados.",
     "updateButton": "Atualizar o ShowSeek",
     "storeUnavailable": "Não foi possível abrir a loja. Atualize o ShowSeek a partir da sua loja de aplicações."
+  },
+  "tips": {
+    "title": "Dicas e funcionalidades",
+    "intro": "Atalhos úteis que passam despercebidos. A maioria é de toque longo: mantenha premido até sentir uma vibração.",
+    "sections": {
+      "titles": "Filmes e séries",
+      "people": "Pessoas",
+      "library": "Listas e biblioteca",
+      "filters": "Filtros",
+      "settings": "Definições"
+    },
+    "items": {
+      "addToList": {
+        "title": "Adicione a uma lista em qualquer lado",
+        "description": "Mantenha premido o cartaz de um filme ou série no Início, Descobrir, Pesquisa e outros ecrãs para o adicionar a uma lista."
+      },
+      "watchHistory": {
+        "title": "Veja ou limpe o seu histórico",
+        "description": "Mantenha premido o botão de visto de um filme ou série que já viu para ver cada vez que o viu ou limpar o histórico."
+      },
+      "copyTitle": {
+        "title": "Copie um título",
+        "description": "Mantenha premido o título na página de um filme ou série para o copiar."
+      },
+      "poster": {
+        "title": "Escolha outro cartaz",
+        "description": "Toque no cartaz na página de um filme ou série para escolher outro. A sua escolha é usada em toda a app."
+      },
+      "actionButtons": {
+        "title": "Organize os botões de ação",
+        "description": "Coloque os botões das páginas de filmes e séries pela ordem que preferir em Definições › Conteúdo › Reordenar botões de ação."
+      },
+      "favoritePeople": {
+        "title": "Guarde pessoas favoritas",
+        "description": "Mantenha premida qualquer pessoa do elenco ou da equipa para a adicionar às suas favoritas."
+      },
+      "selectSeveral": {
+        "title": "Selecione vários de uma vez",
+        "description": "Mantenha premido um título numa das suas listas para começar a selecionar e depois adicione-os a outra lista ou remova-os."
+      },
+      "deleteLists": {
+        "title": "Elimine listas em massa",
+        "description": "Em Listas personalizadas, mantenha premida uma lista para selecionar várias e eliminá-las em conjunto."
+      },
+      "deleteListWhileAdding": {
+        "title": "Elimine uma lista ao adicionar",
+        "description": "Na folha Adicionar à lista, mantenha premida uma das suas listas para a eliminar."
+      },
+      "hideShows": {
+        "title": "Organize o seu progresso",
+        "description": "Mantenha premida uma série em Progresso para selecionar séries e ocultá-las."
+      },
+      "removeRatings": {
+        "title": "Remova classificações em massa",
+        "description": "Mantenha premida uma classificação para selecionar várias e removê-las de uma vez."
+      },
+      "savedFilters": {
+        "title": "Guarde os seus filtros favoritos",
+        "description": "Nos filtros, toque em Guardar para manter uma combinação. Mantenha premido um filtro guardado para mudar o nome, atualizar ou eliminar."
+      },
+      "filterChips": {
+        "title": "Mude um filtro rapidamente",
+        "description": "Toque num chip de filtro por baixo do cabeçalho para mudar só esse filtro, ou no ✕ para o remover."
+      },
+      "searchSettings": {
+        "title": "Pesquise nas definições",
+        "description": "Use a pesquisa em Definições para ir diretamente a qualquer opção."
+      }
+    }
   }
 }
