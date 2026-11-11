@@ -1,4 +1,5 @@
 import { tmdbApi, type WatchProvider } from '@/src/api/tmdb';
+import { useRegion } from '@/src/context/RegionProvider';
 import type { MultiSelectOption, SelectOption } from '@/src/components/filters';
 import { DISCOVER_SORT_OPTIONS } from '@/src/utils/discoverFilters';
 import { getRuntimeLabel, getTmdbRatingLabel, getYearOptions } from '@/src/utils/listFilterLabels';
@@ -16,8 +17,10 @@ const RUNTIME_VALUES: RuntimeFilter[] = ['any', ...RUNTIME_FILTER_VALUES];
  * and the active filter chips (which need the names), so both read the same cached queries.
  */
 export function useDiscoverFilterOptions(mediaType: 'movie' | 'tv') {
+  const { region } = useRegion();
+  // Which services exist depends on the region, so a region change fetches its own list.
   const watchProvidersQuery = useQuery({
-    queryKey: ['watchProviders', mediaType],
+    queryKey: ['watchProviders', mediaType, region],
     queryFn: () => tmdbApi.getWatchProviders(mediaType),
     staleTime: THIRTY_DAYS,
     gcTime: THIRTY_DAYS,

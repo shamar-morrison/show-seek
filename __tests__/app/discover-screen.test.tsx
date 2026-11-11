@@ -86,6 +86,10 @@ jest.mock('@/src/context/auth', () => ({
   useAuth: () => mockAuthState,
 }));
 
+jest.mock('@/src/context/RegionProvider', () => ({
+  useRegion: () => ({ region: 'GB' }),
+}));
+
 jest.mock('@/src/context/GuestAccessContext', () => ({
   useGuestAccess: () => ({
     requireAccount: mockRequireAccount,
@@ -347,5 +351,19 @@ describe('DiscoverScreen stability', () => {
     fireEvent.press(getByText('media.movies'));
     expect(capturedDiscoverQuery.queryKey[1]).toBe('movie');
     expect(capturedDiscoverQuery.queryKey[2]).toEqual({ ...presetFilters, genres: [] });
+  });
+
+  it("filters streaming services in the user's region and refetches when it changes", async () => {
+    render(<DiscoverScreen />);
+
+    act(() => {
+      capturedSheetProps.onApply({ ...capturedSheetProps.filters, watchProviders: [8] });
+    });
+    expect(capturedDiscoverQuery.queryKey).toContain('GB');
+
+    await capturedDiscoverQuery.queryFn({ pageParam: 1 });
+    expect(mockDiscoverMovies).toHaveBeenCalledWith(
+      expect.objectContaining({ withWatchProviders: '8', watchRegion: 'GB' })
+    );
   });
 });

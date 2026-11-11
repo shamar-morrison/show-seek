@@ -769,7 +769,8 @@ export const tmdbApi = {
           'with_runtime.lte': params?.runtimeLte,
           with_original_language: params?.withOriginalLanguage,
           with_watch_providers: params?.withWatchProviders,
-          watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
+          // Left unset, the interceptor fills in the user's region.
+          watch_region: params?.withWatchProviders ? params?.watchRegion : undefined,
           'primary_release_date.lte': params?.hideUnreleased
             ? new Date().toISOString().split('T')[0]
             : undefined,
@@ -804,7 +805,8 @@ export const tmdbApi = {
           'with_runtime.lte': params?.runtimeLte,
           with_original_language: params?.withOriginalLanguage,
           with_watch_providers: params?.withWatchProviders,
-          watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
+          // Left unset, the interceptor fills in the user's region.
+          watch_region: params?.withWatchProviders ? params?.watchRegion : undefined,
           'first_air_date.lte': params?.hideUnreleased
             ? new Date().toISOString().split('T')[0]
             : undefined,

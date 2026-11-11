@@ -19,6 +19,7 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
+import { useRegion } from '@/src/context/RegionProvider';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDiscoverPresets } from '@/src/hooks/useFilterPresets';
@@ -73,6 +74,7 @@ export default function DiscoverScreen() {
   const filtersSheetRef = useRef<DiscoverFiltersSheetRef>(null);
   const { t } = useTranslation();
   const { preferences } = usePreferences();
+  const { region } = useRegion();
   const { resolvePosterPath } = usePosterOverrides();
   const { accentColor } = useAccentColor();
   const { user, isGuest } = useAuth();
@@ -91,7 +93,7 @@ export default function DiscoverScreen() {
   );
 
   const discoverQuery = useInfiniteQuery({
-    queryKey: ['discover', mediaType, filters, preferences?.hideUnreleasedContent],
+    queryKey: ['discover', mediaType, filters, preferences?.hideUnreleasedContent, region],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         genre:
@@ -105,6 +107,7 @@ export default function DiscoverScreen() {
         withOriginalLanguage: filters.language || undefined,
         withWatchProviders:
           filters.watchProviders.length > 0 ? filters.watchProviders.join('|') : undefined,
+        watchRegion: region,
         page: pageParam,
         hideUnreleased: preferences?.hideUnreleasedContent,
       };
