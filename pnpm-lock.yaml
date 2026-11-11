@@ -192,6 +192,9 @@ dependencies:
   react-native-screens:
     specifier: ~4.16.0
     version: 4.16.0(react-native@0.81.5)(react@19.1.0)
+  react-native-sortables:
+    specifier: ^1.10.1
+    version: 1.10.1(react-native-gesture-handler@2.28.0)(react-native-reanimated@4.1.1)(react-native@0.81.5)(react@19.1.0)
   react-native-svg:
     specifier: 15.12.1
     version: 15.12.1(react-native@0.81.5)(react@19.1.0)
@@ -12221,6 +12224,21 @@ packages:
       react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
     dev: false
 
+  /react-native-haptic-feedback@3.0.0(react-native@0.81.5)(react@19.1.0):
+    resolution: {integrity: sha512-yxBQFHhXU8S0xupGtzDRToGw5yMWezUdLzxtlx2Oi9YpjPwprWZWCw8foPt0S2t84B0ZikzZYyOHiMSXIelUxg==}
+    requiresBuild: true
+    peerDependencies:
+      react: '>=18.0.0'
+      react-native: '>=0.71.0'
+    peerDependenciesMeta:
+      react:
+        optional: true
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
+    dev: false
+    optional: true
+
   /react-native-is-edge-to-edge@1.2.1(react-native@0.81.5)(react@19.1.0):
     resolution: {integrity: sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==}
     peerDependencies:
@@ -12297,6 +12315,22 @@ packages:
       react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
       react-native-is-edge-to-edge: 1.2.1(react-native@0.81.5)(react@19.1.0)
       warn-once: 0.1.1
+
+  /react-native-sortables@1.10.1(react-native-gesture-handler@2.28.0)(react-native-reanimated@4.1.1)(react-native@0.81.5)(react@19.1.0):
+    resolution: {integrity: sha512-3M+OnzE2zgN2meECvd5cGQrm5oFQSQ34HPm3DSLAo8Xaif9+Zvtv5V4uX8u/HmBtI+v1gEuw7rjuYWqvUhZB9Q==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-gesture-handler: '>=2.0.0'
+      react-native-reanimated: '>=3.0.0'
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
+      react-native-gesture-handler: 2.28.0(react-native@0.81.5)(react@19.1.0)
+      react-native-reanimated: 4.1.1(@babel/core@7.25.2)(react-native-worklets@0.5.1)(react-native@0.81.5)(react@19.1.0)
+    optionalDependencies:
+      react-native-haptic-feedback: 3.0.0(react-native@0.81.5)(react@19.1.0)
+    dev: false
 
   /react-native-svg@15.12.1(react-native@0.81.5)(react@19.1.0):
     resolution: {integrity: sha512-vCuZJDf8a5aNC2dlMovEv4Z0jjEUET53lm/iILFnFewa15b4atjVxU6Wirm6O9y6dEsdjDZVD7Q3QM4T1wlI8g==}

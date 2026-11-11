@@ -737,7 +737,8 @@
     "languageScreenNote": "Cela affecte les titres, descriptions et autres textes de notre base de données. Certains contenus peuvent ne pas être disponibles dans toutes les langues.",
     "updateRegionError": "Échec de la mise à jour de la région. Veuillez réessayer.",
     "regionScreenDescription": "Sélectionnez votre région pour voir la disponibilité locale en streaming et les dates de sortie.",
-    "regionScreenNote": "Cela affecte les informations de disponibilité et les dates de sortie locales."
+    "regionScreenNote": "Cela affecte les informations de disponibilité et les dates de sortie locales.",
+    "actionButtons": "Boutons d'action"
   },
   "profile": {
     "displayNameLabel": "Nom d'affichage",
@@ -2005,6 +2006,13 @@
     "deleteConfirmTitle": "Supprimer les filtres enregistrés ?",
     "deleteConfirmMessage": "« {{name}} » sera supprimé.",
     "longPressHint": "Appui long sur un filtre enregistré pour plus d'options."
+  },
+  "actionButtons": {
+    "description": "Faites glisser les boutons pour changer leur ordre sur les pages des films et des séries.",
+    "reminderHint": "Uniquement pour les titres à venir",
+    "dragHandle": "Faire glisser pour réordonner {{name}}",
+    "position": "Position {{position}}",
+    "saveFailed": "Impossible d'enregistrer le nouvel ordre. Veuillez réessayer."
   },
   "lists": {
     "alreadyWatched": "Déjà vus",

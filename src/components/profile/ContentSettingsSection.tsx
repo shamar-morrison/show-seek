@@ -14,6 +14,7 @@ import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
 import {
+  DragDropVerticalIcon,
   Layout01Icon,
   MapPinIcon,
   PaintBoardIcon,
@@ -27,7 +28,12 @@ import { ActionButton } from './ActionButton';
 /** Stored (not rendered) category keys for content items. */
 export type ContentCategoryKey = 'localization' | 'appearance';
 
-export type ContentItemId = 'language' | 'region' | 'accentColor' | 'defaultLaunchScreen';
+export type ContentItemId =
+  | 'language'
+  | 'region'
+  | 'accentColor'
+  | 'defaultLaunchScreen'
+  | 'actionButtons';
 
 export interface ContentConfigItem {
   /** Stable id (also used as the search/scroll id) */
@@ -42,6 +48,7 @@ export const CONTENT_ITEMS: ContentConfigItem[] = [
   { id: 'region', titleKey: 'settings.region', category: 'localization' },
   { id: 'accentColor', titleKey: 'settings.accentColor', category: 'appearance' },
   { id: 'defaultLaunchScreen', titleKey: 'settings.defaultLaunchScreen', category: 'appearance' },
+  { id: 'actionButtons', titleKey: 'settings.actionButtons', category: 'appearance' },
 ];
 
 export interface ContentSettingsSectionProps {
@@ -59,6 +66,8 @@ export interface ContentSettingsSectionProps {
   onColorPress: () => void;
   /** Handler for launch screen button press */
   onLaunchScreenPress: () => void;
+  /** Handler for the action buttons order button press */
+  onActionButtonsPress: () => void;
   /** Whether to show section title (default: true) */
   showTitle?: boolean;
   /** Id of the item to briefly highlight (e.g. from profile search) */
@@ -78,6 +87,7 @@ export function ContentSettingsSection({
   onRegionPress,
   onColorPress,
   onLaunchScreenPress,
+  onActionButtonsPress,
   showTitle = true,
   highlightedId = null,
   registerItemLayout,
@@ -206,6 +216,17 @@ export function ContentSettingsSection({
                 <Text style={styles.languageBadgeText}>{accentLabel}</Text>
               </View>
             }
+          />
+        );
+      case 'actionButtons':
+        return (
+          <ActionButton
+            icon={DragDropVerticalIcon}
+            label={t('settings.actionButtons')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onActionButtonsPress();
+            }}
           />
         );
       case 'defaultLaunchScreen':

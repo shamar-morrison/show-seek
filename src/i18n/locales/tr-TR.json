@@ -737,7 +737,8 @@
     "languageScreenNote": "Bu; film veritabanımızdaki başlıkları, açıklamaları ve diğer metinleri etkiler. Bazı içerikler tüm dillerde mevcut olmayabilir.",
     "updateRegionError": "Bölge güncellenemedi. Lütfen tekrar deneyin.",
     "regionScreenDescription": "Yerel yayın kullanılabilirliğini ve yayın tarihlerini görmek için bölgenizi seçin.",
-    "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler."
+    "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler.",
+    "actionButtons": "Eylem düğmeleri"
   },
   "profile": {
     "displayNameLabel": "Görünen ad",
@@ -1971,6 +1972,13 @@
     "deleteConfirmTitle": "Kayıtlı filtreler silinsin mi?",
     "deleteConfirmMessage": "“{{name}}” silinecek.",
     "longPressHint": "Diğer seçenekler için kayıtlı bir filtreyi basılı tutun."
+  },
+  "actionButtons": {
+    "description": "Film ve dizi sayfalarındaki sıralarını değiştirmek için düğmeleri sürükleyin.",
+    "reminderHint": "Yalnızca yakında çıkacak yapımlarda görünür",
+    "dragHandle": "{{name}} öğesini yeniden sıralamak için sürükleyin",
+    "position": "Sıra {{position}}",
+    "saveFailed": "Yeni sıra kaydedilemedi. Lütfen tekrar deneyin."
   },
   "lists": {
     "alreadyWatched": "Daha önce izlenenler",

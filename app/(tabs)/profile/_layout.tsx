@@ -162,6 +162,15 @@ export default function ProfileLayout() {
                 headerTintColor: COLORS.text,
               }}
             />
+            <Stack.Screen
+              name="action-buttons"
+              options={{
+                headerShown: true,
+                headerTitle: t('settings.actionButtons'),
+                headerStyle: { backgroundColor: COLORS.background },
+                headerTintColor: COLORS.text,
+              }}
+            />
           </Stack>
         </SimklImportFlowProvider>
       </TvTimeImportFlowProvider>

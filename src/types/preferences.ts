@@ -2,6 +2,8 @@
  * User preferences types
  */
 
+import type { DetailActionButtonId } from '@/src/utils/detailActionOrder';
+
 /**
  * Types of lists that can appear on home screen
  */
@@ -47,6 +49,7 @@ export interface UserPreferences {
   dataSaver: boolean; // Load lower resolution images to save data
   showOriginalTitles: boolean; // Show movie/TV titles in original language when available
   posterOverrides?: Record<string, string>; // Per-user poster overrides keyed by "movie_<id>" / "tv_<id>"
+  detailActionOrder?: DetailActionButtonId[]; // Order of the action buttons on movie/TV pages; unset = default
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {

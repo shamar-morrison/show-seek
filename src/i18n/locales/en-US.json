@@ -737,7 +737,8 @@
     "languageScreenNote": "This affects titles, descriptions, and other text from our movie database. Some content may not be available in all languages.",
     "updateRegionError": "Failed to update region. Please try again.",
     "regionScreenDescription": "Select your region to see local streaming availability and release dates.",
-    "regionScreenNote": "This affects where to watch information and local release dates."
+    "regionScreenNote": "This affects where to watch information and local release dates.",
+    "actionButtons": "Action Buttons"
   },
   "profile": {
     "displayNameLabel": "Display name",
@@ -1971,6 +1972,13 @@
     "deleteConfirmTitle": "Delete saved filters?",
     "deleteConfirmMessage": "“{{name}}” will be deleted.",
     "longPressHint": "Long press a saved filter for more options."
+  },
+  "actionButtons": {
+    "description": "Drag the buttons to change their order on movie and TV show pages.",
+    "reminderHint": "Only shows for upcoming titles",
+    "dragHandle": "Drag to reorder {{name}}",
+    "position": "Position {{position}}",
+    "saveFailed": "Couldn't save the new order. Please try again."
   },
   "lists": {
     "alreadyWatched": "Already Watched",

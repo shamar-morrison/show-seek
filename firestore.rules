@@ -88,6 +88,10 @@ service cloud.firestore {
           && (!('dataSaver' in request.resource.data.preferences) || request.resource.data.preferences.dataSaver is bool)
           && (!('copyInsteadOfMove' in request.resource.data.preferences) || request.resource.data.preferences.copyInsteadOfMove is bool)
           && (!('showOriginalTitles' in request.resource.data.preferences) || request.resource.data.preferences.showOriginalTitles is bool)
+          && (!('detailActionOrder' in request.resource.data.preferences) || (
+            request.resource.data.preferences.detailActionOrder is list
+            && request.resource.data.preferences.detailActionOrder.size() <= 10
+          ))
           && (!('posterOverrides' in request.resource.data.preferences) || (
             request.resource.data.preferences.posterOverrides is map
             && request.resource.data.preferences.posterOverrides.size() <= 1000

@@ -1,4 +1,5 @@
 import { auditedGetDoc, auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
+import { resolveDetailActionOrder } from '@/src/utils/detailActionOrder';
 import {
   getSignedInUser,
   requireSignedInUser,
@@ -70,6 +71,9 @@ class PreferencesService {
       posterOverrides: sanitizePosterOverrides(
         data?.preferences?.posterOverrides ?? DEFAULT_PREFERENCES.posterOverrides
       ),
+      detailActionOrder: Array.isArray(data?.preferences?.detailActionOrder)
+        ? resolveDetailActionOrder(data.preferences.detailActionOrder)
+        : undefined,
     };
   }
 

@@ -265,6 +265,10 @@ export function useProfileLogic() {
     router.push('/(tabs)/profile/default-launch-screen' as any);
   }, [router]);
 
+  const handleActionButtonsPress = useCallback(() => {
+    router.push('/(tabs)/profile/action-buttons' as any);
+  }, [router]);
+
   const handleTraktPress = useCallback(() => {
     router.push('/(tabs)/profile/trakt-settings');
   }, [router]);
@@ -313,6 +317,7 @@ export function useProfileLogic() {
     handleRegionPress,
     handleColorPress,
     handleLaunchScreenPress,
+    handleActionButtonsPress,
     handleTraktPress,
     handleStremioPress,
     handleAboutPress,
