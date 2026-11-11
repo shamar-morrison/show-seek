@@ -131,7 +131,8 @@ describe('OpenWithDrawer', () => {
       expect(Linking.openURL).toHaveBeenCalledWith('trakt://movies/fight-club-1999');
       expect(Linking.openURL).toHaveBeenCalledWith('https://www.themoviedb.org/movie/550');
       expect(Linking.openURL).toHaveBeenCalledWith(
-        'https://letterboxd.com/search/Fight%20Club%201999/'
+        // Letterboxd redirects its TMDB link to the film's page.
+        'https://letterboxd.com/tmdb/550/'
       );
       expect(Linking.openURL).toHaveBeenCalledWith(
         'https://www.rottentomatoes.com/search?search=Fight%20Club%201999'

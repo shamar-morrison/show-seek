@@ -1,21 +1,71 @@
 /**
  * External Ratings Section
  *
- * Displays IMDb, Rotten Tomatoes, and Metacritic ratings with source logos.
- * Each rating is tappable and opens the respective website for the media.
- * Hides completely if no ratings are available.
+ * A compact row of scores (IMDb, Rotten Tomatoes, Metacritic, Letterboxd, Trakt), each a small
+ * logo with the score under it. Sites without a score are left out and the rest spread evenly.
+ * Each one opens that site's page for the title. Hides when there are no scores.
  */
-import { ExternalRatings } from '@/src/api/omdb';
+import { ExternalRatings } from '@/src/api/mdblist';
+import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { buildOpenWithUrl, OpenWithServiceId } from '@/src/utils/openWithLinks';
 import React, { memo, useCallback } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageStyle, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
-// Logo imports
 const imdbLogo = require('@/assets/images/imdb.png');
 const rtLogo = require('@/assets/images/rt.png');
 const mcLogo = require('@/assets/images/mc.png');
+const lbLogo = require('@/assets/images/lb.png');
+
+/** Logo height; IMDb's wide logo keeps its shape at this height. */
+const LOGO_SIZE = 18;
+const LOGO_STYLE: ImageStyle = { height: LOGO_SIZE, width: LOGO_SIZE };
+
+type RatingSite = Extract<
+  OpenWithServiceId,
+  'imdb' | 'rottenTomatoes' | 'metacritic' | 'letterboxd' | 'trakt'
+>;
+
+/** In the order they're shown. */
+const SITES: { id: RatingSite; label: string; testID: string; logo: React.ReactNode }[] = [
+  {
+    id: 'imdb',
+    label: 'IMDb',
+    testID: 'external-rating-imdb',
+    logo: (
+      <Image
+        source={imdbLogo}
+        style={[LOGO_STYLE, { width: LOGO_SIZE * 2 }]}
+        resizeMode="contain"
+      />
+    ),
+  },
+  {
+    id: 'rottenTomatoes',
+    label: 'Rotten Tomatoes',
+    testID: 'external-rating-rotten-tomatoes',
+    logo: <Image source={rtLogo} style={LOGO_STYLE} resizeMode="contain" />,
+  },
+  {
+    id: 'metacritic',
+    label: 'Metacritic',
+    testID: 'external-rating-metacritic',
+    logo: <Image source={mcLogo} style={LOGO_STYLE} resizeMode="contain" />,
+  },
+  {
+    id: 'letterboxd',
+    label: 'Letterboxd',
+    testID: 'external-rating-letterboxd',
+    logo: <Image source={lbLogo} style={LOGO_STYLE} resizeMode="contain" />,
+  },
+  {
+    id: 'trakt',
+    label: 'Trakt',
+    testID: 'external-rating-trakt',
+    logo: <TraktLogo size={LOGO_SIZE} />,
+  },
+];
 
 interface ExternalRatingsSectionProps {
   ratings: ExternalRatings | null;
@@ -28,12 +78,11 @@ interface ExternalRatingsSectionProps {
   onOpenLinkError?: (message: string) => void;
 }
 
-// Skeleton loader for ratings
 const RatingSkeleton = memo(() => (
   <>
     <SectionSeparator />
-    <View style={styles.ratingsRow}>
-      {[1, 2, 3].map((i) => (
+    <View style={styles.ratingsRow} testID="external-ratings-skeleton">
+      {[1, 2, 3, 4, 5].map((i) => (
         <View key={i} style={styles.ratingItem}>
           <View style={styles.skeletonLogo} />
           <View style={styles.skeletonText} />
@@ -45,54 +94,49 @@ const RatingSkeleton = memo(() => (
 ));
 RatingSkeleton.displayName = 'RatingSkeleton';
 
-/**
- * Individual rating display with logo and value.
- * Tappable — opens the source website for the media.
- */
 const RatingItem = memo<{
-  logo: any;
-  logoStyle?: object;
+  logo: React.ReactNode;
   value: string;
-  label: string;
-  testID?: string;
-  accessibilityLabel?: string;
-  onPress?: () => void;
-}>(({ logo, logoStyle, value, label, testID, accessibilityLabel, onPress }) => (
+  testID: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+}>(({ logo, value, testID, accessibilityLabel, onPress }) => (
   <Pressable
     style={({ pressed }) => [styles.ratingItem, { opacity: pressed ? 0.7 : 1 }]}
     onPress={onPress}
     testID={testID}
     accessibilityRole="button"
-    accessibilityLabel={accessibilityLabel ?? label}
+    accessibilityLabel={accessibilityLabel}
     hitSlop={SPACING.s}
   >
-    <Image source={logo} style={[styles.logo, logoStyle]} resizeMode="contain" />
-    <Text style={styles.ratingValue}>{value}</Text>
-    <Text style={styles.ratingLabel}>{label}</Text>
+    <View style={styles.logoSlot}>{logo}</View>
+    <Text style={styles.ratingValue} numberOfLines={1}>
+      {value}
+    </Text>
   </Pressable>
 ));
 RatingItem.displayName = 'RatingItem';
 
-/**
- * External Ratings Section Component
- *
- * Displays ratings from IMDb, Rotten Tomatoes, and Metacritic.
- * Each rating opens the respective website (IMDb title page when the IMDb ID
- * is known, otherwise site search — same URL logic as the Open With drawer).
- * Returns a single SectionSeparator if no ratings are available to maintain uniform section separation.
- */
 export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
-  ({ ratings, isLoading, mediaType = 'movie', mediaId = 0, title = '', year, imdbId, onOpenLinkError }) => {
+  ({
+    ratings,
+    isLoading,
+    mediaType = 'movie',
+    mediaId = 0,
+    title = '',
+    year,
+    imdbId,
+    onOpenLinkError,
+  }) => {
     const openServiceUrl = useCallback(
       async (serviceId: OpenWithServiceId) => {
-        const effectiveImdbId = imdbId ?? ratings?.imdbId ?? null;
         const url = buildOpenWithUrl({
           serviceId,
           mediaType,
           mediaId,
           title,
           year,
-          imdbId: effectiveImdbId,
+          imdbId: imdbId ?? ratings?.imdbId ?? null,
         });
 
         try {
@@ -105,31 +149,13 @@ export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
       [imdbId, ratings, mediaType, mediaId, title, year, onOpenLinkError]
     );
 
-    const handleImdbPress = useCallback(
-      () => void openServiceUrl('imdb'),
-      [openServiceUrl]
-    );
-    const handleRottenTomatoesPress = useCallback(
-      () => void openServiceUrl('rottenTomatoes'),
-      [openServiceUrl]
-    );
-    const handleMetacriticPress = useCallback(
-      () => void openServiceUrl('metacritic'),
-      [openServiceUrl]
-    );
-
-    // Show skeleton while loading
     if (isLoading) {
       return <RatingSkeleton />;
     }
 
-    // Show single separator if no ratings
-    if (!ratings) {
-      return <SectionSeparator />;
-    }
-
-    const hasAnyRating = ratings.imdb || ratings.rottenTomatoes || ratings.metacritic;
-    if (!hasAnyRating) {
+    const shown = ratings ? SITES.filter((site) => ratings[site.id]) : [];
+    if (shown.length === 0) {
+      // A single separator keeps the spacing between the sections around it.
       return <SectionSeparator />;
     }
 
@@ -137,41 +163,20 @@ export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
       <>
         <SectionSeparator />
         <View style={styles.ratingsRow}>
-          {ratings.imdb && (
+          {shown.map((site) => (
             <RatingItem
-              logo={imdbLogo}
-              logoStyle={styles.imdbLogo}
-              value={`${ratings.imdb.rating}/10`}
-              label="IMDb"
-              testID="external-rating-imdb"
-              accessibilityLabel={title ? `Open IMDb page for ${title}` : 'Open IMDb page'}
-              onPress={handleImdbPress}
-            />
-          )}
-          {ratings.rottenTomatoes && (
-            <RatingItem
-              logo={rtLogo}
-              value={ratings.rottenTomatoes}
-              label="Rotten Tomatoes"
-              testID="external-rating-rotten-tomatoes"
+              key={site.id}
+              logo={site.logo}
+              value={ratings![site.id]!}
+              testID={site.testID}
               accessibilityLabel={
-                title ? `Open Rotten Tomatoes page for ${title}` : 'Open Rotten Tomatoes page'
+                title
+                  ? `${site.label} ${ratings![site.id]}. Open ${site.label} page for ${title}`
+                  : `${site.label} ${ratings![site.id]}. Open ${site.label} page`
               }
-              onPress={handleRottenTomatoesPress}
+              onPress={() => void openServiceUrl(site.id)}
             />
-          )}
-          {ratings.metacritic && (
-            <RatingItem
-              logo={mcLogo}
-              value={ratings.metacritic}
-              label="Metacritic"
-              testID="external-rating-metacritic"
-              accessibilityLabel={
-                title ? `Open Metacritic page for ${title}` : 'Open Metacritic page'
-              }
-              onPress={handleMetacriticPress}
-            />
-          )}
+          ))}
         </View>
         <SectionSeparator />
       </>
@@ -183,45 +188,35 @@ ExternalRatingsSection.displayName = 'ExternalRatingsSection';
 
 const styles = StyleSheet.create({
   ratingsRow: {
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: SPACING.xs,
   },
   ratingItem: {
     alignItems: 'center',
     flex: 1,
     gap: SPACING.xs,
   },
-  logo: {
-    width: 28,
-    height: 28,
-  },
-  imdbLogo: {
-    width: 48,
-    height: 24,
+  logoSlot: {
+    alignItems: 'center',
+    height: LOGO_SIZE,
+    justifyContent: 'center',
   },
   ratingValue: {
     color: COLORS.white,
-    fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
+    fontSize: FONT_SIZE.s,
   },
-  ratingLabel: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  // Skeleton styles
   skeletonLogo: {
-    width: 28,
-    height: 28,
     backgroundColor: COLORS.surface,
     borderRadius: 4,
+    height: LOGO_SIZE,
+    width: LOGO_SIZE,
   },
   skeletonText: {
-    width: 40,
-    height: 14,
     backgroundColor: COLORS.surface,
     borderRadius: 4,
-    marginTop: SPACING.xs,
+    height: 12,
+    width: 32,
   },
 });

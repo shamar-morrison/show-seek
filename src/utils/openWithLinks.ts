@@ -74,6 +74,11 @@ export const buildOpenWithUrl = (params: BuildOpenWithUrlParams): string => {
     return `https://trakt.tv/${traktType}/${traktSlug}`;
   }
 
+  // Letterboxd redirects /tmdb/{id}/ to the film's page. It's film-only, so shows use its search.
+  if (serviceId === 'letterboxd' && mediaType === 'movie') {
+    return `https://letterboxd.com/tmdb/${mediaId}/`;
+  }
+
   // Stremio's Cinemeta ids are IMDb ids. A movie opens its own page; a show opens its episodes.
   if (serviceId === 'stremio' && imdbId) {
     return mediaType === 'movie'

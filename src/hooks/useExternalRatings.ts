@@ -1,12 +1,16 @@
 /**
- * Hook for fetching external ratings from OMDb API
+ * External ratings (IMDb, Rotten Tomatoes, Metacritic, Letterboxd, Trakt) from MDBList.
  *
- * Uses React Query for state management and AsyncStorage for persistent 24-hour caching.
+ * React Query keeps them in memory; src/api/mdblist keeps them on the phone for 7 days.
  */
-import { tmdbApi } from '@/src/api/tmdb';
 import { useQuery } from '@tanstack/react-query';
 
-import { ExternalRatings, fetchExternalRatings, hasValidRatings } from '../api/omdb';
+import {
+  ExternalRatings,
+  fetchExternalRatings,
+  hasValidRatings,
+  MDBLIST_CACHE_DURATION_MS,
+} from '../api/mdblist';
 
 interface UseExternalRatingsResult {
   ratings: ExternalRatings | null;
@@ -16,64 +20,29 @@ interface UseExternalRatingsResult {
 }
 
 /**
- * Fetch external ratings (IMDb, Rotten Tomatoes, Metacritic) for a movie or TV show
- *
  * @param mediaType - 'movie' or 'tv'
- * @param mediaId - TMDB media ID
- * @returns Ratings data, loading state, and error state
+ * @param mediaId - TMDB ID (MDBList looks titles up by it directly)
+ * @returns Ratings (null when there are none to show, which hides the section)
  */
 export function useExternalRatings(
   mediaType: 'movie' | 'tv',
   mediaId: number
 ): UseExternalRatingsResult {
-  const {
-    data,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ['external-ratings', mediaType, mediaId],
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['external-ratings', 'mdblist', mediaType, mediaId],
     queryFn: async () => {
-      // Step 1: Get IMDB ID from TMDB
-      const externalIds =
-        mediaType === 'movie'
-          ? await tmdbApi.getMovieExternalIds(mediaId)
-          : await tmdbApi.getTVExternalIds(mediaId);
-
-      const imdbId = externalIds.imdb_id;
-      if (!imdbId) {
-        return { ratings: null, imdbId: null };
-      }
-
-      // Step 2: Fetch ratings from OMDb (with internal caching)
-      const result = await fetchExternalRatings(imdbId);
-
-      // Return null if no valid ratings to trigger section hide
-      if (!hasValidRatings(result)) {
-        return { ratings: null, imdbId };
-      }
-
-      // Ensure imdbId is present even for stale cache entries written before it was stored
-      return {
-        ratings: result && !result.imdbId ? { ...result, imdbId } : result,
-        imdbId,
-      };
+      const ratings = await fetchExternalRatings(mediaType, mediaId);
+      return hasValidRatings(ratings) ? ratings : null;
     },
     enabled: !!mediaId,
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours - match AsyncStorage cache
-    gcTime: 24 * 60 * 60 * 1000, // Keep in memory for 24 hours
-    retry: 1, // Only retry once to avoid burning API quota
+    staleTime: MDBLIST_CACHE_DURATION_MS,
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: 1, // Only retry once: every request counts against the shared daily limit.
   });
 
-  // NB: read these in separate statements. Chaining them as
-  // `data?.imdbId ?? data?.ratings?.imdbId` makes TS narrow `data` by the
-  // `imdbId` discriminant in the right operand, collapsing the fallback
-  // access to `never` (TS2339). Separate reads keep identical runtime behavior.
-  const topLevelImdbId = data?.imdbId ?? null;
-  const nestedImdbId = data?.ratings?.imdbId ?? null;
-
   return {
-    ratings: data?.ratings ?? null,
-    imdbId: topLevelImdbId ?? nestedImdbId,
+    ratings: data ?? null,
+    imdbId: data?.imdbId ?? null,
     isLoading,
     isError,
   };

@@ -162,4 +162,24 @@ describe('openWithLinks', () => {
   it('only turns Stremio Web links into app links', () => {
     expect(buildStremioAppUrlFromWeb('https://www.imdb.com/title/tt0137523/')).toBeNull();
   });
+
+  it("opens a movie's Letterboxd page through its TMDB link, and searches for shows", () => {
+    expect(
+      buildOpenWithUrl({
+        serviceId: 'letterboxd',
+        mediaType: 'movie',
+        mediaId: 550,
+        title: 'Fight Club',
+      })
+    ).toBe('https://letterboxd.com/tmdb/550/');
+    expect(
+      buildOpenWithUrl({
+        serviceId: 'letterboxd',
+        mediaType: 'tv',
+        mediaId: 1399,
+        title: 'Game of Thrones',
+        year: 2011,
+      })
+    ).toBe('https://letterboxd.com/search/Game%20of%20Thrones%202011/');
+  });
 });
