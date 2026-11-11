@@ -484,7 +484,12 @@ export default function ProfileScreen() {
 
       {/* Mounted only while open: it presents itself on mount, and remounting lets it reopen. */}
       {whatsNew.openAnnouncement ? (
-        <WhatsNewSheet announcement={whatsNew.openAnnouncement} onDismiss={whatsNew.handleDismiss} />
+        <WhatsNewSheet
+          announcement={whatsNew.openAnnouncement}
+          onDismiss={whatsNew.handleDismiss}
+          // Opened on request, so no settling delay.
+          presentDelayMs={0}
+        />
       ) : null}
     </SafeAreaView>
   );

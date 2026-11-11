@@ -6,7 +6,7 @@ import {
   DiscordIcon,
   // Globe02Icon, // Hidden: ShowSeek web app link disabled
   InformationCircleIcon,
-  SparklesIcon,
+  Megaphone01Icon,
   StarIcon,
 } from '@hugeicons/core-free-icons';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -72,7 +72,7 @@ export function AppSettingsSection({
         />
         {onWhatsNew ? (
           <ActionButton
-            icon={SparklesIcon}
+            icon={Megaphone01Icon}
             label={t('settings.whatsNew')}
             onPress={onWhatsNew}
             testID="action-button-whats-new"

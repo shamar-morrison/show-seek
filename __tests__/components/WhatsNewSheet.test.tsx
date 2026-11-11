@@ -87,6 +87,14 @@ describe('WhatsNewSheet', () => {
     expect(mockPresent).toHaveBeenCalledTimes(1);
   });
 
+  it('presents at once when opened on request (no settling delay)', () => {
+    render(<WhatsNewSheet announcement={announcement} onDismiss={jest.fn()} presentDelayMs={0} />);
+
+    act(() => jest.advanceTimersByTime(0));
+
+    expect(mockPresent).toHaveBeenCalledTimes(1);
+  });
+
   it('does not present if the user leaves the screen first', () => {
     render(<WhatsNewSheet announcement={announcement} onDismiss={jest.fn()} />);
 

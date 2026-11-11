@@ -37,10 +37,19 @@ interface WhatsNewSheetProps {
   announcement: WhatsNewAnnouncement;
   /** Fires however the sheet was closed. */
   onDismiss: () => void;
+  /**
+   * Wait before presenting. Home's automatic sheet waits so the screen can settle first; opened
+   * on request (Settings > What's New) it should appear at once, so pass 0.
+   */
+  presentDelayMs?: number;
 }
 
 /** Presents itself once, the first time its screen is focused. */
-export function WhatsNewSheet({ announcement, onDismiss }: WhatsNewSheetProps) {
+export function WhatsNewSheet({
+  announcement,
+  onDismiss,
+  presentDelayMs = PRESENT_DELAY_MS,
+}: WhatsNewSheetProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const { width } = useWindowDimensions();
@@ -61,10 +70,10 @@ export function WhatsNewSheet({ announcement, onDismiss }: WhatsNewSheetProps) {
       const timer = setTimeout(() => {
         hasPresentedRef.current = true;
         void sheetRef.current?.present();
-      }, PRESENT_DELAY_MS);
+      }, presentDelayMs);
 
       return () => clearTimeout(timer);
-    }, [])
+    }, [presentDelayMs])
   );
 
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {

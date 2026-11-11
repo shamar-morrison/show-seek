@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
 
-const mockMarkSeen = jest.fn(() => Promise.resolve());
+const mockMarkSeen = jest.fn((..._args: unknown[]) => Promise.resolve());
 jest.mock('@/src/services/whatsNewService', () => ({
   markWhatsNewSeen: (...args: unknown[]) => mockMarkSeen(...args),
   shouldShowWhatsNew: jest.fn(() => Promise.resolve(false)),
