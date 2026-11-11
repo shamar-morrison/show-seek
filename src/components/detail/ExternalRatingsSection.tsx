@@ -105,21 +105,45 @@ const RatingItem = memo<{
   testID: string;
   accessibilityLabel: string;
   onPress: () => void;
-}>(({ logo, value, testID, accessibilityLabel, onPress }) => (
-  <Pressable
-    style={({ pressed }) => [styles.ratingItem, { opacity: pressed ? 0.7 : 1 }]}
-    onPress={onPress}
-    testID={testID}
-    accessibilityRole="button"
-    accessibilityLabel={accessibilityLabel}
-    hitSlop={SPACING.s}
-  >
-    <View style={styles.logoSlot}>{logo}</View>
-    <Text style={styles.ratingValue} numberOfLines={1}>
-      {value}
-    </Text>
-  </Pressable>
-));
+}>(({ logo, value, testID, accessibilityLabel, onPress }) => {
+  // Optical centring for "81%": centring the whole text leaves the number 7px left of the logo,
+  // and centring the number leaves the whole text 7px right, and both look off. An invisible "%"
+  // at half size before the number splits the difference (3.5px each way). It stays in the normal
+  // row, since Android clips anything positioned outside its parent.
+  const [, number, suffix] = value.match(/^(.*?)(%?)$/) ?? [value, value, ''];
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.ratingItem, { opacity: pressed ? 0.7 : 1 }]}
+      onPress={onPress}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={SPACING.s}
+    >
+      <View style={styles.logoSlot}>{logo}</View>
+      <View style={styles.valueRow} testID={`${testID}-score`}>
+        {suffix ? (
+          <Text
+            style={[styles.ratingValue, styles.balancingSuffix]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            testID={`${testID}-balance`}
+          >
+            {suffix}
+          </Text>
+        ) : null}
+        <Text style={styles.ratingValue} numberOfLines={1} testID={`${testID}-value`}>
+          {number}
+        </Text>
+        {suffix ? (
+          <Text style={styles.ratingValue} testID={`${testID}-suffix`}>
+            {suffix}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+});
 RatingItem.displayName = 'RatingItem';
 
 export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
@@ -231,6 +255,14 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.s,
+  },
+  valueRow: {
+    flexDirection: 'row',
+  },
+  // Half the visible "%"'s width (the glyph scales with the font size), without showing.
+  balancingSuffix: {
+    fontSize: FONT_SIZE.s / 2,
+    opacity: 0,
   },
   skeletonLogo: {
     backgroundColor: COLORS.surface,

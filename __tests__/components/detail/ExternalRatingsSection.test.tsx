@@ -84,17 +84,56 @@ describe('ExternalRatingsSection', () => {
     const { getAllByTestId, getByText, queryByText } = renderFightClub(all);
 
     expect(getAllByTestId('section-separator')).toHaveLength(2);
-    expect(getAllByTestId(/^external-rating-/).map((node) => node.props.testID)).toEqual([
+    expect(
+      getAllByTestId(/^external-rating-[a-z-]+$/)
+        .map((node) => node.props.testID)
+        .filter((id: string) => !/-(value|suffix|balance|score)$/.test(id))
+    ).toEqual([
       'external-rating-imdb',
       'external-rating-rotten-tomatoes',
       'external-rating-metacritic',
       'external-rating-letterboxd',
       'external-rating-trakt',
     ]);
-    for (const value of ['8.8', '79%', '67', '4.3', '88%']) {
+    for (const value of ['8.8', '79', '67', '4.3', '88']) {
       expect(getByText(value)).toBeTruthy();
     }
     expect(queryByText('Rotten Tomatoes')).toBeNull();
+  });
+
+  it('optically centres a % score with a half-size invisible %', () => {
+    const { getByTestId, queryByTestId } = renderFightClub(all);
+    // The balancing "%" is hidden from screen readers, so look it up including hidden elements.
+    const hidden = { includeHiddenElements: true };
+
+    // Invisible "%", number, visible "%", side by side in the normal row (nothing positioned
+    // outside it, which Android clips).
+    expect(getByTestId('external-rating-rotten-tomatoes-score')).toHaveStyle({
+      flexDirection: 'row',
+    });
+    // Half size: it splits the difference between centring the number and the whole "79%".
+    expect(getByTestId('external-rating-rotten-tomatoes-balance', hidden)).toHaveStyle({
+      opacity: 0,
+      fontSize: 7,
+    });
+    expect(getByTestId('external-rating-rotten-tomatoes-balance', hidden).props.children).toBe('%');
+    expect(getByTestId('external-rating-rotten-tomatoes-value').props.children).toBe('79');
+    expect(getByTestId('external-rating-rotten-tomatoes-suffix').props.children).toBe('%');
+    expect(getByTestId('external-rating-rotten-tomatoes-suffix')).not.toHaveStyle({
+      position: 'absolute',
+    });
+    expect(getByTestId('external-rating-trakt-suffix').props.children).toBe('%');
+    expect(getByTestId('external-rating-imdb-value').props.children).toBe('8.8');
+    expect(queryByTestId('external-rating-imdb-suffix')).toBeNull();
+    expect(queryByTestId('external-rating-imdb-balance', hidden)).toBeNull();
+  });
+
+  it('hides the balancing % from screen readers', () => {
+    const { getByTestId } = renderFightClub(all);
+    const balance = getByTestId('external-rating-trakt-balance', { includeHiddenElements: true });
+
+    expect(balance.props.accessibilityElementsHidden).toBe(true);
+    expect(balance.props.importantForAccessibility).toBe('no-hide-descendants');
   });
 
   it('leaves out sites without a score', () => {
