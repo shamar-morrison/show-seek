@@ -187,6 +187,28 @@ describe('WatchStatusFiltersModal', () => {
     expect(queryByTestId('filters-match-count')).toBeNull();
   });
 
+  it('disables Clear all until there is something to clear, like Discover', () => {
+    const { getByTestId, rerender } = renderModal();
+    expect(getByTestId('filters-clear-button').props.accessibilityState).toEqual({
+      disabled: true,
+    });
+
+    rerender(
+      <WatchStatusFiltersModal
+        visible
+        onClose={jest.fn()}
+        filters={{ ...DEFAULT_WATCH_STATUS_FILTERS, year: 2001 }}
+        onApplyFilters={jest.fn()}
+        genreMap={genreMap}
+      />
+    );
+    fireEvent.press(getByTestId('filters-clear-button'));
+    // Cleared back to the defaults, which differ from the filters in use, so Apply turns on.
+    expect(getByTestId('filters-apply-button').props.accessibilityState).toEqual({
+      disabled: false,
+    });
+  });
+
   describe('opening and closing', () => {
     beforeEach(() => jest.clearAllMocks());
 

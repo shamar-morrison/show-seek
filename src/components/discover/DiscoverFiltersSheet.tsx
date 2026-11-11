@@ -1,18 +1,10 @@
 import DiscoverFilters from '@/src/components/DiscoverFilters';
-import FilterPresetSheets, {
-  type FilterPresetSheetsRef,
-} from '@/src/components/filters/FilterPresetSheets';
-import { SavedPresetsStrip } from '@/src/components/filters/SavedPresetsStrip';
-import { AppIcon } from '@/src/components/ui/AppIcon';
-import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
+import FilterSheet, { type FilterSheetRef } from '@/src/components/filters/FilterSheet';
 import { useDiscoverFilterOptions } from '@/src/hooks/useDiscoverFilterOptions';
 import { useFilterPresetActions } from '@/src/hooks/useFilterPresetActions';
 import { useDiscoverPresets } from '@/src/hooks/useFilterPresets';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { describeDiscoverFilters } from '@/src/utils/filterDescriptions';
-import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import {
   areDiscoverFiltersEqual,
   DEFAULT_DISCOVER_FILTERS,
@@ -26,9 +18,7 @@ import {
   type DiscoverFilterPreset,
   type FilterPreset,
 } from '@/src/utils/filterPresets';
-import { Cancel01Icon, Film01Icon, Tv01Icon } from '@hugeicons/core-free-icons';
-import { TrueSheet } from '@lodev09/react-native-true-sheet';
-import * as Haptics from 'expo-haptics';
+import { Film01Icon, Tv01Icon } from '@hugeicons/core-free-icons';
 import React, {
   forwardRef,
   useCallback,
@@ -38,8 +28,6 @@ import React, {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface DiscoverFiltersSheetRef {
   present: () => Promise<void>;
@@ -84,20 +72,15 @@ function useDiscoverSummary() {
 }
 
 /**
- * Discover's filters in a bottom sheet. Picks are held as a draft and only reach the results
- * on Apply, so the list reloads once. Apply is disabled while nothing would change.
- * Saved presets sit at the top: tapping one applies it straight away and closes the sheet, and
- * their options, the full list and naming open in their own sheets while this one steps aside.
+ * Discover's filters, in the shared filter sheet. Picks are held as a draft and only reach the
+ * results on Apply, so the list reloads once. Saved Discover presets sit at the top; applying
+ * one switches to its tab.
  */
 const DiscoverFiltersSheet = forwardRef<DiscoverFiltersSheetRef, DiscoverFiltersSheetProps>(
   ({ filters, onApply, onApplyPreset, mediaType, genreMap }, ref) => {
-    const sheetRef = useRef<TrueSheet>(null);
-    const { width } = useWindowDimensions();
+    const sheetRef = useRef<FilterSheetRef>(null);
     const { t } = useTranslation();
-    const { accentColor } = useAccentColor();
-    const { isGuest, requireAccount } = useGuestAccess();
     const [draft, setDraft] = useState<DiscoverFilterState>(filters);
-    const presetSheetsRef = useRef<FilterPresetSheetsRef>(null);
 
     const presets = useDiscoverPresets();
     const presetActions = useFilterPresetActions('discover');
@@ -114,141 +97,52 @@ const DiscoverFiltersSheet = forwardRef<DiscoverFiltersSheetRef, DiscoverFilters
     }));
 
     const activePreset = findMatchingDiscoverPreset(presets, mediaType, draft);
-    const saveBlocker = getDiscoverSaveBlocker(presets, mediaType, draft);
-
-    // Guests are asked to sign in once the sheet is out of the way.
-    const handleSave = () => {
-      if (isGuest) {
-        void sheetRef.current?.dismiss().then(() => requireAccount());
-        return;
-      }
-      void presetSheetsRef.current?.openSave();
-    };
-
-    const applyPreset = (preset: FilterPreset) => {
-      if (preset.scope !== 'discover') return;
-      presetActions.recordApplied(preset);
-      onApplyPreset(preset);
-    };
-
-    const handleApplyPreset = (preset: FilterPreset) => {
-      applyPreset(preset);
-      void sheetRef.current?.dismiss();
-    };
-
-    const canApply = !areDiscoverFiltersEqual(draft, filters);
-    const canClear = !areDiscoverFiltersEqual(draft, DEFAULT_DISCOVER_FILTERS);
-
-    const handleClear = () => {
-      void Haptics.selectionAsync();
-      setDraft(DEFAULT_DISCOVER_FILTERS);
-    };
-
-    const handleApply = () => {
-      if (!canApply) return;
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onApply(draft);
-      void sheetRef.current?.dismiss();
-    };
 
     return (
-      <>
-        <TrueSheet
-          ref={sheetRef}
-          detents={['auto']}
-          cornerRadius={BORDER_RADIUS.l}
-          backgroundColor={COLORS.surface}
-          grabber={false}
-        >
-          <GestureHandlerRootView style={[modalSheetStyles.content, styles.content, { width }]}>
-            <View style={modalHeaderStyles.header}>
-              <Text style={modalHeaderStyles.title}>{t('discover.filters')}</Text>
-              <Pressable
-                onPress={() => sheetRef.current?.dismiss()}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.close')}
-                testID="discover-filters-close"
-              >
-                <AppIcon icon={Cancel01Icon} size={24} color={COLORS.text} />
-              </Pressable>
-            </View>
-
-            <SavedPresetsStrip
-              presets={presets}
-              activePresetId={activePreset?.id}
-              saveBlocker={saveBlocker}
-              getPresetIcon={getPresetIcon}
-              onApply={handleApplyPreset}
-              onLongPress={(preset) => void presetSheetsRef.current?.openActions(preset)}
-              onSave={handleSave}
-              onManage={() => void presetSheetsRef.current?.openManage()}
-              testID="discover-presets"
-            />
-
-            <DiscoverFilters
-              filters={draft}
-              onChange={setDraft}
-              mediaType={mediaType}
-              genreMap={genreMap}
-            />
-
-            <View style={styles.actions}>
-              <Pressable
-                style={[styles.clearButton, !canClear && styles.disabledButton]}
-                onPress={handleClear}
-                disabled={!canClear}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !canClear }}
-                testID="discover-filters-clear"
-              >
-                <Text style={styles.clearButtonText}>{t('common.clearAll')}</Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.applyButton,
-                  { backgroundColor: accentColor },
-                  !canApply && styles.disabledButton,
-                ]}
-                onPress={handleApply}
-                disabled={!canApply}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !canApply }}
-                testID="discover-filters-apply"
-              >
-                <Text style={styles.applyButtonText}>{t('common.apply')}</Text>
-              </Pressable>
-            </View>
-          </GestureHandlerRootView>
-        </TrueSheet>
-
-        <FilterPresetSheets
-          ref={presetSheetsRef}
-          presets={presets}
-          activePresetId={activePreset?.id}
-          currentSummary={summarize(draft)}
-          describePreset={(preset) => summarize(preset.filters as DiscoverFilterState)}
-          getPresetIcon={getPresetIcon}
-          validateName={(name, ignoreId) => validatePresetName(name, presets, ignoreId)}
-          getUpdateBlocker={(preset) =>
-            getDiscoverSaveBlocker(presets, mediaType, draft, preset.id)
-          }
-          hideParent={async () => {
-            await sheetRef.current?.dismiss();
-          }}
-          showParent={async () => {
-            await sheetRef.current?.present();
-          }}
-          onApply={applyPreset}
-          onCreate={(name) => presetActions.createDiscoverPreset(name, mediaType, draft)}
-          onRename={presetActions.renamePreset}
-          onUpdate={(preset) =>
-            preset.scope === 'discover' &&
-            presetActions.replacePreset({ ...preset, mediaType, filters: draft })
-          }
-          onDelete={presetActions.deletePreset}
+      <FilterSheet
+        ref={sheetRef}
+        title={t('discover.filters')}
+        canApply={!areDiscoverFiltersEqual(draft, filters)}
+        canClear={!areDiscoverFiltersEqual(draft, DEFAULT_DISCOVER_FILTERS)}
+        onApply={() => onApply(draft)}
+        onClear={() => setDraft(DEFAULT_DISCOVER_FILTERS)}
+        testIDs={{
+          close: 'discover-filters-close',
+          clear: 'discover-filters-clear',
+          apply: 'discover-filters-apply',
+        }}
+        presets={{
+          presets,
+          activePresetId: activePreset?.id,
+          saveBlocker: getDiscoverSaveBlocker(presets, mediaType, draft),
+          getPresetIcon,
+          currentSummary: summarize(draft),
+          describePreset: (preset) => summarize(preset.filters as DiscoverFilterState),
+          validateName: (name, ignoreId) => validatePresetName(name, presets, ignoreId),
+          getUpdateBlocker: (preset) =>
+            getDiscoverSaveBlocker(presets, mediaType, draft, preset.id),
+          onApply: (preset) => {
+            if (preset.scope !== 'discover') return;
+            presetActions.recordApplied(preset);
+            onApplyPreset(preset);
+          },
+          onCreate: (name) => presetActions.createDiscoverPreset(name, mediaType, draft),
+          onRename: presetActions.renamePreset,
+          onUpdate: (preset) => {
+            if (preset.scope !== 'discover') return;
+            presetActions.replacePreset({ ...preset, mediaType, filters: draft });
+          },
+          onDelete: presetActions.deletePreset,
+          testID: 'discover-presets',
+        }}
+      >
+        <DiscoverFilters
+          filters={draft}
+          onChange={setDraft}
+          mediaType={mediaType}
+          genreMap={genreMap}
         />
-      </>
+      </FilterSheet>
     );
   }
 );
@@ -256,42 +150,3 @@ const DiscoverFiltersSheet = forwardRef<DiscoverFiltersSheetRef, DiscoverFilters
 DiscoverFiltersSheet.displayName = 'DiscoverFiltersSheet';
 
 export default DiscoverFiltersSheet;
-
-const styles = StyleSheet.create({
-  content: {
-    paddingBottom: SPACING.l,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-    marginTop: SPACING.l,
-  },
-  clearButton: {
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    flex: 1,
-    justifyContent: 'center',
-    padding: SPACING.m,
-  },
-  clearButtonText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: FONT_SIZE.m,
-  },
-  applyButton: {
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.m,
-    flex: 1,
-    justifyContent: 'center',
-    padding: SPACING.m,
-  },
-  applyButtonText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: FONT_SIZE.m,
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-});
