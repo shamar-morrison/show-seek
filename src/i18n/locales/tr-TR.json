@@ -900,7 +900,11 @@
     "backgroundFailed": "Profil arka planı ayarlanamadı",
     "profileBackground": "Profil arka planı",
     "removeBackground": "Arka planı kaldır",
-    "backgroundHint": "Bir film ya da dizinin fotoğraflarını açın ve bir afişi ya da arka planı burada kullanmak için Profil arka planı yap'a dokunun."
+    "backgroundHint": "Bir film ya da dizinin fotoğraflarını açın ve bir afişi ya da arka planı burada kullanmak için Profil arka planı yap'a dokunun.",
+    "positionBackdrop": "Arka planı konumlandır",
+    "positionHint": "Profilinizin arkasında neyin görüneceğini seçmek için resmi sürükleyin.",
+    "drawerPreview": "Yan menü",
+    "adjustPosition": "Konumu ayarla"
   },
   "dataExport": {
     "title": "ShowSeek verilerini dışa aktar",

@@ -1,3 +1,4 @@
+import { ProfileBackdropPositioner } from '@/src/components/profile/ProfileBackdropPositioner';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import {
@@ -17,7 +18,11 @@ import {
   updateUserProfile,
 } from '@/src/services/ProfileService';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { getProfileBackgroundUrl } from '@/src/utils/profileBackground';
+import {
+  getProfileBackgroundPosition,
+  getProfileBackgroundUrl,
+  type ProfileBackgroundFocus,
+} from '@/src/utils/profileBackground';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
@@ -25,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -44,9 +50,11 @@ export default function EditProfileScreen() {
   const [name, setName] = useState(user?.displayName ?? '');
   const [photo, setPhoto] = useState<ProfilePhotoChange>({ type: 'keep' });
   const [isSaving, setIsSaving] = useState(false);
-  // The background is set from the image viewer; here it can only be removed, on Save.
+  // The backdrop is set from the image viewer; here it can be repositioned or removed, on Save.
   const { profileBackground, setProfileBackground } = useProfileBackground();
   const [removeBackground, setRemoveBackground] = useState(false);
+  const [backgroundFocus, setBackgroundFocus] = useState<ProfileBackgroundFocus | null>(null);
+  const [isPositioning, setIsPositioning] = useState(false);
   const isFocusedRef = useRef(true);
 
   useFocusEffect(
@@ -67,8 +75,14 @@ export default function EditProfileScreen() {
     photo.type === 'replace' ? photo.uri : photo.type === 'remove' ? null : user.photoURL;
   const hasProfileChanges =
     photo.type !== 'keep' || trimmedName !== (user.displayName?.trim() ?? '');
-  const previewBackground = removeBackground ? null : profileBackground;
-  const hasChanges = hasProfileChanges || (removeBackground && !!profileBackground);
+  const previewBackground =
+    removeBackground || !profileBackground
+      ? null
+      : backgroundFocus
+        ? { ...profileBackground, focus: backgroundFocus }
+        : profileBackground;
+  const hasBackgroundChanges = !!profileBackground && (removeBackground || !!backgroundFocus);
+  const hasChanges = hasProfileChanges || hasBackgroundChanges;
   const canSave = !!trimmedName && hasChanges && !isSaving;
 
   const handlePickPhoto = async () => {
@@ -100,8 +114,8 @@ export default function EditProfileScreen() {
         await updateUserProfile(user, { displayName: trimmedName, photo });
         await refreshProfile();
       }
-      if (removeBackground && profileBackground) {
-        await setProfileBackground(null);
+      if (hasBackgroundChanges) {
+        await setProfileBackground(removeBackground ? null : previewBackground);
       }
 
       // A save can outlast the screen, and going back then would pop wherever the user went next.
@@ -110,6 +124,7 @@ export default function EditProfileScreen() {
       } else {
         setPhoto({ type: 'keep' });
         setRemoveBackground(false);
+        setBackgroundFocus(null);
         setIsSaving(false);
       }
     } catch (error) {
@@ -193,20 +208,31 @@ export default function EditProfileScreen() {
                 source={{ uri: getProfileBackgroundUrl(previewBackground) }}
                 style={styles.backgroundPreview}
                 contentFit="cover"
-                contentPosition={previewBackground.kind === 'poster' ? 'top' : 'center'}
+                contentPosition={getProfileBackgroundPosition(previewBackground)}
                 testID="edit-profile-background-preview"
               />
-              <TouchableOpacity
-                onPress={() => setRemoveBackground(true)}
-                disabled={isSaving}
-                activeOpacity={ACTIVE_OPACITY}
-                style={styles.removeBackground}
-                testID="edit-profile-remove-background"
-              >
-                <Text style={[styles.photoAction, styles.removePhoto]}>
-                  {t('profile.removeBackground')}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.backgroundActions}>
+                <TouchableOpacity
+                  onPress={() => setIsPositioning(true)}
+                  disabled={isSaving}
+                  activeOpacity={ACTIVE_OPACITY}
+                  testID="edit-profile-adjust-background"
+                >
+                  <Text style={[styles.photoAction, { color: accentColor }]}>
+                    {t('profile.adjustPosition')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setRemoveBackground(true)}
+                  disabled={isSaving}
+                  activeOpacity={ACTIVE_OPACITY}
+                  testID="edit-profile-remove-background"
+                >
+                  <Text style={[styles.photoAction, styles.removePhoto]}>
+                    {t('profile.removeBackground')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </>
           ) : (
             <Text style={styles.backgroundHint} testID="edit-profile-background-hint">
@@ -230,6 +256,24 @@ export default function EditProfileScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {previewBackground ? (
+        <Modal
+          visible={isPositioning}
+          animationType="slide"
+          onRequestClose={() => setIsPositioning(false)}
+        >
+          <ProfileBackdropPositioner
+            background={previewBackground}
+            onCancel={() => setIsPositioning(false)}
+            onConfirm={(focus) => {
+              setBackgroundFocus(focus);
+              setIsPositioning(false);
+            }}
+            confirmLabel={t('common.done')}
+          />
+        </Modal>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -280,8 +324,10 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     width: '100%',
   },
-  removeBackground: {
+  backgroundActions: {
     alignSelf: 'center',
+    flexDirection: 'row',
+    gap: SPACING.l,
   },
   backgroundHint: {
     backgroundColor: COLORS.surface,

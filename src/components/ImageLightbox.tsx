@@ -1,4 +1,5 @@
 import { ProfileBackgroundButton } from '@/src/components/profile/ProfileBackgroundButton';
+import { SetProfileBackdrop } from '@/src/components/profile/SetProfileBackdrop';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import {
   ACTIVE_OPACITY,
@@ -60,6 +61,8 @@ export default function ImageLightbox({
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isDownloading, setIsDownloading] = useState(false);
+  // The image being positioned as the profile backdrop, shown over the viewer.
+  const [positioning, setPositioning] = useState<ProfileBackground | null>(null);
   const lightboxToastRef = useRef<ToastRef>(null);
 
   // Start from the tapped image each time it opens, even when that's the same index as last time.
@@ -132,7 +135,13 @@ export default function ImageLightbox({
   if (!visible || images.length === 0) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      // Android back leaves "Position backdrop" first, then the viewer.
+      onRequestClose={() => (positioning ? setPositioning(null) : onClose())}
+    >
       <View style={styles.overlay}>
         <SafeAreaView edges={['top']} style={styles.headerSafe}>
           <View style={styles.header}>
@@ -201,13 +210,26 @@ export default function ImageLightbox({
             {profileBackgrounds?.[currentIndex] ? (
               <ProfileBackgroundButton
                 image={profileBackgrounds[currentIndex]!}
-                onShowToast={showToast}
+                onChoose={setPositioning}
                 style={styles.actionButton}
                 labelStyle={styles.actionLabel}
               />
             ) : null}
           </View>
         </SafeAreaView>
+
+        {positioning ? (
+          <View style={StyleSheet.absoluteFill}>
+            <SetProfileBackdrop
+              image={positioning}
+              onShowToast={showToast}
+              onClose={(message) => {
+                setPositioning(null);
+                if (message) showToast(message);
+              }}
+            />
+          </View>
+        ) : null}
 
         <Toast ref={lightboxToastRef} />
       </View>

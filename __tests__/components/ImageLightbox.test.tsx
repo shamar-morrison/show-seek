@@ -2,7 +2,7 @@ import ImageLightbox from '@/src/components/ImageLightbox';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
 const mockToastShow = jest.fn();
 let mockAttachToastRef = true;
@@ -31,9 +31,20 @@ jest.mock('react-native-safe-area-context', () => {
 });
 
 jest.mock('@/src/components/profile/ProfileBackgroundButton', () => ({
-  ProfileBackgroundButton: ({ image }: any) => {
+  ProfileBackgroundButton: ({ image, onChoose }: any) => {
+    const { Pressable } = require('react-native');
+    return (
+      <Pressable testID="profile-background-button" image={image} onPress={() => onChoose(image)} />
+    );
+  },
+}));
+
+let capturedSetBackdrop: any = null;
+jest.mock('@/src/components/profile/SetProfileBackdrop', () => ({
+  SetProfileBackdrop: (props: any) => {
     const { View } = require('react-native');
-    return <View testID="profile-background-button" image={image} />;
+    capturedSetBackdrop = props;
+    return <View testID="set-profile-backdrop" />;
   },
 }));
 
@@ -191,6 +202,58 @@ describe('ImageLightbox', () => {
       />
     );
     expect(queryByTestId('profile-background-button')).toBeNull();
+  });
+
+  describe('positioning the profile backdrop', () => {
+    const images = ['https://example.com/a.jpg'];
+    const backgrounds = [{ path: '/a.jpg', kind: 'backdrop' as const }];
+    const renderViewer = () =>
+      render(
+        <ImageLightbox
+          visible
+          onClose={mockOnClose}
+          images={images}
+          profileBackgrounds={backgrounds}
+        />
+      );
+
+    beforeEach(() => {
+      capturedSetBackdrop = null;
+    });
+
+    it('opens over the viewer for the chosen image', () => {
+      const utils = renderViewer();
+      expect(utils.queryByTestId('set-profile-backdrop')).toBeNull();
+
+      fireEvent.press(utils.getByTestId('profile-background-button'));
+
+      expect(utils.getByTestId('set-profile-backdrop')).toBeTruthy();
+      expect(capturedSetBackdrop.image).toEqual(backgrounds[0]);
+    });
+
+    it('closes back to the viewer, showing the saved message', () => {
+      const utils = renderViewer();
+      fireEvent.press(utils.getByTestId('profile-background-button'));
+
+      act(() => capturedSetBackdrop.onClose('Set as your profile backdrop'));
+
+      expect(utils.queryByTestId('set-profile-backdrop')).toBeNull();
+      expect(mockToastShow).toHaveBeenCalledWith('Set as your profile backdrop');
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it("makes Android's back button leave positioning before the viewer", () => {
+      const utils = renderViewer();
+      const modal = () => utils.UNSAFE_getByType('Modal' as never);
+      fireEvent.press(utils.getByTestId('profile-background-button'));
+
+      act(() => modal().props.onRequestClose());
+      expect(utils.queryByTestId('set-profile-backdrop')).toBeNull();
+      expect(mockOnClose).not.toHaveBeenCalled();
+
+      act(() => modal().props.onRequestClose());
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('has no profile background button without TMDB paths', () => {

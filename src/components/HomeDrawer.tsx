@@ -6,6 +6,7 @@ import {
   COLORS,
   FONT_FAMILY,
   FONT_SIZE,
+  HOME_DRAWER_WIDTH_RATIO,
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -42,7 +43,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const DRAWER_WIDTH = SCREEN_WIDTH * 0.78;
+const DRAWER_WIDTH = SCREEN_WIDTH * HOME_DRAWER_WIDTH_RATIO;
 
 export interface HomeDrawerProps {
   /** Whether the drawer is visible */

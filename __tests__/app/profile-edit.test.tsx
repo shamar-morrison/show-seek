@@ -36,6 +36,14 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('@/src/context/auth', () => ({ useAuth: () => mockAuth }));
 
+let capturedPositioner: any = null;
+jest.mock('@/src/components/profile/ProfileBackdropPositioner', () => ({
+  ProfileBackdropPositioner: (props: any) => {
+    capturedPositioner = props;
+    return null;
+  },
+}));
+
 let mockProfileBackground: { path: string; kind: 'backdrop' | 'poster' } | null = null;
 const mockSetProfileBackground = jest.fn(() => Promise.resolve());
 jest.mock('@/src/hooks/useProfileBackground', () => ({
@@ -74,6 +82,51 @@ describe('EditProfileScreen', () => {
   });
 
   describe('profile background', () => {
+    it('repositions the backdrop and saves the new position on Save', async () => {
+      mockProfileBackground = { path: '/poster.jpg', kind: 'poster' };
+      (updateUserProfile as jest.Mock).mockClear();
+      const utils = render(<EditProfileScreen />);
+      const modal = () => utils.UNSAFE_getByType('Modal' as never);
+      expect(modal().props.visible).toBe(false);
+
+      fireEvent.press(utils.getByTestId('edit-profile-adjust-background'));
+      expect(modal().props.visible).toBe(true);
+      expect(capturedPositioner.background).toEqual(mockProfileBackground);
+      expect(capturedPositioner.confirmLabel).toBe('Done');
+
+      act(() => capturedPositioner.onConfirm({ x: 0.5, y: 0.4 }));
+
+      expect(modal().props.visible).toBe(false);
+      expect(utils.getByTestId('edit-profile-background-preview').props.contentPosition).toEqual({
+        left: '50%',
+        top: '40%',
+      });
+      expect(mockSetProfileBackground).not.toHaveBeenCalled();
+
+      fireEvent.press(utils.getByTestId('edit-profile-save'));
+
+      await waitFor(() =>
+        expect(mockSetProfileBackground).toHaveBeenCalledWith({
+          path: '/poster.jpg',
+          kind: 'poster',
+          focus: { x: 0.5, y: 0.4 },
+        })
+      );
+      expect(updateUserProfile).not.toHaveBeenCalled();
+    });
+
+    it('drops a new position if the backdrop is removed', async () => {
+      mockProfileBackground = { path: '/poster.jpg', kind: 'poster' };
+      const utils = render(<EditProfileScreen />);
+
+      fireEvent.press(utils.getByTestId('edit-profile-adjust-background'));
+      act(() => capturedPositioner.onConfirm({ x: 0.5, y: 0.4 }));
+      fireEvent.press(utils.getByTestId('edit-profile-remove-background'));
+      fireEvent.press(utils.getByTestId('edit-profile-save'));
+
+      await waitFor(() => expect(mockSetProfileBackground).toHaveBeenCalledWith(null));
+    });
+
     it('explains how to set one when there is none', () => {
       const { getByTestId, queryByTestId } = render(<EditProfileScreen />);
 

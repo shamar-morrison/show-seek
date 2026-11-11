@@ -1,17 +1,16 @@
 import { ProfileBackgroundButton } from '@/src/components/profile/ProfileBackgroundButton';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
-const mockSetProfileBackground = jest.fn();
 const mockIsAccountRequired = jest.fn();
-let mockProfileBackground: { path: string; kind: 'backdrop' | 'poster' } | null = null;
+let mockProfileBackground: {
+  path: string;
+  kind: 'backdrop' | 'poster';
+  focus?: { x: number; y: number };
+} | null = null;
 
 jest.mock('@/src/hooks/useProfileBackground', () => ({
-  useProfileBackground: () => ({
-    profileBackground: mockProfileBackground,
-    setProfileBackground: mockSetProfileBackground,
-    isSaving: false,
-  }),
+  useProfileBackground: () => ({ profileBackground: mockProfileBackground }),
 }));
 jest.mock('@/src/hooks/useAccountRequired', () => ({
   useAccountRequired: () => mockIsAccountRequired,
@@ -19,75 +18,52 @@ jest.mock('@/src/hooks/useAccountRequired', () => ({
 jest.mock('@/src/context/AccentColorProvider', () => ({
   useAccentColor: () => ({ accentColor: '#E50914' }),
 }));
-jest.mock('expo-haptics', () => ({
-  notificationAsync: jest.fn(),
-  NotificationFeedbackType: { Success: 'success' },
-}));
 
 const backdrop = { path: '/backdrop.jpg', kind: 'backdrop' as const };
 
 describe('ProfileBackgroundButton', () => {
-  const onShowToast = jest.fn();
+  const onChoose = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockProfileBackground = null;
     mockIsAccountRequired.mockReturnValue(false);
-    mockSetProfileBackground.mockResolvedValue(undefined);
   });
 
   const renderButton = () =>
-    render(<ProfileBackgroundButton image={backdrop} onShowToast={onShowToast} />);
+    render(<ProfileBackgroundButton image={backdrop} onChoose={onChoose} />);
+  const press = (utils: ReturnType<typeof render>) =>
+    fireEvent.press(utils.getByTestId('image-lightbox-profile-background-button'));
 
-  it('sets the image as the profile background and says so', async () => {
-    const { getByTestId } = renderButton();
+  it('is labelled "Set as profile backdrop"', () => {
+    const utils = renderButton();
+    expect(utils.getByText('Set as profile backdrop')).toBeTruthy();
+    expect(
+      utils.getByTestId('image-lightbox-profile-background-button').props.accessibilityLabel
+    ).toBe('Set as profile backdrop');
+  });
 
-    fireEvent.press(getByTestId('image-lightbox-profile-background-button'));
+  it('opens positioning for the image', () => {
+    const utils = renderButton();
+    press(utils);
+    expect(onChoose).toHaveBeenCalledWith(backdrop);
+  });
 
-    await waitFor(() => expect(onShowToast).toHaveBeenCalledWith('Set as your profile backdrop'));
-    expect(mockSetProfileBackground).toHaveBeenCalledWith(backdrop);
+  it('starts from the saved position when it is already the backdrop', () => {
+    mockProfileBackground = { ...backdrop, focus: { x: 0.2, y: 0.7 } };
+    const utils = renderButton();
+
+    press(utils);
+
+    expect(onChoose).toHaveBeenCalledWith({ ...backdrop, focus: { x: 0.2, y: 0.7 } });
+    expect(
+      utils.getByTestId('image-lightbox-profile-background-button').props.accessibilityState
+    ).toEqual(expect.objectContaining({ selected: true }));
   });
 
   it('asks guests to sign in instead', () => {
     mockIsAccountRequired.mockReturnValue(true);
-    const { getByTestId } = renderButton();
-
-    fireEvent.press(getByTestId('image-lightbox-profile-background-button'));
-
-    expect(mockSetProfileBackground).not.toHaveBeenCalled();
-    expect(onShowToast).not.toHaveBeenCalled();
-  });
-
-  it('says when saving fails', async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockSetProfileBackground.mockRejectedValue(new Error('offline'));
-    const { getByTestId } = renderButton();
-
-    fireEvent.press(getByTestId('image-lightbox-profile-background-button'));
-
-    await waitFor(() =>
-      expect(onShowToast).toHaveBeenCalledWith("Couldn't set your profile backdrop")
-    );
-  });
-
-  it('is labelled "Set as profile backdrop"', () => {
-    const { getByText, getByTestId } = renderButton();
-    expect(getByText('Set as profile backdrop')).toBeTruthy();
-    expect(getByTestId('image-lightbox-profile-background-button').props.accessibilityLabel).toBe(
-      'Set as profile backdrop'
-    );
-  });
-
-  it('marks the image that is already the background', () => {
-    expect(
-      renderButton().getByTestId('image-lightbox-profile-background-button').props
-        .accessibilityState
-    ).toEqual(expect.objectContaining({ selected: false }));
-
-    mockProfileBackground = backdrop;
-    expect(
-      renderButton().getByTestId('image-lightbox-profile-background-button').props
-        .accessibilityState
-    ).toEqual(expect.objectContaining({ selected: true }));
+    press(renderButton());
+    expect(onChoose).not.toHaveBeenCalled();
   });
 });

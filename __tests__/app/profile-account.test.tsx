@@ -35,7 +35,11 @@ jest.mock('@/src/hooks/useProfileLogic', () => ({
   useProfileLogic: () => mockLogic,
 }));
 
-let mockProfileBackground: { path: string; kind: 'backdrop' | 'poster' } | null = null;
+let mockProfileBackground: {
+  path: string;
+  kind: 'backdrop' | 'poster';
+  focus?: { x: number; y: number };
+} | null = null;
 const mockSetProfileBackground = jest.fn(() => Promise.resolve());
 jest.mock('@/src/hooks/useProfileBackground', () => ({
   useProfileBackground: () => ({
@@ -67,7 +71,20 @@ describe('AccountScreen', () => {
     mockProfileBackground = { path: '/poster.jpg', kind: 'poster' };
     const { getByTestId } = render(<AccountScreen />);
 
-    expect(getByTestId('profile-background-image').props.contentPosition).toBe('top');
+    expect(getByTestId('profile-background-image').props.contentPosition).toEqual({
+      left: '50%',
+      top: '0%',
+    });
+  });
+
+  it('shows the part chosen when positioning it', () => {
+    mockProfileBackground = { path: '/backdrop.jpg', kind: 'backdrop', focus: { x: 0.2, y: 0.8 } };
+    const { getByTestId } = render(<AccountScreen />);
+
+    expect(getByTestId('profile-background-image').props.contentPosition).toEqual({
+      left: '20%',
+      top: '80%',
+    });
   });
 
   it('shows no background when none is set, or to guests', () => {

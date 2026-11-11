@@ -16,6 +16,19 @@ interface MediaImageProps extends Omit<ImageProps, 'source'> {
  * missing or failed images by displaying a placeholder.
  * Memoized to prevent unnecessary re-renders.
  */
+/**
+ * Compares by value: callers often build the position object on each render (the profile
+ * backdrop's chosen part), and a moved part has to redraw.
+ */
+function sameContentPosition(a: ImageProps['contentPosition'], b: ImageProps['contentPosition']) {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  return [...keys].every(
+    (key) => (a as Record<string, unknown>)[key] === (b as Record<string, unknown>)[key]
+  );
+}
+
 export const MediaImage = memo(
   ({
     source,
@@ -40,10 +53,7 @@ export const MediaImage = memo(
     if (shouldShowPlaceholder) {
       return (
         <View style={[style, placeholderStyle, { overflow: 'hidden' }]}>
-          <ImagePlaceholder
-            type={placeholderType}
-            backgroundColor={placeholderBackgroundColor}
-          />
+          <ImagePlaceholder type={placeholderType} backgroundColor={placeholderBackgroundColor} />
         </View>
       );
     }
@@ -81,7 +91,8 @@ export const MediaImage = memo(
       prevProps.style === nextProps.style &&
       prevProps.placeholderType === nextProps.placeholderType &&
       prevProps.placeholderBackgroundColor === nextProps.placeholderBackgroundColor &&
-      prevProps.contentFit === nextProps.contentFit
+      prevProps.contentFit === nextProps.contentFit &&
+      sameContentPosition(prevProps.contentPosition, nextProps.contentPosition)
     );
   }
 );

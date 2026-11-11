@@ -90,6 +90,9 @@ export const HIT_SLOP = {
 
 export const BUTTON_HEIGHT = 48;
 
+/** The Home drawer's width as a share of the screen (also used to preview its header). */
+export const HOME_DRAWER_WIDTH_RATIO = 0.78;
+
 /** Combined height of header + navigation chrome to subtract from empty state container */
 export const HEADER_CHROME_HEIGHT = 150;
 

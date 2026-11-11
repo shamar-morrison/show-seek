@@ -1,5 +1,9 @@
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { type ProfileBackground, getProfileBackgroundUrl } from '@/src/utils/profileBackground';
+import {
+  type ProfileBackground,
+  getProfileBackgroundPosition,
+  getProfileBackgroundUrl,
+} from '@/src/utils/profileBackground';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -22,8 +26,8 @@ export const ProfileBackgroundImage = memo<ProfileBackgroundImageProps>(
         source={{ uri: getProfileBackgroundUrl(background) }}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
-        // Posters are tall: show their artwork at the top rather than the title in the middle.
-        contentPosition={background.kind === 'poster' ? 'top' : 'center'}
+        // The part they chose by dragging (by default, posters from the top).
+        contentPosition={getProfileBackgroundPosition(background)}
         testID="profile-background-image"
       />
       <LinearGradient

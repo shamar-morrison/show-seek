@@ -900,7 +900,11 @@
     "backgroundFailed": "Couldn't set your profile backdrop",
     "profileBackground": "Profile backdrop",
     "removeBackground": "Remove backdrop",
-    "backgroundHint": "Open a movie or show's photos and tap Set as profile backdrop to use a poster or backdrop here."
+    "backgroundHint": "Open a movie or show's photos and tap Set as profile backdrop to use a poster or backdrop here.",
+    "positionBackdrop": "Position backdrop",
+    "positionHint": "Drag the image to choose what shows behind your profile.",
+    "drawerPreview": "Home drawer",
+    "adjustPosition": "Adjust position"
   },
   "dataExport": {
     "title": "Export your ShowSeek data",

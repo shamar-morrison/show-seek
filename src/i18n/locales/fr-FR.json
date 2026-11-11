@@ -900,7 +900,11 @@
     "backgroundFailed": "Impossible de définir le fond du profil",
     "profileBackground": "Fond du profil",
     "removeBackground": "Retirer le fond",
-    "backgroundHint": "Ouvrez les photos d'un film ou d'une série et touchez Définir comme fond du profil pour utiliser ici une affiche ou un arrière-plan."
+    "backgroundHint": "Ouvrez les photos d'un film ou d'une série et touchez Définir comme fond du profil pour utiliser ici une affiche ou un arrière-plan.",
+    "positionBackdrop": "Positionner le fond",
+    "positionHint": "Faites glisser l'image pour choisir ce qui apparaît derrière votre profil.",
+    "drawerPreview": "Menu latéral",
+    "adjustPosition": "Ajuster la position"
   },
   "dataExport": {
     "title": "Exportez vos données ShowSeek",

@@ -900,7 +900,11 @@
     "backgroundFailed": "Não foi possível definir o fundo do perfil",
     "profileBackground": "Fundo do perfil",
     "removeBackground": "Remover fundo",
-    "backgroundHint": "Abra as fotos de um filme ou série e toque em Usar como fundo do perfil para usar aqui um cartaz ou imagem de fundo."
+    "backgroundHint": "Abra as fotos de um filme ou série e toque em Usar como fundo do perfil para usar aqui um cartaz ou imagem de fundo.",
+    "positionBackdrop": "Posicionar fundo",
+    "positionHint": "Arraste a imagem para escolher o que aparece atrás do seu perfil.",
+    "drawerPreview": "Menu lateral",
+    "adjustPosition": "Ajustar posição"
   },
   "dataExport": {
     "title": "Exporte os seus dados do ShowSeek",
