@@ -88,6 +88,30 @@ service cloud.firestore {
           && (!('dataSaver' in request.resource.data.preferences) || request.resource.data.preferences.dataSaver is bool)
           && (!('copyInsteadOfMove' in request.resource.data.preferences) || request.resource.data.preferences.copyInsteadOfMove is bool)
           && (!('showOriginalTitles' in request.resource.data.preferences) || request.resource.data.preferences.showOriginalTitles is bool)
+          && (!('use24HourTime' in request.resource.data.preferences) || request.resource.data.preferences.use24HourTime is bool)
+          && (!('profileBackground' in request.resource.data.preferences)
+            || request.resource.data.preferences.profileBackground == null
+            || (
+              request.resource.data.preferences.profileBackground is map
+              && request.resource.data.preferences.profileBackground.keys().hasOnly(['path', 'kind', 'focus'])
+              && request.resource.data.preferences.profileBackground.path is string
+              && request.resource.data.preferences.profileBackground.path.matches('^/[A-Za-z0-9_-]+[.](jpg|jpeg|png|webp)$')
+              && request.resource.data.preferences.profileBackground.kind in ['backdrop', 'poster']
+              && (!('focus' in request.resource.data.preferences.profileBackground) || (
+                request.resource.data.preferences.profileBackground.focus is map
+                && request.resource.data.preferences.profileBackground.focus.keys().hasOnly(['x', 'y'])
+                && request.resource.data.preferences.profileBackground.focus.x is number
+                && request.resource.data.preferences.profileBackground.focus.y is number
+                && request.resource.data.preferences.profileBackground.focus.x >= 0
+                && request.resource.data.preferences.profileBackground.focus.x <= 1
+                && request.resource.data.preferences.profileBackground.focus.y >= 0
+                && request.resource.data.preferences.profileBackground.focus.y <= 1
+              ))
+            ))
+          && (!('detailActionOrder' in request.resource.data.preferences) || (
+            request.resource.data.preferences.detailActionOrder is list
+            && request.resource.data.preferences.detailActionOrder.size() <= 10
+          ))
           && (!('posterOverrides' in request.resource.data.preferences) || (
             request.resource.data.preferences.posterOverrides is map
             && request.resource.data.preferences.posterOverrides.size() <= 1000

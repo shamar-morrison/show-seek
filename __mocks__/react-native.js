@@ -129,6 +129,22 @@ module.exports = {
     addListener: jest.fn(() => ({ remove: jest.fn() })),
     dismiss: jest.fn(),
   },
+  // A drag in tests: fireEvent(view, 'responderGrant'), then fireEvent(view, 'responderMove',
+  // { dx, dy }) with the distance from where it started.
+  PanResponder: {
+    create: (config) => {
+      const gesture = (event) => ({ dx: event?.dx ?? 0, dy: event?.dy ?? 0 });
+      return {
+        panHandlers: {
+          onStartShouldSetResponder: (event) =>
+            config.onStartShouldSetPanResponder?.(event, gesture(event)) ?? false,
+          onResponderGrant: (event) => config.onPanResponderGrant?.(event, gesture(event)),
+          onResponderMove: (event) => config.onPanResponderMove?.(event, gesture(event)),
+          onResponderRelease: (event) => config.onPanResponderRelease?.(event, gesture(event)),
+        },
+      };
+    },
+  },
   useWindowDimensions: () => ({ width: 375, height: 812 }),
   useColorScheme: () => 'dark',
 };

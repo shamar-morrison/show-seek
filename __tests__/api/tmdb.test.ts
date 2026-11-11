@@ -140,6 +140,21 @@ describe('tmdb api client', () => {
     });
   });
 
+  // Without an explicit region, streaming filters must use the user's region, not the US.
+  it("leaves watch_region for the interceptor to fill with the user's region", async () => {
+    const { setApiRegion, tmdbApi } = loadTmdbModule();
+    setApiRegion('GB');
+    mockAxiosClient.get.mockResolvedValue({ data: { page: 1, results: [] } });
+
+    await tmdbApi.discoverMovies({ withWatchProviders: '8|337' });
+    const movieParams = mockAxiosClient.get.mock.calls.at(-1)[1].params;
+    expect(movieParams.watch_region).toBeUndefined();
+    expect(requestInterceptor?.({ params: movieParams }).params.watch_region).toBe('GB');
+
+    await tmdbApi.discoverTV({ withWatchProviders: 8 });
+    expect(mockAxiosClient.get.mock.calls.at(-1)[1].params.watch_region).toBeUndefined();
+  });
+
   // Verifies watch-provider lookups call the right endpoint and return the region-scoped provider payload.
   it('uses the watch-provider lookup path and resolves the current region payload', async () => {
     const { setApiRegion, tmdbApi } = loadTmdbModule();

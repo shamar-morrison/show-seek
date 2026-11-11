@@ -69,4 +69,21 @@ describe('PreferencesService', () => {
 
     expect(preferences.allowUnreleasedEpisodeWatches).toBe(true);
   });
+
+  it('keeps the 24-hour time choice, and leaves it unset when missing or malformed', async () => {
+    mockAuditedGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ preferences: { use24HourTime: false } }),
+    });
+    expect((await preferencesService.fetchPreferences('user-1')).use24HourTime).toBe(false);
+
+    mockAuditedGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ preferences: { use24HourTime: 'yes' } }),
+    });
+    expect((await preferencesService.fetchPreferences('user-1')).use24HourTime).toBeUndefined();
+
+    mockAuditedGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ preferences: {} }) });
+    expect((await preferencesService.fetchPreferences('user-1')).use24HourTime).toBeUndefined();
+  });
 });

@@ -1,4 +1,5 @@
 import { auditedGetDoc, auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
+import { resolveDetailActionOrder } from '@/src/utils/detailActionOrder';
 import {
   getSignedInUser,
   requireSignedInUser,
@@ -6,6 +7,7 @@ import {
   toFirestoreError,
 } from '@/src/services/serviceSupport';
 import { sanitizePosterOverrides } from '@/src/utils/posterOverrides';
+import { sanitizeProfileBackground } from '@/src/utils/profileBackground';
 import { raceWithTimeout } from '@/src/utils/timeout';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -70,6 +72,14 @@ class PreferencesService {
       posterOverrides: sanitizePosterOverrides(
         data?.preferences?.posterOverrides ?? DEFAULT_PREFERENCES.posterOverrides
       ),
+      detailActionOrder: Array.isArray(data?.preferences?.detailActionOrder)
+        ? resolveDetailActionOrder(data.preferences.detailActionOrder)
+        : undefined,
+      use24HourTime:
+        typeof data?.preferences?.use24HourTime === 'boolean'
+          ? data.preferences.use24HourTime
+          : undefined,
+      profileBackground: sanitizeProfileBackground(data?.preferences?.profileBackground),
     };
   }
 

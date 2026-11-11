@@ -4,6 +4,11 @@ import { renderWithProviders } from '@/__tests__/utils/test-utils';
 import { fireEvent, within } from '@testing-library/react-native';
 import React from 'react';
 
+let mockDevice24Hour: boolean | undefined;
+jest.mock('@/src/utils/timeFormat', () => ({
+  deviceUses24HourClock: () => mockDevice24Hour,
+}));
+
 describe('PreferencesSection', () => {
   it('shows spinner only for the updating preference', () => {
     const { getAllByTestId } = renderWithProviders(
@@ -188,5 +193,47 @@ describe('PreferencesSection', () => {
     });
 
     expect(registerItemLayout).toHaveBeenLastCalledWith('dataSaver', 840);
+  });
+
+  describe('24-hour time', () => {
+    const renderWith = (use24HourTime: boolean | undefined, onUpdate = jest.fn()) => {
+      const utils = renderWithProviders(
+        <PreferencesSection
+          preferences={{ ...DEFAULT_PREFERENCES, use24HourTime }}
+          isLoading={false}
+          error={null}
+          onRetry={jest.fn()}
+          onUpdate={onUpdate}
+          isUpdating={false}
+          isPremium={true}
+          onPremiumPress={jest.fn()}
+        />
+      );
+      const row = utils
+        .getAllByTestId('preference-item')
+        .find((item) => within(item).queryByText('24-Hour Time'));
+      if (!row) throw new Error('24-Hour Time preference row not found');
+      return { ...utils, toggle: within(row).getByTestId('preference-switch'), onUpdate };
+    };
+
+    afterEach(() => {
+      mockDevice24Hour = undefined;
+    });
+
+    it("shows the phone's setting until the person chooses", () => {
+      mockDevice24Hour = true;
+      expect(renderWith(undefined).toggle.props.value).toBe(true);
+      mockDevice24Hour = false;
+      expect(renderWith(undefined).toggle.props.value).toBe(false);
+    });
+
+    it("shows the person's choice over the phone's setting, and saves a change", () => {
+      mockDevice24Hour = true;
+      const { toggle, onUpdate } = renderWith(false);
+      expect(toggle.props.value).toBe(false);
+
+      fireEvent(toggle, 'valueChange', true);
+      expect(onUpdate).toHaveBeenCalledWith('use24HourTime', true);
+    });
   });
 });

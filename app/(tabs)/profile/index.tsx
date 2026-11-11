@@ -95,6 +95,8 @@ export default function ProfileScreen() {
     handleRegionPress,
     handleColorPress,
     handleLaunchScreenPress,
+    handleActionButtonsPress,
+    handleTipsPress,
     handleTraktPress,
     handleStremioPress,
     handleAboutPress,
@@ -183,7 +185,7 @@ export default function ProfileScreen() {
         id: item.id,
         tab: 'content',
         title: t(item.titleKey),
-        description: '',
+        description: t(item.descKey),
         category: t(`profile.categories.${item.category}`),
       });
     }
@@ -192,7 +194,7 @@ export default function ProfileScreen() {
         id: item.id,
         tab: 'integrations',
         title: t(item.titleKey),
-        description: '',
+        description: t(item.descKey),
         category: t(`profile.categories.${item.category}`),
       });
     }
@@ -332,6 +334,7 @@ export default function ProfileScreen() {
             onRegionPress={() => handleGuardedContentAction(handleRegionPress)}
             onColorPress={() => handleGuardedContentAction(handleColorPress)}
             onLaunchScreenPress={() => handleGuardedContentAction(handleLaunchScreenPress)}
+            onActionButtonsPress={() => handleGuardedContentAction(handleActionButtonsPress)}
             showTitle={false}
             highlightedId={highlightedId}
             registerItemLayout={registerItemLayout}
@@ -363,6 +366,7 @@ export default function ProfileScreen() {
             onWebApp={handleOpenWebApp}
             onAbout={handleAboutPress}
             onDiscord={handleJoinDiscord}
+            onTips={handleTipsPress}
             showTitle={false}
           />
         );

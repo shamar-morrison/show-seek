@@ -2,6 +2,9 @@
  * User preferences types
  */
 
+import type { DetailActionButtonId } from '@/src/utils/detailActionOrder';
+import type { ProfileBackground } from '@/src/utils/profileBackground';
+
 /**
  * Types of lists that can appear on home screen
  */
@@ -47,6 +50,9 @@ export interface UserPreferences {
   dataSaver: boolean; // Load lower resolution images to save data
   showOriginalTitles: boolean; // Show movie/TV titles in original language when available
   posterOverrides?: Record<string, string>; // Per-user poster overrides keyed by "movie_<id>" / "tv_<id>"
+  detailActionOrder?: DetailActionButtonId[]; // Order of the action buttons on movie/TV pages; unset = default
+  use24HourTime?: boolean; // Show clock times as 24-hour (21:05); unset = follow the phone's setting
+  profileBackground?: ProfileBackground | null; // Poster/backdrop behind the profile; null or unset = none
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {

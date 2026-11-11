@@ -73,11 +73,25 @@ export interface ListShareCardData {
   posterPaths: string[];
 }
 
+export interface CollectionShareCardData {
+  kind: 'collection';
+  collectionName: string;
+  movieCount: number;
+  /** "1977–2019", a single year, or empty when no movie has a date. */
+  yearRange: string;
+  /** Up to three posters in release order, first one in front. */
+  posterPaths: string[];
+  backdropPath: string | null;
+  /** Only when the collection is being tracked. */
+  progress?: { watched: number; total: number };
+}
+
 export type ShareCardData =
   | TitleShareCardData
   | EpisodeShareCardData
   | ProgressShareCardData
-  | ListShareCardData;
+  | ListShareCardData
+  | CollectionShareCardData;
 
 /** Who the card credits. Deliberately has no email: cards are posted publicly. */
 export interface ShareCardIdentity {

@@ -296,6 +296,7 @@
     "openWith": "Abrir con",
     "imdb": "IMDb",
     "trakt": "Trakt",
+    "stremio": "Stremio",
     "tmdb": "TMDB",
     "rottenTomatoes": "Rotten Tomatoes",
     "metacritic": "Metacritic",
@@ -313,6 +314,12 @@
     "moreEpisodes": "Más episodios",
     "notYetAired": "Aún no se ha emitido",
     "photos": "Fotos",
+    "posters": "Pósters",
+    "backdrops": "Fondos",
+    "noPosters": "Aún no hay pósters",
+    "noBackdrops": "Aún no hay fondos",
+    "photosFailedToLoad": "No se pudieron cargar las fotos",
+    "photoNumber": "Foto {{number}}",
     "review": "Reseña",
     "reviewCounter": "Reseña {{current}} de {{total}}",
     "seasonsAndEpisodes": "Temporadas y episodios",
@@ -323,7 +330,23 @@
     "tmdbReviews": "Reseñas de TMDB",
     "unknownShow": "Serie desconocida",
     "videos": "Vídeos",
-    "youMayAlsoLike": "También te puede gustar"
+    "videosFailedToLoad": "No se pudieron cargar los videos",
+    "noVideos": "Aún no hay videos",
+    "searchVideos": "Buscar videos…",
+    "noVideoMatches": "No hay coincidencias en {{type}}",
+    "videoTypes": {
+      "trailers": "Tráileres",
+      "teasers": "Teasers",
+      "clips": "Clips",
+      "featurettes": "Reportajes",
+      "behindTheScenes": "Detrás de cámaras",
+      "bloopers": "Tomas falsas",
+      "openingCredits": "Créditos iniciales"
+    },
+    "youMayAlsoLike": "También te puede gustar",
+    "moreTitlesFailedToLoad": "No se pudieron cargar estos títulos",
+    "noMoreTitles": "Nada que mostrar",
+    "noMoreTitlesDescription": "No hay títulos que mostrar aquí, o tus filtros de contenido los ocultan todos."
   },
   "library": {
     "title": "Biblioteca",
@@ -737,7 +760,8 @@
     "languageScreenNote": "Esto afecta a títulos, descripciones y otros textos de nuestra base de datos. Es posible que algunos contenidos no estén disponibles en todos los idiomas.",
     "updateRegionError": "No se pudo actualizar la región. Inténtalo de nuevo.",
     "regionScreenDescription": "Selecciona tu región para ver disponibilidad en streaming y fechas de estreno locales.",
-    "regionScreenNote": "Esto afecta a la información de dónde ver y a las fechas de estreno locales."
+    "regionScreenNote": "Esto afecta a la información de dónde ver y a las fechas de estreno locales.",
+    "actionButtons": "Reordenar botones de acción"
   },
   "profile": {
     "displayNameLabel": "Nombre visible",
@@ -779,6 +803,7 @@
     "ratingsGiven": "Calificaciones dadas",
     "listsCreated": "Listas creadas",
     "traktIntegration": "Integración con Trakt",
+    "traktIntegrationDescription": "Copia tu historial, calificaciones y listas de Trakt, o importa un zip exportado de Trakt.",
     "stremioIntegration": "Addon de Stremio",
     "connectTrakt": "Conectar Trakt",
     "disconnectTrakt": "Desconectar Trakt",
@@ -808,8 +833,11 @@
     "allowUnreleasedEpisodeWatchesDescription": "Te permite marcar episodios con fecha futura como vistos antes de su estreno oficial",
     "sendFeedback": "Enviar comentarios",
     "importFromImdb": "Importar desde IMDb",
+    "importFromImdbDescription": "Importa tus calificaciones, pendientes y listas desde archivos exportados de IMDb.",
     "importFromTvTime": "Importar desde TV Time",
+    "importFromTvTimeDescription": "Importa tu historial, calificaciones y listas desde una exportación de TV Time.",
     "importFromSimkl": "Importar desde Simkl",
+    "importFromSimklDescription": "Importa tu historial, calificaciones y pendientes desde un respaldo de Simkl.",
     "exportData": "Exportar datos",
     "webApp": "ShowSeek Web",
     "joinDiscord": "Únete a nuestro Discord",
@@ -830,6 +858,8 @@
     "dataSaverDescription": "Cargar imágenes de menor resolución para ahorrar datos",
     "showOriginalTitles": "Usar títulos originales",
     "showOriginalTitlesDescription": "Mostrar títulos de películas y series en su idioma original cuando estén disponibles.",
+    "use24HourTime": "Formato de 24 horas",
+    "use24HourTimeDescription": "Muestra horas como 21:05 en lugar de 9:05 p. m. Usa la configuración de tu teléfono hasta que la cambies.",
     "blurPlotSpoilers": "Difuminar la trama",
     "blurPlotSpoilersDescription": "Oculta las sinopsis por defecto para evitar spoilers. Toca para revelar.",
     "checkConnection": "Comprueba tu conexión e inténtalo de nuevo",
@@ -867,7 +897,17 @@
     "clearCacheTitle": "¿Borrar la caché de imágenes?",
     "clearCacheMessage": "Esto solo borra pósteres/fondos descargados y otras imágenes en caché. Tus listas, cuenta y configuraciones no se ven afectadas.",
     "cacheCleared": "La caché de imágenes se borró correctamente.",
-    "clearCacheFailed": "No se pudo borrar la caché de imágenes. Inténtalo de nuevo."
+    "clearCacheFailed": "No se pudo borrar la caché de imágenes. Inténtalo de nuevo.",
+    "useAsBackground": "Usar como fondo del perfil",
+    "backgroundSet": "Se estableció como fondo de tu perfil",
+    "backgroundFailed": "No se pudo establecer el fondo del perfil",
+    "profileBackground": "Fondo del perfil",
+    "removeBackground": "Quitar fondo",
+    "backgroundHint": "Abre las fotos de una película o serie y toca Usar como fondo del perfil para poner aquí un póster o un fondo.",
+    "positionBackdrop": "Acomodar fondo",
+    "positionHint": "Arrastra la imagen para elegir qué se ve detrás de tu perfil.",
+    "drawerPreview": "Menú lateral",
+    "adjustPosition": "Ajustar posición"
   },
   "dataExport": {
     "title": "Exporta tus datos de ShowSeek",
@@ -1785,6 +1825,13 @@
     "deleteConfirmMessage": "Se eliminará “{{name}}”.",
     "longPressHint": "Mantén presionado un filtro guardado para ver más opciones."
   },
+  "actionButtons": {
+    "description": "Arrastra los botones para cambiar su orden en las páginas de películas y series.",
+    "reminderHint": "Solo aparece en títulos por estrenar",
+    "dragHandle": "Arrastra para reordenar {{name}}",
+    "position": "Posición {{position}}",
+    "saveFailed": "No se pudo guardar el nuevo orden. Inténtalo de nuevo."
+  },
   "lists": {
     "alreadyWatched": "Ya vistos",
     "dropped": "Abandonadas",
@@ -2055,11 +2102,6 @@
       "description": "Guarda los filtros que más usas en Descubrir y en tus listas, y vuelve a aplicarlos con un toque. Los encontrarás hasta arriba en los filtros."
     }
   },
-  "share": {
-    "message": "{{title}} - ¡Mira esto en TMDB! {{url}}",
-    "linkCopied": "Enlace copiado al portapapeles",
-    "unableToShare": "No se pudo compartir. Inténtalo de nuevo."
-  },
   "posterPicker": {
     "movieTitle": "Elegir póster de película",
     "tvTitle": "Elegir póster de serie",
@@ -2289,5 +2331,81 @@
     "body": "Esta versión de ShowSeek ya no es compatible. Actualiza para mantener sincronizadas tus listas, tu historial y tus calificaciones.",
     "updateButton": "Actualizar ShowSeek",
     "storeUnavailable": "No se pudo abrir la tienda. Actualiza ShowSeek desde tu tienda de apps."
+  },
+  "tips": {
+    "title": "Trucos y funciones",
+    "intro": "Atajos útiles que es fácil pasar por alto. Casi todos son toques largos: mantén presionado hasta sentir una vibración.",
+    "sections": {
+      "titles": "Películas y series",
+      "people": "Personas",
+      "library": "Listas y biblioteca",
+      "filters": "Filtros",
+      "settings": "Configuración"
+    },
+    "items": {
+      "addToList": {
+        "title": "Agrega a una lista desde cualquier lugar",
+        "description": "Mantén presionado el póster de una película o serie en Inicio, Descubrir, Buscar y otras pantallas para agregarla a una lista."
+      },
+      "watchHistory": {
+        "title": "Consulta o borra tu historial",
+        "description": "Mantén presionado el botón de visto de una película o serie que hayas visto para ver cada vez que la viste o borrar el historial."
+      },
+      "copyTitle": {
+        "title": "Copia un título",
+        "description": "Mantén presionado el título en la página de una película o serie para copiarlo."
+      },
+      "poster": {
+        "title": "Elige otro póster",
+        "description": "Toca el póster en la página de una película o serie para elegir otro. Se usará en toda la app."
+      },
+      "actionButtons": {
+        "title": "Ordena los botones de acción",
+        "description": "Pon los botones de las páginas de películas y series en el orden que prefieras en Configuración › Contenido › Reordenar botones de acción."
+      },
+      "profileBackground": {
+        "title": "Elige un fondo para tu perfil",
+        "description": "Mientras ves los pósters o fondos de una película o serie, toca Usar como fondo del perfil para mostrarlo detrás de tu perfil."
+      },
+      "favoritePeople": {
+        "title": "Guarda tus personas favoritas",
+        "description": "Mantén presionada a cualquier persona del reparto o del equipo para agregarla a tus favoritas."
+      },
+      "selectSeveral": {
+        "title": "Selecciona varios a la vez",
+        "description": "Mantén presionado un título de una de tus listas para empezar a seleccionar y luego agrégalos todos a otra lista o quítalos."
+      },
+      "deleteLists": {
+        "title": "Elimina listas en bloque",
+        "description": "En Listas personalizadas, mantén presionada una lista para seleccionar varias y eliminarlas juntas."
+      },
+      "deleteListWhileAdding": {
+        "title": "Elimina una lista al agregar",
+        "description": "En la hoja Agregar a la lista, mantén presionada una de tus listas para eliminarla."
+      },
+      "hideShows": {
+        "title": "Ordena tu progreso",
+        "description": "Mantén presionada una serie en Progreso para seleccionar series y ocultarlas."
+      },
+      "removeRatings": {
+        "title": "Quita calificaciones en bloque",
+        "description": "Mantén presionada una calificación para seleccionar varias y quitarlas a la vez."
+      },
+      "savedFilters": {
+        "title": "Guarda tus filtros favoritos",
+        "description": "En los filtros, toca Guardar para conservar una combinación. Mantén presionado uno guardado para cambiarle el nombre, actualizarlo o eliminarlo."
+      },
+      "filterChips": {
+        "title": "Cambia un filtro rápidamente",
+        "description": "Toca un chip de filtro debajo del encabezado para cambiar solo ese filtro, o su ✕ para quitarlo."
+      },
+      "searchSettings": {
+        "title": "Busca en la configuración",
+        "description": "Usa la búsqueda de Configuración para ir directo a cualquier opción."
+      }
+    }
+  },
+  "imageViewer": {
+    "download": "Descargar"
   }
 }

@@ -41,6 +41,10 @@ interface MediaGridProps {
   contentBottomPadding?: number;
   refreshing?: boolean;
   onRefresh?: () => void | Promise<void>;
+  /** Loads more when the end is near (for lists fetched a page at a time). */
+  onEndReached?: () => void;
+  /** Shows a spinner after the last row while the next page loads. */
+  isFetchingMore?: boolean;
 }
 
 export interface MediaGridRef {
@@ -157,6 +161,8 @@ export const MediaGrid = memo(
         contentBottomPadding = 0,
         refreshing = false,
         onRefresh,
+        onEndReached,
+        isFetchingMore = false,
       },
       ref
     ) => {
@@ -250,6 +256,15 @@ export const MediaGrid = memo(
           ListEmptyComponent={listEmptyComponent}
           refreshing={refreshing}
           onRefresh={onRefresh}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isFetchingMore ? (
+              <View style={styles.footer} testID="media-grid-loading-more">
+                <ActivityIndicator color={accentColor} />
+              </View>
+            ) : null
+          }
         />
       );
     }
@@ -259,6 +274,9 @@ export const MediaGrid = memo(
 MediaGrid.displayName = 'MediaGrid';
 
 const styles = StyleSheet.create({
+  footer: {
+    paddingVertical: SPACING.l,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

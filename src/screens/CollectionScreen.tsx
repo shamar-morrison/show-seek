@@ -1,8 +1,9 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { CollectionScreenSkeleton } from '@/src/components/collection/CollectionScreenSkeleton';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
-import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
   ACTIVE_OPACITY,
@@ -25,7 +26,10 @@ import {
 } from '@/src/hooks/useCollectionTracking';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { useOpenShareCard } from '@/src/hooks/useOpenShareCard';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { buildCollectionShareCard } from '@/src/utils/collectionShareCard';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
@@ -35,6 +39,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   ArrowLeft01Icon,
+  Image01Icon,
   PlayIcon,
   StarIcon,
   StopCircleIcon,
@@ -71,6 +76,7 @@ export default function CollectionScreen() {
   const { resolvePosterPath } = usePosterOverrides();
   const { isPremium } = usePremium();
   const isAccountRequired = useAccountRequired();
+  const openShareCard = useOpenShareCard();
 
   // Collection tracking state
   const {
@@ -192,8 +198,34 @@ export default function CollectionScreen() {
       .map(({ movie }) => movie);
   }, [collectionQuery.data?.parts]);
 
-  if (collectionQuery.isLoading) {
-    return <FullScreenLoading />;
+  const handleShareCard = useCallback(() => {
+    if (!collectionQuery.data) return;
+    openShareCard([
+      buildCollectionShareCard({
+        name: collectionQuery.data.name,
+        backdropPath: collectionQuery.data.backdrop_path,
+        movies: sortedMovies,
+        resolvePosterPath,
+        // The watched bar is part of tracking, so it only shows for tracked collections.
+        progress: isTracked ? { watched: watchedCount, total: totalMovies } : null,
+      }),
+    ]);
+  }, [
+    collectionQuery.data,
+    isTracked,
+    openShareCard,
+    resolvePosterPath,
+    sortedMovies,
+    totalMovies,
+    watchedCount,
+  ]);
+
+  // The page draws every movie at once, so when the collection is cached the first render is a
+  // light skeleton: the page slides in straight away and the list follows a tick later.
+  const { isReady } = useProgressiveRender();
+
+  if (!isReady || collectionQuery.isLoading) {
+    return <CollectionScreenSkeleton />;
   }
 
   if (collectionQuery.isError || !collectionQuery.data) {
@@ -230,6 +262,15 @@ export default function CollectionScreen() {
         title={collection.name}
         onBackPress={() => router.back()}
         scrollY={scrollY}
+        rightAction={
+          <HeaderIconButton
+            onPress={handleShareCard}
+            accessibilityLabel={t('shareCard.title')}
+            testID="collection-share-card-scrolled"
+          >
+            <AppIcon icon={Image01Icon} size={22} color={COLORS.white} />
+          </HeaderIconButton>
+        }
       />
 
       <Animated.ScrollView style={styles.scrollView} bounces={false} {...scrollViewProps}>
@@ -247,6 +288,18 @@ export default function CollectionScreen() {
               activeOpacity={ACTIVE_OPACITY}
             >
               <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
+            </TouchableOpacity>
+          </SafeAreaView>
+          <SafeAreaView style={[styles.headerSafe, styles.headerSafeRight]} edges={['top']}>
+            <TouchableOpacity
+              style={[styles.headerButton, styles.headerButtonRight]}
+              onPress={handleShareCard}
+              activeOpacity={ACTIVE_OPACITY}
+              accessibilityRole="button"
+              accessibilityLabel={t('shareCard.title')}
+              testID="collection-share-card"
+            >
+              <AppIcon icon={Image01Icon} size={22} color={COLORS.white} />
             </TouchableOpacity>
           </SafeAreaView>
         </View>
@@ -430,6 +483,15 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     zIndex: 10,
+  },
+  // The share card button mirrors the back button on the right.
+  headerSafeRight: {
+    left: undefined,
+    right: 0,
+  },
+  headerButtonRight: {
+    marginLeft: 0,
+    marginRight: SPACING.m,
   },
   headerButton: {
     marginTop: SPACING.m,

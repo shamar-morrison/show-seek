@@ -29,6 +29,23 @@ jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => ({ isPremium: false }),
 }));
 
+let mockProfileBackground: { path: string; kind: 'backdrop' | 'poster' } | null = null;
+const mockSetProfileBackground = jest.fn(() => Promise.resolve());
+jest.mock('@/src/hooks/useProfileBackground', () => ({
+  useProfileBackground: () => ({
+    profileBackground: mockProfileBackground,
+    setProfileBackground: mockSetProfileBackground,
+    isSaving: false,
+  }),
+}));
+// Its image component pulls in expo-image's native module.
+jest.mock('@/src/components/profile/ProfileBackgroundImage', () => ({
+  ProfileBackgroundImage: ({ background, fadeTo }: any) => {
+    const { View } = require('react-native');
+    return <View testID="profile-background" background={background} fadeTo={fadeTo} />;
+  },
+}));
+
 jest.mock('@/src/components/ui/UserAvatar', () => ({
   UserAvatar: () => null,
 }));
@@ -58,6 +75,7 @@ jest.mock('expo-router', () => ({
 }));
 
 import { HomeDrawer } from '@/src/components/HomeDrawer';
+import { COLORS } from '@/src/constants/theme';
 
 describe('HomeDrawer sign out flow', () => {
   beforeEach(() => {
@@ -68,6 +86,27 @@ describe('HomeDrawer sign out flow', () => {
       email: 'test@example.com',
     };
     mockAuthState.isGuest = false;
+    mockProfileBackground = null;
+  });
+
+  it('shows the profile background behind the profile card, fading into the drawer', () => {
+    mockProfileBackground = { path: '/backdrop.jpg', kind: 'backdrop' };
+    const { getByTestId } = render(<HomeDrawer visible onClose={mockOnClose} />);
+
+    expect(getByTestId('profile-background').props.background).toEqual(mockProfileBackground);
+    expect(getByTestId('profile-background').props.fadeTo).toBe(COLORS.surface);
+  });
+
+  it('shows no background without one, or for guests', () => {
+    expect(
+      render(<HomeDrawer visible onClose={mockOnClose} />).queryByTestId('profile-background')
+    ).toBeNull();
+
+    mockProfileBackground = { path: '/backdrop.jpg', kind: 'backdrop' };
+    mockAuthState.isGuest = true;
+    expect(
+      render(<HomeDrawer visible onClose={mockOnClose} />).queryByTestId('profile-background')
+    ).toBeNull();
   });
 
   it('keeps drawer open while signing out and closes after signOut completes', async () => {

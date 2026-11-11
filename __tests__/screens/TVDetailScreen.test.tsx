@@ -82,7 +82,6 @@ jest.mock('@/src/api/tmdb', () => ({
     getSeasonDetails: jest.fn(),
     getTVCredits: jest.fn(),
     getTVVideos: jest.fn(),
-    getSimilarTV: jest.fn(),
     getTVWatchProviders: jest.fn(),
     getTVImages: jest.fn(),
     getTVReviews: jest.fn(),
@@ -382,9 +381,21 @@ jest.mock('@/src/components/detail/MediaActionButtons', () => ({
 }));
 jest.mock('@/src/components/detail/MediaDetailsInfo', () => ({ MediaDetailsInfo: () => null }));
 jest.mock('@/src/components/detail/OpenWithDrawer', () => () => null);
-jest.mock('@/src/components/detail/PhotosSection', () => ({ PhotosSection: () => null }));
+jest.mock('@/src/components/detail/PhotosSection', () => ({
+  PhotosSection: ({ onViewAll, viewAllStyle }: any) => {
+    const { Pressable, Text } = require('react-native');
+    return onViewAll ? (
+      <Pressable testID="photos-see-all" onPress={onViewAll}>
+        <Text>{viewAllStyle}</Text>
+      </Pressable>
+    ) : null;
+  },
+}));
 jest.mock('@/src/components/detail/RecommendationsSection', () => ({
-  RecommendationsSection: () => null,
+  RecommendationsSection: ({ onViewAll }: any) => {
+    const { Pressable } = require('react-native');
+    return onViewAll ? <Pressable testID="recommendations-see-all" onPress={onViewAll} /> : null;
+  },
 }));
 jest.mock('@/src/components/detail/ReviewsSection', () => ({ ReviewsSection: () => null }));
 jest.mock('@/src/components/detail/SeasonsSection', () => ({ SeasonsSection: () => null }));
@@ -397,13 +408,35 @@ jest.mock('@/src/components/detail/UpNextEpisodeSection', () => ({
   },
 }));
 jest.mock('@/src/components/detail/SimilarMediaSection', () => ({
-  SimilarMediaSection: () => null,
+  SimilarMediaSection: ({ onViewAll, items }: any) => {
+    const { Pressable } = require('react-native');
+    return onViewAll ? (
+      <Pressable testID="similar-see-all" onPress={onViewAll} itemCount={items.length} />
+    ) : null;
+  },
+}));
+
+const mockUseMoreTitles = jest.fn(
+  (_kind: string, _mediaType: string, _id: number, _options?: any) => ({
+    items: [] as unknown[],
+    isLoading: false,
+    isError: false,
+    refetch: jest.fn(),
+  })
+);
+jest.mock('@/src/hooks/useMoreTitles', () => ({
+  useMoreTitles: (...args: [string, string, number, any?]) => mockUseMoreTitles(...args),
 }));
 jest.mock('@/src/components/detail/TraktReviewsSection', () => ({
   TraktReviewsSection: () => null,
 }));
 jest.mock('@/src/components/detail/TVMetaSection', () => ({ TVMetaSection: () => null }));
-jest.mock('@/src/components/detail/VideosSection', () => ({ VideosSection: () => null }));
+jest.mock('@/src/components/detail/VideosSection', () => ({
+  VideosSection: ({ onViewAll }: any) => {
+    const { Pressable } = require('react-native');
+    return onViewAll ? <Pressable testID="videos-see-all" onPress={onViewAll} /> : null;
+  },
+}));
 jest.mock('@/src/components/detail/WatchProvidersSection', () => ({
   WatchProvidersSection: () => null,
 }));
@@ -1293,5 +1326,68 @@ describe('TVDetailScreen', () => {
         mockShow.seasons = originalSeasons;
       }
     });
+  });
+
+  it('opens all photos from See All on the Photos row', () => {
+    const defaultQuery = mockUseQuery.getMockImplementation()!;
+    mockUseQuery.mockImplementation((args: { queryKey: unknown[] }) =>
+      args.queryKey[2] === 'images'
+        ? {
+            data: { backdrops: [{ file_path: '/b.jpg' }], posters: [] },
+            isLoading: false,
+            isError: false,
+            refetch: jest.fn(),
+          }
+        : defaultQuery(args)
+    );
+
+    const { getByTestId, getByText } = render(<TVDetailScreen />);
+
+    expect(getByText('text')).toBeTruthy();
+    fireEvent.press(getByTestId('photos-see-all'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/\(tabs\)\/discover\/tv\/10\/photos\?title=/)
+    );
+  });
+
+  it('opens all videos from See All on the Videos row', () => {
+    const { getByTestId } = render(<TVDetailScreen />);
+
+    fireEvent.press(getByTestId('videos-see-all'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/\(tabs\)\/discover\/tv\/10\/videos\?title=/)
+    );
+  });
+
+  it('loads "More like this" and recommendations (once their row is reached) from the shared pages', () => {
+    render(<TVDetailScreen />);
+
+    expect(mockUseMoreTitles).toHaveBeenCalledWith('similar', 'tv', 10);
+    expect(mockUseMoreTitles).toHaveBeenCalledWith('recommendations', 'tv', 10, {
+      enabled: false,
+    });
+  });
+
+  it('shows the first 10 similar titles and opens See All for each row', () => {
+    mockUseMoreTitles.mockImplementation((kind: string) => ({
+      items: kind === 'similar' ? Array.from({ length: 15 }, (_, i) => ({ id: 100 + i })) : [],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    }));
+    const { getByTestId } = render(<TVDetailScreen />);
+
+    expect(getByTestId('similar-see-all').props.itemCount).toBe(10);
+    fireEvent.press(getByTestId('similar-see-all'));
+    fireEvent.press(getByTestId('recommendations-see-all'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/\(tabs\)\/discover\/tv\/10\/similar\?title=/)
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/\(tabs\)\/discover\/tv\/10\/recommendations\?title=/)
+    );
   });
 });

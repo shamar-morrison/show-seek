@@ -21,6 +21,32 @@ export const CommonDetailScreens = () => (
       options={{ title: 'Poster', headerShown: false, presentation: 'modal', gestureEnabled: true }}
     />
     <Stack.Screen
+      name="movie/[id]/photos"
+      options={{ title: 'Photos', headerShown: false, presentation: 'modal', gestureEnabled: true }}
+    />
+    <Stack.Screen
+      name="movie/[id]/videos"
+      options={{ title: 'Videos', headerShown: false, presentation: 'modal', gestureEnabled: true }}
+    />
+    <Stack.Screen
+      name="movie/[id]/recommendations"
+      options={{
+        title: 'Recommendations',
+        headerShown: false,
+        presentation: 'modal',
+        gestureEnabled: true,
+      }}
+    />
+    <Stack.Screen
+      name="movie/[id]/similar"
+      options={{
+        title: 'Similar',
+        headerShown: false,
+        presentation: 'modal',
+        gestureEnabled: true,
+      }}
+    />
+    <Stack.Screen
       name="tv/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}
     />
@@ -37,6 +63,32 @@ export const CommonDetailScreens = () => (
       name="tv/[id]/poster-picker"
       options={{ title: 'Poster', headerShown: false, presentation: 'modal', gestureEnabled: true }}
     />
+    <Stack.Screen
+      name="tv/[id]/photos"
+      options={{ title: 'Photos', headerShown: false, presentation: 'modal', gestureEnabled: true }}
+    />
+    <Stack.Screen
+      name="tv/[id]/videos"
+      options={{ title: 'Videos', headerShown: false, presentation: 'modal', gestureEnabled: true }}
+    />
+    <Stack.Screen
+      name="tv/[id]/recommendations"
+      options={{
+        title: 'Recommendations',
+        headerShown: false,
+        presentation: 'modal',
+        gestureEnabled: true,
+      }}
+    />
+    <Stack.Screen
+      name="tv/[id]/similar"
+      options={{
+        title: 'Similar',
+        headerShown: false,
+        presentation: 'modal',
+        gestureEnabled: true,
+      }}
+    />
     <Stack.Screen name="tv/[id]/seasons" options={{ title: 'Seasons', headerShown: true }} />
     <Stack.Screen
       name="tv/[id]/season/[seasonNum]/episode/[episodeNum]/index"
@@ -46,7 +98,8 @@ export const CommonDetailScreens = () => (
       name="person/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}
     />
-    <Stack.Screen name="person/[id]/credits" options={{ headerShown: true }} />
+    {/* Draws its own two-line header (name and section). */}
+    <Stack.Screen name="person/[id]/credits" options={{ headerShown: false }} />
     <Stack.Screen
       name="collection/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}

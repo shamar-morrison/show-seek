@@ -1,6 +1,7 @@
 import {
   buildOpenWithFallbackUrl,
   buildOpenWithUrl,
+  buildStremioAppUrlFromWeb,
   buildTraktAppUrlFromWeb,
 } from '@/src/utils/openWithLinks';
 
@@ -120,5 +121,65 @@ describe('openWithLinks', () => {
     expect(buildTraktAppUrlFromWeb('https://trakt.tv/movies/fight-club-1999')).toBe(
       'trakt://movies/fight-club-1999'
     );
+  });
+
+  it('opens a Stremio movie page by IMDb id', () => {
+    const url = buildOpenWithUrl({
+      serviceId: 'stremio',
+      mediaType: 'movie',
+      mediaId: 550,
+      title: 'Fight Club',
+      imdbId: 'tt0137523',
+    });
+    expect(url).toBe('https://web.stremio.com/#/detail/movie/tt0137523/tt0137523');
+    expect(buildStremioAppUrlFromWeb(url)).toBe('stremio:///detail/movie/tt0137523/tt0137523');
+  });
+
+  it("opens a Stremio show's episode list by IMDb id", () => {
+    const url = buildOpenWithUrl({
+      serviceId: 'stremio',
+      mediaType: 'tv',
+      mediaId: 1399,
+      title: 'Game of Thrones',
+      imdbId: 'tt0944947',
+    });
+    expect(url).toBe('https://web.stremio.com/#/detail/series/tt0944947');
+    expect(buildStremioAppUrlFromWeb(url)).toBe('stremio:///detail/series/tt0944947');
+  });
+
+  it('searches Stremio by title when there is no IMDb id', () => {
+    const url = buildOpenWithUrl({
+      serviceId: 'stremio',
+      mediaType: 'movie',
+      mediaId: 1,
+      title: 'Amélie',
+      year: 2001,
+    });
+    expect(url).toBe('https://web.stremio.com/#/search?search=Am%C3%A9lie');
+    expect(buildStremioAppUrlFromWeb(url)).toBe('stremio:///search?search=Am%C3%A9lie');
+  });
+
+  it('only turns Stremio Web links into app links', () => {
+    expect(buildStremioAppUrlFromWeb('https://www.imdb.com/title/tt0137523/')).toBeNull();
+  });
+
+  it("opens a movie's Letterboxd page through its TMDB link, and searches for shows", () => {
+    expect(
+      buildOpenWithUrl({
+        serviceId: 'letterboxd',
+        mediaType: 'movie',
+        mediaId: 550,
+        title: 'Fight Club',
+      })
+    ).toBe('https://letterboxd.com/tmdb/550/');
+    expect(
+      buildOpenWithUrl({
+        serviceId: 'letterboxd',
+        mediaType: 'tv',
+        mediaId: 1399,
+        title: 'Game of Thrones',
+        year: 2011,
+      })
+    ).toBe('https://letterboxd.com/search/Game%20of%20Thrones%202011/');
   });
 });

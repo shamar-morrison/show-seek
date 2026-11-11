@@ -296,6 +296,7 @@
     "openWith": "Open with",
     "imdb": "IMDb",
     "trakt": "Trakt",
+    "stremio": "Stremio",
     "tmdb": "TMDB",
     "rottenTomatoes": "Rotten Tomatoes",
     "metacritic": "Metacritic",
@@ -313,6 +314,12 @@
     "moreEpisodes": "More Episodes",
     "notYetAired": "Not yet aired",
     "photos": "Photos",
+    "posters": "Posters",
+    "backdrops": "Backdrops",
+    "noPosters": "No posters yet",
+    "noBackdrops": "No backdrops yet",
+    "photosFailedToLoad": "Couldn't load the photos",
+    "photoNumber": "Photo {{number}}",
     "review": "Review",
     "reviewCounter": "Review {{current}} of {{total}}",
     "seasonsAndEpisodes": "Seasons & Episodes",
@@ -323,7 +330,23 @@
     "tmdbReviews": "TMDB Reviews",
     "unknownShow": "Unknown show",
     "videos": "Videos",
-    "youMayAlsoLike": "You May Also Like"
+    "videosFailedToLoad": "Couldn't load the videos",
+    "noVideos": "No videos yet",
+    "searchVideos": "Search videos…",
+    "noVideoMatches": "No matches in {{type}}",
+    "videoTypes": {
+      "trailers": "Trailers",
+      "teasers": "Teasers",
+      "clips": "Clips",
+      "featurettes": "Featurettes",
+      "behindTheScenes": "Behind the Scenes",
+      "bloopers": "Bloopers",
+      "openingCredits": "Opening Credits"
+    },
+    "youMayAlsoLike": "You May Also Like",
+    "moreTitlesFailedToLoad": "Couldn't load these titles",
+    "noMoreTitles": "Nothing to show",
+    "noMoreTitlesDescription": "There are no titles to show here, or your content filters hide them all."
   },
   "library": {
     "title": "Library",
@@ -737,7 +760,8 @@
     "languageScreenNote": "This affects titles, descriptions, and other text from our movie database. Some content may not be available in all languages.",
     "updateRegionError": "Failed to update region. Please try again.",
     "regionScreenDescription": "Select your region to see local streaming availability and release dates.",
-    "regionScreenNote": "This affects where to watch information and local release dates."
+    "regionScreenNote": "This affects where to watch information and local release dates.",
+    "actionButtons": "Reorder Action Buttons"
   },
   "profile": {
     "displayNameLabel": "Display name",
@@ -779,6 +803,7 @@
     "ratingsGiven": "Ratings Given",
     "listsCreated": "Lists Created",
     "traktIntegration": "Trakt Integration",
+    "traktIntegrationDescription": "Mirror your Trakt watch history, ratings and lists, or import a Trakt export zip.",
     "stremioIntegration": "Stremio Add-on",
     "connectTrakt": "Connect Trakt",
     "disconnectTrakt": "Disconnect Trakt",
@@ -818,8 +843,11 @@
     "checkConnection": "Please check your connection and try again",
     "sendFeedback": "Send Feedback",
     "importFromImdb": "Import from IMDb",
+    "importFromImdbDescription": "Bring in your ratings, watchlist and lists from IMDb export files.",
     "importFromTvTime": "Import from TV Time",
+    "importFromTvTimeDescription": "Bring in your watch history, ratings and lists from a TV Time export.",
     "importFromSimkl": "Import from Simkl",
+    "importFromSimklDescription": "Bring in your watch history, ratings and watchlist from a Simkl backup.",
     "exportData": "Export Data",
     "webApp": "ShowSeek Web App",
     "joinDiscord": "Join our Discord",
@@ -849,6 +877,8 @@
     "dataSaverDescription": "Load lower resolution images to save data",
     "showOriginalTitles": "Use original titles",
     "showOriginalTitlesDescription": "Show movie and TV titles in their original language when available.",
+    "use24HourTime": "24-Hour Time",
+    "use24HourTimeDescription": "Show times like 21:05 instead of 9:05 PM. Uses your phone's setting until you change it.",
     "updatePreferenceError": "Failed to update preference. Please try again.",
     "content": "Content",
     "exportFailedFallbackMessage": "Export failed. Please try again.",
@@ -867,7 +897,17 @@
       "title": "Open Web App"
     },
     "defaultBulkAction": "Default bulk action: {{mode}}",
-    "defaultBulkActionDescription": "Choose what happens when you bulk add items from a list."
+    "defaultBulkActionDescription": "Choose what happens when you bulk add items from a list.",
+    "useAsBackground": "Set as profile backdrop",
+    "backgroundSet": "Set as your profile backdrop",
+    "backgroundFailed": "Couldn't set your profile backdrop",
+    "profileBackground": "Profile backdrop",
+    "removeBackground": "Remove backdrop",
+    "backgroundHint": "Open a movie or show's photos and tap Set as profile backdrop to use a poster or backdrop here.",
+    "positionBackdrop": "Position backdrop",
+    "positionHint": "Drag the image to choose what shows behind your profile.",
+    "drawerPreview": "Home drawer",
+    "adjustPosition": "Adjust position"
   },
   "dataExport": {
     "title": "Export your ShowSeek data",
@@ -1689,11 +1729,6 @@
       "description": "Save the filters you use most on Discover and in your lists, then apply them again in one tap. Find them at the top of the filters."
     }
   },
-  "share": {
-    "message": "{{title}} - Check this out on TMDB! {{url}}",
-    "linkCopied": "Link copied to clipboard",
-    "unableToShare": "Unable to share. Please try again."
-  },
   "posterPicker": {
     "movieTitle": "Choose Movie Poster",
     "tvTitle": "Choose TV Poster",
@@ -1971,6 +2006,13 @@
     "deleteConfirmTitle": "Delete saved filters?",
     "deleteConfirmMessage": "“{{name}}” will be deleted.",
     "longPressHint": "Long press a saved filter for more options."
+  },
+  "actionButtons": {
+    "description": "Drag the buttons to change their order on movie and TV show pages.",
+    "reminderHint": "Only shows for upcoming titles",
+    "dragHandle": "Drag to reorder {{name}}",
+    "position": "Position {{position}}",
+    "saveFailed": "Couldn't save the new order. Please try again."
   },
   "lists": {
     "alreadyWatched": "Already Watched",
@@ -2289,5 +2331,81 @@
     "body": "This version of ShowSeek is no longer supported. Update to keep your lists, watch history and ratings in sync.",
     "updateButton": "Update ShowSeek",
     "storeUnavailable": "Couldn't open the store. Please update ShowSeek from your app store."
+  },
+  "tips": {
+    "title": "Tips & Features",
+    "intro": "Handy shortcuts that are easy to miss. Most are long presses: press and hold until you feel a buzz.",
+    "sections": {
+      "titles": "Movies & TV shows",
+      "people": "People",
+      "library": "Lists & library",
+      "filters": "Filters",
+      "settings": "Settings"
+    },
+    "items": {
+      "addToList": {
+        "title": "Add to a list from anywhere",
+        "description": "Long-press a movie or show poster on Home, Discover, Search and other screens to add it to a list."
+      },
+      "watchHistory": {
+        "title": "See or clear your watch history",
+        "description": "Long-press the watched button on a movie or show you've watched to see each time you watched it, or to clear it."
+      },
+      "copyTitle": {
+        "title": "Copy a title",
+        "description": "Long-press the title on a movie or show page to copy it."
+      },
+      "poster": {
+        "title": "Pick a different poster",
+        "description": "Tap the poster on a movie or show page to choose another one. Your pick is used across the app."
+      },
+      "actionButtons": {
+        "title": "Arrange the action buttons",
+        "description": "Put the buttons on movie and show pages in the order you like in Settings › Content › Reorder Action Buttons."
+      },
+      "profileBackground": {
+        "title": "Pick a profile backdrop",
+        "description": "While viewing a movie or show's posters or backdrops, tap Set as profile backdrop to show it behind your profile."
+      },
+      "favoritePeople": {
+        "title": "Save favorite people",
+        "description": "Long-press anyone in the cast or crew to add them to your favorite people."
+      },
+      "selectSeveral": {
+        "title": "Select several at once",
+        "description": "Long-press a title in one of your lists to start selecting, then add them all to another list or remove them."
+      },
+      "deleteLists": {
+        "title": "Delete lists in bulk",
+        "description": "In Custom Lists, long-press a list to select several and delete them together."
+      },
+      "deleteListWhileAdding": {
+        "title": "Delete a list while adding",
+        "description": "In the Add to List sheet, long-press one of your own lists to delete it."
+      },
+      "hideShows": {
+        "title": "Tidy up Watch Progress",
+        "description": "Long-press a show in Watch Progress to select shows and hide them."
+      },
+      "removeRatings": {
+        "title": "Remove ratings in bulk",
+        "description": "Long-press a rating to select several and remove them at once."
+      },
+      "savedFilters": {
+        "title": "Save your favorite filters",
+        "description": "In the filters, tap Save to keep a set of filters. Long-press a saved one to rename, update or delete it."
+      },
+      "filterChips": {
+        "title": "Change one filter quickly",
+        "description": "Tap a filter chip under the header to change just that filter, or its ✕ to remove it."
+      },
+      "searchSettings": {
+        "title": "Search your settings",
+        "description": "Use the search in Settings to jump straight to any option."
+      }
+    }
+  },
+  "imageViewer": {
+    "download": "Download"
   }
 }

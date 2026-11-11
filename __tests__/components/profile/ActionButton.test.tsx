@@ -36,6 +36,23 @@ describe('ActionButton', () => {
     expect(getByText('Test Action')).toBeTruthy();
   });
 
+  it('shows a description under the label when given', () => {
+    const { getByText } = render(
+      <ActionButton
+        label="Language"
+        description="Select your preferred language."
+        onPress={mockOnPress}
+      />
+    );
+    expect(getByText('Language')).toBeTruthy();
+    expect(getByText('Select your preferred language.')).toBeTruthy();
+  });
+
+  it('shows no description line without one', () => {
+    const { toJSON } = render(<ActionButton label="Language" onPress={mockOnPress} />);
+    expect(JSON.stringify(toJSON())).not.toContain('Select your preferred language.');
+  });
+
   it('should call onPress when pressed', () => {
     const { getByTestId } = render(<ActionButton label="Test Action" onPress={mockOnPress} />);
     fireEvent.press(getByTestId('action-button-test-action'));

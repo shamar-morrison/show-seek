@@ -34,6 +34,12 @@ function resolveHeroUrl(data: ShareCardData, format: ShareCardFormat): string | 
     return getImageUrl(data.posterPaths[0] ?? null, TMDB_IMAGE_SIZES.poster.original);
   }
 
+  if (data.kind === 'collection') {
+    const poster = getImageUrl(data.posterPaths[0] ?? null, TMDB_IMAGE_SIZES.poster.original);
+    const backdrop = getImageUrl(data.backdropPath, TMDB_IMAGE_SIZES.backdrop.original);
+    return format === 'portrait' ? (poster ?? backdrop) : (backdrop ?? poster);
+  }
+
   const poster = getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.original);
   const backdrop = getImageUrl(
     (data.kind === 'episode' ? data.stillPath : null) ?? data.backdropPath,
@@ -55,6 +61,22 @@ export function resolveShareCardImages(
       foregroundIsPosterFallback: false,
       fanUrls: [],
       heroUrl: resolveHeroUrl(data, format),
+    };
+  }
+
+  if (data.kind === 'collection') {
+    // Like a list: the posters fanned out in front, but over the collection's own backdrop.
+    const urls = data.posterPaths
+      .map((path) => getImageUrl(path, TMDB_IMAGE_SIZES.poster.large))
+      .filter((url): url is string => !!url);
+    const backdrop = getImageUrl(data.backdropPath, TMDB_IMAGE_SIZES.backdrop.large);
+
+    return {
+      backgroundUrl: backdrop ?? urls[0] ?? null,
+      foregroundUrl: urls.length === 1 ? urls[0] : null,
+      foregroundIsPosterFallback: false,
+      fanUrls: urls.length > 1 ? urls : [],
+      heroUrl: null,
     };
   }
 

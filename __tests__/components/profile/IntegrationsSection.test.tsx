@@ -81,6 +81,7 @@ describe('IntegrationsSection', () => {
     expect(INTEGRATION_ITEMS).toContainEqual({
       id: 'simklImport',
       titleKey: 'profile.importFromSimkl',
+      descKey: 'profile.importFromSimklDescription',
       category: 'import',
     });
 
@@ -113,6 +114,7 @@ describe('IntegrationsSection', () => {
     expect(INTEGRATION_ITEMS).toContainEqual({
       id: 'stremio',
       titleKey: 'profile.stremioIntegration',
+      descKey: 'stremio.intro',
       category: 'sync',
     });
 

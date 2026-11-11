@@ -2,7 +2,6 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { OpenWithButton } from '@/src/components/ui/OpenWithButton';
-import { ShareButton } from '@/src/components/ui/ShareButton';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -17,9 +16,7 @@ export interface TVHeroSectionProps {
   /** Path to the poster image */
   posterPath: string | null;
   /** Show name for share button */
-  showName: string;
   /** Show ID for share button */
-  showId: number;
   /** Handler for back button press */
   onBackPress: () => void;
   /** Handler for open-with button press */
@@ -27,7 +24,6 @@ export interface TVHeroSectionProps {
   /** Handler for poster press */
   onPosterPress: () => void;
   /** Handler for toast messages */
-  onShowToast: (message: string) => void;
 }
 
 /**
@@ -38,16 +34,7 @@ export interface TVHeroSectionProps {
  * - Poster overlay
  */
 export const TVHeroSection = memo<TVHeroSectionProps>(
-  ({
-    backdropPath,
-    posterPath,
-    showName,
-    showId,
-    onBackPress,
-    onOpenWithPress,
-    onPosterPress,
-    onShowToast,
-  }) => {
+  ({ backdropPath, posterPath, onBackPress, onOpenWithPress, onPosterPress }) => {
     const styles = useDetailStyles();
     const backdropUrl = getImageUrl(backdropPath, TMDB_IMAGE_SIZES.backdrop.medium);
     const posterUrl = getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium);
@@ -67,7 +54,6 @@ export const TVHeroSection = memo<TVHeroSectionProps>(
           </TouchableOpacity>
         </SafeAreaView>
 
-        <ShareButton id={showId} title={showName} mediaType="tv" onShowToast={onShowToast} />
         <OpenWithButton onPress={onOpenWithPress} />
 
         <TouchableOpacity

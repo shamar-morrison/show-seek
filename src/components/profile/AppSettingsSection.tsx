@@ -1,6 +1,7 @@
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import {
+  BulbIcon,
   Delete02Icon,
   DiscordIcon,
   // Globe02Icon, // Hidden: ShowSeek web app link disabled
@@ -28,6 +29,8 @@ export interface AppSettingsSectionProps {
   onAbout: () => void;
   /** Handler for Join Discord button */
   onDiscord: () => void;
+  /** Handler for Tips & Features button */
+  onTips: () => void;
   /** Whether to show section title (default: true) */
   showTitle?: boolean;
 }
@@ -44,6 +47,7 @@ export function AppSettingsSection({
   // onWebApp, // Hidden: ShowSeek web app link disabled
   onAbout,
   onDiscord,
+  onTips,
   showTitle = true,
 }: AppSettingsSectionProps) {
   const { t } = useTranslation();
@@ -56,6 +60,12 @@ export function AppSettingsSection({
         </Text>
       )}
       <View style={styles.actionsList}>
+        <ActionButton
+          icon={BulbIcon}
+          label={t('tips.title')}
+          onPress={onTips}
+          testID="action-button-tips"
+        />
         <ActionButton icon={StarIcon} label={t('profile.rateApp')} onPress={onRateApp} />
         {!isGuest && (
           <ActionButton

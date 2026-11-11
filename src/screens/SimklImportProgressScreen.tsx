@@ -1,3 +1,4 @@
+import { formatDateTime } from '@/src/utils/timeFormat';
 import type {
   FileImportCounts,
   FileImportIgnoredReason,
@@ -199,7 +200,7 @@ export default function SimklImportProgressScreen() {
         console.error('[SimklImportProgressScreen] Import stopped:', { code, details, error });
 
         const time = details?.nextAllowedImportAt
-          ? new Date(details.nextAllowedImportAt).toLocaleString(i18n.language)
+          ? formatDateTime(details.nextAllowedImportAt, i18n.language)
           : undefined;
         setErrorMessage(t(getSimklRunErrorKey(code, details), { time }));
         setStatus('failed');

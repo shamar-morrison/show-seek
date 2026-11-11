@@ -10,7 +10,7 @@ interface OpenWithButtonProps {
   rightOffset?: number;
 }
 
-export function OpenWithButton({ onPress, rightOffset = 58 }: OpenWithButtonProps) {
+export function OpenWithButton({ onPress, rightOffset = 0 }: OpenWithButtonProps) {
   return (
     <SafeAreaView style={[styles.headerSafe, { right: rightOffset }]} edges={['top']}>
       <TouchableOpacity

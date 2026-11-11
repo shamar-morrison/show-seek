@@ -91,6 +91,7 @@ describe('OpenWithDrawer', () => {
     expect(getByText('Open with')).toBeTruthy();
     expect(getByTestId('open-with-item-imdb')).toBeTruthy();
     expect(getByTestId('open-with-item-trakt')).toBeTruthy();
+    expect(getByTestId('open-with-item-stremio')).toBeTruthy();
     expect(getByTestId('open-with-item-tmdb')).toBeTruthy();
     expect(getByTestId('open-with-item-letterboxd')).toBeTruthy();
     expect(getByTestId('open-with-item-rottenTomatoes')).toBeTruthy();
@@ -130,7 +131,8 @@ describe('OpenWithDrawer', () => {
       expect(Linking.openURL).toHaveBeenCalledWith('trakt://movies/fight-club-1999');
       expect(Linking.openURL).toHaveBeenCalledWith('https://www.themoviedb.org/movie/550');
       expect(Linking.openURL).toHaveBeenCalledWith(
-        'https://letterboxd.com/search/Fight%20Club%201999/'
+        // Letterboxd redirects its TMDB link to the film's page.
+        'https://letterboxd.com/tmdb/550/'
       );
       expect(Linking.openURL).toHaveBeenCalledWith(
         'https://www.rottentomatoes.com/search?search=Fight%20Club%201999'
@@ -174,6 +176,37 @@ describe('OpenWithDrawer', () => {
     await waitFor(() => {
       expect(Linking.openURL).toHaveBeenCalledWith('trakt://movies/fight-club-1999');
       expect(Linking.openURL).toHaveBeenCalledWith('https://trakt.tv/movies/fight-club-1999');
+    });
+  });
+
+  it('opens Stremio in its app, or Stremio Web when the app is missing', async () => {
+    (Linking.openURL as jest.Mock).mockImplementation((url: string) =>
+      url.startsWith('stremio://')
+        ? Promise.reject(new Error('No app installed'))
+        : Promise.resolve()
+    );
+
+    const { getByTestId } = render(
+      <OpenWithDrawer
+        visible={true}
+        onClose={jest.fn()}
+        mediaId={550}
+        mediaType="movie"
+        title="Fight Club"
+      />
+    );
+
+    await waitFor(() => {
+      expect(tmdbApi.getMovieExternalIds).toHaveBeenCalledWith(550);
+    });
+
+    fireEvent.press(getByTestId('open-with-item-stremio'));
+
+    await waitFor(() => {
+      expect(Linking.openURL).toHaveBeenCalledWith('stremio:///detail/movie/tt0137523/tt0137523');
+      expect(Linking.openURL).toHaveBeenCalledWith(
+        'https://web.stremio.com/#/detail/movie/tt0137523/tt0137523'
+      );
     });
   });
 

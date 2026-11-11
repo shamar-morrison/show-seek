@@ -32,6 +32,8 @@ export interface ActionButtonProps {
   isPremium?: boolean;
   /** Optional badge to show (e.g., for Trakt connected indicator) */
   badge?: React.ReactNode;
+  /** Optional short description shown under the label */
+  description?: string;
   /** Optional testID for testing - defaults to 'action-button-{label-slug}' */
   testID?: string;
 }
@@ -51,6 +53,7 @@ export function ActionButton({
   isPremiumFeature = false,
   isPremium = true,
   badge,
+  description,
   testID,
 }: ActionButtonProps) {
   const isDanger = variant === 'danger';
@@ -83,18 +86,21 @@ export function ActionButton({
           color={isLocked ? COLORS.textSecondary : isDanger ? COLORS.error : COLORS.text}
         />
       ) : null}
-      <View style={styles.actionButtonLabelContainer}>
-        <Text
-          style={[
-            styles.actionButtonText,
-            isDanger && styles.actionButtonTextDanger,
-            isLocked && styles.actionButtonTextLocked,
-          ]}
-        >
-          {label}
-        </Text>
-        {isPremiumFeature && !isPremium && <PremiumBadge />}
-        {badge}
+      <View style={styles.actionButtonBody}>
+        <View style={styles.actionButtonLabelContainer}>
+          <Text
+            style={[
+              styles.actionButtonText,
+              isDanger && styles.actionButtonTextDanger,
+              isLocked && styles.actionButtonTextLocked,
+            ]}
+          >
+            {label}
+          </Text>
+          {isPremiumFeature && !isPremium && <PremiumBadge />}
+          {badge}
+        </View>
+        {!!description && <Text style={styles.actionButtonDescription}>{description}</Text>}
       </View>
     </TouchableOpacity>
   );
@@ -118,11 +124,19 @@ const styles = StyleSheet.create({
   actionButtonLocked: {
     opacity: 0.6,
   },
-  actionButtonLabelContainer: {
+  actionButtonBody: {
     flex: 1,
+    gap: 2,
+  },
+  actionButtonLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.s,
+  },
+  actionButtonDescription: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    lineHeight: 18,
   },
   actionButtonText: {
     fontSize: FONT_SIZE.m,

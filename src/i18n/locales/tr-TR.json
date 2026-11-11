@@ -296,6 +296,7 @@
     "openWith": "Şununla aç",
     "imdb": "IMDb",
     "trakt": "Trakt",
+    "stremio": "Stremio",
     "tmdb": "TMDB",
     "rottenTomatoes": "Rotten Tomatoes",
     "metacritic": "Metacritic",
@@ -313,6 +314,12 @@
     "moreEpisodes": "Daha fazla bölüm",
     "notYetAired": "Henüz yayınlanmadı",
     "photos": "Fotoğraflar",
+    "posters": "Afişler",
+    "backdrops": "Arka planlar",
+    "noPosters": "Henüz afiş yok",
+    "noBackdrops": "Henüz arka plan yok",
+    "photosFailedToLoad": "Fotoğraflar yüklenemedi",
+    "photoNumber": "Fotoğraf {{number}}",
     "review": "İnceleme",
     "reviewCounter": "İnceleme {{current}} / {{total}}",
     "seasonsAndEpisodes": "Sezonlar ve bölümler",
@@ -323,7 +330,23 @@
     "tmdbReviews": "TMDB incelemeleri",
     "unknownShow": "Bilinmeyen dizi",
     "videos": "Videolar",
-    "youMayAlsoLike": "Bunları da beğenebilirsin"
+    "videosFailedToLoad": "Videolar yüklenemedi",
+    "noVideos": "Henüz video yok",
+    "searchVideos": "Videolarda ara…",
+    "noVideoMatches": "{{type}} içinde sonuç yok",
+    "videoTypes": {
+      "trailers": "Fragmanlar",
+      "teasers": "Tanıtımlar",
+      "clips": "Klipler",
+      "featurettes": "Özel videolar",
+      "behindTheScenes": "Kamera arkası",
+      "bloopers": "Bloopers",
+      "openingCredits": "Açılış jenerikleri"
+    },
+    "youMayAlsoLike": "Bunları da beğenebilirsin",
+    "moreTitlesFailedToLoad": "Bu yapımlar yüklenemedi",
+    "noMoreTitles": "Gösterilecek bir şey yok",
+    "noMoreTitlesDescription": "Burada gösterilecek yapım yok ya da içerik filtreleriniz hepsini gizliyor."
   },
   "library": {
     "title": "Kitaplık",
@@ -737,7 +760,8 @@
     "languageScreenNote": "Bu; film veritabanımızdaki başlıkları, açıklamaları ve diğer metinleri etkiler. Bazı içerikler tüm dillerde mevcut olmayabilir.",
     "updateRegionError": "Bölge güncellenemedi. Lütfen tekrar deneyin.",
     "regionScreenDescription": "Yerel yayın kullanılabilirliğini ve yayın tarihlerini görmek için bölgenizi seçin.",
-    "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler."
+    "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler.",
+    "actionButtons": "Eylem düğmelerini yeniden sırala"
   },
   "profile": {
     "displayNameLabel": "Görünen ad",
@@ -779,6 +803,7 @@
     "ratingsGiven": "Verilen puanlar",
     "listsCreated": "Oluşturulan listeler",
     "traktIntegration": "Trakt entegrasyonu",
+    "traktIntegrationDescription": "Trakt izleme geçmişinizi, puanlarınızı ve listelerinizi aktarın ya da bir Trakt dışa aktarma zip'i içe aktarın.",
     "stremioIntegration": "Stremio Eklentisi",
     "connectTrakt": "Trakt'a bağlan",
     "disconnectTrakt": "Trakt bağlantısını kes",
@@ -818,8 +843,11 @@
     "checkConnection": "Lütfen bağlantınızı kontrol edip tekrar deneyin",
     "sendFeedback": "Geri bildirim gönder",
     "importFromImdb": "IMDb'den içe aktar",
+    "importFromImdbDescription": "IMDb dışa aktarma dosyalarından puanlarınızı, izleme listenizi ve listelerinizi getirin.",
     "importFromTvTime": "TV Time'dan içe aktar",
+    "importFromTvTimeDescription": "TV Time dışa aktarımından izleme geçmişinizi, puanlarınızı ve listelerinizi getirin.",
     "importFromSimkl": "Simkl'den içe aktar",
+    "importFromSimklDescription": "Simkl yedeğinden izleme geçmişinizi, puanlarınızı ve izleme listenizi getirin.",
     "exportData": "Verileri dışa aktar",
     "webApp": "ShowSeek web uygulaması",
     "joinDiscord": "Discord'umuza katıl",
@@ -849,6 +877,8 @@
     "dataSaverDescription": "Veri tasarrufu için düşük çözünürlüklü görseller yükler",
     "showOriginalTitles": "Orijinal başlıkları kullan",
     "showOriginalTitlesDescription": "Mevcut olduğunda film ve dizi başlıklarını orijinal dilinde gösterir.",
+    "use24HourTime": "24 saat biçimi",
+    "use24HourTimeDescription": "Saatleri 9:05 PM yerine 21:05 olarak gösterir. Siz değiştirene kadar telefonunuzun ayarını kullanır.",
     "updatePreferenceError": "Tercih güncellenemedi. Lütfen tekrar deneyin.",
     "content": "İçerik",
     "exportFailedFallbackMessage": "Dışa aktarma başarısız oldu. Lütfen tekrar deneyin.",
@@ -867,7 +897,17 @@
       "title": "Web uygulamasını aç"
     },
     "defaultBulkAction": "Varsayılan toplu işlem: {{mode}}",
-    "defaultBulkActionDescription": "Bir listeden toplu öğe eklerken ne olacağını seçin."
+    "defaultBulkActionDescription": "Bir listeden toplu öğe eklerken ne olacağını seçin.",
+    "useAsBackground": "Profil arka planı yap",
+    "backgroundSet": "Profil arka planın olarak ayarlandı",
+    "backgroundFailed": "Profil arka planı ayarlanamadı",
+    "profileBackground": "Profil arka planı",
+    "removeBackground": "Arka planı kaldır",
+    "backgroundHint": "Bir film ya da dizinin fotoğraflarını açın ve bir afişi ya da arka planı burada kullanmak için Profil arka planı yap'a dokunun.",
+    "positionBackdrop": "Arka planı konumlandır",
+    "positionHint": "Profilinizin arkasında neyin görüneceğini seçmek için resmi sürükleyin.",
+    "drawerPreview": "Yan menü",
+    "adjustPosition": "Konumu ayarla"
   },
   "dataExport": {
     "title": "ShowSeek verilerini dışa aktar",
@@ -1689,11 +1729,6 @@
       "description": "Keşfet'te ve listelerinizde en çok kullandığınız filtreleri kaydedin, ardından tek dokunuşla yeniden uygulayın. Filtrelerin en üstünde bulabilirsiniz."
     }
   },
-  "share": {
-    "message": "{{title}} - Buna TMDB'de göz at! {{url}}",
-    "linkCopied": "Bağlantı panoya kopyalandı",
-    "unableToShare": "Paylaşılamadı. Lütfen tekrar deneyin."
-  },
   "posterPicker": {
     "movieTitle": "Film afişi seç",
     "tvTitle": "Dizi afişi seç",
@@ -1971,6 +2006,13 @@
     "deleteConfirmTitle": "Kayıtlı filtreler silinsin mi?",
     "deleteConfirmMessage": "“{{name}}” silinecek.",
     "longPressHint": "Diğer seçenekler için kayıtlı bir filtreyi basılı tutun."
+  },
+  "actionButtons": {
+    "description": "Film ve dizi sayfalarındaki sıralarını değiştirmek için düğmeleri sürükleyin.",
+    "reminderHint": "Yalnızca yakında çıkacak yapımlarda görünür",
+    "dragHandle": "{{name}} öğesini yeniden sıralamak için sürükleyin",
+    "position": "Sıra {{position}}",
+    "saveFailed": "Yeni sıra kaydedilemedi. Lütfen tekrar deneyin."
   },
   "lists": {
     "alreadyWatched": "Daha önce izlenenler",
@@ -2289,5 +2331,81 @@
     "body": "ShowSeek'in bu sürümü artık desteklenmiyor. Listelerinizi, izleme geçmişinizi ve puanlarınızı senkronize tutmak için güncelleyin.",
     "updateButton": "ShowSeek'i güncelle",
     "storeUnavailable": "Mağaza açılamadı. Lütfen ShowSeek'i uygulama mağazanızdan güncelleyin."
+  },
+  "tips": {
+    "title": "İpuçları ve özellikler",
+    "intro": "Gözden kaçması kolay kullanışlı kısayollar. Çoğu uzun basmadır: titreşim hissedene kadar basılı tutun.",
+    "sections": {
+      "titles": "Filmler ve diziler",
+      "people": "Kişiler",
+      "library": "Listeler ve kütüphane",
+      "filters": "Filtreler",
+      "settings": "Ayarlar"
+    },
+    "items": {
+      "addToList": {
+        "title": "Her yerden listeye ekleyin",
+        "description": "Ana Sayfa, Keşfet, Arama ve diğer ekranlarda bir film ya da dizi afişine uzun basarak onu bir listeye ekleyin."
+      },
+      "watchHistory": {
+        "title": "İzleme geçmişini görün veya temizleyin",
+        "description": "İzlediğiniz bir film ya da dizinin izlendi düğmesine uzun basarak her izleyişinizi görün veya geçmişi temizleyin."
+      },
+      "copyTitle": {
+        "title": "Başlığı kopyalayın",
+        "description": "Film ya da dizi sayfasındaki başlığa uzun basarak kopyalayın."
+      },
+      "poster": {
+        "title": "Başka bir afiş seçin",
+        "description": "Film ya da dizi sayfasındaki afişe dokunarak başka bir afiş seçin. Seçiminiz uygulamanın her yerinde kullanılır."
+      },
+      "actionButtons": {
+        "title": "Eylem düğmelerini düzenleyin",
+        "description": "Film ve dizi sayfalarındaki düğmeleri Ayarlar › İçerik › Eylem düğmelerini yeniden sırala bölümünden istediğiniz sıraya koyun."
+      },
+      "profileBackground": {
+        "title": "Bir profil arka planı seçin",
+        "description": "Bir film ya da dizinin afişlerine veya arka planlarına bakarken, onu profilinizin arkasında göstermek için Profil arka planı yap'a dokunun."
+      },
+      "favoritePeople": {
+        "title": "Favori kişilerinizi kaydedin",
+        "description": "Oyuncu ya da ekipten birine uzun basarak onu favori kişilerinize ekleyin."
+      },
+      "selectSeveral": {
+        "title": "Birden çok öğe seçin",
+        "description": "Listelerinizden birindeki bir yapıma uzun basarak seçmeye başlayın, sonra hepsini başka bir listeye ekleyin ya da kaldırın."
+      },
+      "deleteLists": {
+        "title": "Listeleri toplu silin",
+        "description": "Özel Listeler'de bir listeye uzun basarak birkaç liste seçin ve birlikte silin."
+      },
+      "deleteListWhileAdding": {
+        "title": "Eklerken liste silin",
+        "description": "Listeye Ekle sayfasında kendi listelerinizden birine uzun basarak onu silin."
+      },
+      "hideShows": {
+        "title": "İzleme ilerlemenizi düzenleyin",
+        "description": "İzleme İlerlemesi'nde bir diziye uzun basarak dizileri seçin ve gizleyin."
+      },
+      "removeRatings": {
+        "title": "Puanları toplu kaldırın",
+        "description": "Bir puana uzun basarak birkaçını seçin ve hepsini birden kaldırın."
+      },
+      "savedFilters": {
+        "title": "Favori filtrelerinizi kaydedin",
+        "description": "Filtrelerde Kaydet'e dokunarak bir filtre setini saklayın. Kayıtlı birine uzun basarak yeniden adlandırın, güncelleyin ya da silin."
+      },
+      "filterChips": {
+        "title": "Bir filtreyi hızlıca değiştirin",
+        "description": "Yalnızca o filtreyi değiştirmek için başlığın altındaki filtre çipine, kaldırmak için ✕ işaretine dokunun."
+      },
+      "searchSettings": {
+        "title": "Ayarlarda arayın",
+        "description": "Herhangi bir seçeneğe doğrudan gitmek için Ayarlar'daki aramayı kullanın."
+      }
+    }
+  },
+  "imageViewer": {
+    "download": "İndir"
   }
 }

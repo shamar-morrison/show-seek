@@ -1,3 +1,4 @@
+import { formatDateTime } from '@/src/utils/timeFormat';
 import {
   CollapsibleCategory,
   CollapsibleFeatureItem,
@@ -208,7 +209,7 @@ export default function TvTimeImportScreen() {
             <AppIcon icon={Clock01Icon} size={18} color={COLORS.warning} />
             <Text style={styles.warningText}>
               {t('tvtimeImport.cooldownNotice', {
-                time: new Date(limitState.blockedUntil!).toLocaleString(i18n.language),
+                time: formatDateTime(limitState.blockedUntil!, i18n.language),
               })}
             </Text>
           </View>

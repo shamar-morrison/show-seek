@@ -14,6 +14,7 @@ import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
 import {
+  DragDropVerticalIcon,
   Layout01Icon,
   MapPinIcon,
   PaintBoardIcon,
@@ -27,21 +28,54 @@ import { ActionButton } from './ActionButton';
 /** Stored (not rendered) category keys for content items. */
 export type ContentCategoryKey = 'localization' | 'appearance';
 
-export type ContentItemId = 'language' | 'region' | 'accentColor' | 'defaultLaunchScreen';
+export type ContentItemId =
+  | 'language'
+  | 'region'
+  | 'accentColor'
+  | 'defaultLaunchScreen'
+  | 'actionButtons';
 
 export interface ContentConfigItem {
   /** Stable id (also used as the search/scroll id) */
   id: ContentItemId;
   /** Translation key for the title */
   titleKey: string;
+  /** Translation key for the short description (the one its own screen opens with) */
+  descKey: string;
   category: ContentCategoryKey;
 }
 
 export const CONTENT_ITEMS: ContentConfigItem[] = [
-  { id: 'language', titleKey: 'settings.language', category: 'localization' },
-  { id: 'region', titleKey: 'settings.region', category: 'localization' },
-  { id: 'accentColor', titleKey: 'settings.accentColor', category: 'appearance' },
-  { id: 'defaultLaunchScreen', titleKey: 'settings.defaultLaunchScreen', category: 'appearance' },
+  {
+    id: 'language',
+    titleKey: 'settings.language',
+    descKey: 'settings.languageScreenDescription',
+    category: 'localization',
+  },
+  {
+    id: 'region',
+    titleKey: 'settings.region',
+    descKey: 'settings.regionScreenDescription',
+    category: 'localization',
+  },
+  {
+    id: 'accentColor',
+    titleKey: 'settings.accentColor',
+    descKey: 'settings.accentColorDescription',
+    category: 'appearance',
+  },
+  {
+    id: 'defaultLaunchScreen',
+    titleKey: 'settings.defaultLaunchScreen',
+    descKey: 'settings.launchScreenDescription',
+    category: 'appearance',
+  },
+  {
+    id: 'actionButtons',
+    titleKey: 'settings.actionButtons',
+    descKey: 'actionButtons.description',
+    category: 'appearance',
+  },
 ];
 
 export interface ContentSettingsSectionProps {
@@ -59,6 +93,8 @@ export interface ContentSettingsSectionProps {
   onColorPress: () => void;
   /** Handler for launch screen button press */
   onLaunchScreenPress: () => void;
+  /** Handler for the action buttons order button press */
+  onActionButtonsPress: () => void;
   /** Whether to show section title (default: true) */
   showTitle?: boolean;
   /** Id of the item to briefly highlight (e.g. from profile search) */
@@ -78,6 +114,7 @@ export function ContentSettingsSection({
   onRegionPress,
   onColorPress,
   onLaunchScreenPress,
+  onActionButtonsPress,
   showTitle = true,
   highlightedId = null,
   registerItemLayout,
@@ -159,6 +196,7 @@ export function ContentSettingsSection({
           <ActionButton
             icon={TranslateIcon}
             label={t('settings.language')}
+            description={t('settings.languageScreenDescription')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onLanguagePress();
@@ -178,6 +216,7 @@ export function ContentSettingsSection({
           <ActionButton
             icon={MapPinIcon}
             label={t('settings.region')}
+            description={t('settings.regionScreenDescription')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onRegionPress();
@@ -196,6 +235,7 @@ export function ContentSettingsSection({
           <ActionButton
             icon={PaintBoardIcon}
             label={t('settings.accentColor')}
+            description={t('settings.accentColorDescription')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onColorPress();
@@ -208,11 +248,24 @@ export function ContentSettingsSection({
             }
           />
         );
+      case 'actionButtons':
+        return (
+          <ActionButton
+            icon={DragDropVerticalIcon}
+            label={t('settings.actionButtons')}
+            description={t('actionButtons.description')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onActionButtonsPress();
+            }}
+          />
+        );
       case 'defaultLaunchScreen':
         return (
           <ActionButton
             icon={Layout01Icon}
             label={t('settings.defaultLaunchScreen')}
+            description={t('settings.launchScreenDescription')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onLaunchScreenPress();

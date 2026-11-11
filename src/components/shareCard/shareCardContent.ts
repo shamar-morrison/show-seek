@@ -49,6 +49,19 @@ export function getShareCardContent(data: ShareCardData, t: TFunction): ShareCar
     };
   }
 
+  if (data.kind === 'collection') {
+    return {
+      headline: data.collectionName,
+      meta: [t('collection.moviesCount', { count: data.movieCount }), data.yearRange]
+        .filter(Boolean)
+        .join(' • '),
+      userRating: 0,
+      progress: data.progress
+        ? { current: data.progress.watched, total: data.progress.total }
+        : undefined,
+    };
+  }
+
   if (data.kind === 'list') {
     return {
       headline: data.listName,

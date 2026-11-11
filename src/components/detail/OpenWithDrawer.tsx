@@ -5,6 +5,7 @@ import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/co
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import {
   buildOpenWithUrl,
+  buildStremioAppUrlFromWeb,
   buildTraktAppUrlFromWeb,
   OpenWithServiceId,
 } from '@/src/utils/openWithLinks';
@@ -21,6 +22,7 @@ const lbLogo = require('../../../assets/images/lb.png');
 const rtLogo = require('../../../assets/images/rt.png');
 const mcLogo = require('../../../assets/images/mc.png');
 const tmdbLogo = require('../../../assets/images/tmdb.png');
+const stremioLogo = require('../../../assets/images/stremio.png');
 
 interface OpenWithDrawerProps {
   visible: boolean;
@@ -64,6 +66,11 @@ export default function OpenWithDrawer({
         id: 'trakt',
         label: t('media.trakt'),
         icon: <TraktLogo size={22} />,
+      },
+      {
+        id: 'stremio',
+        label: t('media.stremio'),
+        icon: <Image source={stremioLogo} style={styles.logo} resizeMode="contain" />,
       },
       {
         id: 'tmdb',
@@ -156,16 +163,23 @@ export default function OpenWithDrawer({
       });
 
       try {
-        if (serviceId === 'trakt') {
-          const appUrl = buildTraktAppUrlFromWeb(webUrl);
-          if (appUrl) {
-            try {
-              await Linking.openURL(appUrl);
-              await sheetRef.current?.dismiss();
-              return;
-            } catch (appError) {
-              console.warn('[OpenWithDrawer] Trakt app not available, opening website:', appError);
-            }
+        // Trakt and Stremio open in their app when it's installed, else on their website.
+        const appUrl =
+          serviceId === 'trakt'
+            ? buildTraktAppUrlFromWeb(webUrl)
+            : serviceId === 'stremio'
+              ? buildStremioAppUrlFromWeb(webUrl)
+              : null;
+        if (appUrl) {
+          try {
+            await Linking.openURL(appUrl);
+            await sheetRef.current?.dismiss();
+            return;
+          } catch (appError) {
+            console.warn(
+              `[OpenWithDrawer] ${serviceId} app not available, opening website:`,
+              appError
+            );
           }
         }
 

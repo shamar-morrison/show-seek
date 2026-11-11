@@ -204,9 +204,12 @@ export const useDetailStyles = () =>
     reviewsListContent: {
       paddingHorizontal: SPACING.l,
     },
+    // Review cards (TMDB and Trakt) look like the action buttons: a faint fill and a thin border.
     reviewCard: {
       width: 280,
-      backgroundColor: COLORS.surfaceLight,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
       borderRadius: BORDER_RADIUS.m,
       padding: SPACING.m,
       marginRight: SPACING.m,
@@ -250,7 +253,9 @@ export const useDetailStyles = () =>
     // Review Loading States
     reviewCardSkeleton: {
       width: 280,
-      backgroundColor: COLORS.surfaceLight,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
       borderRadius: BORDER_RADIUS.m,
       padding: SPACING.m,
       marginRight: SPACING.m,
@@ -300,8 +305,9 @@ export const useDetailStyles = () =>
     },
 
     // Review Error State
+    // Same faint fill as the review cards; the red border marks it as an error.
     reviewErrorBox: {
-      backgroundColor: COLORS.surfaceLight,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
       borderRadius: BORDER_RADIUS.m,
       padding: SPACING.l,
       marginBottom: SPACING.m,

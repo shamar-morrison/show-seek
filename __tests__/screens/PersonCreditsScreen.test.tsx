@@ -10,6 +10,8 @@ const mockGetListsForMedia = jest.fn();
 const mockRequireAccount = jest.fn();
 const mockPresent = jest.fn();
 const mockImpactAsync = jest.fn();
+const mockToggleViewMode = jest.fn();
+const mockListActionsPresent = jest.fn();
 
 let mockViewMode: 'list' | 'grid' = 'list';
 let mockShowIndicators = true;
@@ -146,12 +148,16 @@ jest.mock('@/src/components/AddToListModal', () => {
 
 jest.mock('@/src/components/ListActionsModal', () => {
   const React = require('react');
-  const ListActionsModal = React.forwardRef(() => null);
+  const ListActionsModal = React.forwardRef((_props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({ present: mockListActionsPresent }));
+    return null;
+  });
 
   return {
     __esModule: true,
     default: ListActionsModal,
-    ListActionsIcon: () => null,
+    // Icon data (drawn through AppIcon), not a component.
+    ListActionsIcon: [],
   };
 });
 
@@ -221,6 +227,7 @@ jest.mock('@/src/hooks/useViewModeToggle', () => ({
   useViewModeToggle: () => ({
     viewMode: mockViewMode,
     isLoadingPreference: false,
+    toggleViewMode: mockToggleViewMode,
   }),
 }));
 
@@ -328,10 +335,10 @@ describe('PersonCreditsScreen', () => {
       crew: directedMovies,
     });
 
-    const { getByText, queryByText } = render(<PersonCreditsScreen />);
+    const { getByText, queryByText, getByTestId } = render(<PersonCreditsScreen />);
 
-    expect(mockSetOptions).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Test Person - person.directedWrittenMovies' })
+    expect(getByTestId('person-credits-subtitle').props.children).toBe(
+      'person.directedWrittenMovies'
     );
     expect(getByText('Directed Movie 0')).toBeTruthy();
     expect(getByText('Directed Movie 11')).toBeTruthy();
@@ -344,13 +351,54 @@ describe('PersonCreditsScreen', () => {
       crew: [mockDirectedMovieCredit],
     });
 
-    const { getByText, queryByText } = render(<PersonCreditsScreen />);
+    const { getByText, queryByText, getByTestId } = render(<PersonCreditsScreen />);
 
-    expect(mockSetOptions).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Test Person - person.actingMovies' })
-    );
+    expect(getByTestId('person-credits-subtitle').props.children).toBe('person.actingMovies');
     expect(getByText('Known Movie')).toBeTruthy();
     expect(queryByText('Directed Movie')).toBeNull();
+  });
+
+  describe('header', () => {
+    beforeEach(() => {
+      setupCreditsQuery({ cast: [mockMovieCredit], crew: [] });
+    });
+
+    it('hides the native header and shows the name with the section on its own line', () => {
+      const { getByTestId } = render(<PersonCreditsScreen />);
+
+      expect(mockSetOptions).toHaveBeenCalledWith({ headerShown: false });
+      expect(getByTestId('person-credits-title').props.children).toBe('Test Person');
+      expect(getByTestId('person-credits-title').props.numberOfLines).toBe(1);
+      expect(getByTestId('person-credits-subtitle').props.children).toBe('person.actingMovies');
+    });
+
+    it('uses the section as the title when there is no name', () => {
+      mockSearchParams = { ...mockSearchParams, name: '' };
+      const { getByTestId, queryByTestId } = render(<PersonCreditsScreen />);
+
+      expect(getByTestId('person-credits-title').props.children).toBe('person.actingMovies');
+      expect(queryByTestId('person-credits-subtitle')).toBeNull();
+    });
+
+    it('goes back, toggles the view and opens sort and filter from the header', () => {
+      const { getByTestId } = render(<PersonCreditsScreen />);
+
+      fireEvent.press(getByTestId('person-credits-back'));
+      fireEvent.press(getByTestId('person-credits-view-toggle'));
+      fireEvent.press(getByTestId('person-credits-actions'));
+
+      expect(mockBack).toHaveBeenCalledTimes(1);
+      expect(mockToggleViewMode).toHaveBeenCalledTimes(1);
+      expect(mockListActionsPresent).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the header, with its back button, while loading', () => {
+      mockUseQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+      const { getByTestId } = render(<PersonCreditsScreen />);
+
+      fireEvent.press(getByTestId('person-credits-back'));
+      expect(mockBack).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('opens AddToListModal for authenticated long press in list mode', async () => {

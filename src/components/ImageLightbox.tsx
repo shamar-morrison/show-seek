@@ -1,6 +1,15 @@
+import { ProfileBackgroundButton } from '@/src/components/profile/ProfileBackgroundButton';
+import { SetProfileBackdrop } from '@/src/components/profile/SetProfileBackdrop';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
+import type { ProfileBackground } from '@/src/utils/profileBackground';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -23,6 +32,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const FALLBACK_IMAGE_EXTENSION = '.jpg';
+/** Only images this many pages from the current one are loaded, so long sets stay light. */
+const RENDER_WINDOW = 2;
 
 interface ImageLightboxProps {
   visible: boolean;
@@ -31,6 +42,11 @@ interface ImageLightboxProps {
   downloadImages?: string[];
   onShowToast?: (message: string) => void;
   initialIndex?: number;
+  /**
+   * For posters and backdrops: each image's TMDB path, in the same order as `images`, which adds
+   * a "Use as profile background" button. Null entries (or no array) show no button.
+   */
+  profileBackgrounds?: (ProfileBackground | null)[];
 }
 
 export default function ImageLightbox({
@@ -40,16 +56,19 @@ export default function ImageLightbox({
   downloadImages,
   onShowToast,
   initialIndex = 0,
+  profileBackgrounds,
 }: ImageLightboxProps) {
-  const { accentColor } = useAccentColor();
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isDownloading, setIsDownloading] = useState(false);
+  // The image being positioned as the profile backdrop, shown over the viewer.
+  const [positioning, setPositioning] = useState<ProfileBackground | null>(null);
   const lightboxToastRef = useRef<ToastRef>(null);
 
+  // Start from the tapped image each time it opens, even when that's the same index as last time.
   React.useEffect(() => {
-    setCurrentIndex(initialIndex);
-  }, [initialIndex]);
+    if (visible) setCurrentIndex(initialIndex);
+  }, [initialIndex, visible]);
 
   const getImageExtension = (url: string) => {
     const sanitizedUrl = url.split('?')[0].split('#')[0];
@@ -116,10 +135,24 @@ export default function ImageLightbox({
   if (!visible || images.length === 0) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      // Android back leaves "Position backdrop" first, then the viewer.
+      onRequestClose={() => (positioning ? setPositioning(null) : onClose())}
+    >
       <View style={styles.overlay}>
         <SafeAreaView edges={['top']} style={styles.headerSafe}>
           <View style={styles.header}>
+            {/* The counter sits in the middle; close is on the right. */}
+            {images.length > 1 && (
+              <View style={styles.counterContainer} pointerEvents="none">
+                <Text style={styles.counter} testID="image-lightbox-counter">
+                  {currentIndex + 1} / {images.length}
+                </Text>
+              </View>
+            )}
             <Pressable
               style={({ pressed }) => [styles.headerButton, pressed && { opacity: ACTIVE_OPACITY }]}
               onPress={onClose}
@@ -128,26 +161,6 @@ export default function ImageLightbox({
               accessibilityLabel={t('common.close')}
             >
               <AppIcon icon={Cancel01Icon} size={28} color={COLORS.white} />
-            </Pressable>
-
-            {images.length > 1 && (
-              <Text style={styles.counter} testID="image-lightbox-counter">
-                {currentIndex + 1} / {images.length}
-              </Text>
-            )}
-
-            <Pressable
-              style={({ pressed }) => [styles.headerButton, pressed && { opacity: ACTIVE_OPACITY }]}
-              onPress={handleDownload}
-              disabled={isDownloading}
-              testID="image-lightbox-download-button"
-              accessibilityRole="button"
-            >
-              {isDownloading ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : (
-                <AppIcon icon={Download01Icon} size={24} color={COLORS.white} />
-              )}
             </Pressable>
           </View>
         </SafeAreaView>
@@ -167,24 +180,56 @@ export default function ImageLightbox({
         >
           {images.map((imageUrl, index) => (
             <View key={index} style={styles.imageContainer}>
-              <Image source={{ uri: imageUrl }} style={styles.image} contentFit="contain" />
+              {Math.abs(index - currentIndex) <= RENDER_WINDOW ? (
+                <Image source={{ uri: imageUrl }} style={styles.image} contentFit="contain" />
+              ) : null}
             </View>
           ))}
         </ScrollView>
 
-        {images.length > 1 && (
-          <View style={styles.indicator}>
-            {images.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  currentIndex === index && { backgroundColor: accentColor, width: 24 },
-                ]}
+        {/* Labelled actions below the image, within thumb reach. */}
+        <SafeAreaView edges={['bottom']} style={styles.actionBarSafe}>
+          <View style={styles.actionBar} testID="image-lightbox-actions">
+            <Pressable
+              style={({ pressed }) => [styles.actionButton, pressed && { opacity: ACTIVE_OPACITY }]}
+              onPress={handleDownload}
+              disabled={isDownloading}
+              testID="image-lightbox-download-button"
+              accessibilityRole="button"
+              accessibilityLabel={t('imageViewer.download')}
+            >
+              {isDownloading ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <AppIcon icon={Download01Icon} size={24} color={COLORS.white} />
+              )}
+              <Text style={styles.actionLabel} numberOfLines={2}>
+                {t('imageViewer.download')}
+              </Text>
+            </Pressable>
+            {profileBackgrounds?.[currentIndex] ? (
+              <ProfileBackgroundButton
+                image={profileBackgrounds[currentIndex]!}
+                onChoose={setPositioning}
+                style={styles.actionButton}
+                labelStyle={styles.actionLabel}
               />
-            ))}
+            ) : null}
           </View>
-        )}
+        </SafeAreaView>
+
+        {positioning ? (
+          <View style={StyleSheet.absoluteFill}>
+            <SetProfileBackdrop
+              image={positioning}
+              onShowToast={showToast}
+              onClose={(message) => {
+                setPositioning(null);
+                if (message) showToast(message);
+              }}
+            />
+          </View>
+        ) : null}
 
         <Toast ref={lightboxToastRef} />
       </View>
@@ -203,7 +248,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: SPACING.s,
     paddingVertical: SPACING.xs,
   },
@@ -213,6 +258,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 22,
+  },
+  counterContainer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   counter: {
     color: COLORS.textSecondary,
@@ -232,17 +282,35 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  indicator: {
-    position: 'absolute',
-    bottom: 50,
-    alignSelf: 'center',
+  actionBarSafe: {
+    backgroundColor: COLORS.black,
+  },
+  actionBar: {
     flexDirection: 'row',
     gap: SPACING.s,
+    paddingHorizontal: SPACING.l,
+    paddingVertical: SPACING.s,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  // Styled like the action buttons on movie and TV pages (MediaActionButtons), plus a label under
+  // the icon that may wrap to two lines ("Set as profile backdrop" doesn't fit one line beside
+  // "Download" on smaller phones). Both buttons stretch to the same height.
+  actionButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    flex: 1,
+    gap: SPACING.xs,
+    justifyContent: 'center',
+    minHeight: 64,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.s,
+  },
+  actionLabel: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: FONT_SIZE.xs,
+    textAlign: 'center',
   },
 });

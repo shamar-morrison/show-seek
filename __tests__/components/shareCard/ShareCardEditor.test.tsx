@@ -1,5 +1,6 @@
 import ShareCardEditor from '@/src/components/shareCard/ShareCardEditor';
 import {
+  CollectionShareCardData,
   EpisodeShareCardData,
   ListShareCardData,
   ProgressShareCardData,
@@ -779,6 +780,53 @@ describe('ShareCardEditor', () => {
     });
   });
 
+  describe('collection card', () => {
+    const collection: CollectionShareCardData = {
+      kind: 'collection',
+      collectionName: 'Star Wars Collection',
+      movieCount: 9,
+      yearRange: '1977–2019',
+      posterPaths: ['/one.jpg', '/two.jpg', '/three.jpg'],
+      backdropPath: '/collection-backdrop.jpg',
+    };
+
+    const selectFormat = (utils: ReturnType<typeof render>, format: string) =>
+      fireEvent.press(utils.getByTestId(`share-card-format-tab-${format}`));
+    const imageUris = (utils: ReturnType<typeof render>) =>
+      captureImages(utils).map((image) => image.props.source?.uri ?? '');
+
+    it.each(['portrait', 'square', 'landscape'])(
+      '%s shows the name, movie count, years and a fan of posters over the backdrop',
+      async (format) => {
+        const utils = await renderEditor(collection);
+        selectFormat(utils, format);
+
+        expect(capturedCard(utils).getByTestId('share-card-title')).toHaveTextContent(
+          'Star Wars Collection'
+        );
+        expect(capturedCard(utils).getByText('9 Movies • 1977–2019')).toBeTruthy();
+        expect(capturedCard(utils).queryAllByTestId('share-card-fan-poster')).toHaveLength(3);
+        expect(imageUris(utils).some((uri) => uri.includes('/collection-backdrop.jpg'))).toBe(true);
+        expect(capturedCard(utils).queryByTestId('share-card-progress-fill')).toBeNull();
+      }
+    );
+
+    it('shows the watched progress of a tracked collection', async () => {
+      const utils = await renderEditor({ ...collection, progress: { watched: 5, total: 9 } });
+
+      expect(capturedCard(utils).getByText('5/9')).toBeTruthy();
+      expect(capturedCard(utils).getByTestId('share-card-progress-fill')).toHaveStyle({
+        width: `${(5 / 9) * 100}%`,
+      });
+    });
+
+    it('leaves out the years when no movie has a date', async () => {
+      const utils = await renderEditor({ ...collection, yearRange: '' });
+
+      expect(capturedCard(utils).getByText('9 Movies')).toBeTruthy();
+    });
+  });
+
   describe('list card', () => {
     const list: ListShareCardData = {
       kind: 'list',
@@ -946,6 +994,24 @@ describe('ShareCardEditor', () => {
       expect(capturedCard(utils).queryByTestId('share-card-foreground')).toBeNull();
       expect(capturedCard(utils).getByText('8/10')).toBeTruthy();
       expect(footer(utils).getByText('Sam Rivera')).toBeTruthy();
+    });
+
+    it('puts the collection backdrop behind a landscape cinematic card', async () => {
+      const utils = await renderEditor({
+        kind: 'collection',
+        collectionName: 'Star Wars Collection',
+        movieCount: 9,
+        yearRange: '1977–2019',
+        posterPaths: ['/one.jpg'],
+        backdropPath: '/collection-backdrop.jpg',
+      });
+
+      pickStyle(utils, 'cinematic');
+      fireEvent.press(utils.getByTestId('share-card-format-tab-landscape'));
+
+      expect(capturedCard(utils).getByTestId('share-card-hero').props.source.uri).toContain(
+        '/collection-backdrop.jpg'
+      );
     });
 
     it('still shows every card type in cinematic', async () => {
