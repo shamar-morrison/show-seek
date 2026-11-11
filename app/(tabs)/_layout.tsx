@@ -4,6 +4,7 @@ import { useAuth } from '@/src/context/auth';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { Redirect, Tabs } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import { WhatsNewOnLaunch } from '@/src/components/WhatsNewOnLaunch';
 import {
   BinocularsIcon,
   FolderLibraryIcon,
@@ -45,76 +46,82 @@ export default function TabLayout() {
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: accentColor,
-        tabBarInactiveTintColor: COLORS.textSecondary,
-        headerShown: false,
-        tabBarShowLabel: !hideLabels,
-        tabBarStyle: {
-          backgroundColor: COLORS.surface,
-          borderTopColor: COLORS.surfaceLight,
-          borderTopWidth: 1,
-          height: (hideLabels ? 56 : 70) + insets.bottom,
-          paddingTop: 5,
-          paddingBottom: insets.bottom,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontFamily: FONT_FAMILY.semiBold,
-          marginBottom: 4,
-        },
-        tabBarItemStyle: {
-          justifyContent: 'center',
-          paddingVertical: 4,
-        },
-        // @ts-expect-error - detachInactiveScreens is supported but not in types
-        detachInactiveScreens: true,
-      }}
-    >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: t('tabs.home'),
-          tabBarIcon: ({ color, size }) => <AppIcon icon={Home01Icon} color={color} size={size} />,
+    <>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: accentColor,
+          tabBarInactiveTintColor: COLORS.textSecondary,
+          headerShown: false,
+          tabBarShowLabel: !hideLabels,
+          tabBarStyle: {
+            backgroundColor: COLORS.surface,
+            borderTopColor: COLORS.surfaceLight,
+            borderTopWidth: 1,
+            height: (hideLabels ? 56 : 70) + insets.bottom,
+            paddingTop: 5,
+            paddingBottom: insets.bottom,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontFamily: FONT_FAMILY.semiBold,
+            marginBottom: 4,
+          },
+          tabBarItemStyle: {
+            justifyContent: 'center',
+            paddingVertical: 4,
+          },
+          // @ts-expect-error - detachInactiveScreens is supported but not in types
+          detachInactiveScreens: true,
         }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: t('tabs.search'),
-          tabBarIcon: ({ color, size }) => (
-            <AppIcon icon={Search01Icon} color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="discover"
-        options={{
-          title: t('tabs.discover'),
-          tabBarIcon: ({ color, size }) => (
-            <AppIcon icon={BinocularsIcon} color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="library"
-        options={{
-          title: t('tabs.library'),
-          tabBarIcon: ({ color, size }) => (
-            <AppIcon icon={FolderLibraryIcon} color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t('tabs.profile'),
-          tabBarIcon: ({ color, size }) => <AppIcon icon={UserIcon} color={color} size={size} />,
-          // @ts-expect-error - unmountOnBlur is supported but not in types
-          unmountOnBlur: true,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="home"
+          options={{
+            title: t('tabs.home'),
+            tabBarIcon: ({ color, size }) => (
+              <AppIcon icon={Home01Icon} color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="search"
+          options={{
+            title: t('tabs.search'),
+            tabBarIcon: ({ color, size }) => (
+              <AppIcon icon={Search01Icon} color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="discover"
+          options={{
+            title: t('tabs.discover'),
+            tabBarIcon: ({ color, size }) => (
+              <AppIcon icon={BinocularsIcon} color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="library"
+          options={{
+            title: t('tabs.library'),
+            tabBarIcon: ({ color, size }) => (
+              <AppIcon icon={FolderLibraryIcon} color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: t('tabs.profile'),
+            tabBarIcon: ({ color, size }) => <AppIcon icon={UserIcon} color={color} size={size} />,
+            // @ts-expect-error - unmountOnBlur is supported but not in types
+            unmountOnBlur: true,
+          }}
+        />
+      </Tabs>
+      {/* Over whichever tab opens first, not only Home. */}
+      <WhatsNewOnLaunch />
+    </>
   );
 }

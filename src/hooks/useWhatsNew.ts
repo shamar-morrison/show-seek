@@ -2,7 +2,24 @@ import { CURRENT_WHATS_NEW } from '@/src/constants/whatsNew';
 import { markWhatsNewSeen, shouldShowWhatsNew } from '@/src/services/whatsNewService';
 import { useCallback, useEffect, useState } from 'react';
 
-/** Decides whether this launch shows the current announcement. */
+// Decided once per launch and shared, so the sheet (shown over the first tab) and Home's review
+// prompt agree: once the sheet marks the announcement seen, a fresh read would say "don't show"
+// and Home could interrupt again in the same launch.
+let launchDecision: { id: string; promise: Promise<boolean> } | null = null;
+
+function decideForThisLaunch(announcementId: string): Promise<boolean> {
+  if (launchDecision?.id !== announcementId) {
+    launchDecision = { id: announcementId, promise: shouldShowWhatsNew(announcementId) };
+  }
+  return launchDecision.promise;
+}
+
+/** Tests only: forget this launch's decision. */
+export function resetWhatsNewLaunchDecision(): void {
+  launchDecision = null;
+}
+
+/** Decides whether this launch shows the current announcement (the same answer everywhere). */
 export function useWhatsNew() {
   const announcement = CURRENT_WHATS_NEW;
   // Null while checking. Stays true after dismissal, so it describes the whole session.
@@ -12,7 +29,7 @@ export function useWhatsNew() {
     if (!announcement) return;
 
     let isCancelled = false;
-    void shouldShowWhatsNew(announcement.id).then((result) => {
+    void decideForThisLaunch(announcement.id).then((result) => {
       if (!isCancelled) setShouldShow(result);
     });
 

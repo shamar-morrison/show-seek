@@ -8,7 +8,6 @@ import HomeScreenCustomizationModal, {
 import { HomeListSectionSkeleton } from '@/src/components/skeletons/HomeListSectionSkeleton';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { WhatsNewSheet } from '@/src/components/WhatsNewSheet';
 import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
@@ -285,9 +284,6 @@ export default function HomeScreen() {
           onShowToast={handleShowToast}
           onDismiss={() => setSelectedMediaItem(null)}
         />
-      )}
-      {whatsNew.announcement && (
-        <WhatsNewSheet announcement={whatsNew.announcement} onDismiss={whatsNew.markSeen} />
       )}
       <Toast ref={toastRef} />
     </SafeAreaView>

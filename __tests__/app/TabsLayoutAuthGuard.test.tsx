@@ -45,6 +45,13 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+jest.mock('@/src/components/WhatsNewOnLaunch', () => ({
+  WhatsNewOnLaunch: () => {
+    const { View } = require('react-native');
+    return <View testID="whats-new-on-launch" />;
+  },
+}));
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
@@ -62,9 +69,7 @@ describe('TabLayout auth guard', () => {
   it('redirects to sign-in when user is unauthenticated', () => {
     render(<TabLayout />);
 
-    expect(mockRedirect).toHaveBeenCalledWith(
-      expect.objectContaining({ href: '/(auth)/sign-in' })
-    );
+    expect(mockRedirect).toHaveBeenCalledWith(expect.objectContaining({ href: '/(auth)/sign-in' }));
     expect(mockTabsRender).not.toHaveBeenCalled();
   });
 
@@ -84,5 +89,18 @@ describe('TabLayout auth guard', () => {
 
     expect(mockTabsRender).not.toHaveBeenCalled();
     expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("shows What's New beside the tabs, so it appears on whichever tab opens first", () => {
+    mockAuthState.user = { uid: 'user-1' };
+
+    const { getByTestId } = render(<TabLayout />);
+
+    expect(getByTestId('whats-new-on-launch')).toBeTruthy();
+  });
+
+  it("doesn't show What's New to signed-out users", () => {
+    const { queryByTestId } = render(<TabLayout />);
+    expect(queryByTestId('whats-new-on-launch')).toBeNull();
   });
 });

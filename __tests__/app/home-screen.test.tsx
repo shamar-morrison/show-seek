@@ -623,12 +623,13 @@ describe('HomeScreen long press add-to-list', () => {
       markSeen: jest.fn(),
     });
 
-    it('shows the sheet and holds the review prompt when there is an announcement', () => {
+    it('holds the review prompt when there is an announcement, without showing the sheet itself', () => {
       mockUseWhatsNew.mockReturnValueOnce(whatsNewState(true));
 
-      const { getByTestId } = render(<HomeScreen />);
+      const { queryByTestId } = render(<HomeScreen />);
 
-      expect(getByTestId('whats-new-sheet')).toBeTruthy();
+      // The sheet is shown beside the tabs (WhatsNewOnLaunch), over whichever tab opens first.
+      expect(queryByTestId('whats-new-sheet')).toBeNull();
       expect(mockUseInAppReview).toHaveBeenCalledWith(false);
     });
 
