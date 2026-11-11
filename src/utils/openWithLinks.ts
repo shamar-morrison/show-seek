@@ -1,6 +1,7 @@
 export type OpenWithServiceId =
   | 'imdb'
   | 'trakt'
+  | 'stremio'
   | 'tmdb'
   | 'letterboxd'
   | 'rottenTomatoes'
@@ -17,6 +18,9 @@ export interface BuildOpenWithUrlParams {
   imdbId?: string | null;
   traktSlug?: string | null;
 }
+
+/** Stremio Web; the app's `stremio:///` links use the same paths (Stremio addon SDK deep links). */
+const STREMIO_WEB_BASE = 'https://web.stremio.com/#/';
 
 const normalizeQuery = (title: string, year?: string | number | null) => {
   const safeTitle = title.trim();
@@ -38,6 +42,8 @@ export const buildOpenWithFallbackUrl = ({
       return `https://www.imdb.com/find/?q=${query}&s=tt`;
     case 'trakt':
       return `https://trakt.tv/search/${traktType}?query=${query}`;
+    case 'stremio':
+      return `${STREMIO_WEB_BASE}search?search=${encodeURIComponent(title.trim())}`;
     case 'tmdb':
       return `https://www.themoviedb.org/search/${mediaType}?query=${query}`;
     case 'letterboxd':
@@ -68,6 +74,13 @@ export const buildOpenWithUrl = (params: BuildOpenWithUrlParams): string => {
     return `https://trakt.tv/${traktType}/${traktSlug}`;
   }
 
+  // Stremio's Cinemeta ids are IMDb ids. A movie opens its own page; a show opens its episodes.
+  if (serviceId === 'stremio' && imdbId) {
+    return mediaType === 'movie'
+      ? `${STREMIO_WEB_BASE}detail/movie/${imdbId}/${imdbId}`
+      : `${STREMIO_WEB_BASE}detail/series/${imdbId}`;
+  }
+
   if (serviceId === 'tmdb') {
     return `https://www.themoviedb.org/${tmdbPath}/${mediaId}`;
   }
@@ -82,4 +95,13 @@ export const buildTraktAppUrlFromWeb = (webUrl: string): string | null => {
   }
 
   return `trakt://${webUrl.slice(base.length)}`;
+};
+
+/** The Stremio app link for a Stremio Web link, e.g. `stremio:///detail/movie/tt0111161/tt0111161`. */
+export const buildStremioAppUrlFromWeb = (webUrl: string): string | null => {
+  if (!webUrl.startsWith(STREMIO_WEB_BASE)) {
+    return null;
+  }
+
+  return `stremio:///${webUrl.slice(STREMIO_WEB_BASE.length)}`;
 };
