@@ -1,6 +1,6 @@
 import { type Video } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { HorizontalFlashList } from '@/src/components/ui/HorizontalFlashList';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import { useDetailStyles } from './detailStyles';
 import type { VideosSectionProps } from './types';
 
 export const VideosSection = memo<VideosSectionProps>(
-  ({ videos, onVideoPress, style }) => {
+  ({ videos, onVideoPress, style, onViewAll }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
 
@@ -46,9 +46,27 @@ export const VideosSection = memo<VideosSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
-          {t('media.videos')}
-        </Text>
+        {onViewAll ? (
+          <TouchableOpacity
+            // Same spacing as the plain title.
+            style={[
+              styles.sectionHeader,
+              { marginTop: 0, marginBottom: 0, paddingBottom: SPACING.s },
+            ]}
+            onPress={onViewAll}
+            activeOpacity={ACTIVE_OPACITY}
+            hitSlop={HIT_SLOP.m}
+            accessibilityRole="button"
+            testID="videos-section-header"
+          >
+            <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>{t('media.videos')}</Text>
+            <Text style={styles.viewAll}>{t('common.seeAll')}</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
+            {t('media.videos')}
+          </Text>
+        )}
         <HorizontalFlashList
           data={videos}
           renderItem={renderItem}
@@ -68,7 +86,8 @@ export const VideosSection = memo<VideosSectionProps>(
       prevProps.videos.length === nextProps.videos.length &&
       (prevProps.videos.length === 0 || prevProps.videos[0]?.id === nextProps.videos[0]?.id) &&
       prevProps.onVideoPress === nextProps.onVideoPress &&
-      prevProps.style === nextProps.style
+      prevProps.style === nextProps.style &&
+      prevProps.onViewAll === nextProps.onViewAll
     );
   }
 );

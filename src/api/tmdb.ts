@@ -3,6 +3,7 @@ import {
   organizeMediaImages,
   type MediaImages,
 } from '@/src/utils/mediaImages';
+import { buildIncludeVideoLanguage, organizeVideos } from '@/src/utils/mediaVideos';
 import axios from 'axios';
 
 const TMDB_API_KEY = process.env.EXPO_PUBLIC_TMDB_API_KEY || 'YOUR_TMDB_API_KEY';
@@ -260,6 +261,10 @@ export interface Video {
   site: string;
   type: string;
   official?: boolean;
+  /** The video's language. */
+  iso_639_1?: string | null;
+  /** When it was published, as an ISO date-time. */
+  published_at?: string;
 }
 
 export interface TrailerItem extends Video {
@@ -600,14 +605,22 @@ export const tmdbApi = {
     return data;
   },
 
+  /** A movie's playable videos for the app language (see organizeVideos). */
   getMovieVideos: async (id: number) => {
-    const { data } = await tmdbClient.get<{ results: Video[] }>(`/movie/${id}/videos`);
-    return data.results;
+    const language = currentLanguage;
+    const { data } = await tmdbClient.get<{ results: Video[] }>(`/movie/${id}/videos`, {
+      params: { include_video_language: buildIncludeVideoLanguage(language) },
+    });
+    return organizeVideos(data.results, language);
   },
 
+  /** A TV show's playable videos for the app language (see organizeVideos). */
   getTVVideos: async (id: number) => {
-    const { data } = await tmdbClient.get<{ results: Video[] }>(`/tv/${id}/videos`);
-    return data.results;
+    const language = currentLanguage;
+    const { data } = await tmdbClient.get<{ results: Video[] }>(`/tv/${id}/videos`, {
+      params: { include_video_language: buildIncludeVideoLanguage(language) },
+    });
+    return organizeVideos(data.results, language);
   },
 
   getSimilarMovies: async (id: number) => {

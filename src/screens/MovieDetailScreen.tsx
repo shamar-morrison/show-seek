@@ -531,6 +531,10 @@ export default function MovieDetailScreen() {
     navigateTo(`/movie/${movieId}/photos?title=${encodeURIComponent(displayMovieTitle)}`);
   };
 
+  const handleVideosViewAll = () => {
+    navigateTo(`/movie/${movieId}/videos?title=${encodeURIComponent(displayMovieTitle)}`);
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -979,6 +983,7 @@ export default function MovieDetailScreen() {
               setSelectedVideo(video);
               setTrailerModalVisible(true);
             }}
+            onViewAll={handleVideosViewAll}
           />
 
           {videos.length > 0 && <SectionSeparator />}

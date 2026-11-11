@@ -330,6 +330,17 @@
     "tmdbReviews": "Avis TMDB",
     "unknownShow": "Série inconnue",
     "videos": "Vidéos",
+    "videosFailedToLoad": "Impossible de charger les vidéos",
+    "noVideos": "Aucune vidéo pour l'instant",
+    "videoTypes": {
+      "trailers": "Bandes-annonces",
+      "teasers": "Teasers",
+      "clips": "Extraits",
+      "featurettes": "Featurettes",
+      "behindTheScenes": "Coulisses",
+      "bloopers": "Bêtisiers",
+      "openingCredits": "Génériques"
+    },
     "youMayAlsoLike": "Vous pourriez aussi aimer"
   },
   "library": {

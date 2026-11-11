@@ -9,6 +9,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { useDetailStyles } from './detailStyles';
 import type { PhotosSectionProps } from './types';
 
+const seeAllHeaderSpacing = { marginTop: 0, marginBottom: 0 };
+
 export const PhotosSection = memo<PhotosSectionProps>(
   ({ images, onPhotoPress, style, variant = 'landscape', onViewAll, viewAllStyle = 'button' }) => {
     const { t } = useTranslation();
@@ -45,14 +47,21 @@ export const PhotosSection = memo<PhotosSectionProps>(
       <View style={style}>
         {onViewAll ? (
           <TouchableOpacity
-            style={[styles.sectionHeader, { paddingBottom: SPACING.s }]}
+            style={[
+              styles.sectionHeader,
+              { paddingBottom: SPACING.s },
+              // "See All" text keeps the spacing of the plain title, as on movie and TV pages.
+              viewAllStyle === 'text' && seeAllHeaderSpacing,
+            ]}
             onPress={onViewAll}
             activeOpacity={ACTIVE_OPACITY}
             hitSlop={viewAllStyle === 'text' ? HIT_SLOP.m : undefined}
             accessibilityRole="button"
             testID="photos-section-header"
           >
-            <Text style={styles.sectionTitle}>{t('media.photos')}</Text>
+            <Text style={[styles.sectionTitle, viewAllStyle === 'text' && { paddingBottom: 0 }]}>
+              {t('media.photos')}
+            </Text>
             {viewAllStyle === 'text' ? (
               <Text style={styles.viewAll}>{t('common.seeAll')}</Text>
             ) : (

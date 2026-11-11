@@ -428,6 +428,10 @@ export default function TVDetailScreen() {
     navigateTo(`/tv/${tvId}/photos?title=${encodeURIComponent(displayShowTitle)}`);
   };
 
+  const handleVideosViewAll = () => {
+    navigateTo(`/tv/${tvId}/videos?title=${encodeURIComponent(displayShowTitle)}`);
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -685,6 +689,7 @@ export default function TVDetailScreen() {
               setSelectedVideo(video);
               setTrailerModalVisible(true);
             }}
+            onViewAll={handleVideosViewAll}
           />
 
           {videos.length > 0 && <SectionSeparator />}

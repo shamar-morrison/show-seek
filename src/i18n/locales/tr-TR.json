@@ -330,6 +330,17 @@
     "tmdbReviews": "TMDB incelemeleri",
     "unknownShow": "Bilinmeyen dizi",
     "videos": "Videolar",
+    "videosFailedToLoad": "Videolar yüklenemedi",
+    "noVideos": "Henüz video yok",
+    "videoTypes": {
+      "trailers": "Fragmanlar",
+      "teasers": "Tanıtımlar",
+      "clips": "Klipler",
+      "featurettes": "Özel videolar",
+      "behindTheScenes": "Kamera arkası",
+      "bloopers": "Bloopers",
+      "openingCredits": "Açılış jenerikleri"
+    },
     "youMayAlsoLike": "Bunları da beğenebilirsin"
   },
   "library": {

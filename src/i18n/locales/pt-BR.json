@@ -330,6 +330,17 @@
     "tmdbReviews": "Críticas do TMDB",
     "unknownShow": "Série desconhecida",
     "videos": "Vídeos",
+    "videosFailedToLoad": "Não foi possível carregar os vídeos",
+    "noVideos": "Ainda não há vídeos",
+    "videoTypes": {
+      "trailers": "Trailers",
+      "teasers": "Teasers",
+      "clips": "Clipes",
+      "featurettes": "Featurettes",
+      "behindTheScenes": "Bastidores",
+      "bloopers": "Erros de gravação",
+      "openingCredits": "Aberturas"
+    },
     "youMayAlsoLike": "Você também pode gostar"
   },
   "library": {

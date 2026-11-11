@@ -330,6 +330,17 @@
     "tmdbReviews": "TMDB Reviews",
     "unknownShow": "Unknown show",
     "videos": "Videos",
+    "videosFailedToLoad": "Couldn't load the videos",
+    "noVideos": "No videos yet",
+    "videoTypes": {
+      "trailers": "Trailers",
+      "teasers": "Teasers",
+      "clips": "Clips",
+      "featurettes": "Featurettes",
+      "behindTheScenes": "Behind the Scenes",
+      "bloopers": "Bloopers",
+      "openingCredits": "Opening Credits"
+    },
     "youMayAlsoLike": "You May Also Like"
   },
   "library": {

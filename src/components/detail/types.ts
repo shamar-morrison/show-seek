@@ -87,6 +87,8 @@ export interface VideosSectionProps {
   videos: Video[];
   onVideoPress: (video: Video) => void;
   style?: ViewStyle;
+  /** Shows "See All" in the header, which opens every video sorted by type. */
+  onViewAll?: () => void;
 }
 
 export interface ReviewsSectionProps {

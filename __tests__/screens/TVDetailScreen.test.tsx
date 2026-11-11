@@ -412,7 +412,12 @@ jest.mock('@/src/components/detail/TraktReviewsSection', () => ({
   TraktReviewsSection: () => null,
 }));
 jest.mock('@/src/components/detail/TVMetaSection', () => ({ TVMetaSection: () => null }));
-jest.mock('@/src/components/detail/VideosSection', () => ({ VideosSection: () => null }));
+jest.mock('@/src/components/detail/VideosSection', () => ({
+  VideosSection: ({ onViewAll }: any) => {
+    const { Pressable } = require('react-native');
+    return onViewAll ? <Pressable testID="videos-see-all" onPress={onViewAll} /> : null;
+  },
+}));
 jest.mock('@/src/components/detail/WatchProvidersSection', () => ({
   WatchProvidersSection: () => null,
 }));
@@ -1324,6 +1329,16 @@ describe('TVDetailScreen', () => {
 
     expect(mockPush).toHaveBeenCalledWith(
       expect.stringMatching(/^\/\(tabs\)\/discover\/tv\/10\/photos\?title=/)
+    );
+  });
+
+  it('opens all videos from See All on the Videos row', () => {
+    const { getByTestId } = render(<TVDetailScreen />);
+
+    fireEvent.press(getByTestId('videos-see-all'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/\(tabs\)\/discover\/tv\/10\/videos\?title=/)
     );
   });
 });
