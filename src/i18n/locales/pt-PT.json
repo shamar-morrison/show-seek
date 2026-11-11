@@ -2086,11 +2086,6 @@
   "reviews": {
     "tapToRevealSpoiler": "Toque para revelar spoiler"
   },
-  "share": {
-    "message": "{{title}} - Confira isto no TMDB! {{url}}",
-    "linkCopied": "Ligação copiada para a área de transferência",
-    "unableToShare": "Não foi possível partilhar. Tente novamente."
-  },
   "posterPicker": {
     "movieTitle": "Escolher cartaz do filme",
     "tvTitle": "Escolher cartaz da série",

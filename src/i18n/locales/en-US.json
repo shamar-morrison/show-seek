@@ -1716,11 +1716,6 @@
       "description": "Save the filters you use most on Discover and in your lists, then apply them again in one tap. Find them at the top of the filters."
     }
   },
-  "share": {
-    "message": "{{title}} - Check this out on TMDB! {{url}}",
-    "linkCopied": "Link copied to clipboard",
-    "unableToShare": "Unable to share. Please try again."
-  },
   "posterPicker": {
     "movieTitle": "Choose Movie Poster",
     "tvTitle": "Choose TV Poster",

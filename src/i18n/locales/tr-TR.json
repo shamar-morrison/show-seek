@@ -1716,11 +1716,6 @@
       "description": "Keşfet'te ve listelerinizde en çok kullandığınız filtreleri kaydedin, ardından tek dokunuşla yeniden uygulayın. Filtrelerin en üstünde bulabilirsiniz."
     }
   },
-  "share": {
-    "message": "{{title}} - Buna TMDB'de göz at! {{url}}",
-    "linkCopied": "Bağlantı panoya kopyalandı",
-    "unableToShare": "Paylaşılamadı. Lütfen tekrar deneyin."
-  },
   "posterPicker": {
     "movieTitle": "Film afişi seç",
     "tvTitle": "Dizi afişi seç",

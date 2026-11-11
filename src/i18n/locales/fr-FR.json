@@ -1864,11 +1864,6 @@
       "description": "Enregistrez les filtres que vous utilisez le plus dans Découvrir et dans vos listes, puis réappliquez-les en un geste. Ils se trouvent en haut des filtres."
     }
   },
-  "share": {
-    "message": "{{title}} - Découvrez ceci sur TMDB ! {{url}}",
-    "linkCopied": "Lien copié dans le presse-papiers",
-    "unableToShare": "Impossible de partager. Veuillez réessayer."
-  },
   "posterPicker": {
     "movieTitle": "Choisir l'affiche du film",
     "tvTitle": "Choisir l'affiche de la série",

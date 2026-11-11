@@ -498,12 +498,9 @@ export default function TVDetailScreen() {
         <TVHeroSection
           backdropPath={show.backdrop_path}
           posterPath={resolvedShowPosterPath}
-          showName={displayShowTitle}
-          showId={tvId}
           onBackPress={() => router.back()}
           onOpenWithPress={() => setOpenWithDrawerVisible(true)}
           onPosterPress={handlePosterPress}
-          onShowToast={(msg) => toastRef.current?.show(msg)}
         />
 
         {/* Content */}

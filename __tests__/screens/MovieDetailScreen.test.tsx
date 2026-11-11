@@ -270,10 +270,6 @@ jest.mock('@/src/components/ui/SectionSeparator', () => ({
   SectionSeparator: () => null,
 }));
 
-jest.mock('@/src/components/ui/ShareButton', () => ({
-  ShareButton: () => null,
-}));
-
 jest.mock('@/src/components/ui/AppErrorState', () => {
   const React = require('react');
   const { Text } = require('react-native');

@@ -33,7 +33,6 @@ import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { OpenWithButton } from '@/src/components/ui/OpenWithButton';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
-import { ShareButton } from '@/src/components/ui/ShareButton';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
@@ -764,12 +763,6 @@ export default function MovieDetailScreen() {
             </TouchableOpacity>
           </SafeAreaView>
 
-          <ShareButton
-            id={movieId}
-            title={displayMovieTitle}
-            mediaType="movie"
-            onShowToast={(msg) => toastRef.current?.show(msg)}
-          />
           <OpenWithButton onPress={() => setOpenWithDrawerVisible(true)} />
 
           <TouchableOpacity

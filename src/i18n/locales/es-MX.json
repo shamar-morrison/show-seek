@@ -2089,11 +2089,6 @@
       "description": "Guarda los filtros que más usas en Descubrir y en tus listas, y vuelve a aplicarlos con un toque. Los encontrarás hasta arriba en los filtros."
     }
   },
-  "share": {
-    "message": "{{title}} - ¡Mira esto en TMDB! {{url}}",
-    "linkCopied": "Enlace copiado al portapapeles",
-    "unableToShare": "No se pudo compartir. Inténtalo de nuevo."
-  },
   "posterPicker": {
     "movieTitle": "Elegir póster de película",
     "tvTitle": "Elegir póster de serie",
