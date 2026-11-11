@@ -3,6 +3,7 @@
  * Allows users to select their preferred language for TMDB content
  */
 import { LanguageSelectionList } from '@/src/components/language/LanguageSelectionList';
+import { SearchField } from '@/src/components/ui/SearchField';
 import {
   COLORS,
   FONT_SIZE,
@@ -11,6 +12,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,10 +21,24 @@ export default function LanguageScreen() {
   const { language, setLanguage } = useLanguage();
   const { accentColor } = useAccentColor();
   const { t } = useTranslation();
+  const [query, setQuery] = useState('');
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* Pinned above the list, so it's always there while scrolling. */}
+      <SearchField
+        value={query}
+        onChangeText={setQuery}
+        placeholder={t('settings.searchLanguages')}
+        style={styles.search}
+        testID="language-search"
+      />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         <Text style={styles.description}>
           {t('settings.languageScreenDescription')}
         </Text>
@@ -33,6 +49,8 @@ export default function LanguageScreen() {
           errorTitle={t('common.error')}
           errorMessage={t('settings.updateLanguageError')}
           onSelectLanguage={setLanguage}
+          query={query}
+          emptyText={t('common.noResults')}
         />
 
         <Text style={styles.note}>
@@ -44,8 +62,14 @@ export default function LanguageScreen() {
 }
 
 const styles = StyleSheet.create({
+  search: {
+    marginHorizontal: SPACING.l,
+    marginTop: SPACING.m,
+    marginBottom: SPACING.s,
+  },
   scrollContent: {
     padding: SPACING.l,
+    paddingTop: SPACING.s,
   },
   description: {
     fontSize: FONT_SIZE.m,

@@ -14,7 +14,8 @@ import {
 import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Tick02Icon } from '@hugeicons/core-free-icons';
-import React, { useCallback, useState } from 'react';
+import { languageMatches } from '@/src/utils/settingsSearch';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface LanguageSelectionListProps {
@@ -23,6 +24,10 @@ interface LanguageSelectionListProps {
   errorTitle: string;
   errorMessage: string;
   onSelectLanguage: (languageCode: SupportedLanguageCode) => Promise<void> | void;
+  /** Shows only the languages matching this (Settings' search); omit for the full list. */
+  query?: string;
+  /** Shown when `query` matches nothing. */
+  emptyText?: string;
 }
 
 export function LanguageSelectionList({
@@ -31,6 +36,8 @@ export function LanguageSelectionList({
   errorTitle,
   errorMessage,
   onSelectLanguage,
+  query = '',
+  emptyText,
 }: LanguageSelectionListProps) {
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
@@ -53,9 +60,22 @@ export function LanguageSelectionList({
     [errorMessage, errorTitle, isUpdating, onSelectLanguage, selectedLanguage]
   );
 
+  const languages = useMemo(
+    () => SUPPORTED_LANGUAGES.filter((language) => languageMatches(query, language)),
+    [query]
+  );
+
+  if (languages.length === 0) {
+    return (
+      <Text style={styles.emptyText} testID="language-search-empty">
+        {emptyText}
+      </Text>
+    );
+  }
+
   return (
     <View style={styles.languageList}>
-      {SUPPORTED_LANGUAGES.map((language) => {
+      {languages.map((language) => {
         const isSelected = selectedLanguage === language.code;
         const isLoading = isUpdating === language.code;
 
@@ -99,6 +119,12 @@ export function LanguageSelectionList({
 }
 
 const styles = StyleSheet.create({
+  emptyText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    paddingVertical: SPACING.xl,
+    textAlign: 'center',
+  },
   languageList: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,

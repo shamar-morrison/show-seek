@@ -762,7 +762,9 @@
     "regionScreenDescription": "Yerel yayın kullanılabilirliğini ve yayın tarihlerini görmek için bölgenizi seçin.",
     "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler.",
     "actionButtons": "Eylem düğmelerini yeniden sırala",
-    "whatsNew": "Yenilikler"
+    "whatsNew": "Yenilikler",
+    "searchLanguages": "Dil ara",
+    "searchRegions": "Bölge ara"
   },
   "profile": {
     "displayNameLabel": "Görünen ad",

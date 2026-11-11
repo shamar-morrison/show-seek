@@ -13,11 +13,13 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { SUPPORTED_REGIONS, useRegion } from '@/src/context/RegionProvider';
+import { SearchField } from '@/src/components/ui/SearchField';
+import { regionMatches } from '@/src/utils/settingsSearch';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Tick02Icon } from '@hugeicons/core-free-icons';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -35,6 +37,8 @@ export default function RegionScreen() {
   const { accentColor } = useAccentColor();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const regions = useMemo(() => SUPPORTED_REGIONS.filter((r) => regionMatches(query, r)), [query]);
 
   const handleSelectRegion = async (regionCode: string) => {
     if (regionCode === region) return;
@@ -54,50 +58,69 @@ export default function RegionScreen() {
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* Pinned above the list, so it's always there while scrolling. */}
+      <SearchField
+        value={query}
+        onChangeText={setQuery}
+        placeholder={t('settings.searchRegions')}
+        style={styles.search}
+        testID="region-search"
+      />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         <Text style={styles.description}>{t('settings.regionScreenDescription')}</Text>
 
-        <View style={styles.regionList}>
-          {SUPPORTED_REGIONS.map((r) => {
-            const isSelected = region === r.code;
-            const isLoading = isUpdating === r.code;
+        {regions.length === 0 ? (
+          <Text style={styles.emptyText} testID="region-search-empty">
+            {t('common.noResults')}
+          </Text>
+        ) : (
+          <View style={styles.regionList}>
+            {regions.map((r) => {
+              const isSelected = region === r.code;
+              const isLoading = isUpdating === r.code;
 
-            return (
-              <Pressable
-                key={r.code}
-                style={({ pressed }) => [
-                  styles.regionItem,
-                  isSelected && styles.regionItemSelected,
-                  pressed && styles.regionItemPressed,
-                ]}
-                onPress={() => handleSelectRegion(r.code)}
-                disabled={isUpdating !== null}
-              >
-                <View style={styles.regionInfo}>
-                  <Text style={styles.regionEmoji}>{r.emoji}</Text>
-                  <Text style={[styles.regionName, isSelected && { color: accentColor }]}>
-                    {r.name}
-                  </Text>
-                </View>
+              return (
+                <Pressable
+                  key={r.code}
+                  style={({ pressed }) => [
+                    styles.regionItem,
+                    isSelected && styles.regionItemSelected,
+                    pressed && styles.regionItemPressed,
+                  ]}
+                  onPress={() => handleSelectRegion(r.code)}
+                  disabled={isUpdating !== null}
+                >
+                  <View style={styles.regionInfo}>
+                    <Text style={styles.regionEmoji}>{r.emoji}</Text>
+                    <Text style={[styles.regionName, isSelected && { color: accentColor }]}>
+                      {r.name}
+                    </Text>
+                  </View>
 
-                <View style={styles.regionStatus}>
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color={accentColor} />
-                  ) : isSelected ? (
-                    <View
-                      style={[
-                        styles.checkContainer,
-                        { backgroundColor: hexToRGBA(accentColor, 0.2) },
-                      ]}
-                    >
-                      <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
-                    </View>
-                  ) : null}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
+                  <View style={styles.regionStatus}>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color={accentColor} />
+                    ) : isSelected ? (
+                      <View
+                        style={[
+                          styles.checkContainer,
+                          { backgroundColor: hexToRGBA(accentColor, 0.2) },
+                        ]}
+                      >
+                        <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
+                      </View>
+                    ) : null}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         <Text style={styles.note}>{t('settings.regionScreenNote')}</Text>
       </ScrollView>
@@ -106,8 +129,20 @@ export default function RegionScreen() {
 }
 
 const styles = StyleSheet.create({
+  search: {
+    marginHorizontal: SPACING.l,
+    marginTop: SPACING.m,
+    marginBottom: SPACING.s,
+  },
+  emptyText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    paddingVertical: SPACING.xl,
+    textAlign: 'center',
+  },
   scrollContent: {
     padding: SPACING.l,
+    paddingTop: SPACING.s,
   },
   description: {
     fontSize: FONT_SIZE.m,

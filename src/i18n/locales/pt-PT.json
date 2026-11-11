@@ -762,7 +762,9 @@
     "regionScreenDescription": "Selecione a sua região para ver disponibilidade local de streaming e datas de lançamento.",
     "regionScreenNote": "Isto afeta onde ver e datas de lançamento locais.",
     "actionButtons": "Reordenar botões de ação",
-    "whatsNew": "Novidades"
+    "whatsNew": "Novidades",
+    "searchLanguages": "Pesquisar idiomas",
+    "searchRegions": "Pesquisar regiões"
   },
   "profile": {
     "displayNameLabel": "Nome a apresentar",
