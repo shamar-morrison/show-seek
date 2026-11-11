@@ -44,6 +44,11 @@ jobs:
         run: npm ci
         working-directory: functions
 
+      # Lint errors fail the build (warnings don't). Among other things this enforces the
+      # no-bounce rule for horizontal scrolls in eslint.config.js.
+      - name: Lint
+        run: pnpm lint
+
       - name: Run tests
         run: pnpm exec jest --maxWorkers=2
         if: github.event_name == 'push'

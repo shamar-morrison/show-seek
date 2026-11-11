@@ -57,6 +57,8 @@ export function HorizontalFlashList<T>(props: HorizontalFlashListProps<T>) {
     [contentContainerStyle]
   );
   return (
+    // The anti-bounce props are set right here; this is the component the lint rule points to.
+    // eslint-disable-next-line no-restricted-syntax
     <FlashList
       showsHorizontalScrollIndicator={false}
       {...(rest as FlashListProps<T>)}
