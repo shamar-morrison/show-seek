@@ -345,15 +345,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.m,
     gap: SPACING.m,
   },
+  // Looks the same as the action buttons on movie and TV pages. Those are 6% white over the black
+  // page, which shows as #0F0F0F; the drawer's surface is lighter, so that colour is used solid
+  // here. The 20% white border then sits over the same colour as theirs.
   navigationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: '#0F0F0F',
     paddingHorizontal: SPACING.m,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     gap: SPACING.m,
   },
   navigationCardPressed: {
