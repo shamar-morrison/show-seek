@@ -332,6 +332,8 @@
     "videos": "Videos",
     "videosFailedToLoad": "Couldn't load the videos",
     "noVideos": "No videos yet",
+    "searchVideos": "Search videos…",
+    "noVideoMatches": "No matches in {{type}}",
     "videoTypes": {
       "trailers": "Trailers",
       "teasers": "Teasers",

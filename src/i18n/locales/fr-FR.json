@@ -332,6 +332,8 @@
     "videos": "Vidéos",
     "videosFailedToLoad": "Impossible de charger les vidéos",
     "noVideos": "Aucune vidéo pour l'instant",
+    "searchVideos": "Rechercher des vidéos…",
+    "noVideoMatches": "Aucun résultat dans {{type}}",
     "videoTypes": {
       "trailers": "Bandes-annonces",
       "teasers": "Teasers",

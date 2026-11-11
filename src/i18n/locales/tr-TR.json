@@ -332,6 +332,8 @@
     "videos": "Videolar",
     "videosFailedToLoad": "Videolar yüklenemedi",
     "noVideos": "Henüz video yok",
+    "searchVideos": "Videolarda ara…",
+    "noVideoMatches": "{{type}} içinde sonuç yok",
     "videoTypes": {
       "trailers": "Fragmanlar",
       "teasers": "Tanıtımlar",

@@ -8,7 +8,10 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
+import { HORIZONTAL_SCROLL_PROPS } from '@/src/components/ui/horizontalScrollProps';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -18,17 +21,30 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDateShort } from '@/src/utils/dateUtils';
 import { groupVideosByType, VIDEO_TYPE_LABEL_KEYS } from '@/src/utils/mediaVideos';
-import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
-import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
+import { foldForSearch } from '@/src/utils/searchText';
+import { ArrowLeft01Icon, Search01Icon } from '@hugeicons/core-free-icons';
+import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const NO_ITEMS: Video[] = [];
+const getNoSearchText = () => '';
 
 interface MediaVideosScreenProps {
   mediaType: 'movie' | 'tv';
@@ -53,6 +69,52 @@ export default function MediaVideosScreen({ mediaType }: MediaVideosScreenProps)
 
   const groups = useMemo(() => groupVideosByType(videosQuery.data ?? []), [videosQuery.data]);
   const activeGroup = groups.find((group) => group.type === selectedType) ?? groups[0];
+
+  // One search filters every tab, like Cast & Crew: each tab shows its matches and the tabs with
+  // none are dimmed, so it's clear where the matches are without switching tabs.
+  const {
+    searchQuery,
+    debouncedQuery,
+    isSearchActive,
+    activateSearch,
+    deactivateSearch,
+    setSearchQuery,
+  } = useHeaderSearch({ items: NO_ITEMS, getSearchableText: getNoSearchText, debounceMs: 150 });
+  const foldedQuery = useMemo(() => foldForSearch(debouncedQuery), [debouncedQuery]);
+  const isFiltering = foldedQuery.length > 0;
+  const matchesByType = useMemo(() => {
+    const matches = new Map<string, Video[]>();
+    for (const group of groups) {
+      matches.set(
+        group.type,
+        isFiltering
+          ? group.videos.filter((video) => foldForSearch(video.name).includes(foldedQuery))
+          : group.videos
+      );
+    }
+    return matches;
+  }, [foldedQuery, groups, isFiltering]);
+  const activeVideos = activeGroup ? (matchesByType.get(activeGroup.type) ?? []) : [];
+
+  // Results start at the top; clearing the search returns to where each tab's full list was.
+  const listRef = useRef<FlashListRef<Video>>(null);
+  const scrollOffsetsRef = useRef<Record<string, number>>({});
+  const activeType = activeGroup?.type;
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isFiltering || !activeType) return;
+      scrollOffsetsRef.current[activeType] = event.nativeEvent.contentOffset.y;
+    },
+    [activeType, isFiltering]
+  );
+  useEffect(() => {
+    if (!activeType) return;
+    const offset = isFiltering ? 0 : (scrollOffsetsRef.current[activeType] ?? 0);
+    const frameId = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset, animated: false });
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [activeType, foldedQuery, isFiltering]);
 
   const typeLabel = useCallback(
     (type: string) =>
@@ -112,41 +174,67 @@ export default function MediaVideosScreen({ mediaType }: MediaVideosScreenProps)
   return (
     <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => router.back()}
-          activeOpacity={ACTIVE_OPACITY}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.goBack')}
-        >
-          <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>{t('media.videos')}</Text>
-          {title ? (
-            <Text style={styles.headerSubtitle} numberOfLines={1}>
-              {title}
-            </Text>
+      {isSearchActive ? (
+        <SearchableHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onClose={deactivateSearch}
+          placeholder={t('media.searchVideos')}
+          includeTopInset={false}
+        />
+      ) : (
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => router.back()}
+            activeOpacity={ACTIVE_OPACITY}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.goBack')}
+          >
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>{t('media.videos')}</Text>
+            {title ? (
+              <Text style={styles.headerSubtitle} numberOfLines={1}>
+                {title}
+              </Text>
+            ) : null}
+          </View>
+          {groups.length > 0 ? (
+            <HeaderIconButton
+              onPress={activateSearch}
+              accessibilityLabel={t('common.search')}
+              testID="media-videos-search-button"
+            >
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
+            </HeaderIconButton>
           ) : null}
         </View>
-      </View>
+      )}
 
       {activeGroup ? (
         <>
           <View>
+            {/* No edge bounce: its spring-back swallows taps on the end tabs. */}
             <ScrollView
-              horizontal
+              {...HORIZONTAL_SCROLL_PROPS}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tabs}
               accessibilityRole="tablist"
+              testID="media-videos-tabs"
             >
               {groups.map((group) => {
                 const isActive = group.type === activeGroup.type;
+                const count = matchesByType.get(group.type)?.length ?? 0;
                 return (
                   <TouchableOpacity
                     key={group.type}
-                    style={[styles.tab, isActive && { backgroundColor: accentColor }]}
+                    style={[
+                      styles.tab,
+                      isActive && { backgroundColor: accentColor },
+                      count === 0 && !isActive && styles.tabNoMatches,
+                    ]}
                     onPress={() => setSelectedType(group.type)}
                     activeOpacity={ACTIVE_OPACITY}
                     accessibilityRole="tab"
@@ -154,7 +242,7 @@ export default function MediaVideosScreen({ mediaType }: MediaVideosScreenProps)
                     testID={`media-videos-tab-${group.type}`}
                   >
                     <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-                      {`${typeLabel(group.type)} (${group.videos.length})`}
+                      {`${typeLabel(group.type)} (${count})`}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -162,15 +250,27 @@ export default function MediaVideosScreen({ mediaType }: MediaVideosScreenProps)
             </ScrollView>
           </View>
 
-          <FlashList
-            key={activeGroup.type}
-            data={activeGroup.videos}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.key}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            testID="media-videos-list"
-          />
+          {activeVideos.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>
+                {t('media.noVideoMatches', { type: typeLabel(activeGroup.type) })}
+              </Text>
+            </View>
+          ) : (
+            <FlashList
+              ref={listRef}
+              key={activeGroup.type}
+              data={activeVideos}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.key}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              testID="media-videos-list"
+            />
+          )}
         </>
       ) : (
         <View style={styles.empty}>
@@ -228,6 +328,9 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: FONT_SIZE.m,
+  },
+  tabNoMatches: {
+    opacity: 0.5,
   },
   activeTabText: {
     color: COLORS.white,

@@ -1,5 +1,5 @@
 import MediaVideosScreen from '@/src/screens/MediaVideosScreen';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 const mockUseQuery = jest.fn();
@@ -26,6 +26,26 @@ jest.mock('@/src/components/VideoPlayerModal', () => ({
     return null;
   },
 }));
+
+// The real header needs safe-area insets; a plain input is enough to drive the search.
+jest.mock('@/src/components/ui/SearchableHeader', () => {
+  const { Pressable, Text, TextInput, View } = require('react-native');
+  return {
+    SearchableHeader: ({ searchQuery, onSearchChange, onClose, placeholder }: any) => (
+      <View>
+        <TextInput
+          testID="videos-search-input"
+          value={searchQuery}
+          onChangeText={onSearchChange}
+          placeholder={placeholder}
+        />
+        <Pressable testID="videos-search-close" onPress={onClose}>
+          <Text>close</Text>
+        </Pressable>
+      </View>
+    ),
+  };
+});
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
@@ -66,6 +86,12 @@ describe('MediaVideosScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedPlayerProps = null;
+    const globalAny = global as any;
+    globalAny.requestAnimationFrame = (callback: (timestamp: number) => void) => {
+      callback(0);
+      return 1;
+    };
+    globalAny.cancelAnimationFrame = jest.fn();
     mockUseQuery.mockReturnValue(loaded(videos));
   });
 
@@ -88,6 +114,19 @@ describe('MediaVideosScreen', () => {
     expect(queryByTestId('media-video-teaser1')).toBeNull();
   });
 
+  it('keeps the tab row from bouncing at the edges, which swallowed taps on the end tabs', () => {
+    const { getByTestId } = render(<MediaVideosScreen mediaType="tv" />);
+
+    expect(getByTestId('media-videos-tabs').props).toEqual(
+      expect.objectContaining({
+        horizontal: true,
+        bounces: false,
+        alwaysBounceHorizontal: false,
+        overScrollMode: 'never',
+      })
+    );
+  });
+
   it('switches type and shows the publish date', () => {
     const { getByTestId, getByText, queryByTestId } = render(<MediaVideosScreen mediaType="tv" />);
 
@@ -107,6 +146,61 @@ describe('MediaVideosScreen', () => {
     expect(capturedPlayerProps).toEqual(
       expect.objectContaining({ visible: true, videoKey: 'trailer2', title: 'Season 8 Trailer' })
     );
+  });
+
+  describe('search', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    const search = (utils: ReturnType<typeof render>, query: string) => {
+      fireEvent.press(utils.getByTestId('media-videos-search-button'));
+      expect(utils.getByPlaceholderText('Search videos…')).toBeTruthy();
+      fireEvent.changeText(utils.getByTestId('videos-search-input'), query);
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+    };
+
+    it('filters every tab at once, ignoring case and accents, and stays on the tab', () => {
+      const utils = render(<MediaVideosScreen mediaType="tv" />);
+
+      search(utils, 'SÉASON');
+
+      expect(utils.getByText('Trailers (1)')).toBeTruthy();
+      expect(utils.getByText('Teasers (0)')).toBeTruthy();
+      expect(utils.getByText('Behind the Scenes (0)')).toBeTruthy();
+      expect(utils.getByTestId('media-video-trailer2')).toBeTruthy();
+      expect(utils.queryByTestId('media-video-trailer1')).toBeNull();
+    });
+
+    it('dims tabs with no matches', () => {
+      const utils = render(<MediaVideosScreen mediaType="tv" />);
+      search(utils, 'making');
+
+      const style = (testID: string) =>
+        Object.assign({}, ...[utils.getByTestId(testID).props.style].flat(Infinity));
+      expect(style('media-videos-tab-Teaser').opacity).toBe(0.5);
+      expect(style('media-videos-tab-Behind the Scenes').opacity).toBeUndefined();
+    });
+
+    it('says when the current tab has no matches', () => {
+      const utils = render(<MediaVideosScreen mediaType="tv" />);
+      search(utils, 'making');
+
+      expect(utils.getByText('No matches in Trailers')).toBeTruthy();
+      fireEvent.press(utils.getByTestId('media-videos-tab-Behind the Scenes'));
+      expect(utils.getByTestId('media-video-bts1')).toBeTruthy();
+    });
+
+    it('brings everything back when the search is closed', () => {
+      const utils = render(<MediaVideosScreen mediaType="tv" />);
+      search(utils, 'making');
+
+      fireEvent.press(utils.getByTestId('videos-search-close'));
+
+      expect(utils.getByText('Trailers (2)')).toBeTruthy();
+      expect(utils.getByTestId('media-video-trailer1')).toBeTruthy();
+    });
   });
 
   it('says so when there are no videos', () => {

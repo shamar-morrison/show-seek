@@ -332,6 +332,8 @@
     "videos": "Vídeos",
     "videosFailedToLoad": "No se pudieron cargar los vídeos",
     "noVideos": "Aún no hay vídeos",
+    "searchVideos": "Buscar vídeos…",
+    "noVideoMatches": "No hay coincidencias en {{type}}",
     "videoTypes": {
       "trailers": "Tráileres",
       "teasers": "Teasers",
