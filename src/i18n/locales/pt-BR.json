@@ -761,7 +761,8 @@
     "updateRegionError": "Falha ao atualizar a região. Tente novamente.",
     "regionScreenDescription": "Selecione sua região para ver disponibilidade local de streaming e datas de lançamento.",
     "regionScreenNote": "Isso afeta onde assistir e datas de lançamento locais.",
-    "actionButtons": "Reordenar botões de ação"
+    "actionButtons": "Reordenar botões de ação",
+    "whatsNew": "Novidades"
   },
   "profile": {
     "displayNameLabel": "Nome de exibição",

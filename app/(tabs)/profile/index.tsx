@@ -5,6 +5,7 @@ import { ContentSettingsSection, CONTENT_ITEMS } from '@/src/components/profile/
 import { IntegrationsSection, INTEGRATION_ITEMS } from '@/src/components/profile/IntegrationsSection';
 import { PreferencesSection, PREFERENCE_ITEMS } from '@/src/components/profile/PreferencesSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
+import { WhatsNewSheet } from '@/src/components/WhatsNewSheet';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
@@ -27,6 +28,7 @@ import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
 import { useProfileSearchScroll } from '@/src/hooks/useProfileSearchScroll';
+import { useWhatsNewOnDemand } from '@/src/hooks/useWhatsNew';
 import { useStremioConnection } from '@/src/hooks/useStremioConnection';
 import { getFirestoreReadAuditReport } from '@/src/services/firestoreReadAudit';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -141,6 +143,8 @@ export default function ProfileScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
+  // Settings > General > What's New shows the current announcement again, on demand.
+  const whatsNew = useWhatsNewOnDemand();
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
   const highlightTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -367,6 +371,7 @@ export default function ProfileScreen() {
             onAbout={handleAboutPress}
             onDiscord={handleJoinDiscord}
             onTips={handleTipsPress}
+            onWhatsNew={whatsNew.open}
             showTitle={false}
           />
         );
@@ -476,6 +481,11 @@ export default function ProfileScreen() {
         onClose={handleCloseWebAppModal}
         onConfirm={handleConfirmOpenWebApp}
       />
+
+      {/* Mounted only while open: it presents itself on mount, and remounting lets it reopen. */}
+      {whatsNew.openAnnouncement ? (
+        <WhatsNewSheet announcement={whatsNew.openAnnouncement} onDismiss={whatsNew.handleDismiss} />
+      ) : null}
     </SafeAreaView>
   );
 }

@@ -761,7 +761,8 @@
     "updateRegionError": "Bölge güncellenemedi. Lütfen tekrar deneyin.",
     "regionScreenDescription": "Yerel yayın kullanılabilirliğini ve yayın tarihlerini görmek için bölgenizi seçin.",
     "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler.",
-    "actionButtons": "Eylem düğmelerini yeniden sırala"
+    "actionButtons": "Eylem düğmelerini yeniden sırala",
+    "whatsNew": "Yenilikler"
   },
   "profile": {
     "displayNameLabel": "Görünen ad",

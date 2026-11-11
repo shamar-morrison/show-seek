@@ -6,6 +6,7 @@ import {
   DiscordIcon,
   // Globe02Icon, // Hidden: ShowSeek web app link disabled
   InformationCircleIcon,
+  SparklesIcon,
   StarIcon,
 } from '@hugeicons/core-free-icons';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -31,6 +32,8 @@ export interface AppSettingsSectionProps {
   onDiscord: () => void;
   /** Handler for Tips & Features button */
   onTips: () => void;
+  /** Shows the current What's New announcement again; the row is hidden without one. */
+  onWhatsNew?: () => void;
   /** Whether to show section title (default: true) */
   showTitle?: boolean;
 }
@@ -48,6 +51,7 @@ export function AppSettingsSection({
   onAbout,
   onDiscord,
   onTips,
+  onWhatsNew,
   showTitle = true,
 }: AppSettingsSectionProps) {
   const { t } = useTranslation();
@@ -66,6 +70,14 @@ export function AppSettingsSection({
           onPress={onTips}
           testID="action-button-tips"
         />
+        {onWhatsNew ? (
+          <ActionButton
+            icon={SparklesIcon}
+            label={t('settings.whatsNew')}
+            onPress={onWhatsNew}
+            testID="action-button-whats-new"
+          />
+        ) : null}
         <ActionButton icon={StarIcon} label={t('profile.rateApp')} onPress={onRateApp} />
         {!isGuest && (
           <ActionButton

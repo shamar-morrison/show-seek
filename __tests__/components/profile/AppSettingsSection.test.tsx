@@ -33,6 +33,22 @@ describe('AppSettingsSection', () => {
     expect(props.onTips).toHaveBeenCalledTimes(1);
   });
 
+  it("shows What's New when there's an announcement, and opens it", () => {
+    const onWhatsNew = jest.fn();
+    const { getByTestId, getByText } = render(
+      <AppSettingsSection {...createProps({ onWhatsNew })} />
+    );
+
+    expect(getByText("What's New")).toBeTruthy();
+    fireEvent.press(getByTestId('action-button-whats-new'));
+    expect(onWhatsNew).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides What's New without an announcement", () => {
+    const { queryByTestId } = render(<AppSettingsSection {...createProps()} />);
+    expect(queryByTestId('action-button-whats-new')).toBeNull();
+  });
+
   it('renders clear cache action button', () => {
     const props = createProps();
     const { getByText } = render(<AppSettingsSection {...props} />);

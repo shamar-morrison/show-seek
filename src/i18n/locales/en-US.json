@@ -761,7 +761,8 @@
     "updateRegionError": "Failed to update region. Please try again.",
     "regionScreenDescription": "Select your region to see local streaming availability and release dates.",
     "regionScreenNote": "This affects where to watch information and local release dates.",
-    "actionButtons": "Reorder Action Buttons"
+    "actionButtons": "Reorder Action Buttons",
+    "whatsNew": "What's New"
   },
   "profile": {
     "displayNameLabel": "Display name",
