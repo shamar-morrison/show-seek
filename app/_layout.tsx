@@ -18,6 +18,7 @@ import { PremiumProvider } from '@/src/context/PremiumContext';
 import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { setPreferred24HourClock } from '@/src/utils/timeFormat';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
 import { useWidgetAutoSync } from '@/src/hooks/useWidgetAutoSync';
 import {
@@ -617,6 +618,11 @@ function RootLayoutNav() {
   // deduped by query key) — only read here to thread the talk-shows toggle
   // into background widget syncs. No extra network in steady state.
   const { preferences: rootPreferences } = usePreferences();
+  const preferred24HourClock = rootPreferences?.use24HourTime;
+  // Clock times are formatted outside React, so hand them the 24-hour time preference.
+  useEffect(() => {
+    setPreferred24HourClock(preferred24HourClock);
+  }, [preferred24HourClock]);
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
   const { accentColor, isAccentReady } = useAccentColor();

@@ -10,6 +10,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { UserPreferences } from '@/src/types/preferences';
+import { deviceUses24HourClock } from '@/src/utils/timeFormat';
 import * as Haptics from 'expo-haptics';
 import React, { Fragment, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,6 +59,7 @@ export const PREFERENCE_ITEMS: PreferenceConfigItem[] = [
   { key: 'showListIndicators', titleKey: 'profile.showListIndicators', descKey: 'profile.showListIndicatorsDescription', category: 'display' },
   { key: 'hideTabLabels', titleKey: 'profile.hideTabLabels', descKey: 'profile.hideTabLabelsDescription', category: 'display' },
   { key: 'showOriginalTitles', titleKey: 'profile.showOriginalTitles', descKey: 'profile.showOriginalTitlesDescription', category: 'display' },
+  { key: 'use24HourTime', titleKey: 'profile.use24HourTime', descKey: 'profile.use24HourTimeDescription', category: 'display' },
   { key: 'dataSaver', titleKey: 'profile.dataSaver', descKey: 'profile.dataSaverDescription', category: 'performance' },
 ];
 
@@ -110,6 +112,12 @@ export function PreferencesSection({
   const { accentColor } = useAccentColor();
   const bulkActionModeLabel = preferences?.copyInsteadOfMove ? t('common.copy') : t('common.move');
   const defaultBulkActionLabel = t('profile.defaultBulkAction', { mode: bulkActionModeLabel });
+
+  // 24-hour time shows the phone's setting until the person chooses.
+  const getSwitchValue = (key: keyof UserPreferences) =>
+    key === 'use24HourTime'
+      ? (preferences?.use24HourTime ?? deviceUses24HourClock() ?? false)
+      : !!preferences?.[key];
 
   const isItemUpdating = (key: keyof UserPreferences) =>
     isUpdating && updatingPreferenceKey === key;
@@ -217,7 +225,7 @@ export function PreferencesSection({
                   <PreferenceItem
                     label={label}
                     subtitle={t(item.descKey)}
-                    value={!!preferences?.[item.key]}
+                    value={getSwitchValue(item.key)}
                     onValueChange={(value) => handleUpdate(item.key, value)}
                     loading={isLoading || isItemUpdating(item.key)}
                     disabled={isUpdating}

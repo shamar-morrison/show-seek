@@ -1,3 +1,4 @@
+import { formatDateTime } from '@/src/utils/timeFormat';
 import type {
   TvTimeIgnoredReason,
   TvTimeImportCounts,
@@ -195,7 +196,7 @@ export default function TvTimeImportProgressScreen() {
         console.error('[TvTimeImportProgressScreen] Import stopped:', { code, details, error });
 
         const time = details?.nextAllowedImportAt
-          ? new Date(details.nextAllowedImportAt).toLocaleString(i18n.language)
+          ? formatDateTime(details.nextAllowedImportAt, i18n.language)
           : undefined;
         setErrorMessage(t(getTvTimeRunErrorKey(code, details), { time }));
         setStatus('failed');

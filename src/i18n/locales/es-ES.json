@@ -835,6 +835,8 @@
     "dataSaverDescription": "Cargar imágenes de menor resolución para ahorrar datos",
     "showOriginalTitles": "Usar títulos originales",
     "showOriginalTitlesDescription": "Mostrar títulos de películas y series en su idioma original cuando estén disponibles.",
+    "use24HourTime": "Formato de 24 horas",
+    "use24HourTimeDescription": "Muestra horas como 21:05 en lugar de 9:05 p. m. Usa el ajuste de tu teléfono hasta que lo cambies.",
     "blurPlotSpoilers": "Difuminar la trama",
     "blurPlotSpoilersDescription": "Oculta las sinopsis por defecto para evitar spoilers. Toca para revelar.",
     "checkConnection": "Comprueba tu conexión e inténtalo de nuevo",

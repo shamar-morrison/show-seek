@@ -837,6 +837,8 @@
     "dataSaverDescription": "Charger des images de résolution inférieure pour économiser les données",
     "showOriginalTitles": "Utiliser les titres originaux",
     "showOriginalTitlesDescription": "Afficher les titres des films et séries dans leur langue d’origine lorsqu’ils sont disponibles.",
+    "use24HourTime": "Format 24 heures",
+    "use24HourTimeDescription": "Affiche les heures comme 21:05 au lieu de 9:05 PM. Suit le réglage de votre téléphone tant que vous ne le changez pas.",
     "defaultBulkAction": "Action groupée par défaut : {{mode}}",
     "defaultBulkActionDescription": "Choisissez ce qui se passe lorsque vous ajoutez des éléments en lot depuis une liste.",
     "clearCache": "Vider le cache d’images",

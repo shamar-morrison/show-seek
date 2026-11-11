@@ -835,6 +835,8 @@
     "dataSaverDescription": "Carregar imagens de menor resolução para poupar dados",
     "showOriginalTitles": "Usar títulos originais",
     "showOriginalTitlesDescription": "Mostrar títulos de filmes e séries no idioma original quando disponíveis.",
+    "use24HourTime": "Formato de 24 horas",
+    "use24HourTimeDescription": "Mostra as horas como 21:05 em vez de 9:05 PM. Usa a definição do seu telemóvel até a alterar.",
     "blurPlotSpoilers": "Desfocar enredo de filmes e séries",
     "blurPlotSpoilersDescription": "Oculte sinopses por predefinição para evitar spoilers. Toque para revelar.",
     "hideWatchedContent": "Ocultar conteúdo visto",

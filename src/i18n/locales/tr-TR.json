@@ -854,6 +854,8 @@
     "dataSaverDescription": "Veri tasarrufu için düşük çözünürlüklü görseller yükler",
     "showOriginalTitles": "Orijinal başlıkları kullan",
     "showOriginalTitlesDescription": "Mevcut olduğunda film ve dizi başlıklarını orijinal dilinde gösterir.",
+    "use24HourTime": "24 saat biçimi",
+    "use24HourTimeDescription": "Saatleri 9:05 PM yerine 21:05 olarak gösterir. Siz değiştirene kadar telefonunuzun ayarını kullanır.",
     "updatePreferenceError": "Tercih güncellenemedi. Lütfen tekrar deneyin.",
     "content": "İçerik",
     "exportFailedFallbackMessage": "Dışa aktarma başarısız oldu. Lütfen tekrar deneyin.",

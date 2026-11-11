@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { formatDateTime } from '@/src/utils/timeFormat';
 import {
   BORDER_RADIUS,
   COLORS,
@@ -85,15 +86,13 @@ const formatReleaseDate = (date: string): string => {
   return formatTmdbDate(date, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-const formatNotificationTime = (timestamp: number): string => {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString(i18n.language, {
+const formatNotificationTime = (timestamp: number): string =>
+  formatDateTime(timestamp, i18n.language, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   });
-};
 
 export const ReminderCard = memo<ReminderCardProps>(
   ({ reminder, onEditTiming, onCancel, isLoading = false, t }) => {

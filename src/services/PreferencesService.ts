@@ -74,6 +74,10 @@ class PreferencesService {
       detailActionOrder: Array.isArray(data?.preferences?.detailActionOrder)
         ? resolveDetailActionOrder(data.preferences.detailActionOrder)
         : undefined,
+      use24HourTime:
+        typeof data?.preferences?.use24HourTime === 'boolean'
+          ? data.preferences.use24HourTime
+          : undefined,
     };
   }
 

@@ -854,6 +854,8 @@
     "dataSaverDescription": "Load lower resolution images to save data",
     "showOriginalTitles": "Use original titles",
     "showOriginalTitlesDescription": "Show movie and TV titles in their original language when available.",
+    "use24HourTime": "24-Hour Time",
+    "use24HourTimeDescription": "Show times like 21:05 instead of 9:05 PM. Uses your phone's setting until you change it.",
     "updatePreferenceError": "Failed to update preference. Please try again.",
     "content": "Content",
     "exportFailedFallbackMessage": "Export failed. Please try again.",
