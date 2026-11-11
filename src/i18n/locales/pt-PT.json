@@ -343,7 +343,10 @@
       "bloopers": "Erros de gravação",
       "openingCredits": "Genéricos"
     },
-    "youMayAlsoLike": "Também poderá gostar"
+    "youMayAlsoLike": "Também poderá gostar",
+    "moreTitlesFailedToLoad": "Não foi possível carregar estes títulos",
+    "noMoreTitles": "Nada para mostrar",
+    "noMoreTitlesDescription": "Não há títulos para mostrar aqui, ou os seus filtros de conteúdo ocultam todos."
   },
   "library": {
     "title": "Biblioteca",

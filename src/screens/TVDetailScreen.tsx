@@ -45,6 +45,7 @@ import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
+import { useMoreTitles } from '@/src/hooks/useMoreTitles';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useCanCreateNote, useMediaNote } from '@/src/hooks/useNotes';
 import { useNotePress } from '@/src/hooks/useNotePress';
@@ -185,11 +186,8 @@ export default function TVDetailScreen() {
     enabled: !!tvId,
   });
 
-  const similarQuery = useQuery({
-    queryKey: ['tv', tvId, 'similar'],
-    queryFn: () => tmdbApi.getSimilarTV(tvId),
-    enabled: !!tvId,
-  });
+  // "More like this" (TMDB Discover by shared genres and keywords), shared with its See All.
+  const similarQuery = useMoreTitles('similar', 'tv', tvId);
 
   const watchProvidersQuery = useQuery({
     queryKey: ['tv', tvId, 'watch-providers'],
@@ -209,10 +207,8 @@ export default function TVDetailScreen() {
     enabled: !!tvId && shouldLoadReviews,
   });
 
-  const recommendationsQuery = useQuery({
-    queryKey: ['tv', tvId, 'recommendations'],
-    queryFn: () => tmdbApi.getRecommendedTV(tvId),
-    enabled: !!tvId && shouldLoadRecommendations,
+  const recommendationsQuery = useMoreTitles('recommendations', 'tv', tvId, {
+    enabled: shouldLoadRecommendations,
   });
 
   // Per-season episode details for the show-wide Mark as Watched entry point.
@@ -341,8 +337,8 @@ export default function TVDetailScreen() {
   const { isReady } = useProgressiveRender();
 
   // Filter out watched content - must be called before early returns (Rules of Hooks)
-  const rawSimilarShows = similarQuery.data?.results.slice(0, 10) || [];
-  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
+  const rawSimilarShows = similarQuery.items.slice(0, 10);
+  const rawRecommendations = recommendationsQuery.items.slice(0, 10);
   const filteredSimilarShows = useContentFilter(rawSimilarShows);
   const filteredRecommendations = useContentFilter(rawRecommendations);
 
@@ -382,7 +378,6 @@ export default function TVDetailScreen() {
     videos.find((v) => v.type === 'Trailer' && v.official) ||
     videos.find((v) => v.type === 'Trailer') ||
     videos[0];
-  const similarShows = similarQuery.data?.results.slice(0, 10) || [];
   const watchProviders = watchProvidersQuery.data;
   const watchProvidersLink = watchProvidersQuery.data?.link;
   const images = imagesQuery.data;
@@ -434,6 +429,14 @@ export default function TVDetailScreen() {
 
   const handleVideosViewAll = () => {
     navigateTo(`/tv/${tvId}/videos?title=${encodeURIComponent(displayShowTitle)}`);
+  };
+
+  const handleSimilarViewAll = () => {
+    navigateTo(`/tv/${tvId}/similar?title=${encodeURIComponent(displayShowTitle)}`);
+  };
+
+  const handleRecommendationsViewAll = () => {
+    navigateTo(`/tv/${tvId}/recommendations?title=${encodeURIComponent(displayShowTitle)}`);
   };
 
   const handleRefresh = async () => {
@@ -663,6 +666,7 @@ export default function TVDetailScreen() {
             onMediaPress={handleShowPress}
             onMediaLongPress={handleMediaLongPress}
             title={t('media.similarShows')}
+            onViewAll={handleSimilarViewAll}
             preferOriginalTitles={!!preferences?.showOriginalTitles}
           />
 
@@ -710,6 +714,7 @@ export default function TVDetailScreen() {
                 setShouldLoadRecommendations(true);
               }
             }}
+            onViewAll={handleRecommendationsViewAll}
           />
 
           {filteredRecommendations.length > 0 && <SectionSeparator />}

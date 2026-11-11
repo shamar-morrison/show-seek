@@ -9,6 +9,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { DetailSectionHeader } from './DetailSectionHeader';
 import { useDetailStyles } from './detailStyles';
 import { getMediaTitle, getMediaYear } from './detailUtils';
 import type { SimilarMediaItem, SimilarMediaSectionProps } from './types';
@@ -96,8 +97,8 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
     style,
     mediaType,
     preferOriginalTitles = false,
+    onViewAll,
   }) => {
-    const styles = useDetailStyles();
     const { resolvePosterPath } = usePosterOverrides();
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
@@ -120,7 +121,7 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>{title}</Text>
+        <DetailSectionHeader title={title} onViewAll={onViewAll} testID="similar-section-header" />
         <HorizontalFlashList
           data={items}
           renderItem={renderItem}

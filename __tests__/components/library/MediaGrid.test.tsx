@@ -84,4 +84,26 @@ describe('MediaGrid', () => {
 
     expect(mockOnRefresh).toHaveBeenCalledTimes(1);
   });
+
+  it('loads more near the end and shows a spinner while it does', () => {
+    const EmptyIcon = (() => null) as any;
+    const onEndReached = jest.fn();
+    const props = {
+      items: [],
+      isLoading: false,
+      emptyState: { icon: EmptyIcon, title: 'No items', description: '' },
+      onItemPress: jest.fn(),
+      onItemLongPress: jest.fn(),
+      onEndReached,
+    };
+
+    const { rerender } = render(<MediaGrid {...props} />);
+    expect(capturedFlashListProps.onEndReachedThreshold).toBe(0.5);
+    expect(capturedFlashListProps.ListFooterComponent).toBeNull();
+    capturedFlashListProps.onEndReached();
+    expect(onEndReached).toHaveBeenCalledTimes(1);
+
+    rerender(<MediaGrid {...props} isFetchingMore />);
+    expect(capturedFlashListProps.ListFooterComponent).toBeTruthy();
+  });
 });

@@ -55,6 +55,7 @@ import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
+import { useMoreTitles } from '@/src/hooks/useMoreTitles';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useCanCreateNote, useMediaNote } from '@/src/hooks/useNotes';
 import { useNotePress } from '@/src/hooks/useNotePress';
@@ -327,11 +328,8 @@ export default function MovieDetailScreen() {
     enabled: !!movieId,
   });
 
-  const similarQuery = useQuery({
-    queryKey: ['movie', movieId, 'similar'],
-    queryFn: () => tmdbApi.getSimilarMovies(movieId),
-    enabled: !!movieId,
-  });
+  // "More like this" (TMDB Discover by shared genres and keywords), shared with its See All.
+  const similarQuery = useMoreTitles('similar', 'movie', movieId);
 
   const watchProvidersQuery = useQuery({
     queryKey: ['movie', movieId, 'watch-providers'],
@@ -351,10 +349,8 @@ export default function MovieDetailScreen() {
     enabled: !!movieId && shouldLoadReviews,
   });
 
-  const recommendationsQuery = useQuery({
-    queryKey: ['movie', movieId, 'recommendations'],
-    queryFn: () => tmdbApi.getRecommendedMovies(movieId),
-    enabled: !!movieId && shouldLoadRecommendations,
+  const recommendationsQuery = useMoreTitles('recommendations', 'movie', movieId, {
+    enabled: shouldLoadRecommendations,
   });
   const movieData = movieQuery.data;
   const resolvedMoviePosterPath = movieData
@@ -443,8 +439,8 @@ export default function MovieDetailScreen() {
   const { isReady } = useProgressiveRender();
 
   // Filter out watched content - must be called before early returns (Rules of Hooks)
-  const rawSimilarMovies = similarQuery.data?.results.slice(0, 10) || [];
-  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
+  const rawSimilarMovies = similarQuery.items.slice(0, 10);
+  const rawRecommendations = recommendationsQuery.items.slice(0, 10);
   const filteredSimilarMovies = useContentFilter(rawSimilarMovies);
   const filteredRecommendations = useContentFilter(rawRecommendations);
 
@@ -536,6 +532,14 @@ export default function MovieDetailScreen() {
 
   const handleVideosViewAll = () => {
     navigateTo(`/movie/${movieId}/videos?title=${encodeURIComponent(displayMovieTitle)}`);
+  };
+
+  const handleSimilarViewAll = () => {
+    navigateTo(`/movie/${movieId}/similar?title=${encodeURIComponent(displayMovieTitle)}`);
+  };
+
+  const handleRecommendationsViewAll = () => {
+    navigateTo(`/movie/${movieId}/recommendations?title=${encodeURIComponent(displayMovieTitle)}`);
   };
 
   const handleRefresh = async () => {
@@ -953,6 +957,7 @@ export default function MovieDetailScreen() {
             onMediaPress={handleMoviePress}
             onMediaLongPress={handleMediaLongPress}
             title={t('media.similarMovies')}
+            onViewAll={handleSimilarViewAll}
             preferOriginalTitles={!!preferences?.showOriginalTitles}
           />
 
@@ -1000,6 +1005,7 @@ export default function MovieDetailScreen() {
                 setShouldLoadRecommendations(true);
               }
             }}
+            onViewAll={handleRecommendationsViewAll}
           />
 
           {filteredRecommendations.length > 0 && <SectionSeparator />}

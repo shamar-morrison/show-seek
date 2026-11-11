@@ -623,23 +623,18 @@ export const tmdbApi = {
     return organizeVideos(data.results, language);
   },
 
-  getSimilarMovies: async (id: number) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(`/movie/${id}/similar`);
+  getRecommendedMovies: async (id: number, page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
+      `/movie/${id}/recommendations`,
+      { params: { page } }
+    );
     return data;
   },
 
-  getSimilarTV: async (id: number) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(`/tv/${id}/similar`);
-    return data;
-  },
-
-  getRecommendedMovies: async (id: number) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(`/movie/${id}/recommendations`);
-    return data;
-  },
-
-  getRecommendedTV: async (id: number) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(`/tv/${id}/recommendations`);
+  getRecommendedTV: async (id: number, page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(`/tv/${id}/recommendations`, {
+      params: { page },
+    });
     return data;
   },
 

@@ -343,7 +343,10 @@
       "bloopers": "Tomas falsas",
       "openingCredits": "Créditos iniciales"
     },
-    "youMayAlsoLike": "También te puede gustar"
+    "youMayAlsoLike": "También te puede gustar",
+    "moreTitlesFailedToLoad": "No se pudieron cargar estos títulos",
+    "noMoreTitles": "Nada que mostrar",
+    "noMoreTitlesDescription": "No hay títulos que mostrar aquí, o tus filtros de contenido los ocultan todos."
   },
   "library": {
     "title": "Biblioteca",

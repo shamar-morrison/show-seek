@@ -68,6 +68,8 @@ export interface SimilarMediaSectionProps {
   title: string;
   preferOriginalTitles?: boolean;
   style?: ViewStyle;
+  /** Shows "See All" in the header. */
+  onViewAll?: () => void;
 }
 
 export interface PhotosSectionProps {
@@ -112,6 +114,8 @@ export interface RecommendationsSectionProps {
   preferOriginalTitles?: boolean;
   onLayout?: () => void;
   style?: ViewStyle;
+  /** Shows "See All" in the header once recommendations have loaded. */
+  onViewAll?: () => void;
 }
 
 export interface CollectionSectionProps {

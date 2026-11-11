@@ -70,7 +70,6 @@ jest.mock('@/src/api/tmdb', () => ({
     getMovieDetails: jest.fn(),
     getMovieCredits: jest.fn(),
     getMovieVideos: jest.fn(),
-    getSimilarMovies: jest.fn(),
     getMovieWatchProviders: jest.fn(),
     getMovieImages: jest.fn(),
     getMovieReviews: jest.fn(),
@@ -322,11 +321,31 @@ jest.mock('@/src/components/detail/PhotosSection', () => ({
   },
 }));
 jest.mock('@/src/components/detail/RecommendationsSection', () => ({
-  RecommendationsSection: () => null,
+  RecommendationsSection: ({ onViewAll }: any) => {
+    const { Pressable } = require('react-native');
+    return onViewAll ? <Pressable testID="recommendations-see-all" onPress={onViewAll} /> : null;
+  },
 }));
 jest.mock('@/src/components/detail/ReviewsSection', () => ({ ReviewsSection: () => null }));
 jest.mock('@/src/components/detail/SimilarMediaSection', () => ({
-  SimilarMediaSection: () => null,
+  SimilarMediaSection: ({ onViewAll, items }: any) => {
+    const { Pressable } = require('react-native');
+    return onViewAll ? (
+      <Pressable testID="similar-see-all" onPress={onViewAll} itemCount={items.length} />
+    ) : null;
+  },
+}));
+
+const mockUseMoreTitles = jest.fn(
+  (_kind: string, _mediaType: string, _id: number, _options?: any) => ({
+    items: [] as unknown[],
+    isLoading: false,
+    isError: false,
+    refetch: jest.fn(),
+  })
+);
+jest.mock('@/src/hooks/useMoreTitles', () => ({
+  useMoreTitles: (...args: [string, string, number, any?]) => mockUseMoreTitles(...args),
 }));
 jest.mock('@/src/components/detail/TraktReviewsSection', () => ({
   TraktReviewsSection: () => null,
@@ -495,6 +514,36 @@ describe('MovieDetailScreen', () => {
 
     expect(mockPush).toHaveBeenCalledWith(
       expect.stringMatching(/^\/\(tabs\)\/discover\/movie\/10\/videos\?title=/)
+    );
+  });
+
+  it('loads "More like this" and recommendations (once their row is reached) from the shared pages', () => {
+    render(<MovieDetailScreen />);
+
+    expect(mockUseMoreTitles).toHaveBeenCalledWith('similar', 'movie', 10);
+    expect(mockUseMoreTitles).toHaveBeenCalledWith('recommendations', 'movie', 10, {
+      enabled: false,
+    });
+  });
+
+  it('shows the first 10 similar titles and opens See All for each row', () => {
+    mockUseMoreTitles.mockImplementation((kind: string) => ({
+      items: kind === 'similar' ? Array.from({ length: 15 }, (_, i) => ({ id: 100 + i })) : [],
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    }));
+    const { getByTestId } = render(<MovieDetailScreen />);
+
+    expect(getByTestId('similar-see-all').props.itemCount).toBe(10);
+    fireEvent.press(getByTestId('similar-see-all'));
+    fireEvent.press(getByTestId('recommendations-see-all'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/\(tabs\)\/discover\/movie\/10\/similar\?title=/)
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/\(tabs\)\/discover\/movie\/10\/recommendations\?title=/)
     );
   });
 });

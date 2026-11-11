@@ -343,7 +343,10 @@
       "bloopers": "Bêtisiers",
       "openingCredits": "Génériques"
     },
-    "youMayAlsoLike": "Vous pourriez aussi aimer"
+    "youMayAlsoLike": "Vous pourriez aussi aimer",
+    "moreTitlesFailedToLoad": "Impossible de charger ces titres",
+    "noMoreTitles": "Rien à afficher",
+    "noMoreTitlesDescription": "Il n'y a aucun titre à afficher ici, ou vos filtres de contenu les masquent tous."
   },
   "library": {
     "title": "Bibliothèque",

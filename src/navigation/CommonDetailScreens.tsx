@@ -29,6 +29,24 @@ export const CommonDetailScreens = () => (
       options={{ title: 'Videos', headerShown: false, presentation: 'modal', gestureEnabled: true }}
     />
     <Stack.Screen
+      name="movie/[id]/recommendations"
+      options={{
+        title: 'Recommendations',
+        headerShown: false,
+        presentation: 'modal',
+        gestureEnabled: true,
+      }}
+    />
+    <Stack.Screen
+      name="movie/[id]/similar"
+      options={{
+        title: 'Similar',
+        headerShown: false,
+        presentation: 'modal',
+        gestureEnabled: true,
+      }}
+    />
+    <Stack.Screen
       name="tv/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}
     />
@@ -52,6 +70,24 @@ export const CommonDetailScreens = () => (
     <Stack.Screen
       name="tv/[id]/videos"
       options={{ title: 'Videos', headerShown: false, presentation: 'modal', gestureEnabled: true }}
+    />
+    <Stack.Screen
+      name="tv/[id]/recommendations"
+      options={{
+        title: 'Recommendations',
+        headerShown: false,
+        presentation: 'modal',
+        gestureEnabled: true,
+      }}
+    />
+    <Stack.Screen
+      name="tv/[id]/similar"
+      options={{
+        title: 'Similar',
+        headerShown: false,
+        presentation: 'modal',
+        gestureEnabled: true,
+      }}
     />
     <Stack.Screen name="tv/[id]/seasons" options={{ title: 'Seasons', headerShown: true }} />
     <Stack.Screen

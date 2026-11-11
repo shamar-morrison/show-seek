@@ -343,7 +343,10 @@
       "bloopers": "Bloopers",
       "openingCredits": "Opening Credits"
     },
-    "youMayAlsoLike": "You May Also Like"
+    "youMayAlsoLike": "You May Also Like",
+    "moreTitlesFailedToLoad": "Couldn't load these titles",
+    "noMoreTitles": "Nothing to show",
+    "noMoreTitlesDescription": "There are no titles to show here, or your content filters hide them all."
   },
   "library": {
     "title": "Library",

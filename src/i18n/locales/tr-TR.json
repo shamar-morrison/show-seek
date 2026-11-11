@@ -343,7 +343,10 @@
       "bloopers": "Bloopers",
       "openingCredits": "Açılış jenerikleri"
     },
-    "youMayAlsoLike": "Bunları da beğenebilirsin"
+    "youMayAlsoLike": "Bunları da beğenebilirsin",
+    "moreTitlesFailedToLoad": "Bu yapımlar yüklenemedi",
+    "noMoreTitles": "Gösterilecek bir şey yok",
+    "noMoreTitlesDescription": "Burada gösterilecek yapım yok ya da içerik filtreleriniz hepsini gizliyor."
   },
   "library": {
     "title": "Kitaplık",

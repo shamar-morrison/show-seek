@@ -14,6 +14,7 @@ import { StarIcon } from '@hugeicons/core-free-icons';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { DetailSectionHeader } from './DetailSectionHeader';
 import { useDetailStyles } from './detailStyles';
 import { getMediaTitle, getMediaYear } from './detailUtils';
 import type { RecommendationsSectionProps, SimilarMediaItem } from './types';
@@ -104,6 +105,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     style,
     mediaType,
     preferOriginalTitles = false,
+    onViewAll,
   }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
@@ -165,9 +167,11 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     if (!isLoading && !isError && items.length > 0) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            {t('media.youMayAlsoLike')}
-          </Text>
+          <DetailSectionHeader
+            title={t('media.youMayAlsoLike')}
+            onViewAll={onViewAll}
+            testID="recommendations-section-header"
+          />
           <View style={{ marginHorizontal: -SPACING.l }}>
             <HorizontalFlashList
               data={items}
