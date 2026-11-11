@@ -738,7 +738,7 @@
     "updateRegionError": "Échec de la mise à jour de la région. Veuillez réessayer.",
     "regionScreenDescription": "Sélectionnez votre région pour voir la disponibilité locale en streaming et les dates de sortie.",
     "regionScreenNote": "Cela affecte les informations de disponibilité et les dates de sortie locales.",
-    "actionButtons": "Boutons d'action"
+    "actionButtons": "Réorganiser les boutons d'action"
   },
   "profile": {
     "displayNameLabel": "Nom d'affichage",
@@ -780,6 +780,7 @@
     "ratingsGiven": "Notes données",
     "listsCreated": "Listes créées",
     "traktIntegration": "Intégration Trakt",
+    "traktIntegrationDescription": "Recopiez votre historique, vos notes et vos listes Trakt, ou importez un export zip de Trakt.",
     "stremioIntegration": "Addon Stremio",
     "connectTrakt": "Connecter Trakt",
     "disconnectTrakt": "Déconnecter Trakt",
@@ -811,8 +812,11 @@
     "allowUnreleasedEpisodeWatchesDescription": "Permet de marquer comme vus des épisodes datés dans le futur avant leur diffusion officielle",
     "sendFeedback": "Envoyer des commentaires",
     "importFromImdb": "Importer depuis IMDb",
+    "importFromImdbDescription": "Importez vos notes, vos titres à voir et vos listes depuis des exports IMDb.",
     "importFromTvTime": "Importer depuis TV Time",
+    "importFromTvTimeDescription": "Importez votre historique, vos notes et vos listes depuis un export TV Time.",
     "importFromSimkl": "Importer depuis Simkl",
+    "importFromSimklDescription": "Importez votre historique, vos notes et vos titres à voir depuis une sauvegarde Simkl.",
     "exportData": "Exporter les données",
     "webApp": "ShowSeek Web",
     "joinDiscord": "Rejoignez notre Discord",

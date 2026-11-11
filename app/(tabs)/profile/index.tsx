@@ -184,7 +184,7 @@ export default function ProfileScreen() {
         id: item.id,
         tab: 'content',
         title: t(item.titleKey),
-        description: '',
+        description: t(item.descKey),
         category: t(`profile.categories.${item.category}`),
       });
     }
@@ -193,7 +193,7 @@ export default function ProfileScreen() {
         id: item.id,
         tab: 'integrations',
         title: t(item.titleKey),
-        description: '',
+        description: t(item.descKey),
         category: t(`profile.categories.${item.category}`),
       });
     }

@@ -20,15 +20,42 @@ export interface IntegrationConfigItem {
   id: IntegrationItemId;
   /** Translation key for the title */
   titleKey: string;
+  /** Translation key for the short description under the title */
+  descKey: string;
   category: IntegrationCategoryKey;
 }
 
 export const INTEGRATION_ITEMS: IntegrationConfigItem[] = [
-  { id: 'imdbImport', titleKey: 'profile.importFromImdb', category: 'import' },
-  { id: 'tvtimeImport', titleKey: 'profile.importFromTvTime', category: 'import' },
-  { id: 'simklImport', titleKey: 'profile.importFromSimkl', category: 'import' },
-  { id: 'trakt', titleKey: 'profile.traktIntegration', category: 'sync' },
-  { id: 'stremio', titleKey: 'profile.stremioIntegration', category: 'sync' },
+  {
+    id: 'imdbImport',
+    titleKey: 'profile.importFromImdb',
+    descKey: 'profile.importFromImdbDescription',
+    category: 'import',
+  },
+  {
+    id: 'tvtimeImport',
+    titleKey: 'profile.importFromTvTime',
+    descKey: 'profile.importFromTvTimeDescription',
+    category: 'import',
+  },
+  {
+    id: 'simklImport',
+    titleKey: 'profile.importFromSimkl',
+    descKey: 'profile.importFromSimklDescription',
+    category: 'import',
+  },
+  {
+    id: 'trakt',
+    titleKey: 'profile.traktIntegration',
+    descKey: 'profile.traktIntegrationDescription',
+    category: 'sync',
+  },
+  {
+    id: 'stremio',
+    titleKey: 'profile.stremioIntegration',
+    descKey: 'stremio.intro',
+    category: 'sync',
+  },
 ];
 
 export interface IntegrationsSectionProps {
@@ -143,6 +170,7 @@ export function IntegrationsSection({
               </View>
             }
             label={t('profile.importFromImdb')}
+            description={t('profile.importFromImdbDescription')}
             onPress={onImdbImport}
           />
         );
@@ -158,6 +186,7 @@ export function IntegrationsSection({
               />
             }
             label={t('profile.importFromTvTime')}
+            description={t('profile.importFromTvTimeDescription')}
             onPress={onTvTimeImport}
           />
         );
@@ -173,6 +202,7 @@ export function IntegrationsSection({
               />
             }
             label={t('profile.importFromSimkl')}
+            description={t('profile.importFromSimklDescription')}
             onPress={onSimklImport}
           />
         );
@@ -181,6 +211,7 @@ export function IntegrationsSection({
           <ActionButton
             customIcon={<TraktLogo size={21} />}
             label={t('profile.traktIntegration')}
+            description={t('profile.traktIntegrationDescription')}
             onPress={onTraktPress}
             loading={isTraktLoading}
             badge={
@@ -207,6 +238,7 @@ export function IntegrationsSection({
               />
             }
             label={t('profile.stremioIntegration')}
+            description={t('stremio.intro')}
             onPress={onStremioPress}
             testID="action-button-stremio-integration"
             badge={

@@ -738,7 +738,7 @@
     "updateRegionError": "Failed to update region. Please try again.",
     "regionScreenDescription": "Select your region to see local streaming availability and release dates.",
     "regionScreenNote": "This affects where to watch information and local release dates.",
-    "actionButtons": "Action Buttons"
+    "actionButtons": "Reorder Action Buttons"
   },
   "profile": {
     "displayNameLabel": "Display name",
@@ -780,6 +780,7 @@
     "ratingsGiven": "Ratings Given",
     "listsCreated": "Lists Created",
     "traktIntegration": "Trakt Integration",
+    "traktIntegrationDescription": "Mirror your Trakt watch history, ratings and lists, or import a Trakt export zip.",
     "stremioIntegration": "Stremio Add-on",
     "connectTrakt": "Connect Trakt",
     "disconnectTrakt": "Disconnect Trakt",
@@ -819,8 +820,11 @@
     "checkConnection": "Please check your connection and try again",
     "sendFeedback": "Send Feedback",
     "importFromImdb": "Import from IMDb",
+    "importFromImdbDescription": "Bring in your ratings, watchlist and lists from IMDb export files.",
     "importFromTvTime": "Import from TV Time",
+    "importFromTvTimeDescription": "Bring in your watch history, ratings and lists from a TV Time export.",
     "importFromSimkl": "Import from Simkl",
+    "importFromSimklDescription": "Bring in your watch history, ratings and watchlist from a Simkl backup.",
     "exportData": "Export Data",
     "webApp": "ShowSeek Web App",
     "joinDiscord": "Join our Discord",

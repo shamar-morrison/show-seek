@@ -738,7 +738,7 @@
     "updateRegionError": "No se pudo actualizar la región. Inténtalo de nuevo.",
     "regionScreenDescription": "Selecciona tu región para ver disponibilidad en streaming y fechas de estreno locales.",
     "regionScreenNote": "Esto afecta a la información de dónde ver y a las fechas de estreno locales.",
-    "actionButtons": "Botones de acción"
+    "actionButtons": "Reordenar botones de acción"
   },
   "profile": {
     "displayNameLabel": "Nombre visible",
@@ -780,6 +780,7 @@
     "ratingsGiven": "Calificaciones dadas",
     "listsCreated": "Listas creadas",
     "traktIntegration": "Integración con Trakt",
+    "traktIntegrationDescription": "Copia tu historial, calificaciones y listas de Trakt, o importa un zip exportado de Trakt.",
     "stremioIntegration": "Addon de Stremio",
     "connectTrakt": "Conectar Trakt",
     "disconnectTrakt": "Desconectar Trakt",
@@ -809,8 +810,11 @@
     "allowUnreleasedEpisodeWatchesDescription": "Te permite marcar episodios con fecha futura como vistos antes de su estreno oficial",
     "sendFeedback": "Enviar comentarios",
     "importFromImdb": "Importar desde IMDb",
+    "importFromImdbDescription": "Importa tus calificaciones, pendientes y listas desde archivos exportados de IMDb.",
     "importFromTvTime": "Importar desde TV Time",
+    "importFromTvTimeDescription": "Importa tu historial, calificaciones y listas desde una exportación de TV Time.",
     "importFromSimkl": "Importar desde Simkl",
+    "importFromSimklDescription": "Importa tu historial, calificaciones y pendientes desde un respaldo de Simkl.",
     "exportData": "Exportar datos",
     "webApp": "ShowSeek Web",
     "joinDiscord": "Únete a nuestro Discord",

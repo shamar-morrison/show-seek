@@ -738,7 +738,7 @@
     "updateRegionError": "Bölge güncellenemedi. Lütfen tekrar deneyin.",
     "regionScreenDescription": "Yerel yayın kullanılabilirliğini ve yayın tarihlerini görmek için bölgenizi seçin.",
     "regionScreenNote": "Bu; nereden izleneceği bilgisini ve yerel yayın tarihlerini etkiler.",
-    "actionButtons": "Eylem düğmeleri"
+    "actionButtons": "Eylem düğmelerini yeniden sırala"
   },
   "profile": {
     "displayNameLabel": "Görünen ad",
@@ -780,6 +780,7 @@
     "ratingsGiven": "Verilen puanlar",
     "listsCreated": "Oluşturulan listeler",
     "traktIntegration": "Trakt entegrasyonu",
+    "traktIntegrationDescription": "Trakt izleme geçmişinizi, puanlarınızı ve listelerinizi aktarın ya da bir Trakt dışa aktarma zip'i içe aktarın.",
     "stremioIntegration": "Stremio Eklentisi",
     "connectTrakt": "Trakt'a bağlan",
     "disconnectTrakt": "Trakt bağlantısını kes",
@@ -819,8 +820,11 @@
     "checkConnection": "Lütfen bağlantınızı kontrol edip tekrar deneyin",
     "sendFeedback": "Geri bildirim gönder",
     "importFromImdb": "IMDb'den içe aktar",
+    "importFromImdbDescription": "IMDb dışa aktarma dosyalarından puanlarınızı, izleme listenizi ve listelerinizi getirin.",
     "importFromTvTime": "TV Time'dan içe aktar",
+    "importFromTvTimeDescription": "TV Time dışa aktarımından izleme geçmişinizi, puanlarınızı ve listelerinizi getirin.",
     "importFromSimkl": "Simkl'den içe aktar",
+    "importFromSimklDescription": "Simkl yedeğinden izleme geçmişinizi, puanlarınızı ve izleme listenizi getirin.",
     "exportData": "Verileri dışa aktar",
     "webApp": "ShowSeek web uygulaması",
     "joinDiscord": "Discord'umuza katıl",

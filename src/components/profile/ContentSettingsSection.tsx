@@ -40,15 +40,42 @@ export interface ContentConfigItem {
   id: ContentItemId;
   /** Translation key for the title */
   titleKey: string;
+  /** Translation key for the short description (the one its own screen opens with) */
+  descKey: string;
   category: ContentCategoryKey;
 }
 
 export const CONTENT_ITEMS: ContentConfigItem[] = [
-  { id: 'language', titleKey: 'settings.language', category: 'localization' },
-  { id: 'region', titleKey: 'settings.region', category: 'localization' },
-  { id: 'accentColor', titleKey: 'settings.accentColor', category: 'appearance' },
-  { id: 'defaultLaunchScreen', titleKey: 'settings.defaultLaunchScreen', category: 'appearance' },
-  { id: 'actionButtons', titleKey: 'settings.actionButtons', category: 'appearance' },
+  {
+    id: 'language',
+    titleKey: 'settings.language',
+    descKey: 'settings.languageScreenDescription',
+    category: 'localization',
+  },
+  {
+    id: 'region',
+    titleKey: 'settings.region',
+    descKey: 'settings.regionScreenDescription',
+    category: 'localization',
+  },
+  {
+    id: 'accentColor',
+    titleKey: 'settings.accentColor',
+    descKey: 'settings.accentColorDescription',
+    category: 'appearance',
+  },
+  {
+    id: 'defaultLaunchScreen',
+    titleKey: 'settings.defaultLaunchScreen',
+    descKey: 'settings.launchScreenDescription',
+    category: 'appearance',
+  },
+  {
+    id: 'actionButtons',
+    titleKey: 'settings.actionButtons',
+    descKey: 'actionButtons.description',
+    category: 'appearance',
+  },
 ];
 
 export interface ContentSettingsSectionProps {
@@ -169,6 +196,7 @@ export function ContentSettingsSection({
           <ActionButton
             icon={TranslateIcon}
             label={t('settings.language')}
+            description={t('settings.languageScreenDescription')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onLanguagePress();
@@ -188,6 +216,7 @@ export function ContentSettingsSection({
           <ActionButton
             icon={MapPinIcon}
             label={t('settings.region')}
+            description={t('settings.regionScreenDescription')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onRegionPress();
@@ -206,6 +235,7 @@ export function ContentSettingsSection({
           <ActionButton
             icon={PaintBoardIcon}
             label={t('settings.accentColor')}
+            description={t('settings.accentColorDescription')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onColorPress();
@@ -223,6 +253,7 @@ export function ContentSettingsSection({
           <ActionButton
             icon={DragDropVerticalIcon}
             label={t('settings.actionButtons')}
+            description={t('actionButtons.description')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onActionButtonsPress();
@@ -234,6 +265,7 @@ export function ContentSettingsSection({
           <ActionButton
             icon={Layout01Icon}
             label={t('settings.defaultLaunchScreen')}
+            description={t('settings.launchScreenDescription')}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onLaunchScreenPress();
