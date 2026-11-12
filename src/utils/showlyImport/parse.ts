@@ -1,13 +1,17 @@
 import {
+  FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK,
+  FILE_IMPORT_MAX_EPISODE_NUMBER,
   FILE_IMPORT_MAX_LISTS_PER_ENTITY,
   FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH,
   createEmptyFileImportStats,
   incrementFileImportStat,
   type FileImportEpisodePlay,
+  type FileImportEpisodeRating,
   type FileImportIgnoredReason,
   type FileImportListMembership,
   type FileImportMovieEntity,
   type FileImportRating,
+  type FileImportSeasonRating,
   type FileImportShowEntity,
   type FileImportShowStatus,
   type FileImportSkipReason,
@@ -72,6 +76,8 @@ interface ShowAcc {
   fallbackDate: number | null;
   plays: Map<string, FileImportEpisodePlay>;
   rating: FileImportRating | null;
+  seasonRatings: Map<number, FileImportSeasonRating>;
+  episodeRatings: Map<string, FileImportEpisodeRating>;
   lists: Map<string, FileImportListMembership>;
 }
 
@@ -129,10 +135,10 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
     tmdbRaw: unknown,
     titleRaw?: unknown
   ) => {
-    const traktId = toPositiveInt(traktRaw);
+    const traktId = toId(traktRaw);
     if (traktId === null) return;
     const known = map.get(traktId) ?? { tmdbId: null, title: '' };
-    known.tmdbId ??= toPositiveInt(tmdbRaw);
+    known.tmdbId ??= toId(tmdbRaw);
     known.title ||= titleOf(titleRaw);
     map.set(traktId, known);
   };
@@ -147,6 +153,11 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
   arrayOf(showsData.rS)
     .filter(isObject)
     .forEach((row) => learn(knownShows, row.id, row.tmId));
+  for (const key of ['rSe', 'rEp']) {
+    arrayOf(showsData[key])
+      .filter(isObject)
+      .forEach((row) => learn(knownShows, row.sId, row.stmId));
+  }
   for (const key of ['cH', 'cW', 'cHid']) {
     arrayOf(moviesData[key])
       .filter(isObject)
@@ -166,8 +177,10 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
     addedAt: null,
     fallbackDate: null,
     lists: new Map(),
+    episodeRatings: new Map(),
     plays: new Map(),
     rating: null,
+    seasonRatings: new Map(),
     status: null,
     tmdbId: known.tmdbId,
     title: known.title,
@@ -190,9 +203,9 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
     tmdbRaw: unknown,
     titleRaw?: unknown
   ): T | null => {
-    const traktId = toPositiveInt(traktRaw);
+    const traktId = toId(traktRaw);
     const fromTrakt = traktId !== null ? known.get(traktId) : undefined;
-    const tmdbId = toPositiveInt(tmdbRaw) ?? fromTrakt?.tmdbId ?? null;
+    const tmdbId = toId(tmdbRaw) ?? fromTrakt?.tmdbId ?? null;
     const title = titleOf(titleRaw) || fromTrakt?.title || '';
     if (tmdbId === null && !title) return null;
     return acc.get({ tmdbId, title });
@@ -222,8 +235,8 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
       tally.skip('malformed_row');
       continue;
     }
-    const season = toNonNegativeInt(row.sN);
-    const episode = toPositiveInt(row.eN);
+    const season = toSeasonNumber(row.sN);
+    const episode = toEpisodeNumber(row.eN);
     if (season === null || episode === null) {
       tally.skip('malformed_row');
       continue;
@@ -252,8 +265,58 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
   for (const row of arrayOf(showsData.rS)) {
     applyRating(row, (r) => resolve(shows, knownShows, r.id, r.tmId), tally, dateOf, fileDate, now);
   }
-  tally.ignore('season_ratings', arrayOf(showsData.rSe).length);
-  tally.ignore('episode_ratings', arrayOf(showsData.rEp).length);
+  for (const row of arrayOf(showsData.rSe)) {
+    if (!isObject(row)) {
+      tally.skip('malformed_row');
+      continue;
+    }
+    // `sN` is -1 when Showly didn't know the season.
+    const season = toSeasonNumber(row.sN);
+    const value = toRatingValue(row.r);
+    if (season === null || value === null) {
+      tally.skip('malformed_row');
+      continue;
+    }
+    const show = resolve(shows, knownShows, row.sId, row.stmId);
+    if (!show) {
+      tally.skip('missing_identifiers');
+      continue;
+    }
+    if (!show.seasonRatings.has(season)) {
+      show.seasonRatings.set(season, {
+        ratedAt: dateOf(row.rA) ?? show.addedAt ?? fileDate ?? now,
+        season,
+        value,
+      });
+    }
+  }
+  for (const row of arrayOf(showsData.rEp)) {
+    if (!isObject(row)) {
+      tally.skip('malformed_row');
+      continue;
+    }
+    const season = toSeasonNumber(row.sN);
+    const episode = toEpisodeNumber(row.eN);
+    const value = toRatingValue(row.r);
+    if (season === null || episode === null || value === null) {
+      tally.skip('malformed_row');
+      continue;
+    }
+    const show = resolve(shows, knownShows, row.sId, row.stmId);
+    if (!show) {
+      tally.skip('missing_identifiers');
+      continue;
+    }
+    const key = `${season}_${episode}`;
+    if (!show.episodeRatings.has(key)) {
+      show.episodeRatings.set(key, {
+        episode,
+        ratedAt: dateOf(row.rA) ?? show.addedAt ?? fileDate ?? now,
+        season,
+        value,
+      });
+    }
+  }
 
   // ---- Movies ------------------------------------------------------------------
   for (const row of arrayOf(moviesData.cH)) {
@@ -358,7 +421,24 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
       (a, b) => a.season - b.season || a.episode - b.episode
     );
     const showLists = capLists(show.lists);
-    if (!show.status && plays.length === 0 && !show.rating && showLists.length === 0) continue;
+    // One chunk holds at most FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK season + episode
+    // ratings, and a show's ratings travel together; anything past that is counted.
+    const seasonRatings = [...show.seasonRatings.values()]
+      .sort((a, b) => a.season - b.season)
+      .slice(0, FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK);
+    const episodeRatings = [...show.episodeRatings.values()]
+      .sort((a, b) => a.season - b.season || a.episode - b.episode)
+      .slice(0, FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK - seasonRatings.length);
+    tally.ignore('episode_ratings', show.episodeRatings.size - episodeRatings.length);
+    const hasDetailRatings = seasonRatings.length + episodeRatings.length > 0;
+    if (
+      !show.status &&
+      plays.length === 0 &&
+      !show.rating &&
+      !hasDetailRatings &&
+      showLists.length === 0
+    )
+      continue;
     showEntities.push({
       addedAt: show.addedAt ?? earliest(showLists) ?? fileDate ?? now,
       favorite: false,
@@ -370,6 +450,8 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
       title: show.title,
       tvdbId: null,
       ...(show.tmdbId !== null ? { tmdbId: show.tmdbId } : {}),
+      ...(seasonRatings.length > 0 ? { seasonRatings } : {}),
+      ...(episodeRatings.length > 0 ? { episodeRatings } : {}),
     });
   }
 
@@ -448,8 +530,8 @@ function applyRating(
     tally.skip('malformed_row');
     return;
   }
-  const value = typeof row.r === 'number' && Number.isInteger(row.r) ? row.r : null;
-  if (value === null || value < 1 || value > 10) {
+  const value = toRatingValue(row.r);
+  if (value === null) {
     tally.skip('malformed_row');
     return;
   }
@@ -470,6 +552,28 @@ function capLists(lists: Map<string, FileImportListMembership>): FileImportListM
 
 function earliest(lists: FileImportListMembership[]): number | null {
   return lists.length > 0 ? Math.min(...lists.map((list) => list.addedAt)) : null;
+}
+
+/** A Trakt or TMDB ID the server accepts: a positive safe integer. */
+function toId(raw: unknown): number | null {
+  const value = toPositiveInt(raw);
+  return value !== null && Number.isSafeInteger(value) ? value : null;
+}
+
+/** Season numbers the server accepts (0 = specials). Showly writes -1 when unknown. */
+function toSeasonNumber(raw: unknown): number | null {
+  const value = toNonNegativeInt(raw);
+  return value !== null && value <= FILE_IMPORT_MAX_EPISODE_NUMBER ? value : null;
+}
+
+function toEpisodeNumber(raw: unknown): number | null {
+  const value = toPositiveInt(raw);
+  return value !== null && value <= FILE_IMPORT_MAX_EPISODE_NUMBER ? value : null;
+}
+
+/** Showly ratings are whole numbers from 1 to 10 (Trakt's scale, same as ShowSeek's). */
+function toRatingValue(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isInteger(raw) && raw >= 1 && raw <= 10 ? raw : null;
 }
 
 function titleOf(raw: unknown): string {

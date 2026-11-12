@@ -191,13 +191,22 @@ class ShowlyImportService {
     report();
 
     try {
+      // A long show is split into parts, and the server decides a followed show's list on
+      // its last part. Once a part fails, that show's later parts are held back with it, so
+      // "Retry failed items" sends them in order and the decision sees every episode.
+      const heldShows = new Set<string>();
       for (const [position, index] of pending.entries()) {
-        const result = await this.sendChunk({
-          importId: run.importId,
-          ...prepared.chunks[index],
-          // Lets the server mark the import finished, so a new one isn't refused as "already running".
-          ...(position === pending.length - 1 ? { final: true } : {}),
-        });
+        const chunk = prepared.chunks[index];
+        const splitShows = chunk.shows.filter((show) => show.part);
+        let result: FileImportChunkResult | null = null;
+        if (!splitShows.some((show) => heldShows.has(showKeyOf(show)))) {
+          result = await this.sendChunk({
+            importId: run.importId,
+            ...chunk,
+            // Lets the server mark the import finished, so a new one isn't refused as "already running".
+            ...(position === pending.length - 1 ? { final: true } : {}),
+          });
+        }
         if (result) {
           stats = mergeFileImportStats(stats, result);
           run.stats = mergeFileImportStats(run.stats!, result);
@@ -205,6 +214,7 @@ class ShowlyImportService {
           await this.saveRun(userId, run);
         } else {
           failedChunkIndexes.push(index);
+          splitShows.forEach((show) => heldShows.add(showKeyOf(show)));
         }
         doneThisRun += 1;
         report();
@@ -291,6 +301,11 @@ class ShowlyImportService {
 }
 
 export const showlyImportService = new ShowlyImportService();
+
+/** Identifies a show across its parts (they all carry the same ids and title). */
+function showKeyOf(show: FileImportChunkRequest['shows'][number]): string {
+  return show.tmdbId !== undefined ? `tmdb:${show.tmdbId}` : `title:${show.title.toLowerCase()}`;
+}
 
 /** Identifies "the same export" so a resumed run can skip chunks it already sent. */
 export function fingerprintOf(prepared: PreparedShowlyImport): string {

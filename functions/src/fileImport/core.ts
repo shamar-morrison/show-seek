@@ -16,6 +16,7 @@ import {
   assertPremiumUser,
   createImportWriteContext,
   ensureCustomList,
+  insertDetailRatingIfAbsent,
   removeUndefined,
   requestTmdb,
   requestTmdbOrNull,
@@ -37,6 +38,8 @@ import {
   FILE_IMPORT_MAX_CALLS_PER_MINUTE,
   FILE_IMPORT_MAX_CHUNKS_PER_SESSION,
   FILE_IMPORT_MAX_ENTITIES_PER_CHUNK,
+  FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK,
+  FILE_IMPORT_MAX_EPISODE_NUMBER,
   FILE_IMPORT_MAX_LISTS_PER_ENTITY,
   FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH,
   FILE_IMPORT_MAX_MOVIE_WATCHES,
@@ -48,6 +51,8 @@ import {
   incrementFileImportStat,
   type FileImportAnimeNumbering,
   type FileImportEpisodePlay,
+  type FileImportEpisodeRating,
+  type FileImportSeasonRating,
   type FileImportWatchedThrough,
   type FileImportIgnoredReason,
   type FileImportChunkRequest,
@@ -74,7 +79,7 @@ const MAX_EPISODE_FALLBACK_LOOKUPS = 150;
 const MAX_APPENDED_SEASONS = 20;
 const ENDED_SHOW_STATUSES = new Set(['Ended', 'Canceled']);
 const MAX_TITLE_LENGTH = 500;
-const MAX_EPISODE_NUMBER = 10_000;
+const MAX_EPISODE_NUMBER = FILE_IMPORT_MAX_EPISODE_NUMBER;
 /**
  * "Watched up to" episodes one call may expand, across all its shows. Listed plays are
  * capped by FILE_IMPORT_MAX_PLAYS_PER_CHUNK; this caps expansion, which a crafted chunk
@@ -143,7 +148,13 @@ type TmdbTvDetailsWithSeasons = TmdbTvDetails & Record<string, unknown>;
 /** The parts of a `/tv/{id}` response the Simkl paths read (not in `TmdbTvDetails`). */
 type TmdbShowDetails = TmdbTvDetails & {
   genres?: { id: number }[];
-  seasons?: { episode_count?: number; season_number: number }[];
+  seasons?: {
+    air_date?: string | null;
+    episode_count?: number;
+    name?: string;
+    poster_path?: string | null;
+    season_number: number;
+  }[];
 };
 
 interface TmdbEpisodeGroupList {
@@ -1232,6 +1243,8 @@ async function writeShow(
   }
   await addToCustomLists(context, stats, entity.lists, media);
   await writeRating(context, stats, entity.rating, media);
+  await writeSeasonRatings(context, stats, show, entity.seasonRatings ?? []);
+  await writeEpisodeRatings(context, stats, show, entity.episodeRatings ?? []);
 
   // Counted on the primary part only, when the show (or its first part) added anything.
   if (countWrites(stats) > writesBefore) {
@@ -1493,6 +1506,81 @@ async function writeRating(
   }
 }
 
+/**
+ * Season ratings, as `season-{showId}-{season}` docs like the app's RatingService.
+ * A season TMDB doesn't list is counted as unmatched; an existing rating is kept.
+ */
+async function writeSeasonRatings(
+  context: FileImportContext,
+  stats: FileImportStats,
+  show: TmdbTvResult,
+  ratings: FileImportSeasonRating[]
+): Promise<void> {
+  if (ratings.length === 0) return;
+  const details = (await getShowDetails(context, show.id)) as TmdbShowDetails | null;
+  for (const rating of ratings) {
+    const season = details?.seasons?.find((entry) => entry.season_number === rating.season);
+    if (!season) {
+      skip(stats, 'unmatched_episode');
+      continue;
+    }
+    const didWrite = await insertDetailRatingIfAbsent(
+      context,
+      `season-${show.id}-${rating.season}`,
+      {
+        mediaType: 'season',
+        posterPath: season.poster_path ?? show.poster_path ?? null,
+        ratedAt: rating.ratedAt,
+        rating: rating.value,
+        releaseDate: season.air_date ?? null,
+        seasonNumber: rating.season,
+        title: season.name ?? `Season ${rating.season}`,
+        tvShowId: show.id,
+        tvShowName: show.name,
+      }
+    );
+    if (didWrite) stats.imported.ratings += 1;
+    else skip(stats, 'existing_rating');
+  }
+}
+
+/**
+ * Episode ratings, as `episode-{showId}-{season}-{episode}` docs like the app's
+ * RatingService. An episode TMDB doesn't have is counted as unmatched; an existing
+ * rating is kept.
+ */
+async function writeEpisodeRatings(
+  context: FileImportContext,
+  stats: FileImportStats,
+  show: TmdbTvResult,
+  ratings: FileImportEpisodeRating[]
+): Promise<void> {
+  for (const rating of ratings) {
+    const episode = (await getSeasonIndex(context, show.id, rating.season))?.get(rating.episode);
+    if (!episode) {
+      skip(stats, 'unmatched_episode');
+      continue;
+    }
+    const didWrite = await insertDetailRatingIfAbsent(
+      context,
+      `episode-${show.id}-${rating.season}-${rating.episode}`,
+      {
+        episodeName: episode.name,
+        episodeNumber: rating.episode,
+        mediaType: 'episode',
+        posterPath: show.poster_path ?? null,
+        ratedAt: rating.ratedAt,
+        rating: rating.value,
+        seasonNumber: rating.season,
+        tvShowId: show.id,
+        tvShowName: show.name,
+      }
+    );
+    if (didWrite) stats.imported.ratings += 1;
+    else skip(stats, 'existing_rating');
+  }
+}
+
 function skip(stats: FileImportStats, reason: FileImportSkipReason, amount = 1): void {
   stats.skipped = incrementFileImportStat(stats.skipped, reason, amount);
 }
@@ -1550,6 +1638,16 @@ export function parseFileImportChunk(data: unknown): FileImportChunkRequest {
     throw new HttpsError(
       'invalid-argument',
       `Chunk exceeds the supported maximum of ${FILE_IMPORT_MAX_PLAYS_PER_CHUNK} episode plays.`
+    );
+  }
+  const totalDetailRatings = shows.reduce(
+    (total, show) => total + (show.seasonRatings?.length ?? 0) + (show.episodeRatings?.length ?? 0),
+    0
+  );
+  if (totalDetailRatings > FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK) {
+    throw new HttpsError(
+      'invalid-argument',
+      `Chunk exceeds the supported maximum of ${FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK} season and episode ratings.`
     );
   }
 
@@ -1613,12 +1711,55 @@ function parseShow(raw: unknown, path: string): FileImportShowEntity {
   if (show.anime !== undefined) {
     entity.anime = parseAnimeNumbering(show.anime, `${path}.anime`);
   }
+  if (show.seasonRatings !== undefined) {
+    entity.seasonRatings = parseDetailRatings(show.seasonRatings, `${path}.seasonRatings`).map(
+      ({ season, value, ratedAt }) => ({ ratedAt, season, value })
+    );
+  }
+  if (show.episodeRatings !== undefined) {
+    entity.episodeRatings = parseDetailRatings(
+      show.episodeRatings,
+      `${path}.episodeRatings`,
+      true
+    ) as FileImportEpisodeRating[];
+  }
 
   // A TMDB id identifies the show on its own; otherwise the original rule applies.
   if (entity.tmdbId === undefined) {
     assertHasIdentifier(entity, path);
   }
   return entity;
+}
+
+function parseDetailRatings(
+  raw: unknown,
+  path: string,
+  withEpisode = false
+): (FileImportSeasonRating & { episode?: number })[] {
+  if (!Array.isArray(raw) || raw.length > FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK) {
+    throw new HttpsError(
+      'invalid-argument',
+      `${path} must be an array of at most ${FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK} ratings.`
+    );
+  }
+  return raw.map((entry, index) => {
+    const rating = parseObject(entry, `${path}[${index}]`);
+    return {
+      ...(withEpisode
+        ? {
+            episode: parseIntInRange(
+              rating.episode,
+              `${path}[${index}].episode`,
+              1,
+              MAX_EPISODE_NUMBER
+            ),
+          }
+        : {}),
+      ratedAt: parseTimestamp(rating.ratedAt, `${path}[${index}].ratedAt`),
+      season: parseIntInRange(rating.season, `${path}[${index}].season`, 0, MAX_EPISODE_NUMBER),
+      value: parseIntInRange(rating.value, `${path}[${index}].value`, 1, 10),
+    };
+  });
 }
 
 function parseWatchedThrough(raw: unknown, path: string): FileImportWatchedThrough {

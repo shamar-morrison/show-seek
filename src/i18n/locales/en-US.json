@@ -1242,7 +1242,7 @@
       "listsTitle": "Shows, watchlist and lists",
       "listsDescription": "My Shows go to Already Watched if the show has ended and you've watched every episode, otherwise to Watching. Watchlist goes to Should Watch and hidden shows go to Dropped. Your custom lists are recreated.",
       "ratingsTitle": "Ratings",
-      "ratingsDescription": "Show and movie ratings (1–10).",
+      "ratingsDescription": "Show, season, episode and movie ratings (1–10).",
       "safeTitle": "Your ShowSeek data stays as it is",
       "safeDescription": "Nothing you already track is changed. Episodes, movies and ratings already in ShowSeek are left alone."
     },
@@ -1286,7 +1286,6 @@
       "duplicatePlays": "Duplicate entries",
       "hiddenMovies": "Hidden movies",
       "pinnedItems": "Pinned titles",
-      "seasonRatings": "Season ratings",
       "nonMediaListItems": "List items that aren't shows or movies"
     },
     "unresolvedTitlesTitle": "Not found",
@@ -1322,8 +1321,8 @@
       "backendUnavailable": "Showly import isn't available right now. Please try again later.",
       "invalidData": "Part of this backup couldn't be read. Please contact support."
     },
-    "notImportedNote_one": "{{count}} item has no place in ShowSeek (hidden movies, pinned titles, season or episode ratings) and will be left out.",
-    "notImportedNote_other": "{{count}} items have no place in ShowSeek (hidden movies, pinned titles, season or episode ratings) and will be left out.",
+    "notImportedNote_one": "{{count}} item has no place in ShowSeek (hidden movies, pinned titles) and will be left out.",
+    "notImportedNote_other": "{{count}} items have no place in ShowSeek (hidden movies, pinned titles) and will be left out.",
     "emptyListsNote_one": "{{count}} empty list won't be created.",
     "emptyListsNote_other": "{{count}} empty lists won't be created."
   },

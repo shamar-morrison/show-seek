@@ -91,7 +91,6 @@ const IGNORED_LABEL_KEYS: Record<
   non_media_list_items: 'showlyImport.ignored.nonMediaListItems',
   pinned_items: 'showlyImport.ignored.pinnedItems',
   rewatched_episodes: 'showlyImport.ignored.rewatchedEpisodes',
-  season_ratings: 'showlyImport.ignored.seasonRatings',
 };
 
 const MAX_LISTED_TITLES = 50;

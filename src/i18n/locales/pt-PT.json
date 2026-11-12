@@ -1242,7 +1242,7 @@
       "listsTitle": "Séries, para ver e listas",
       "listsDescription": "As minhas séries vão para Já vistos se a série terminou e viu todos os episódios; caso contrário, para A ver. A lista para ver vai para Pendentes e as séries ocultas para Abandonados. As suas listas personalizadas são recriadas.",
       "ratingsTitle": "Classificações",
-      "ratingsDescription": "Classificações de séries e filmes (1–10).",
+      "ratingsDescription": "Classificações de séries, temporadas, episódios e filmes (1–10).",
       "safeTitle": "Os seus dados do ShowSeek mantêm-se",
       "safeDescription": "Nada do que já acompanha é alterado. Os episódios, filmes e classificações que já estão no ShowSeek ficam como estão."
     },
@@ -1286,7 +1286,6 @@
       "duplicatePlays": "Entradas duplicadas",
       "hiddenMovies": "Filmes ocultos",
       "pinnedItems": "Títulos afixados",
-      "seasonRatings": "Classificações de temporadas",
       "nonMediaListItems": "Itens de listas que não são séries nem filmes"
     },
     "unresolvedTitlesTitle": "Não encontrado",
@@ -1322,8 +1321,8 @@
       "backendUnavailable": "A importação do Showly não está disponível agora. Tente mais tarde.",
       "invalidData": "Não foi possível ler parte desta cópia de segurança. Contacte o suporte."
     },
-    "notImportedNote_one": "{{count}} item não tem equivalente no ShowSeek (filmes ocultos, títulos afixados, classificações de temporadas ou episódios) e não será importado.",
-    "notImportedNote_other": "{{count}} itens não têm equivalente no ShowSeek (filmes ocultos, títulos afixados, classificações de temporadas ou episódios) e não serão importados.",
+    "notImportedNote_one": "{{count}} item não tem equivalente no ShowSeek (filmes ocultos, títulos afixados) e não será importado.",
+    "notImportedNote_other": "{{count}} itens não têm equivalente no ShowSeek (filmes ocultos, títulos afixados) e não serão importados.",
     "emptyListsNote_one": "{{count}} lista vazia não será criada.",
     "emptyListsNote_other": "{{count}} listas vazias não serão criadas."
   },

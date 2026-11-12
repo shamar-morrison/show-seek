@@ -70,7 +70,7 @@ describe('ShowlyImportProgressScreen', () => {
     mockRunPreparedImport.mockResolvedValue({
       failedChunkIndexes: [],
       stats: stats({
-        ignored: { hidden_movies: 1, pinned_items: 3, season_ratings: 2 },
+        ignored: { hidden_movies: 1, non_media_list_items: 2, pinned_items: 3 },
         imported: { ...createEmptyFileImportStats().imported, shows: 12, watchedEpisodes: 60 },
         skipped: { missing_identifiers: 2, unmatched_episode: 3 },
         unmatchedEpisodeTitles: ['Doctor Who'],
@@ -96,7 +96,7 @@ describe('ShowlyImportProgressScreen', () => {
     expect(getByText('Items without enough information')).toBeTruthy();
     expect(getByText('Hidden movies')).toBeTruthy();
     expect(getByText('Pinned titles')).toBeTruthy();
-    expect(getByText('Season ratings')).toBeTruthy();
+    expect(getByText("List items that aren't shows or movies")).toBeTruthy();
     expect(getByTestId('showly-import-unresolved')).toBeTruthy();
     expect(getByText('• Some Obscure Show')).toBeTruthy();
     expect(getByTestId('showly-import-unmatched-episodes')).toBeTruthy();

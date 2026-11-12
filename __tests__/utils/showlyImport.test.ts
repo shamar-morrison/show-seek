@@ -491,7 +491,7 @@ describe('Showly import — movies', () => {
 });
 
 describe('Showly import — ratings', () => {
-  it('imports show and movie ratings, fills a -1 TMDB id through the Trakt id, ignores the rest', () => {
+  it('imports show and movie ratings and fills a -1 TMDB id through the Trakt id', () => {
     const { movies, shows, stats } = parseShowlyBackup(
       backup({
         shows: {
@@ -502,8 +502,6 @@ describe('Showly import — ratings', () => {
             { id: 3, r: 7, rA: '2024-04-01T00:00:00Z', tmId: -1 }, // unknown
             { id: 4, r: 11, rA: '2024-04-01T00:00:00Z', tmId: 60059 }, // out of range
           ],
-          rSe: [{ id: 5, r: 8, rA: '2024-04-01T00:00:00Z', sId: 1, sN: 1, stmId: 1396 }],
-          rEp: [{ eN: 1, id: 6, r: 10, rA: '2024-04-01T00:00:00Z', sId: 1, sN: 1, stmId: 1396 }],
         },
         movies: { rM: [{ id: 10, r: 6, tmId: 27205 }] }, // no rA
       }),
@@ -514,7 +512,122 @@ describe('Showly import — ratings', () => {
     expect(byTmdb(shows, 1399)).toMatchObject({ rating: { value: 7 }, status: null, title: '' });
     expect(byTmdb(movies, 27205).rating).toEqual({ ratedAt: at('2026-11-12T06:00:00Z'), value: 6 });
     expect(stats.skipped).toEqual({ malformed_row: 1, missing_identifiers: 1 });
-    expect(stats.ignored).toEqual({ episode_ratings: 1, season_ratings: 1 });
+    expect(stats.ignored).toEqual({});
+  });
+
+  it('imports season and episode ratings, joined to the show by Trakt id when needed', () => {
+    const { shows, stats } = parseShowlyBackup(
+      backup({
+        shows: {
+          cH: [showRow(1, 1396, 'Breaking Bad', '2024-01-01T00:00:00Z')],
+          rSe: [
+            { id: 5, r: 8, rA: '2024-04-01T00:00:00Z', sId: 1, sN: 1, stmId: 1396 },
+            { id: 6, r: 7, sId: 1, sN: 2, stmId: -1 }, // no rA, TMDB id via the Trakt id
+            { id: 7, r: 9, rA: '2024-04-01T00:00:00Z', sId: 1, sN: -1, stmId: 1396 }, // unknown season
+            { id: 8, r: 6, rA: '2024-05-01T00:00:00Z', sId: 1, sN: 1, stmId: 1396 }, // duplicate
+          ],
+          rEp: [
+            { eN: 3, id: 9, r: 10, rA: '2024-04-02T00:00:00Z', sId: 1, sN: 1, stmId: 1396 },
+            { eN: 1, id: 10, r: 4, rA: '2024-04-03T00:00:00Z', sId: 1, sN: 0, stmId: 1396 },
+            { eN: -1, id: 11, r: 5, rA: '2024-04-03T00:00:00Z', sId: 1, sN: 1, stmId: 1396 },
+            { eN: 1, id: 12, r: 5, rA: '2024-04-03T00:00:00Z', sId: 404, sN: 1, stmId: -1 },
+          ],
+        },
+      }),
+      NOW
+    );
+
+    expect(byTmdb(shows, 1396).seasonRatings).toEqual([
+      { ratedAt: at('2024-04-01T00:00:00Z'), season: 1, value: 8 },
+      { ratedAt: at('2024-01-01T00:00:00Z'), season: 2, value: 7 },
+    ]);
+    expect(byTmdb(shows, 1396).episodeRatings).toEqual([
+      { episode: 1, ratedAt: at('2024-04-03T00:00:00Z'), season: 0, value: 4 },
+      { episode: 3, ratedAt: at('2024-04-02T00:00:00Z'), season: 1, value: 10 },
+    ]);
+    expect(stats.skipped).toEqual({ malformed_row: 2, missing_identifiers: 1 });
+  });
+
+  it('counts a rated show as importable even with nothing else', () => {
+    const { shows } = parseShowlyBackup(
+      backup({ shows: { rEp: [{ eN: 1, id: 1, r: 8, sId: 3, sN: 1, stmId: 1396 }] } }),
+      NOW
+    );
+    expect(shows).toHaveLength(1);
+    expect(shows[0]).toMatchObject({ status: null, tmdbId: 1396 });
+  });
+});
+
+describe('Showly import — values the server would reject', () => {
+  it('counts out-of-range season and episode numbers as malformed instead of sending them', () => {
+    const { shows, stats } = parseShowlyBackup(
+      backup({
+        shows: {
+          cH: [showRow(1, 1396, 'Breaking Bad')],
+          pEp: [
+            episodeRow(1, 1396, 1, 10_001, '2024-02-01T00:00:00Z'),
+            episodeRow(1, 1396, 10_001, 1, '2024-02-01T00:00:00Z'),
+            episodeRow(1, 1396, 1, 10_000, '2024-02-01T00:00:00Z'),
+          ],
+        },
+      }),
+      NOW
+    );
+
+    expect(byTmdb(shows, 1396).plays.map((play) => play.episode)).toEqual([10_000]);
+    expect(stats.skipped).toEqual({ malformed_row: 2 });
+  });
+
+  it('treats a TMDB id beyond the safe-integer range as missing', () => {
+    const { movies, stats } = parseShowlyBackup(
+      backup({
+        movies: {
+          cH: [movieRow(10, 1e20, ''), movieRow(11, 2 ** 53, 'Too Big')],
+        },
+      }),
+      NOW
+    );
+
+    // The first has no other identifier; the second falls back to its title.
+    expect(stats.skipped).toEqual({ missing_identifiers: 1 });
+    expect(movies).toHaveLength(1);
+    expect(movies[0]).toMatchObject({ title: 'Too Big' });
+    expect(movies[0].tmdbId).toBeUndefined();
+  });
+
+  it('keeps every chunk inside the server limits for heavily rated shows', () => {
+    const episodeRatings = Array.from({ length: 1600 }, (_, index) => ({
+      eN: (index % 100) + 1,
+      id: index,
+      r: 8,
+      rA: '2024-04-01T00:00:00Z',
+      sId: 1,
+      sN: Math.floor(index / 100) + 1,
+      stmId: 1396,
+    }));
+    const result = prepareShowlyImport(
+      [
+        file(
+          'showly_export.json',
+          backup({
+            shows: {
+              cH: [showRow(1, 1396, 'Breaking Bad'), showRow(2, 1399, 'Game of Thrones')],
+              rEp: [
+                ...episodeRatings,
+                { eN: 1, id: 9999, r: 7, rA: '2024-04-01T00:00:00Z', sId: 2, sN: 1, stmId: 1399 },
+              ],
+            },
+          })
+        ),
+      ],
+      NOW
+    );
+
+    // 100 over the per-show cap are counted, not sent.
+    expect(result.stats.ignored).toEqual({ episode_ratings: 100 });
+    for (const chunk of result.chunks) {
+      expect(() => parseFileImportChunk({ importId: 'import-1234', ...chunk })).not.toThrow();
+    }
   });
 });
 

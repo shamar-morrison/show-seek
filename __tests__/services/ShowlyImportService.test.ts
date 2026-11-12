@@ -191,6 +191,46 @@ describe('ShowlyImportService', () => {
     expect(mockCallable).toHaveBeenCalledTimes(6);
   });
 
+  it("holds back a split show's later parts after an earlier part fails, and retries them in order", async () => {
+    const { showlyImportService, mockCallable } = loadService();
+    const job = prepared(4);
+    // Chunks 0 and 2 carry parts 0 and 1 of the same long show; 1 and 3 are other shows.
+    const part = (index: number) => ({
+      ...job.chunks[0].shows[0],
+      part: { index, total: 2 },
+      status: 'following' as const,
+      title: 'Long Show',
+      tmdbId: 999,
+    });
+    job.chunks[0] = { movies: [], shows: [part(0)] };
+    job.chunks[2] = { movies: [], shows: [part(1)] };
+    mockCallable
+      .mockRejectedValueOnce(callableError('unavailable'))
+      .mockRejectedValueOnce(callableError('unavailable'))
+      .mockRejectedValueOnce(callableError('unavailable'))
+      .mockResolvedValue({ data: chunkStats(1) });
+
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const first = await settle(showlyImportService.runPreparedImport(job, USER));
+    spy.mockRestore();
+
+    // Part 1 was never sent while part 0 is missing.
+    expect(first.failedChunkIndexes).toEqual([0, 2]);
+    const sentShows = () =>
+      mockCallable.mock.calls.map(([request]) => (request as any).shows[0]?.tmdbId);
+    expect(sentShows()).toEqual([999, 999, 999, 2, 4]);
+
+    mockCallable.mockClear();
+    const retry = await settle(
+      showlyImportService.runPreparedImport(job, USER, undefined, first.failedChunkIndexes)
+    );
+    expect(retry.failedChunkIndexes).toEqual([]);
+    expect(mockCallable.mock.calls.map(([request]) => (request as any).shows[0].part)).toEqual([
+      { index: 0, total: 2 },
+      { index: 1, total: 2 },
+    ]);
+  });
+
   it('waits out burst limits instead of failing', async () => {
     const { showlyImportService, mockCallable } = loadService();
     mockCallable

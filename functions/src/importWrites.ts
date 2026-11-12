@@ -348,6 +348,27 @@ function emptyPagedList(
  */
 export type RatingConflictPolicy = 'newer' | 'never';
 
+/**
+ * Writes a season or episode rating doc (users/{uid}/ratings/{docId}) in the shape the
+ * app's RatingService writes, unless one already exists. Returns whether it wrote.
+ */
+export async function insertDetailRatingIfAbsent(
+  context: ImportWriteContext,
+  docId: string,
+  data: Record<string, unknown>
+): Promise<boolean> {
+  const ref = context.db.collection('users').doc(context.userId).collection('ratings').doc(docId);
+  // A transaction, so a rating the user saves in the app meanwhile is never overwritten.
+  return context.db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (snapshot.exists) {
+      return false;
+    }
+    transaction.set(ref, { ...data, id: docId }, { merge: false });
+    return true;
+  });
+}
+
 export async function upsertMovieOrTvRating(
   context: ImportWriteContext,
   resolved: ResolvedListMedia,

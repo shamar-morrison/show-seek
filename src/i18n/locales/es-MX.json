@@ -1242,7 +1242,7 @@
       "listsTitle": "Series, pendientes y listas",
       "listsDescription": "Mis series van a Ya vistos si la serie terminó y viste todos los episodios; si no, a Viendo. Los pendientes van a Pendientes y las series ocultas a Abandonadas. Tus listas personalizadas se vuelven a crear.",
       "ratingsTitle": "Valoraciones",
-      "ratingsDescription": "Calificaciones de series y películas (1–10).",
+      "ratingsDescription": "Calificaciones de series, temporadas, episodios y películas (1–10).",
       "safeTitle": "Tus datos de ShowSeek no cambian",
       "safeDescription": "No se modifica nada de lo que ya sigues. Los episodios, películas y valoraciones que ya están en ShowSeek se dejan como están."
     },
@@ -1286,7 +1286,6 @@
       "duplicatePlays": "Entradas duplicadas",
       "hiddenMovies": "Películas ocultas",
       "pinnedItems": "Títulos fijados",
-      "seasonRatings": "Calificaciones de temporadas",
       "nonMediaListItems": "Elementos de listas que no son series ni películas"
     },
     "unresolvedTitlesTitle": "No encontrado",
@@ -1322,8 +1321,8 @@
       "backendUnavailable": "La importación de Showly no está disponible ahora. Inténtalo más tarde.",
       "invalidData": "Parte de esta copia no se pudo leer. Comunícate con soporte."
     },
-    "notImportedNote_one": "{{count}} elemento no tiene equivalente en ShowSeek (películas ocultas, títulos fijados, calificaciones de temporadas o episodios) y no se importará.",
-    "notImportedNote_other": "{{count}} elementos no tienen equivalente en ShowSeek (películas ocultas, títulos fijados, calificaciones de temporadas o episodios) y no se importarán.",
+    "notImportedNote_one": "{{count}} elemento no tiene equivalente en ShowSeek (películas ocultas, títulos fijados) y no se importará.",
+    "notImportedNote_other": "{{count}} elementos no tienen equivalente en ShowSeek (películas ocultas, títulos fijados) y no se importarán.",
     "emptyListsNote_one": "{{count}} lista vacía no se creará.",
     "emptyListsNote_other": "{{count}} listas vacías no se crearán."
   },

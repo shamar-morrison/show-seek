@@ -507,6 +507,165 @@ describe('importShowlyChunk — list descriptions', () => {
   });
 });
 
+describe('importShowlyChunk — season and episode ratings', () => {
+  const details = () => ({
+    ...tvDetails(1396, 'Breaking Bad', [
+      { episode_count: 2, season_number: 1 },
+      { episode_count: 2, season_number: 2 },
+    ]),
+    seasons: [
+      {
+        air_date: '2008-01-20',
+        episode_count: 2,
+        name: 'Season 1',
+        poster_path: '/s1.jpg',
+        season_number: 1,
+      },
+      {
+        air_date: '2009-03-08',
+        episode_count: 2,
+        name: 'Season 2',
+        poster_path: null,
+        season_number: 2,
+      },
+    ],
+  });
+  const rated = (overrides: Record<string, unknown>) =>
+    showEntity({ status: null, title: 'Breaking Bad', tmdbId: 1396, tvdbId: null, ...overrides });
+
+  beforeEach(() => {
+    seedPremiumUser();
+    routeTmdb(tvRoutes(1396, details() as any, { 1: season(1396, 1, 2), 2: season(1396, 2, 2) }));
+  });
+
+  it('writes season and episode rating docs in the shape the app writes', async () => {
+    const stats = await callImport(
+      authed(
+        chunk({
+          shows: [
+            rated({
+              episodeRatings: [{ episode: 2, ratedAt: WATCHED_AT, season: 1, value: 10 }],
+              seasonRatings: [
+                { ratedAt: WATCHED_AT, season: 1, value: 8 },
+                { ratedAt: WATCHED_AT, season: 2, value: 7 },
+              ],
+            }),
+          ],
+        })
+      )
+    );
+
+    expect(stats.imported).toMatchObject({ ratings: 3, shows: 1 });
+    expect(getDoc('users/user-1/ratings/season-1396-1')).toEqual({
+      id: 'season-1396-1',
+      mediaType: 'season',
+      posterPath: '/s1.jpg',
+      ratedAt: WATCHED_AT,
+      rating: 8,
+      releaseDate: '2008-01-20',
+      seasonNumber: 1,
+      title: 'Season 1',
+      tvShowId: 1396,
+      tvShowName: 'Breaking Bad',
+    });
+    // No season poster: the show's.
+    expect(getDoc('users/user-1/ratings/season-1396-2')).toMatchObject({
+      posterPath: '/p1396.jpg',
+    });
+    expect(getDoc('users/user-1/ratings/episode-1396-1-2')).toEqual({
+      episodeName: 'S1E2',
+      episodeNumber: 2,
+      id: 'episode-1396-1-2',
+      mediaType: 'episode',
+      posterPath: '/p1396.jpg',
+      ratedAt: WATCHED_AT,
+      rating: 10,
+      seasonNumber: 1,
+      tvShowId: 1396,
+      tvShowName: 'Breaking Bad',
+    });
+  });
+
+  it('never overwrites an existing rating', async () => {
+    seedDoc('users/user-1/ratings/season-1396-1', { mediaType: 'season', rating: 3 });
+    seedDoc('users/user-1/ratings/episode-1396-1-1', { mediaType: 'episode', rating: 2 });
+
+    const stats = await callImport(
+      authed(
+        chunk({
+          shows: [
+            rated({
+              episodeRatings: [{ episode: 1, ratedAt: WATCHED_AT, season: 1, value: 10 }],
+              seasonRatings: [{ ratedAt: WATCHED_AT, season: 1, value: 8 }],
+            }),
+          ],
+        })
+      )
+    );
+
+    expect(stats.skipped).toEqual({ existing_rating: 2 });
+    expect(getDoc('users/user-1/ratings/season-1396-1')).toMatchObject({ rating: 3 });
+    expect(getDoc('users/user-1/ratings/episode-1396-1-1')).toMatchObject({ rating: 2 });
+  });
+
+  it('counts a season or episode TMDB does not have as unmatched', async () => {
+    const stats = await callImport(
+      authed(
+        chunk({
+          shows: [
+            rated({
+              episodeRatings: [{ episode: 9, ratedAt: WATCHED_AT, season: 1, value: 10 }],
+              seasonRatings: [{ ratedAt: WATCHED_AT, season: 7, value: 8 }],
+            }),
+          ],
+        })
+      )
+    );
+
+    expect(stats.skipped).toEqual({ unmatched_episode: 2 });
+    expect(getDirectDocPaths('users/user-1/ratings')).toEqual([]);
+  });
+
+  it('writes them from the first part only', async () => {
+    const stats = await callImport(
+      authed(
+        chunk({
+          shows: [
+            rated({
+              part: { index: 1, total: 2 },
+              seasonRatings: [{ ratedAt: WATCHED_AT, season: 1, value: 8 }],
+            }),
+          ],
+        })
+      )
+    );
+
+    expect(stats.imported.ratings).toBe(0);
+  });
+
+  it.each([
+    [{ seasonRatings: [{ ratedAt: WATCHED_AT, season: -1, value: 8 }] }, 'season'],
+    [{ seasonRatings: [{ ratedAt: WATCHED_AT, season: 1, value: 11 }] }, 'value'],
+    [{ episodeRatings: [{ episode: 0, ratedAt: WATCHED_AT, season: 1, value: 8 }] }, 'episode'],
+    [
+      {
+        episodeRatings: Array.from({ length: 1501 }, (_, i) => ({
+          episode: i + 1,
+          ratedAt: WATCHED_AT,
+          season: 1,
+          value: 8,
+        })),
+      },
+      'episodeRatings',
+    ],
+  ])('rejects %#', async (overrides, field) => {
+    await expect(callImport(authed(chunk({ shows: [rated(overrides)] })))).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message: expect.stringContaining(field),
+    });
+  });
+});
+
 describe('importShowlyChunk — following (Showly "My Shows")', () => {
   const ended = (count = 2) =>
     tvRoutes(

@@ -1,4 +1,5 @@
 import {
+  FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK,
   FILE_IMPORT_MAX_ENTITIES_PER_CHUNK,
   FILE_IMPORT_MAX_PLAYS_PER_CHUNK,
   type FileImportChunkRequest,
@@ -50,7 +51,9 @@ export function prepareShowlyImport(
       episodes: parsed.shows.reduce((total, show) => total + show.plays.length, 0),
       following: parsed.shows.filter((show) => show.status === 'following').length,
       movieWatchlist: parsed.movies.filter((movie) => movie.watchlist).length,
-      ratings: [...parsed.shows, ...parsed.movies].filter((entity) => entity.rating).length,
+      ratings:
+        [...parsed.shows, ...parsed.movies].filter((entity) => entity.rating).length +
+        parsed.shows.reduce((total, show) => total + detailRatingCount(show), 0),
       showWatchlist: parsed.shows.filter((show) => show.status === 'watchlist').length,
       watchedMovies: parsed.movies.filter((movie) => movie.watches.length > 0).length,
     },
@@ -73,23 +76,28 @@ export function buildShowlyChunks(
   const chunks: ShowlyChunk[] = [];
   let current: ShowlyChunk = { movies: [], shows: [] };
   let plays = 0;
+  let detailRatings = 0;
 
   const flush = () => {
     if (current.shows.length + current.movies.length > 0) chunks.push(current);
     current = { movies: [], shows: [] };
     plays = 0;
+    detailRatings = 0;
   };
-  const isFull = (extraPlays: number) =>
+  const isFull = (extraPlays: number, extraRatings: number) =>
     current.shows.length + current.movies.length >= FILE_IMPORT_MAX_ENTITIES_PER_CHUNK ||
-    plays + extraPlays > FILE_IMPORT_MAX_PLAYS_PER_CHUNK;
+    plays + extraPlays > FILE_IMPORT_MAX_PLAYS_PER_CHUNK ||
+    detailRatings + extraRatings > FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK;
 
   for (const part of parts) {
-    if (isFull(part.plays.length)) flush();
+    const ratings = detailRatingCount(part);
+    if (isFull(part.plays.length, ratings)) flush();
     current.shows.push(part);
     plays += part.plays.length;
+    detailRatings += ratings;
   }
   for (const movie of movies) {
-    if (isFull(0)) flush();
+    if (isFull(0, 0)) flush();
     current.movies.push(movie);
   }
   flush();
@@ -122,11 +130,23 @@ function splitShow(show: FileImportShowEntity): FileImportShowEntity[] {
   }
   if (group.length) groups.push(group);
 
-  // Rating and lists are written from part 0 only, so later parts don't carry them.
-  return groups.map((plays, index) => ({
-    ...show,
-    ...(index > 0 ? { lists: [], rating: null } : {}),
-    part: { index, total: groups.length },
-    plays,
-  }));
+  // Ratings and lists are written from part 0 only, so later parts don't carry them.
+  return groups.map((plays, index) => {
+    const part: FileImportShowEntity = {
+      ...show,
+      part: { index, total: groups.length },
+      plays,
+    };
+    if (index > 0) {
+      part.lists = [];
+      part.rating = null;
+      delete part.seasonRatings;
+      delete part.episodeRatings;
+    }
+    return part;
+  });
+}
+
+function detailRatingCount(show: FileImportShowEntity): number {
+  return (show.seasonRatings?.length ?? 0) + (show.episodeRatings?.length ?? 0);
 }

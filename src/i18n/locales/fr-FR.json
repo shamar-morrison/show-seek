@@ -1242,7 +1242,7 @@
       "listsTitle": "Séries, à voir et listes",
       "listsDescription": "Mes séries vont dans Déjà vus si la série est terminée et que vous avez vu tous les épisodes, sinon dans En cours. La liste à voir va dans À voir et les séries masquées dans Abandonnés. Vos listes personnalisées sont recréées.",
       "ratingsTitle": "Notes",
-      "ratingsDescription": "Notes des séries et des films (1–10).",
+      "ratingsDescription": "Notes des séries, saisons, épisodes et films (1–10).",
       "safeTitle": "Vos données ShowSeek restent intactes",
       "safeDescription": "Rien de ce que vous suivez déjà n’est modifié. Les épisodes, films et notes déjà dans ShowSeek ne sont pas touchés."
     },
@@ -1286,7 +1286,6 @@
       "duplicatePlays": "Doublons",
       "hiddenMovies": "Films masqués",
       "pinnedItems": "Titres épinglés",
-      "seasonRatings": "Notes de saisons",
       "nonMediaListItems": "Éléments de listes qui ne sont ni des séries ni des films"
     },
     "unresolvedTitlesTitle": "Introuvables",
@@ -1322,8 +1321,8 @@
       "backendUnavailable": "L’import Showly n’est pas disponible pour le moment. Réessayez plus tard.",
       "invalidData": "Une partie de cette sauvegarde n’a pas pu être lue. Veuillez contacter l’assistance."
     },
-    "notImportedNote_one": "{{count}} élément n’a pas d’équivalent dans ShowSeek (films masqués, titres épinglés, notes de saisons ou d’épisodes) et ne sera pas importé.",
-    "notImportedNote_other": "{{count}} éléments n’ont pas d’équivalent dans ShowSeek (films masqués, titres épinglés, notes de saisons ou d’épisodes) et ne seront pas importés.",
+    "notImportedNote_one": "{{count}} élément n’a pas d’équivalent dans ShowSeek (films masqués, titres épinglés) et ne sera pas importé.",
+    "notImportedNote_other": "{{count}} éléments n’ont pas d’équivalent dans ShowSeek (films masqués, titres épinglés) et ne seront pas importés.",
     "emptyListsNote_one": "{{count}} liste vide ne sera pas créée.",
     "emptyListsNote_other": "{{count}} listes vides ne seront pas créées."
   },

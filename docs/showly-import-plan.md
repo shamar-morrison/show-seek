@@ -146,7 +146,8 @@ TV Time's behaviour is pinned by `__tests__/utils/tvtimeImportGolden.test.ts` an
 
    A long show split across chunks is decided on its last part, so all of its plays are counted first. That needs `part` handling, because status is currently written on part 0. Alternative if this is too much: send `watching` for every My Show (see [Decisions](#decisions-recommended-defaults) 3).
 
-3. **New "ignored" stat keys:** `hidden_movies`, `season_ratings`, `pinned_items`, `non_media_list_items`. Reuse the existing `episode_ratings`, `duplicate_plays` and `missing_identifiers`.
+3. **New "ignored" stat keys:** `hidden_movies`, `pinned_items`, `non_media_list_items`. Reuse the existing `episode_ratings` (only for ratings over the per-show cap), `duplicate_plays` and `missing_identifiers`.
+4. **Season and episode ratings** (`seasonRatings` / `episodeRatings` on a show entity, written from part 0). ShowSeek stores them as `season-{show}-{season}` and `episode-{show}-{season}-{episode}` rating docs (`RatingService.saveSeasonRating` / `saveEpisodeRating`); the import writes the same shape and never overwrites an existing one. A season or episode TMDB doesn't have is counted as `unmatched_episode`. At most 1,500 per chunk (`FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK`), the same as a show's ratings.
 
 Everything else is existing behaviour:
 
@@ -179,7 +180,7 @@ Everything else is existing behaviour:
 | `shows.pSe`                        | not used (comes from `pEp`)                                                                                                                                                            |
 | `movies.cH`                        | one watch at `a`                                                                                                                                                                       |
 | `rS`, `rM` (1–10)                  | `rating` unchanged, `ratedAt` = `rA`                                                                                                                                                   |
-| `rSe`, `rEp`                       | not imported, counted as `season_ratings` / `episode_ratings` (the contract has no season or episode ratings)                                                                          |
+| `rSe`, `rEp`                       | season and episode ratings, as `RatingService`'s `season-…` / `episode-…` docs; never over an existing rating. Rows with `sN`/`eN` of `-1` are `malformed_row`                         |
 | `lists.l[].it[]` (`show`/`movie`)  | `lists: [{ name: n, addedAt: l }]` on that title's entity                                                                                                                              |
 | `pP` (pinned)                      | not imported, counted as `pinned_items`                                                                                                                                                |
 | list `d` (description)             | the list's description (≤120 characters, as in the app), written only on a list the import creates. Existing ShowSeek lists are never changed (`ListService` lists have `description`) |
@@ -212,7 +213,7 @@ Everything else is existing behaviour:
 - **Season 0 (specials)**: send them as they are. Trakt and TMDB number specials differently more often than regular seasons, so expect some `unmatched_episode`. The summary names those shows.
 - **`eN` or `sN` below 0, or above the core's caps**: `malformed_row`.
 - **Numbering mismatches** (Trakt vs TMDB): the TMDB "TVDB order" episode-group fallback runs only for shows with plays TMDB doesn't have. It's kept only if it places more plays. What's left is named in the summary.
-- **Very long shows** (daily soaps, One Piece): split into parts by `buildShowlyChunks`, sent in order. Rating and lists go on part 0; the `following` decision waits for the last part. If an earlier part fails and is retried after the last part, the show is decided without it and lands in Watching. That's rare, and safe.
+- **Very long shows** (daily soaps, One Piece): split into parts by `buildShowlyChunks`, sent in order. Rating and lists go on part 0; the `following` decision waits for the last part. If a part fails, `ShowlyImportService` holds back that show's later parts too, so "Retry failed items" sends them in order and the decision still sees every episode.
 
 ### Dates
 
@@ -253,7 +254,7 @@ Everything else is existing behaviour:
 - **Import screen:** "In Showly: Settings → Backup & Restore → Export data, save the file, then pick it here." Then a file picker. Mention scheduled backups (pick the newest) and that the import is Premium-only, like the others.
 - **Preview** before anything is written:
   - Counts: shows (following, watchlist, dropped), episodes, movies (watched, watchlist), ratings, custom lists and items.
-  - What won't be imported: hidden movies, season and episode ratings, pinned items, items with no TMDB ID, empty lists.
+  - What won't be imported: hidden movies, pinned items, items with no TMDB ID, empty lists.
   - The cooldown note, read from `import_limits/showly`.
 - **Progress and summary:** Showly's own copies of the Simkl screens. The summary names unresolved titles and shows with unmatched episodes.
 - **i18n:** a `showlyImport` section in all 7 locales under `src/i18n/locales/`.
@@ -266,7 +267,7 @@ Everything else is existing behaviour:
   - Episodes: some without `a`, a `-1`-default date, fractional and whole-second dates, a duplicate play, specials, and a Trakt/TMDB numbering mismatch.
   - v1: episodes with no `stmId` (joined through `sId`), and an orphan episode with no show (→ `missing_identifiers`).
   - Movies: watched, watchlist, watched + watchlist, hidden, and a hidden show.
-  - Ratings: show and movie ratings, one with `tmId: -1` that the lookup fills, one it can't fill, and season and episode ratings (ignored).
+  - Ratings: show and movie ratings, one with `tmId: -1` that the lookup fills, one it can't fill, and season and episode ratings (imported; `-1` numbers are malformed).
   - Lists: mixed show and movie items, an empty list, two lists with the same name, a name matching an existing ShowSeek list, and a v1 list item with no `tmId`.
   - The same title under two Trakt IDs, and a show in both `cH` and `cHid`.
   - Wrong files: a Simkl backup, a Trakt export, a ZIP, `{}`, and an unknown `version: 3` file that otherwise has v2 keys.
@@ -303,7 +304,7 @@ Everything else is existing behaviour:
 3. **My Shows → `following`**, so the server decides between Already Watched and Watching. Fallback if that's too much core change: everything to Watching.
 4. **Hidden shows → Dropped. Hidden movies aren't imported.**
 5. **Pinned and on-hold aren't imported** (no ShowSeek equivalent). On-hold shows still arrive as followed shows.
-6. **Season and episode ratings aren't imported** (the contract has no place for them). They're counted.
+6. **Season and episode ratings are imported** into ShowSeek's season and episode ratings. (The first build left them out on the wrong belief that ShowSeek had none.)
 7. **Undated episodes are kept** with the show's date as a fallback.
 8. **JSON only.** A ZIP gets a clear "pick the .json" error.
 
@@ -319,7 +320,7 @@ Everything else is existing behaviour:
 ## Later
 
 - **Trakt-ID → TMDB lookup on the server**, for items Showly left at `-1`, using the existing `TRAKT_CLIENT_ID` secret and Trakt's `/search/trakt/{id}?type=…` (no OAuth). Needs a per-call cap and its own throttle. Decide once step 0 and launch numbers show how many items it would rescue.
-- **Season ratings** if ShowSeek ever supports them.
+- ~~Season ratings~~ Imported (see decision 6).
 - **ZIP support**, if users actually send zipped exports.
 
 ## Sources
