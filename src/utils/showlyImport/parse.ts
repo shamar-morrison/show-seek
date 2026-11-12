@@ -1,5 +1,6 @@
 import {
   FILE_IMPORT_MAX_LISTS_PER_ENTITY,
+  FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH,
   createEmptyFileImportStats,
   incrementFileImportStat,
   type FileImportEpisodePlay,
@@ -308,6 +309,11 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
   const usedLists = new Set<string>();
   for (const list of lists) {
     const name = titleOf(list.n) || DEFAULT_LIST_NAME;
+    // `d` is left out of the file when the list has no description.
+    const description =
+      typeof list.d === 'string'
+        ? list.d.trim().slice(0, FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH).trim()
+        : '';
     const listDate = dateOf(list.c) ?? fileDate ?? now;
     const items = arrayOf(list.it);
     if (items.length === 0) {
@@ -335,9 +341,11 @@ export function parseShowlyBackup(text: string, now: number = Date.now()): Parse
       const listKey = name.toLowerCase();
       const existing = entity.lists.get(listKey);
       // Two Showly lists with the same name become one ShowSeek list (matched by name).
+      const listDescription = existing?.description ?? (description || undefined);
       entity.lists.set(listKey, {
         addedAt: existing ? Math.min(existing.addedAt, addedAt) : addedAt,
         name: existing?.name ?? name,
+        ...(listDescription ? { description: listDescription } : {}),
       });
       usedLists.add(listKey);
     }

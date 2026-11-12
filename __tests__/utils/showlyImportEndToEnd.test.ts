@@ -273,6 +273,9 @@ it('imports the real export end to end', async () => {
   expect(customList('showly list 2').items['movie-969681']).toMatchObject({
     title: 'Movie 969681',
   });
+  // The lists' Showly descriptions.
+  expect(customList('showly 1').description).toBe('showlt 1 list description');
+  expect(customList('showly list 2').description).toBe('description for showly list');
 
   expect(total('watchedMovies')).toBe(3);
   expect(total('customListsCreated')).toBe(2);

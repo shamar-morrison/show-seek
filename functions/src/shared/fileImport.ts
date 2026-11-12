@@ -80,7 +80,12 @@ export interface FileImportRating {
 export interface FileImportListMembership {
   name: string;
   addedAt: number;
+  /** The list's description (Showly). Set on a list the import creates, or one with none yet. */
+  description?: string;
 }
+
+/** Same cap as the app's list description field (CreateListModal / RenameListModal). */
+export const FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH = 120;
 
 export interface FileImportEpisodePlay {
   season: number;

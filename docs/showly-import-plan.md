@@ -168,21 +168,22 @@ Everything else is existing behaviour:
 
 ### Mapping
 
-| Showly                                  | ShowSeek contract                                                                                               |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `shows.cH` (My Shows)                   | status `following` (server: Already Watched or Watching, see above); `addedAt` = `a`                            |
-| `shows.pOH` (on hold)                   | nothing extra; they're already My Shows (ShowSeek has no on-hold list, and Simkl's `hold` maps to Watching too) |
-| `shows.cW`, `movies.cW`                 | status `watchlist` / `watchlist: true` (Should Watch)                                                           |
-| `shows.cHid`                            | status `dropped`                                                                                                |
-| `movies.cHid`                           | not imported, counted as `hidden_movies` (the contract has no movie status; hidden means "don't show me this")  |
-| `shows.pEp`                             | `plays` (`season` = `sN`, `episode` = `eN`, `watchedAt` = `a`, see [Dates](#dates))                             |
-| `shows.pSe`                             | not used (comes from `pEp`)                                                                                     |
-| `movies.cH`                             | one watch at `a`                                                                                                |
-| `rS`, `rM` (1–10)                       | `rating` unchanged, `ratedAt` = `rA`                                                                            |
-| `rSe`, `rEp`                            | not imported, counted as `season_ratings` / `episode_ratings` (the contract has no season or episode ratings)   |
-| `lists.l[].it[]` (`show`/`movie`)       | `lists: [{ name: n, addedAt: l }]` on that title's entity                                                       |
-| `pP` (pinned)                           | not imported, counted as `pinned_items`                                                                         |
-| list `d`, `p`, `sId`, `tId`, `r` (rank) | not imported (ShowSeek lists have no description, privacy or manual order through import)                       |
+| Showly                             | ShowSeek contract                                                                                                                                                                                         |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shows.cH` (My Shows)              | status `following` (server: Already Watched or Watching, see above); `addedAt` = `a`                                                                                                                      |
+| `shows.pOH` (on hold)              | nothing extra; they're already My Shows (ShowSeek has no on-hold list, and Simkl's `hold` maps to Watching too)                                                                                           |
+| `shows.cW`, `movies.cW`            | status `watchlist` / `watchlist: true` (Should Watch)                                                                                                                                                     |
+| `shows.cHid`                       | status `dropped`                                                                                                                                                                                          |
+| `movies.cHid`                      | not imported, counted as `hidden_movies` (the contract has no movie status; hidden means "don't show me this")                                                                                            |
+| `shows.pEp`                        | `plays` (`season` = `sN`, `episode` = `eN`, `watchedAt` = `a`, see [Dates](#dates))                                                                                                                       |
+| `shows.pSe`                        | not used (comes from `pEp`)                                                                                                                                                                               |
+| `movies.cH`                        | one watch at `a`                                                                                                                                                                                          |
+| `rS`, `rM` (1–10)                  | `rating` unchanged, `ratedAt` = `rA`                                                                                                                                                                      |
+| `rSe`, `rEp`                       | not imported, counted as `season_ratings` / `episode_ratings` (the contract has no season or episode ratings)                                                                                             |
+| `lists.l[].it[]` (`show`/`movie`)  | `lists: [{ name: n, addedAt: l }]` on that title's entity                                                                                                                                                 |
+| `pP` (pinned)                      | not imported, counted as `pinned_items`                                                                                                                                                                   |
+| list `d` (description)             | the list's description (≤120 characters, as in the app), written on a list the import creates or filled in on an existing list that has none; never replaces one (`ListService` lists have `description`) |
+| list `p`, `sId`, `tId`, `r` (rank) | not imported (no privacy setting or manual order on ShowSeek lists through import)                                                                                                                        |
 
 ## Edge cases
 

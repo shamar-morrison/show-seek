@@ -38,6 +38,7 @@ import {
   FILE_IMPORT_MAX_CHUNKS_PER_SESSION,
   FILE_IMPORT_MAX_ENTITIES_PER_CHUNK,
   FILE_IMPORT_MAX_LISTS_PER_ENTITY,
+  FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH,
   FILE_IMPORT_MAX_MOVIE_WATCHES,
   FILE_IMPORT_MAX_PLAYS_PER_CHUNK,
   FILE_IMPORT_MAX_UNRESOLVED_TITLES_PER_CHUNK,
@@ -1458,7 +1459,7 @@ async function addToCustomLists(
   media: ResolvedListMedia
 ): Promise<void> {
   for (const list of lists) {
-    const { created, listId } = await ensureCustomList(context, list.name);
+    const { created, listId } = await ensureCustomList(context, list.name, list.description);
     if (created) {
       stats.imported.customListsCreated += 1;
     }
@@ -1727,7 +1728,24 @@ function parseLists(raw: unknown, path: string): FileImportListMembership[] {
         `${path}[${index}].name must be a non-empty string.`
       );
     }
-    return { addedAt: parseTimestamp(list.addedAt, `${path}[${index}].addedAt`), name };
+    const membership: FileImportListMembership = {
+      addedAt: parseTimestamp(list.addedAt, `${path}[${index}].addedAt`),
+      name,
+    };
+    if (list.description !== undefined && list.description !== null) {
+      if (
+        typeof list.description !== 'string' ||
+        list.description.length > FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH
+      ) {
+        throw new HttpsError(
+          'invalid-argument',
+          `${path}[${index}].description must be a string of at most ${FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH} characters.`
+        );
+      }
+      const description = list.description.trim();
+      if (description) membership.description = description;
+    }
+    return membership;
   });
 }
 

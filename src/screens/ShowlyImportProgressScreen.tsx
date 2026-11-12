@@ -234,7 +234,24 @@ export default function ShowlyImportProgressScreen() {
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.stageCard}>
-          <Text style={styles.stageTitle}>{title}</Text>
+          <View style={styles.titleRow}>
+            {status === 'success' ? (
+              <View
+                style={[
+                  styles.completeBadge,
+                  { backgroundColor: isPartial ? COLORS.warning : COLORS.success },
+                ]}
+                testID="showly-import-complete-badge"
+              >
+                <AppIcon
+                  icon={isPartial ? AlertCircleIcon : Tick02Icon}
+                  size={14}
+                  color={COLORS.white}
+                />
+              </View>
+            ) : null}
+            <Text style={styles.stageTitle}>{title}</Text>
+          </View>
           <Text style={styles.stageDescription}>
             {isPartial
               ? t('showlyImport.partialBody')
@@ -291,19 +308,6 @@ export default function ShowlyImportProgressScreen() {
               </>
             ) : (
               <>
-                <View
-                  style={[
-                    styles.completeBadge,
-                    { backgroundColor: isPartial ? COLORS.warning : COLORS.success },
-                  ]}
-                >
-                  <AppIcon
-                    icon={isPartial ? AlertCircleIcon : Tick02Icon}
-                    size={20}
-                    color={COLORS.white}
-                  />
-                </View>
-
                 {failedChunkIndexes.length > 0 ? (
                   <View
                     style={[
@@ -524,11 +528,10 @@ const styles = StyleSheet.create({
   },
   completeBadge: {
     alignItems: 'center',
-    alignSelf: 'center',
-    borderRadius: 24,
-    height: 48,
+    borderRadius: 12,
+    height: 24,
     justifyContent: 'center',
-    width: 48,
+    width: 24,
   },
   listedTitle: {
     color: COLORS.text,
@@ -620,7 +623,13 @@ const styles = StyleSheet.create({
   },
   stageTitle: {
     color: COLORS.text,
+    flexShrink: 1,
     fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.l,
+  },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACING.s,
   },
 });

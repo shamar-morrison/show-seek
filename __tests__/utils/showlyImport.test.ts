@@ -163,8 +163,16 @@ describe('Showly import — the real export (2026-11-12)', () => {
       favorite: false,
       imdbId: null,
       lists: [
-        { addedAt: at('2026-11-12T06:10:20.294Z'), name: 'showly list 2' },
-        { addedAt: at('2026-11-12T06:09:45.418Z'), name: 'showly 1' },
+        {
+          addedAt: at('2026-11-12T06:10:20.294Z'),
+          description: 'description for showly list',
+          name: 'showly list 2',
+        },
+        {
+          addedAt: at('2026-11-12T06:09:45.418Z'),
+          description: 'showlt 1 list description',
+          name: 'showly 1',
+        },
       ],
       rating: null,
       title: '',
@@ -175,7 +183,11 @@ describe('Showly import — the real export (2026-11-12)', () => {
       year: null,
     });
     expect(byTmdb(movies, 1003596).lists).toEqual([
-      { addedAt: at('2026-11-12T06:10:25.495Z'), name: 'showly list 2' },
+      {
+        addedAt: at('2026-11-12T06:10:25.495Z'),
+        description: 'description for showly list',
+        name: 'showly list 2',
+      },
     ]);
     expect(movies).toHaveLength(6);
   });
@@ -556,6 +568,60 @@ describe('Showly import — custom lists', () => {
     expect(parsed.emptyLists).toBe(1);
     expect(parsed.customLists).toBe(2);
     expect(parsed.stats.ignored).toEqual({ non_media_list_items: 2 });
+  });
+});
+
+describe('Showly import — list descriptions', () => {
+  const listWith = (n: string, d: string | undefined, tmId: number) => ({
+    c: '2024-01-01T00:00:00Z',
+    ...(d === undefined ? {} : { d }),
+    id: 1,
+    ic: 1,
+    it: [
+      {
+        c: '2024-01-02T00:00:00Z',
+        id: 1,
+        l: '2024-01-02T00:00:00Z',
+        lId: 1,
+        r: 1,
+        t: 'movie',
+        tId: tmId,
+        tmId,
+        u: '2024-01-02T00:00:00Z',
+      },
+    ],
+    n,
+    p: 'private',
+    sId: '',
+    u: '2024-01-01T00:00:00Z',
+  });
+
+  it('carries descriptions, trimmed and capped at 120 characters, and leaves out empty ones', () => {
+    const { movies } = parseShowlyBackup(
+      backup({
+        lists: [
+          listWith('Long', `  ${'x'.repeat(200)}  `, 680),
+          listWith('Blank', '   ', 27205),
+          listWith('None', undefined, 157336),
+        ],
+      }),
+      NOW
+    );
+
+    expect(byTmdb(movies, 680).lists[0].description).toBe('x'.repeat(120));
+    expect(byTmdb(movies, 27205).lists[0]).not.toHaveProperty('description');
+    expect(byTmdb(movies, 157336).lists[0]).not.toHaveProperty('description');
+  });
+
+  it('keeps the first description when two lists share a name', () => {
+    const { movies } = parseShowlyBackup(
+      backup({ lists: [listWith('Crime', 'First', 680), listWith('crime', 'Second', 680)] }),
+      NOW
+    );
+
+    expect(byTmdb(movies, 680).lists).toEqual([
+      { addedAt: at('2024-01-02T00:00:00Z'), description: 'First', name: 'Crime' },
+    ]);
   });
 });
 

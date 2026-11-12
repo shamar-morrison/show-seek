@@ -435,6 +435,75 @@ describe('importShowlyChunk — entities identified by a TMDB id alone', () => {
   });
 });
 
+describe('importShowlyChunk — list descriptions', () => {
+  const listed = (lists: Record<string, unknown>[]) =>
+    movieEntity({ lists, title: '', tmdbId: 969681, watches: [], year: null });
+
+  beforeEach(() => {
+    seedPremiumUser();
+    routeTmdb([[/\/movie\/969681\?/, movieDetails(969681, 'Listed Movie')]]);
+  });
+
+  it('writes the description on a list the import creates', async () => {
+    await callImport(
+      authed(
+        chunk({ movies: [listed([{ addedAt: 1, description: 'Crime picks', name: 'Crime' }])] })
+      )
+    );
+
+    expect(findList('Crime')).toMatchObject({ description: 'Crime picks', isCustom: true });
+  });
+
+  it('fills in a description on an existing list that has none', async () => {
+    seedDoc('users/user-1/lists/crime', { createdAt: 1, isCustom: true, items: {}, name: 'Crime' });
+
+    await callImport(
+      authed(
+        chunk({ movies: [listed([{ addedAt: 1, description: 'Crime picks', name: 'crime' }])] })
+      )
+    );
+
+    expect(getDoc('users/user-1/lists/crime')).toMatchObject({ description: 'Crime picks' });
+  });
+
+  it("never replaces a list's existing description", async () => {
+    seedDoc('users/user-1/lists/crime', {
+      createdAt: 1,
+      description: 'Mine',
+      isCustom: true,
+      items: {},
+      name: 'Crime',
+    });
+
+    await callImport(
+      authed(
+        chunk({ movies: [listed([{ addedAt: 1, description: 'Crime picks', name: 'Crime' }])] })
+      )
+    );
+
+    expect(getDoc('users/user-1/lists/crime')).toMatchObject({ description: 'Mine' });
+  });
+
+  it('creates a list without a description when none is sent', async () => {
+    await callImport(authed(chunk({ movies: [listed([{ addedAt: 1, name: 'Plain' }])] })));
+
+    expect(findList('Plain')).not.toHaveProperty('description');
+  });
+
+  it('rejects a description over 120 characters', async () => {
+    await expect(
+      callImport(
+        authed(
+          chunk({ movies: [listed([{ addedAt: 1, description: 'x'.repeat(121), name: 'Long' }])] })
+        )
+      )
+    ).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message: expect.stringContaining('description'),
+    });
+  });
+});
+
 describe('importShowlyChunk — following (Showly "My Shows")', () => {
   const ended = (count = 2) =>
     tvRoutes(
