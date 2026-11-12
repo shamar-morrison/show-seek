@@ -177,8 +177,7 @@ export const normalizeListIdBase = (listName: string): string =>
 
 /**
  * Finds the user's custom list with this name (ignoring case) or creates it. A
- * `description` is written on a list this creates, and filled in on an existing list
- * that has none; a description the user already has is never replaced.
+ * `description` is written only on a list this creates; existing lists are never changed.
  */
 export async function ensureCustomList(
   context: ImportWriteContext,
@@ -190,9 +189,6 @@ export async function ensureCustomList(
   const trimmedDescription = description?.trim() || undefined;
 
   if (existingId) {
-    if (trimmedDescription) {
-      await fillMissingListDescription(context, existingId, trimmedDescription);
-    }
     return { created: false, listId: existingId };
   }
 
@@ -240,9 +236,6 @@ export async function ensureCustomList(
           ref,
         });
         context.listNameCache.set(normalizedName, nextId);
-        if (trimmedDescription) {
-          await fillMissingListDescription(context, nextId, trimmedDescription);
-        }
         return { created: false, listId: nextId };
       }
       attempt += 1;
@@ -265,24 +258,6 @@ export async function ensureCustomList(
   context.listNameCache.set(normalizedName, nextId);
 
   return { created: true, listId: nextId };
-}
-
-/** Sets a description on an existing custom list only when it has none. */
-async function fillMissingListDescription(
-  context: ImportWriteContext,
-  listId: string,
-  description: string
-): Promise<void> {
-  const record = context.listCache.get(listId);
-  if (!record || DEFAULT_LIST_IDS.has(listId)) {
-    return;
-  }
-  const current = record.list.data.description;
-  if (typeof current === 'string' && current.trim()) {
-    return;
-  }
-  await record.ref.set({ description, updatedAt: Date.now() }, { merge: true });
-  record.list.data = { ...record.list.data, description };
 }
 
 /** Adds a movie/show to a list. Never replaces an existing membership; returns whether it wrote. */

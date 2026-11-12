@@ -80,7 +80,7 @@ export interface FileImportRating {
 export interface FileImportListMembership {
   name: string;
   addedAt: number;
-  /** The list's description (Showly). Set on a list the import creates, or one with none yet. */
+  /** The list's description (Showly). Written only on a list the import creates. */
   description?: string;
 }
 

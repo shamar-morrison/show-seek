@@ -454,7 +454,7 @@ describe('importShowlyChunk — list descriptions', () => {
     expect(findList('Crime')).toMatchObject({ description: 'Crime picks', isCustom: true });
   });
 
-  it('fills in a description on an existing list that has none', async () => {
+  it('leaves an existing list without a description as it is', async () => {
     seedDoc('users/user-1/lists/crime', { createdAt: 1, isCustom: true, items: {}, name: 'Crime' });
 
     await callImport(
@@ -463,7 +463,10 @@ describe('importShowlyChunk — list descriptions', () => {
       )
     );
 
-    expect(getDoc('users/user-1/lists/crime')).toMatchObject({ description: 'Crime picks' });
+    const list = getDoc('users/user-1/lists/crime');
+    expect(list).not.toHaveProperty('description');
+    // The item still goes in.
+    expect(list).toMatchObject({ items: { 'movie-969681': expect.anything() } });
   });
 
   it("never replaces a list's existing description", async () => {
