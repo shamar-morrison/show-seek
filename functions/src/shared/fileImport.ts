@@ -12,6 +12,10 @@ export const FILE_IMPORT_MAX_PLAYS_PER_CHUNK = 1500;
 export const FILE_IMPORT_MAX_MOVIE_WATCHES = 100;
 export const FILE_IMPORT_MAX_LISTS_PER_ENTITY = 50;
 export const FILE_IMPORT_MAX_UNRESOLVED_TITLES_PER_CHUNK = 25;
+/** Season + episode ratings per chunk (and per show): each is one rating write. */
+export const FILE_IMPORT_MAX_DETAIL_RATINGS_PER_CHUNK = 1500;
+/** Highest season or episode number the server accepts. */
+export const FILE_IMPORT_MAX_EPISODE_NUMBER = 10_000;
 
 // Abuse limits, enforced server-side per user and per source (see `claimImportChunkSlot`).
 // Modelled on the Trakt ZIP import: one import at a time + a 6h cooldown. Because
@@ -59,7 +63,17 @@ export interface FileImportLimitDoc {
 /** Client-side cap when merging unresolved titles across chunks for the summary screen. */
 export const FILE_IMPORT_MAX_UNRESOLVED_TITLES_TOTAL = 200;
 
-export type FileImportShowStatus = 'watchlist' | 'watching' | 'up_to_date' | 'dropped';
+/**
+ * `following` (Showly's "My Shows", which has no completed state): the server picks
+ * Already Watched when the show has ended and every aired regular-season episode is
+ * tracked, otherwise Watching. Decided on the show's last part.
+ */
+export type FileImportShowStatus =
+  | 'watchlist'
+  | 'watching'
+  | 'up_to_date'
+  | 'dropped'
+  | 'following';
 
 export interface FileImportRating {
   /** ShowSeek scale, 1–10. Converted from the source's scale on the client. */
@@ -67,10 +81,30 @@ export interface FileImportRating {
   ratedAt: number;
 }
 
+/** A season rating (Showly). Season numbers are the source's; checked against TMDB. */
+export interface FileImportSeasonRating {
+  season: number;
+  value: number;
+  ratedAt: number;
+}
+
+/** An episode rating (Showly), by season and episode number. */
+export interface FileImportEpisodeRating {
+  season: number;
+  episode: number;
+  value: number;
+  ratedAt: number;
+}
+
 export interface FileImportListMembership {
   name: string;
   addedAt: number;
+  /** The list's description (Showly). Written only on a list the import creates. */
+  description?: string;
 }
+
+/** Same cap as the app's list description field (CreateListModal / RenameListModal). */
+export const FILE_IMPORT_MAX_LIST_DESCRIPTION_LENGTH = 120;
 
 export interface FileImportEpisodePlay {
   season: number;
@@ -101,7 +135,7 @@ export interface FileImportAnimeNumbering {
 }
 
 export interface FileImportShowEntity {
-  /** Tried before tvdbId/imdbId when present (Simkl). */
+  /** Tried before tvdbId/imdbId when present (Simkl, Showly). Enough on its own to identify the show. */
   tmdbId?: number;
   tvdbId: number | null;
   imdbId: string | null;
@@ -122,6 +156,10 @@ export interface FileImportShowEntity {
   /** The one date stamped on expanded episodes. Without it, `watchedThrough` is ignored. */
   watchedThroughAt?: number;
   anime?: FileImportAnimeNumbering;
+  /** Season ratings (Showly); written from part 0, never over an existing rating. */
+  seasonRatings?: FileImportSeasonRating[];
+  /** Episode ratings (Showly); written from part 0, never over an existing rating. */
+  episodeRatings?: FileImportEpisodeRating[];
 }
 
 export interface FileImportMovieEntity {
@@ -180,7 +218,16 @@ export type FileImportIgnoredReason =
   /** Client-side (Simkl): dropped movies (the contract has no movie status). */
   | 'dropped_movies'
   /** Client-side (Simkl): shows whose episodes are known only as a "watched up to" point. */
-  | 'summary_only_episodes';
+  | 'summary_only_episodes'
+  /** Client-side (Showly): hidden movies (the contract has no movie status). */
+  | 'hidden_movies'
+  /** Client-side (Showly): pinned titles (ShowSeek has no pinning). */
+  | 'pinned_items'
+  /** Client-side (Showly): custom-list items that aren't a show or movie. */
+  | 'non_media_list_items';
+
+/** Ignored reasons only the Showly client reports. */
+export type ShowlyOnlyIgnoredReason = 'hidden_movies' | 'pinned_items' | 'non_media_list_items';
 
 export interface FileImportCounts {
   shows: number;

@@ -1,0 +1,368 @@
+import {
+  mergeFileImportStats,
+  type FileImportChunkRequest,
+  type FileImportChunkResult,
+  type FileImportLimitDoc,
+  type FileImportRateLimitDetails,
+  type FileImportStats,
+} from '@/functions/src/shared/fileImport';
+import { db, functions } from '@/src/firebase/config';
+import {
+  SHOWLY_MAX_EXPORT_BYTES,
+  ShowlyImportError,
+  type PickedShowlyFile,
+} from '@/src/utils/showlyImport/files';
+import { prepareShowlyImport, type PreparedShowlyImport } from '@/src/utils/showlyImport/prepare';
+import { getShowlyErrorCode } from '@/src/utils/showlyImportError';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+
+/**
+ * Runs a Showly import: one chunk at a time to `importShowlyChunk`, with the same retry,
+ * resume, keep-awake and rate-limit handling as the Showly import (see ShowlyImportService,
+ * which this mirrors; they're kept separate so Showly's code is never touched by Showly work).
+ */
+
+type DocumentPickerModule = typeof import('expo-document-picker');
+type FileSystemModule = typeof import('expo-file-system/legacy');
+type KeepAwakeModule = typeof import('expo-keep-awake');
+
+export interface ShowlyImportProgress {
+  completedChunks: number;
+  totalChunks: number;
+  stats: FileImportStats;
+}
+
+export interface ShowlyImportRunResult {
+  stats: FileImportStats;
+  /** Chunks that still failed after retries; offered via "Retry failed items". */
+  failedChunkIndexes: number[];
+}
+
+/** Thrown when the server refuses the run as a whole (cooldown, another import active, …). */
+export class ShowlyImportRunError extends Error {
+  constructor(
+    readonly code: string,
+    readonly details: Partial<FileImportRateLimitDetails> | null
+  ) {
+    super(`Showly import stopped: ${code}`);
+    this.name = 'ShowlyImportRunError';
+  }
+}
+
+interface StoredRun {
+  importId: string;
+  fingerprint: string;
+  completed: number[];
+  startedAt: number;
+  /** Stats from every completed chunk, so a resumed run's summary covers the whole import. */
+  stats?: FileImportStats;
+}
+
+const CALLABLE_TIMEOUT_MS = 300_000; // matches the function's timeoutSeconds
+const MAX_TRANSIENT_ATTEMPTS = 3;
+const TRANSIENT_BACKOFF_MS = [2_000, 5_000];
+const MAX_BURST_WAITS = 5;
+const MAX_BURST_WAIT_MS = 60_000;
+const TRANSIENT_CODES = new Set(['unavailable', 'deadline-exceeded', 'internal']);
+const KEEP_AWAKE_TAG = 'showly-import';
+
+const storageKey = (userId: string) => `showlyImport:activeRun:${userId}`;
+
+class ShowlyImportService {
+  private readonly importCallable = httpsCallable<FileImportChunkRequest, FileImportChunkResult>(
+    functions,
+    'importShowlyChunk',
+    { timeout: CALLABLE_TIMEOUT_MS }
+  );
+  private documentPickerModulePromise: Promise<DocumentPickerModule> | null = null;
+  private fileSystemModulePromise: Promise<FileSystemModule> | null = null;
+  private keepAwakeModulePromise: Promise<KeepAwakeModule> | null = null;
+
+  /** Lets the user pick Showly's backup (`showly_export_*.json`). */
+  async pickFiles(): Promise<PickedShowlyFile[]> {
+    const documentPicker = await this.load('documentPicker');
+    const result = await documentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      multiple: false,
+      // Phones label JSON inconsistently; the parser identifies the file by its content.
+      type: '*/*',
+    });
+    if (result.canceled) {
+      return [];
+    }
+
+    // Refuse oversized picks before loading them into memory as base64.
+    const declaredBytes = result.assets.reduce((total, asset) => total + (asset.size ?? 0), 0);
+    if (declaredBytes > SHOWLY_MAX_EXPORT_BYTES) {
+      throw new ShowlyImportError('too_large');
+    }
+
+    const fileSystem = await this.load('fileSystem');
+    return Promise.all(
+      result.assets.map(async (asset) => {
+        let base64: string;
+        try {
+          base64 = await fileSystem.readAsStringAsync(asset.uri, {
+            encoding: fileSystem.EncodingType.Base64,
+          });
+        } catch (error) {
+          console.error('[ShowlyImportService] Could not read picked file:', error);
+          throw new ShowlyImportError('unreadable_file');
+        }
+        return { bytes: decodeBase64(base64), name: asset.name || 'showly_export.json' };
+      })
+    );
+  }
+
+  prepare(files: PickedShowlyFile[]): PreparedShowlyImport {
+    return prepareShowlyImport(files);
+  }
+
+  /** Server-side limit state, for showing the cooldown before the user picks a file. */
+  async getLimitState(
+    userId: string
+  ): Promise<{ nextAllowedImportAt: number | null; activeImportId: string | null }> {
+    const snapshot = await getDoc(doc(db, 'users', userId, 'import_limits', 'showly'));
+    const data = snapshot.data() as Partial<FileImportLimitDoc> | undefined;
+    return {
+      activeImportId: data?.session?.id ?? null,
+      nextAllowedImportAt: data?.session?.nextAllowedImportAt ?? null,
+    };
+  }
+
+  /** The unfinished run on this device, if any. Its importId is reused so resuming never hits the cooldown. */
+  async getStoredRun(userId: string): Promise<StoredRun | null> {
+    try {
+      const raw = await AsyncStorage.getItem(storageKey(userId));
+      return raw ? (JSON.parse(raw) as StoredRun) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async clearStoredRun(userId: string): Promise<void> {
+    await AsyncStorage.removeItem(storageKey(userId)).catch(() => undefined);
+  }
+
+  /**
+   * Sends chunks one at a time. Transient failures are retried with backoff; burst
+   * limits wait for `retryAfterMs`; run-level refusals (cooldown, another import
+   * active, premium) stop the run with a `ShowlyImportRunError`.
+   */
+  async runPreparedImport(
+    prepared: PreparedShowlyImport,
+    userId: string,
+    onProgress?: (progress: ShowlyImportProgress) => void,
+    onlyChunkIndexes?: number[]
+  ): Promise<ShowlyImportRunResult> {
+    const fingerprint = fingerprintOf(prepared);
+    const stored = await this.getStoredRun(userId);
+    const isSameExport = stored?.fingerprint === fingerprint;
+    const run: StoredRun = {
+      completed: isSameExport ? stored.completed : [],
+      fingerprint,
+      // Reuse the unfinished run's id even for a different file: the server treats a
+      // new id inside the cooldown as a new import and refuses it.
+      importId: stored?.importId ?? createImportId(),
+      startedAt: stored?.startedAt ?? Date.now(),
+      stats: (isSameExport ? stored.stats : undefined) ?? prepared.stats,
+    };
+    await this.saveRun(userId, run);
+
+    const indexes = onlyChunkIndexes ?? prepared.chunks.map((_, index) => index);
+    const pending = indexes.filter((index) => !run.completed.includes(index));
+    const alreadyDone = indexes.length - pending.length;
+    // Retrying failed chunks: the caller already holds the earlier stats and merges them.
+    // Resuming after a restart: start from what the earlier chunks reported.
+    let stats = onlyChunkIndexes ? prepared.stats : run.stats!;
+    let doneThisRun = 0;
+    const failedChunkIndexes: number[] = [];
+    const report = () =>
+      onProgress?.({
+        completedChunks: alreadyDone + doneThisRun,
+        stats,
+        totalChunks: indexes.length,
+      });
+
+    const keepAwake = await this.load('keepAwake').catch(() => null);
+    await keepAwake?.activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => undefined);
+    report();
+
+    try {
+      // A long show is split into parts, and the server decides a followed show's list on
+      // its last part. Once a part fails, that show's later parts are held back with it, so
+      // "Retry failed items" sends them in order and the decision sees every episode.
+      const heldShows = new Set<string>();
+      for (const [position, index] of pending.entries()) {
+        const chunk = prepared.chunks[index];
+        const splitShows = chunk.shows.filter((show) => show.part);
+        let result: FileImportChunkResult | null = null;
+        if (!splitShows.some((show) => heldShows.has(showKeyOf(show)))) {
+          result = await this.sendChunk({
+            importId: run.importId,
+            ...chunk,
+            // Lets the server mark the import finished, so a new one isn't refused as "already running".
+            ...(position === pending.length - 1 ? { final: true } : {}),
+          });
+        }
+        if (result) {
+          stats = mergeFileImportStats(stats, result);
+          run.stats = mergeFileImportStats(run.stats!, result);
+          run.completed.push(index);
+          await this.saveRun(userId, run);
+        } else {
+          failedChunkIndexes.push(index);
+          splitShows.forEach((show) => heldShows.add(showKeyOf(show)));
+        }
+        doneThisRun += 1;
+        report();
+      }
+    } catch (error) {
+      // A run the server refused before accepting anything has nothing to resume.
+      if (error instanceof ShowlyImportRunError && run.completed.length === 0) {
+        await this.clearStoredRun(userId);
+      }
+      throw error;
+    } finally {
+      keepAwake?.deactivateKeepAwake(KEEP_AWAKE_TAG);
+    }
+
+    if (failedChunkIndexes.length === 0 && run.completed.length >= prepared.chunks.length) {
+      await this.clearStoredRun(userId);
+    }
+    return { failedChunkIndexes, stats };
+  }
+
+  /** Returns the chunk's stats, null after exhausting transient retries, or throws a run-level refusal. */
+  private async sendChunk(request: FileImportChunkRequest): Promise<FileImportChunkResult | null> {
+    let transientAttempts = 0;
+    let burstWaits = 0;
+
+    for (;;) {
+      try {
+        return (await this.importCallable(request)).data;
+      } catch (error) {
+        const code = getShowlyErrorCode(error);
+        const details =
+          (error as { details?: Partial<FileImportRateLimitDetails> }).details ?? null;
+
+        if (
+          code === 'resource-exhausted' &&
+          details?.reason === 'burst' &&
+          burstWaits < MAX_BURST_WAITS
+        ) {
+          burstWaits += 1;
+          await wait(Math.min(details.retryAfterMs ?? 5_000, MAX_BURST_WAIT_MS));
+          continue;
+        }
+        if (code && TRANSIENT_CODES.has(code)) {
+          transientAttempts += 1;
+          if (transientAttempts >= MAX_TRANSIENT_ATTEMPTS) {
+            console.error('[ShowlyImportService] Chunk failed after retries:', error);
+            return null;
+          }
+          await wait(TRANSIENT_BACKOFF_MS[transientAttempts - 1] ?? 5_000);
+          continue;
+        }
+        throw new ShowlyImportRunError(code ?? 'unknown', details);
+      }
+    }
+  }
+
+  private async saveRun(userId: string, run: StoredRun): Promise<void> {
+    await AsyncStorage.setItem(storageKey(userId), JSON.stringify(run)).catch(() => undefined);
+  }
+
+  private load(name: 'documentPicker'): Promise<DocumentPickerModule>;
+  private load(name: 'fileSystem'): Promise<FileSystemModule>;
+  private load(name: 'keepAwake'): Promise<KeepAwakeModule>;
+  private load(name: 'documentPicker' | 'fileSystem' | 'keepAwake'): Promise<unknown> {
+    const isJest = typeof process !== 'undefined' && typeof process.env.JEST_WORKER_ID === 'string';
+    switch (name) {
+      case 'documentPicker':
+        this.documentPickerModulePromise ??= isJest
+          ? Promise.resolve(require('expo-document-picker') as DocumentPickerModule)
+          : import('expo-document-picker');
+        return this.documentPickerModulePromise;
+      case 'fileSystem':
+        this.fileSystemModulePromise ??= isJest
+          ? Promise.resolve(require('expo-file-system/legacy') as FileSystemModule)
+          : import('expo-file-system/legacy');
+        return this.fileSystemModulePromise;
+      case 'keepAwake':
+        this.keepAwakeModulePromise ??= isJest
+          ? Promise.resolve(require('expo-keep-awake') as KeepAwakeModule)
+          : import('expo-keep-awake');
+        return this.keepAwakeModulePromise;
+    }
+  }
+}
+
+export const showlyImportService = new ShowlyImportService();
+
+/** Identifies a show across its parts (they all carry the same ids and title). */
+function showKeyOf(show: FileImportChunkRequest['shows'][number]): string {
+  return show.tmdbId !== undefined ? `tmdb:${show.tmdbId}` : `title:${show.title.toLowerCase()}`;
+}
+
+/** Identifies "the same export" so a resumed run can skip chunks it already sent. */
+export function fingerprintOf(prepared: PreparedShowlyImport): string {
+  const { summary } = prepared;
+  return [
+    prepared.format,
+    prepared.chunks.length,
+    summary.following,
+    summary.episodes,
+    summary.watchedMovies,
+    summary.customLists,
+    // Two exports can share every count; the content hash tells them apart.
+    hashString(JSON.stringify(prepared.chunks)),
+  ].join(':');
+}
+
+/** 32-bit FNV-1a, hex. Not cryptographic: it only has to tell two exports apart. */
+function hashString(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function createImportId(): string {
+  const random = Math.random().toString(36).slice(2, 12).padEnd(10, '0');
+  return `showly-${Date.now().toString(36)}-${random}`;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const BASE64_LOOKUP = (() => {
+  const table = new Uint8Array(256);
+  for (let i = 0; i < BASE64_ALPHABET.length; i += 1) table[BASE64_ALPHABET.charCodeAt(i)] = i;
+  table['-'.charCodeAt(0)] = 62; // tolerate URL-safe variants
+  table['_'.charCodeAt(0)] = 63;
+  return table;
+})();
+
+/** Base64 → bytes without atob/Buffer (works on Hermes for multi-MB files). */
+export function decodeBase64(input: string): Uint8Array {
+  const clean = input.replace(/[^A-Za-z0-9+/\-_]/g, '');
+  const output = new Uint8Array(Math.floor((clean.length * 3) / 4));
+  let outIndex = 0;
+  for (let i = 0; i < clean.length; i += 4) {
+    const a = BASE64_LOOKUP[clean.charCodeAt(i)];
+    const b = BASE64_LOOKUP[clean.charCodeAt(i + 1)];
+    const c = BASE64_LOOKUP[clean.charCodeAt(i + 2)];
+    const d = BASE64_LOOKUP[clean.charCodeAt(i + 3)];
+    output[outIndex++] = (a << 2) | (b >> 4);
+    if (i + 2 < clean.length) output[outIndex++] = ((b & 15) << 4) | (c >> 2);
+    if (i + 3 < clean.length) output[outIndex++] = ((c & 3) << 6) | d;
+  }
+  return output.subarray(0, outIndex);
+}

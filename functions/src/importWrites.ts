@@ -175,12 +175,18 @@ export const normalizeListIdBase = (listName: string): string =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'imported-list';
 
+/**
+ * Finds the user's custom list with this name (ignoring case) or creates it. A
+ * `description` is written only on a list this creates; existing lists are never changed.
+ */
 export async function ensureCustomList(
   context: ImportWriteContext,
-  listName: string
+  listName: string,
+  description?: string
 ): Promise<{ created: boolean; listId: string }> {
   const normalizedName = listName.trim().toLowerCase();
   const existingId = context.listNameCache.get(normalizedName);
+  const trimmedDescription = description?.trim() || undefined;
 
   if (existingId) {
     return { created: false, listId: existingId };
@@ -206,6 +212,7 @@ export async function ensureCustomList(
         isCustom: true,
         items: {},
         name: listName,
+        ...(trimmedDescription ? { description: trimmedDescription } : {}),
       });
       break;
     } catch (error) {
@@ -243,6 +250,7 @@ export async function ensureCustomList(
       isCustom: true,
       items: {},
       name: listName,
+      ...(trimmedDescription ? { description: trimmedDescription } : {}),
     }),
     name: listName,
     ref,
@@ -339,6 +347,27 @@ function emptyPagedList(
  * 'never': leave any existing rating untouched (TV Time).
  */
 export type RatingConflictPolicy = 'newer' | 'never';
+
+/**
+ * Writes a season or episode rating doc (users/{uid}/ratings/{docId}) in the shape the
+ * app's RatingService writes, unless one already exists. Returns whether it wrote.
+ */
+export async function insertDetailRatingIfAbsent(
+  context: ImportWriteContext,
+  docId: string,
+  data: Record<string, unknown>
+): Promise<boolean> {
+  const ref = context.db.collection('users').doc(context.userId).collection('ratings').doc(docId);
+  // A transaction, so a rating the user saves in the app meanwhile is never overwritten.
+  return context.db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (snapshot.exists) {
+      return false;
+    }
+    transaction.set(ref, { ...data, id: docId }, { merge: false });
+    return true;
+  });
+}
 
 export async function upsertMovieOrTvRating(
   context: ImportWriteContext,

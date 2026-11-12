@@ -33,6 +33,7 @@ describe('IntegrationsSection', () => {
     onImdbImport: jest.fn(),
     onTvTimeImport: jest.fn(),
     onSimklImport: jest.fn(),
+    onShowlyImport: jest.fn(),
     onTraktPress: jest.fn(),
     onStremioPress: jest.fn(),
     ...overrides,
@@ -75,6 +76,7 @@ describe('IntegrationsSection', () => {
       'imdbImport',
       'tvtimeImport',
       'simklImport',
+      'showlyImport',
       'trakt',
       'stremio',
     ]);
@@ -88,6 +90,25 @@ describe('IntegrationsSection', () => {
     fireEvent.press(getByTestId('action-button-import-from-simkl'));
     expect(props.onSimklImport).toHaveBeenCalledTimes(1);
     expect(props.onTvTimeImport).not.toHaveBeenCalled();
+  });
+
+  it('renders the Showly import row right after Simkl, as a searchable import item', () => {
+    const props = createProps();
+    const { getByTestId, getByText } = render(<IntegrationsSection {...props} />);
+
+    expect(getByText('Import from Showly')).toBeTruthy();
+    expect(getByTestId('integrations-showly-icon')).toBeTruthy();
+    expect(getByTestId('search-item-showlyImport')).toBeTruthy();
+    expect(INTEGRATION_ITEMS).toContainEqual({
+      id: 'showlyImport',
+      titleKey: 'profile.importFromShowly',
+      descKey: 'profile.importFromShowlyDescription',
+      category: 'import',
+    });
+
+    fireEvent.press(getByTestId('action-button-import-from-showly'));
+    expect(props.onShowlyImport).toHaveBeenCalledTimes(1);
+    expect(props.onSimklImport).not.toHaveBeenCalled();
   });
 
   it('does not show a premium badge on the IMDb row for free users', () => {
