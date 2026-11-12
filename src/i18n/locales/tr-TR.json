@@ -1856,26 +1856,6 @@
     "showlyImport": {
       "title": "Showly'den içe aktarın",
       "description": "Showly'den mi geçiyorsunuz? Premium ile dizilerinizi, izleme geçmişinizi, puanlarınızı ve listelerinizi getirin. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
-    },
-    "profileBackdrop": {
-      "title": "Profil arka planı",
-      "description": "Herhangi bir film ya da dizinin afişini veya arka planını profilinizin arkasına koyun ve hangi kısmın görüneceğini seçmek için sürükleyin. Bir yapımın fotoğraflarını açıp Profil arka planı yap'a dokunun."
-    },
-    "ratings": {
-      "title": "Letterboxd ve Trakt puanları",
-      "description": "Film ve dizi sayfaları artık IMDb, Rotten Tomatoes ve Metacritic'in yanında Letterboxd ve Trakt puanlarını da gösteriyor. O siteyi açmak için bir puana dokunun."
-    },
-    "seeAll": {
-      "title": "Hepsini görün",
-      "description": "Fotoğraflar, Videolar, Benzerleri ve Bunları da beğenebilirsin'de Tümünü gör'e dokunarak her şeye göz atın: afişler ve arka planlar, türüne göre videolar ve çok daha fazla yapım."
-    },
-    "moreLikeThis": {
-      "title": "Daha isabetli benzerler",
-      "description": "Benzerleri artık aynı türleri ve temaları paylaşan yapımları buluyor, böylece öneriler gerçekten birbirine benziyor."
-    },
-    "actionOrder": {
-      "title": "Düğmeleriniz, sizin sıranızla",
-      "description": "Film ve dizi sayfalarındaki düğmeleri Ayarlar › İçerik › Eylem düğmelerini yeniden sırala bölümünden istediğiniz sıraya koyun."
     }
   },
   "posterPicker": {

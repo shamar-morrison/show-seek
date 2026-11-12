@@ -1856,26 +1856,6 @@
     "showlyImport": {
       "title": "Import from Showly",
       "description": "Moving from Showly? With Premium, bring your shows, watch history, ratings and lists with you. Find it in Settings > Integrations."
-    },
-    "profileBackdrop": {
-      "title": "Profile backdrop",
-      "description": "Put any movie or show's poster or backdrop behind your profile, and drag to choose which part shows. Open a title's photos and tap Set as profile backdrop."
-    },
-    "ratings": {
-      "title": "Letterboxd and Trakt scores",
-      "description": "Movie and show pages now show Letterboxd and Trakt scores next to IMDb, Rotten Tomatoes and Metacritic. Tap a score to open that site."
-    },
-    "seeAll": {
-      "title": "See it all",
-      "description": "Tap See All on Photos, Videos, Similar and You May Also Like to browse everything: posters and backdrops, videos by type, and many more titles."
-    },
-    "moreLikeThis": {
-      "title": "Better similar picks",
-      "description": "Similar now finds titles that share the same genres and themes, so the picks actually feel alike."
-    },
-    "actionOrder": {
-      "title": "Your buttons, your order",
-      "description": "Put the buttons on movie and show pages in the order you like in Settings › Content › Reorder Action Buttons."
     }
   },
   "posterPicker": {

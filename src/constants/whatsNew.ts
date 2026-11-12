@@ -35,35 +35,5 @@ export const CURRENT_WHATS_NEW: WhatsNewAnnouncement | null = {
       descriptionKey: 'whatsNew.showlyImport.description',
       visual: { type: 'image', source: require('@/assets/images/whats-new/showly-import.png') },
     },
-    {
-      id: 'profile-backdrop',
-      titleKey: 'whatsNew.profileBackdrop.title',
-      descriptionKey: 'whatsNew.profileBackdrop.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/profile-backdrop.png') },
-    },
-    {
-      id: 'ratings',
-      titleKey: 'whatsNew.ratings.title',
-      descriptionKey: 'whatsNew.ratings.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/ratings.png') },
-    },
-    {
-      id: 'see-all',
-      titleKey: 'whatsNew.seeAll.title',
-      descriptionKey: 'whatsNew.seeAll.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/see-all.png') },
-    },
-    {
-      id: 'more-like-this',
-      titleKey: 'whatsNew.moreLikeThis.title',
-      descriptionKey: 'whatsNew.moreLikeThis.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/more-like-this.png') },
-    },
-    {
-      id: 'action-order',
-      titleKey: 'whatsNew.actionOrder.title',
-      descriptionKey: 'whatsNew.actionOrder.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/action-order.png') },
-    },
   ],
 };

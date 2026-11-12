@@ -2229,26 +2229,6 @@
     "showlyImport": {
       "title": "Importa desde Showly",
       "description": "¿Vienes de Showly? Con Premium, trae tus series, tu historial, tus valoraciones y tus listas. Lo encontrarás en Ajustes > Integraciones."
-    },
-    "profileBackdrop": {
-      "title": "Fondo del perfil",
-      "description": "Pon el póster o un fondo de cualquier película o serie detrás de tu perfil y arrástralo para elegir qué parte se ve. Abre las fotos de un título y toca Usar como fondo del perfil."
-    },
-    "ratings": {
-      "title": "Puntuaciones de Letterboxd y Trakt",
-      "description": "Las páginas de películas y series muestran ahora las puntuaciones de Letterboxd y Trakt junto a IMDb, Rotten Tomatoes y Metacritic. Toca una puntuación para abrir esa web."
-    },
-    "seeAll": {
-      "title": "Verlo todo",
-      "description": "Toca Ver todo en Fotos, Vídeos, Similares y También te puede gustar para explorarlo todo: pósteres y fondos, vídeos por tipo y muchos más títulos."
-    },
-    "moreLikeThis": {
-      "title": "Similares más acertados",
-      "description": "Similares ahora busca títulos con los mismos géneros y temas, para que de verdad se parezcan."
-    },
-    "actionOrder": {
-      "title": "Tus botones, en tu orden",
-      "description": "Coloca los botones de las páginas de películas y series en el orden que prefieras en Ajustes › Contenido › Reordenar botones de acción."
     }
   },
   "posterPicker": {
