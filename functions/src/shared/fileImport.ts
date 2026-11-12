@@ -59,7 +59,17 @@ export interface FileImportLimitDoc {
 /** Client-side cap when merging unresolved titles across chunks for the summary screen. */
 export const FILE_IMPORT_MAX_UNRESOLVED_TITLES_TOTAL = 200;
 
-export type FileImportShowStatus = 'watchlist' | 'watching' | 'up_to_date' | 'dropped';
+/**
+ * `following` (Showly's "My Shows", which has no completed state): the server picks
+ * Already Watched when the show has ended and every aired regular-season episode is
+ * tracked, otherwise Watching. Decided on the show's last part.
+ */
+export type FileImportShowStatus =
+  | 'watchlist'
+  | 'watching'
+  | 'up_to_date'
+  | 'dropped'
+  | 'following';
 
 export interface FileImportRating {
   /** ShowSeek scale, 1–10. Converted from the source's scale on the client. */
@@ -101,7 +111,7 @@ export interface FileImportAnimeNumbering {
 }
 
 export interface FileImportShowEntity {
-  /** Tried before tvdbId/imdbId when present (Simkl). */
+  /** Tried before tvdbId/imdbId when present (Simkl, Showly). Enough on its own to identify the show. */
   tmdbId?: number;
   tvdbId: number | null;
   imdbId: string | null;
@@ -180,7 +190,22 @@ export type FileImportIgnoredReason =
   /** Client-side (Simkl): dropped movies (the contract has no movie status). */
   | 'dropped_movies'
   /** Client-side (Simkl): shows whose episodes are known only as a "watched up to" point. */
-  | 'summary_only_episodes';
+  | 'summary_only_episodes'
+  /** Client-side (Showly): hidden movies (the contract has no movie status). */
+  | 'hidden_movies'
+  /** Client-side (Showly): season ratings (ShowSeek has none). */
+  | 'season_ratings'
+  /** Client-side (Showly): pinned titles (ShowSeek has no pinning). */
+  | 'pinned_items'
+  /** Client-side (Showly): custom-list items that aren't a show or movie. */
+  | 'non_media_list_items';
+
+/** Ignored reasons only the Showly client reports. */
+export type ShowlyOnlyIgnoredReason =
+  | 'hidden_movies'
+  | 'season_ratings'
+  | 'pinned_items'
+  | 'non_media_list_items';
 
 export interface FileImportCounts {
   shows: number;

@@ -5,6 +5,7 @@
 
 import { COLORS } from '@/src/constants/theme';
 import { ImdbImportFlowProvider } from '@/src/context/ImdbImportFlowContext';
+import { ShowlyImportFlowProvider } from '@/src/context/ShowlyImportFlowContext';
 import { SimklImportFlowProvider } from '@/src/context/SimklImportFlowContext';
 import { TvTimeImportFlowProvider } from '@/src/context/TvTimeImportFlowContext';
 import { Stack } from 'expo-router';
@@ -18,169 +19,189 @@ export default function ProfileLayout() {
     <ImdbImportFlowProvider>
       <TvTimeImportFlowProvider>
         <SimklImportFlowProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: COLORS.background },
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen
-              name="account"
-              options={{
-                headerShown: true,
-                headerTitle: t('settings.account'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
+          <ShowlyImportFlowProvider>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: COLORS.background },
               }}
-            />
-            <Stack.Screen
-              name="edit-profile"
-              options={{
-                headerShown: true,
-                headerTitle: t('profile.editProfile'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen name="trakt-settings" />
-            <Stack.Screen name="stremio-settings" />
-            <Stack.Screen
-              name="stremio-how-it-works"
-              options={{
-                headerShown: true,
-                headerTitle: t('stremio.how.title'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="export-data"
-              options={{
-                headerShown: true,
-                headerTitle: t('profile.exportData'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="imdb-import"
-              options={{
-                headerShown: true,
-                headerTitle: t('profile.importFromImdb'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="imdb-import-progress"
-              options={{
-                headerShown: true,
-                headerTitle: t('imdbImport.importingTitle'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="tvtime-import"
-              options={{
-                headerShown: true,
-                headerTitle: t('profile.importFromTvTime'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="tvtime-import-progress"
-              options={{
-                headerShown: true,
-                headerTitle: t('tvtimeImport.importingTitle'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="simkl-import"
-              options={{
-                headerShown: true,
-                headerTitle: t('profile.importFromSimkl'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="simkl-import-progress"
-              options={{
-                headerShown: true,
-                headerTitle: t('simklImport.importingTitle'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="about"
-              options={{
-                headerShown: true,
-                headerTitle: t('settings.about'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="language"
-              options={{
-                headerShown: true,
-                headerTitle: t('settings.language'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="region"
-              options={{
-                headerShown: true,
-                headerTitle: t('settings.region'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="colors"
-              options={{
-                headerShown: true,
-                headerTitle: t('settings.accentColor'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="default-launch-screen"
-              options={{
-                headerShown: true,
-                headerTitle: t('settings.defaultLaunchScreen'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="action-buttons"
-              options={{
-                headerShown: true,
-                headerTitle: t('settings.actionButtons'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-            <Stack.Screen
-              name="tips"
-              options={{
-                headerShown: true,
-                headerTitle: t('tips.title'),
-                headerStyle: { backgroundColor: COLORS.background },
-                headerTintColor: COLORS.text,
-              }}
-            />
-          </Stack>
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen
+                name="account"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('settings.account'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="edit-profile"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('profile.editProfile'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen name="trakt-settings" />
+              <Stack.Screen name="stremio-settings" />
+              <Stack.Screen
+                name="stremio-how-it-works"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('stremio.how.title'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="export-data"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('profile.exportData'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="imdb-import"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('profile.importFromImdb'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="imdb-import-progress"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('imdbImport.importingTitle'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="tvtime-import"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('profile.importFromTvTime'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="tvtime-import-progress"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('tvtimeImport.importingTitle'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="simkl-import"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('profile.importFromSimkl'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="simkl-import-progress"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('simklImport.importingTitle'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="showly-import"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('profile.importFromShowly'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="showly-import-progress"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('showlyImport.importingTitle'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="about"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('settings.about'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="language"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('settings.language'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="region"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('settings.region'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="colors"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('settings.accentColor'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="default-launch-screen"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('settings.defaultLaunchScreen'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="action-buttons"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('settings.actionButtons'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
+                name="tips"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('tips.title'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+            </Stack>
+          </ShowlyImportFlowProvider>
         </SimklImportFlowProvider>
       </TvTimeImportFlowProvider>
     </ImdbImportFlowProvider>

@@ -13,7 +13,13 @@ import { StyleSheet, Text, View } from 'react-native';
 /** Stored (not rendered) category keys for integration items. */
 export type IntegrationCategoryKey = 'import' | 'sync';
 
-export type IntegrationItemId = 'imdbImport' | 'tvtimeImport' | 'simklImport' | 'trakt' | 'stremio';
+export type IntegrationItemId =
+  | 'imdbImport'
+  | 'tvtimeImport'
+  | 'simklImport'
+  | 'showlyImport'
+  | 'trakt'
+  | 'stremio';
 
 export interface IntegrationConfigItem {
   /** Stable id (also used as the search/scroll id) */
@@ -45,6 +51,12 @@ export const INTEGRATION_ITEMS: IntegrationConfigItem[] = [
     category: 'import',
   },
   {
+    id: 'showlyImport',
+    titleKey: 'profile.importFromShowly',
+    descKey: 'profile.importFromShowlyDescription',
+    category: 'import',
+  },
+  {
     id: 'trakt',
     titleKey: 'profile.traktIntegration',
     descKey: 'profile.traktIntegrationDescription',
@@ -69,6 +81,8 @@ export interface IntegrationsSectionProps {
   onTvTimeImport: () => void;
   /** Handler for Simkl import button */
   onSimklImport: () => void;
+  /** Handler for Showly import button */
+  onShowlyImport: () => void;
   /** Handler for Trakt settings button press */
   onTraktPress: () => void;
   /** Whether a Stremio addon link is active (null while unknown) */
@@ -92,6 +106,7 @@ export function IntegrationsSection({
   onImdbImport,
   onTvTimeImport,
   onSimklImport,
+  onShowlyImport,
   onTraktPress,
   isStremioConnected = null,
   onStremioPress,
@@ -206,6 +221,22 @@ export function IntegrationsSection({
             onPress={onSimklImport}
           />
         );
+      case 'showlyImport':
+        return (
+          <ActionButton
+            customIcon={
+              <Image
+                source={require('@/assets/images/showly.png')}
+                contentFit="cover"
+                style={styles.showlyLogo}
+                testID="integrations-showly-icon"
+              />
+            }
+            label={t('profile.importFromShowly')}
+            description={t('profile.importFromShowlyDescription')}
+            onPress={onShowlyImport}
+          />
+        );
       case 'trakt':
         return (
           <ActionButton
@@ -295,6 +326,11 @@ const styles = StyleSheet.create({
     width: 22,
   },
   simklLogo: {
+    borderRadius: 5,
+    height: 22,
+    width: 22,
+  },
+  showlyLogo: {
     borderRadius: 5,
     height: 22,
     width: 22,

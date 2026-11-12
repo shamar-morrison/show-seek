@@ -99,6 +99,11 @@ export function useProfileLogic() {
     router.push('/(tabs)/profile/simkl-import' as any);
   }, [router]);
 
+  const handleShowlyImport = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)/profile/showly-import' as any);
+  }, [router]);
+
   const handleClearCache = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -311,6 +316,7 @@ export function useProfileLogic() {
     handleImdbImport,
     handleTvTimeImport,
     handleSimklImport,
+    handleShowlyImport,
     handleExportData,
     handleClearCache,
     handleDeleteAccount,

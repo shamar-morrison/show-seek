@@ -114,6 +114,7 @@ const SHOW_STATUSES: readonly FileImportShowStatus[] = [
   'watching',
   'up_to_date',
   'dropped',
+  'following',
 ];
 const LIST_NAME_BY_ID: Record<string, string> = {
   'already-watched': DEFAULT_LIST_NAMES.alreadyWatched,
@@ -1188,7 +1189,10 @@ async function writeShow(
 
   const { show } = resolution;
   const isPrimaryPart = !entity.part || entity.part.index === 0;
+  // `following` is decided once every part's episodes are written (the client sends parts in order).
+  const isLastPart = !entity.part || entity.part.index === entity.part.total - 1;
   const writesBefore = countWrites(stats);
+  const media: ResolvedListMedia = { kind: 'tv', value: show };
 
   if (resolution.unmatched > 0) {
     skip(stats, 'unmatched_episode', resolution.unmatched);
@@ -1209,13 +1213,16 @@ async function writeShow(
     await writeEpisodeTracking(context, stats, show, resolution.episodes);
   }
 
+  if (entity.status === 'following' && isLastPart) {
+    const listId = await getFollowingListId(context, show.id);
+    await addToList(context, stats, listId, entity.addedAt, media);
+  }
+
   if (!isPrimaryPart) {
     return;
   }
 
-  const media: ResolvedListMedia = { kind: 'tv', value: show };
-
-  if (entity.status) {
+  if (entity.status && entity.status !== 'following') {
     const listId = await getStatusListId(context, entity.status, show.id);
     await addToList(context, stats, listId, entity.addedAt, media);
   }
@@ -1307,7 +1314,7 @@ async function writeEpisodeTracking(
 
 async function getStatusListId(
   context: FileImportContext,
-  status: FileImportShowStatus,
+  status: Exclude<FileImportShowStatus, 'following'>,
   showId: number
 ): Promise<string> {
   switch (status) {
@@ -1324,6 +1331,41 @@ async function getStatusListId(
         : 'currently-watching';
     }
   }
+}
+
+/**
+ * A followed show (Showly's "My Shows") goes to Already Watched when TMDB says it has
+ * ended and the user has every episode of every regular season tracked (from this import
+ * or already in ShowSeek); otherwise to Watching. Uses the show details already fetched
+ * to resolve it, plus one read of the user's episode tracking.
+ */
+async function getFollowingListId(context: FileImportContext, showId: number): Promise<string> {
+  const details = (await getShowDetails(context, showId)) as TmdbShowDetails | null;
+  if (!details?.status || !ENDED_SHOW_STATUSES.has(details.status)) {
+    return 'currently-watching';
+  }
+  const seasons = (details.seasons ?? []).filter(
+    (season) => season.season_number >= 1 && (season.episode_count ?? 0) > 0
+  );
+  if (seasons.length === 0) {
+    return 'currently-watching';
+  }
+
+  const tracking = await readEpisodeTracking(
+    context.db
+      .collection('users')
+      .doc(context.userId)
+      .collection('episode_tracking')
+      .doc(String(showId))
+  );
+  const tracked = new Set(Object.keys(tracking.items as Record<string, unknown>));
+  const complete = seasons.every((season) => {
+    for (let episode = 1; episode <= season.episode_count!; episode += 1) {
+      if (!tracked.has(`${season.season_number}_${episode}`)) return false;
+    }
+    return true;
+  });
+  return complete ? 'already-watched' : 'currently-watching';
 }
 
 async function writeMovie(
@@ -1645,7 +1687,10 @@ function parseMovie(raw: unknown, path: string): FileImportMovieEntity {
     entity.altTitle = parseTitle(movie.altTitle, `${path}.altTitle`);
   }
 
-  assertHasIdentifier(entity, path);
+  // A TMDB id identifies the movie on its own (Showly list items carry no title).
+  if (entity.tmdbId === undefined) {
+    assertHasIdentifier(entity, path);
+  }
   return entity;
 }
 

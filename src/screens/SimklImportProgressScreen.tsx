@@ -4,6 +4,7 @@ import type {
   FileImportIgnoredReason,
   FileImportSkipReason,
   FileImportStats,
+  ShowlyOnlyIgnoredReason,
 } from '@/functions/src/shared/fileImport';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
@@ -76,7 +77,10 @@ const SKIPPED_LABEL_KEYS: Record<FileImportSkipReason, string> = {
   unresolved_show: 'simklImport.skipped.unresolvedShow',
 };
 
-const IGNORED_LABEL_KEYS: Record<FileImportIgnoredReason, string> = {
+const IGNORED_LABEL_KEYS: Record<
+  Exclude<FileImportIgnoredReason, ShowlyOnlyIgnoredReason>,
+  string
+> = {
   anime_extras: 'simklImport.ignored.animeExtras',
   dropped_movies: 'simklImport.ignored.droppedMovies',
   duplicate_plays: 'simklImport.ignored.duplicatePlays',
