@@ -27,8 +27,14 @@ export interface WhatsNewAnnouncement {
  * strings in every locale. Set it to null to show nothing.
  */
 export const CURRENT_WHATS_NEW: WhatsNewAnnouncement | null = {
-  id: '2026-11-profile-backdrop',
+  id: '2026-11-showly-import',
   sections: [
+    {
+      id: 'showly-import',
+      titleKey: 'whatsNew.showlyImport.title',
+      descriptionKey: 'whatsNew.showlyImport.description',
+      visual: { type: 'image', source: require('@/assets/images/whats-new/showly-import.png') },
+    },
     {
       id: 'profile-backdrop',
       titleKey: 'whatsNew.profileBackdrop.title',

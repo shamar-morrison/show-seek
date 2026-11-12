@@ -1853,6 +1853,10 @@
   },
   "whatsNew": {
     "title": "ShowSeek'te neler yeni?",
+    "showlyImport": {
+      "title": "Showly'den içe aktarın",
+      "description": "Showly'den mi geçiyorsunuz? Premium ile dizilerinizi, izleme geçmişinizi, puanlarınızı ve listelerinizi getirin. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
+    },
     "profileBackdrop": {
       "title": "Profil arka planı",
       "description": "Herhangi bir film ya da dizinin afişini veya arka planını profilinizin arkasına koyun ve hangi kısmın görüneceğini seçmek için sürükleyin. Bir yapımın fotoğraflarını açıp Profil arka planı yap'a dokunun."

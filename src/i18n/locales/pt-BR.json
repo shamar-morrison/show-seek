@@ -2239,6 +2239,10 @@
   },
   "whatsNew": {
     "title": "O que há de novo no ShowSeek?",
+    "showlyImport": {
+      "title": "Importe do Showly",
+      "description": "Vindo do Showly? Com o Premium, traga suas séries, seu histórico, suas avaliações e suas listas. Você encontra isso em Configurações > Integrações."
+    },
     "profileBackdrop": {
       "title": "Fundo do perfil",
       "description": "Coloque o pôster ou um plano de fundo de qualquer filme ou série atrás do seu perfil e arraste para escolher a parte que aparece. Abra as fotos de um título e toque em Usar como fundo do perfil."
