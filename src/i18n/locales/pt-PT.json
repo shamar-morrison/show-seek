@@ -2273,9 +2273,9 @@
   },
   "whatsNew": {
     "title": "O que há de novo no ShowSeek?",
-    "showlyImport": {
-      "title": "Importe do Showly",
-      "description": "Vem do Showly? Com o Premium, traga as suas séries, o seu histórico, as suas classificações e as suas listas. Encontra esta opção em Definições > Integrações."
+    "seasonLists": {
+      "title": "Adicione temporadas às listas",
+      "description": "Quer apenas uma temporada? Toque em Adicionar à lista em qualquer temporada em Temporadas e episódios de uma série para a guardar em qualquer uma das suas listas."
     }
   },
   "shuffle": {

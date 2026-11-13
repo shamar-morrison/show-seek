@@ -2001,9 +2001,9 @@
   },
   "whatsNew": {
     "title": "Quoi de neuf sur ShowSeek ?",
-    "showlyImport": {
-      "title": "Importez depuis Showly",
-      "description": "Vous quittez Showly ? Avec Premium, emportez vos séries, votre historique, vos notes et vos listes. Rendez-vous dans Paramètres > Intégrations."
+    "seasonLists": {
+      "title": "Ajoutez des saisons à vos listes",
+      "description": "Une seule saison vous intéresse ? Touchez Ajouter à une liste sur n'importe quelle saison dans Saisons et épisodes d'une série pour l'enregistrer dans vos listes."
     }
   },
   "posterPicker": {
