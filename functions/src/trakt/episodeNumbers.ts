@@ -1,4 +1,3 @@
-import { canHaveEpisodeListEntries } from '../episodeListRollout';
 import { fetchTMDBJson } from './client';
 import { getTraktEpisodeRef, isWholeNumber } from './seasons';
 import { TraktSyncError, type TraktIds } from './types';
@@ -178,13 +177,10 @@ const asShowEntry = <T extends TraktEpisodeEntry>(item: T): T => {
 export async function alignTraktEpisodeNumbers<T extends TraktEpisodeEntry>(
   items: T[],
   {
-    keepEpisodes = true,
     lookup,
     maxLookups,
     session = createEpisodeNumberSession({ lookup, maxLookups }),
   }: {
-    /** False saves every episode as its show, with no TMDB requests (see episodeListRollout). */
-    keepEpisodes?: boolean;
     /** The run's shared lookups; a new session (from `lookup`, `maxLookups`) when omitted. */
     session?: EpisodeNumberSession;
     lookup?: EpisodeNumberLookup;
@@ -265,7 +261,7 @@ export async function alignTraktEpisodeNumbers<T extends TraktEpisodeEntry>(
       continue;
     }
 
-    const numbers = keepEpisodes ? await confirmNumbers(tvId, item.episode, ref) : null;
+    const numbers = await confirmNumbers(tvId, item.episode, ref);
     if (!numbers) {
       if (!listedShowIds.has(tvId)) {
         listedShowIds.add(tvId);
@@ -282,15 +278,3 @@ export async function alignTraktEpisodeNumbers<T extends TraktEpisodeEntry>(
   }
   return aligned;
 }
-
-/**
- * A user's Trakt list or watchlist entries ready to key: episodes aligned to TMDB for users who
- * can have episode list entries, saved as their show for everyone else (see episodeListRollout).
- * Pass the run's `session` so the watchlist and every list share one lookup budget and cache.
- */
-export const prepareTraktEpisodeEntries = <T extends TraktEpisodeEntry>(
-  userId: string,
-  items: T[],
-  session?: EpisodeNumberSession
-): Promise<T[]> =>
-  alignTraktEpisodeNumbers(items, { keepEpisodes: canHaveEpisodeListEntries(userId), session });

@@ -47,12 +47,11 @@ import {
 } from './constants';
 import { buildTaskDispatchOptions } from './enrichment';
 import {
+  alignTraktEpisodeNumbers,
   createEpisodeNumberSession,
   isTmdbUnavailableError,
-  prepareTraktEpisodeEntries,
   type EpisodeNumberSession,
 } from './episodeNumbers';
-import { canHaveEpisodeListEntries } from '../episodeListRollout';
 import { emptyItemsSynced, getSyncSummaryMode } from './status';
 import {
   didActivityFieldChange,
@@ -598,7 +597,7 @@ export const syncWatchlist = async (
 ): Promise<{ changedCount: number; itemCount: number; shouldEnrich: boolean }> => {
   // Episode entries take TMDB's numbering before they are keyed.
   const remoteItems = buildWatchlistItemsMap(
-    await prepareTraktEpisodeEntries(userId, traktWatchlist, episodeNumbers)
+    await alignTraktEpisodeNumbers(traktWatchlist, { session: episodeNumbers })
   );
   const result = await reconcileManagedList(
     userId,
@@ -705,7 +704,7 @@ export const reconcileCustomLists = async (
     const listItems = await getListItems(accessToken, username, traktList.ids.slug);
     let preparedItems: TraktListItem[];
     try {
-      preparedItems = await prepareTraktEpisodeEntries(userId, listItems, episodeNumbers);
+      preparedItems = await alignTraktEpisodeNumbers(listItems, { session: episodeNumbers });
     } catch (error) {
       if (!isTmdbUnavailableError(error)) {
         throw error;
@@ -793,16 +792,13 @@ export const getSyncSteps = ({
   lastActivities,
   listsSchemaVersion,
   previousActivities,
-  targetListsSchemaVersion = TRAKT_LISTS_SCHEMA_VERSION,
 }: {
   bootstrap: boolean;
   lastActivities: TraktLastActivities;
   listsSchemaVersion: number | undefined;
-  /** The version this user's lists should be read at (see getTraktListsSchemaVersion). */
-  targetListsSchemaVersion?: number;
   previousActivities: TraktLastActivities | undefined;
 }) => {
-  const forceListResync = listsSchemaVersion !== targetListsSchemaVersion;
+  const forceListResync = listsSchemaVersion !== TRAKT_LISTS_SCHEMA_VERSION;
   return {
     forceListResync,
     shouldSyncCustomLists:
@@ -827,14 +823,6 @@ export const getSyncSteps = ({
   };
 };
 
-/**
- * The lists schema version a user's lists are read at: the current one for users who can have
- * episode list entries, 1 (seasons only) for everyone else, so they still get the one-time
- * re-read once episodes roll out to them (see episodeListRollout).
- */
-export const getTraktListsSchemaVersion = (userId: string): number =>
-  canHaveEpisodeListEntries(userId) ? TRAKT_LISTS_SCHEMA_VERSION : 1;
-
 export const syncTraktImport = async (
   userId: string,
   accessToken: string,
@@ -849,7 +837,6 @@ export const syncTraktImport = async (
   const summaryMode = getSyncSummaryMode(currentIncrementalState);
   const lastActivities = await getLastActivities(accessToken);
   const bootstrap = summaryMode === 'bootstrap';
-  const targetListsSchemaVersion = getTraktListsSchemaVersion(userId);
   const {
     forceListResync,
     shouldSyncCustomLists,
@@ -862,7 +849,6 @@ export const syncTraktImport = async (
     lastActivities,
     listsSchemaVersion: currentIncrementalState?.listsSchemaVersion,
     previousActivities: currentIncrementalState?.lastActivities,
-    targetListsSchemaVersion,
   });
   const listsToEnrich: string[] = [];
   let customListsState = currentIncrementalState?.customLists ?? {};
@@ -1038,7 +1024,7 @@ export const syncTraktImport = async (
       bootstrapCompletedAt: currentIncrementalState?.bootstrapCompletedAt ?? Timestamp.now(),
       customLists: customListsState,
       lastActivities,
-      listsSchemaVersion: targetListsSchemaVersion,
+      listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
       schemaVersion: TRAKT_INCREMENTAL_SCHEMA_VERSION,
       updatedAt: Timestamp.now(),
     },
