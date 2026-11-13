@@ -12,6 +12,7 @@ import type {
   TraktWatchedShow,
   TraktWatchlistItem,
 } from './types';
+import { getTraktSeasonNumber } from './seasons';
 
 /**
  * Deterministically constructs the Firestore watch document ID for an imported movie watch event.
@@ -668,6 +669,22 @@ export const aggregateRatings = (rawRatings: RawRatingEvent[]): TraktRating[] =>
   return Array.from(ratingsByKey.values()).map((entry) => entry.rating);
 };
 
+/** The show object of an aggregated list or watchlist entry. */
+const toAggregatedShow = (
+  rawShow: { ids?: Partial<TraktIds>; title?: string; year?: number } | undefined,
+  showTmdbId: number
+): TraktShow => ({
+  ids: {
+    imdb: rawShow?.ids?.imdb,
+    slug: rawShow?.ids?.slug || String(showTmdbId),
+    tmdb: showTmdbId,
+    trakt: rawShow?.ids?.trakt ?? 0,
+    tvdb: rawShow?.ids?.tvdb,
+  },
+  title: rawShow?.title?.trim() || 'Untitled Show',
+  year: rawShow?.year ?? 0,
+});
+
 /**
  * Aggregates raw watchlist entries into valid, deduplicated TraktWatchlistItem[] items.
  */
@@ -728,6 +745,28 @@ export const aggregateWatchlist = (rawItems: RawWatchlistItem[]): TraktWatchlist
       (showTmdbId && !rawItem.type && !rawItem.movie)
     ) {
       if (typeof showTmdbId !== 'number' || showTmdbId <= 0) {
+        continue;
+      }
+
+      // A season keeps its own entry; episodes (and seasons without a number) count as the show.
+      const seasonNumber = getTraktSeasonNumber(rawItem);
+      if (seasonNumber !== undefined) {
+        const seasonKey = `season-${showTmdbId}-${seasonNumber}`;
+        const existingSeason = itemsByKey.get(seasonKey);
+        if (!existingSeason || listedAtMs >= existingSeason.listedAtMs) {
+          itemsByKey.set(seasonKey, {
+            item: {
+              id: rawItem.id ?? showTmdbId,
+              listed_at: listedAtIso,
+              notes: rawItem.notes,
+              rank: rawItem.rank ?? 0,
+              season: { ids: rawItem.season?.ids, number: seasonNumber },
+              show: toAggregatedShow(rawItem.show, showTmdbId),
+              type: 'season',
+            },
+            listedAtMs,
+          });
+        }
         continue;
       }
 
@@ -941,7 +980,37 @@ export const aggregateCustomLists = (
           continue;
         }
 
-        if (rawItem.type === 'show' || (showTmdbId && !rawItem.type)) {
+        const seasonNumber = getTraktSeasonNumber(rawItem);
+        if (seasonNumber !== undefined) {
+          if (typeof showTmdbId !== 'number' || showTmdbId <= 0) {
+            continue;
+          }
+
+          const key = `season-${showTmdbId}-${seasonNumber}`;
+          if (seenItemKeys.has(key)) {
+            continue;
+          }
+          seenItemKeys.add(key);
+
+          items.push({
+            id: rawItem.id ?? showTmdbId,
+            listed_at: listedAtIso,
+            notes: rawItem.notes,
+            rank: rawItem.rank ?? items.length + 1,
+            season: { ids: rawItem.season?.ids, number: seasonNumber },
+            show: toAggregatedShow(rawItem.show, showTmdbId),
+            type: 'season',
+          });
+          continue;
+        }
+
+        // Episodes (and seasons without a number) count as their show, as in the live sync.
+        if (
+          rawItem.type === 'show' ||
+          rawItem.type === 'season' ||
+          rawItem.type === 'episode' ||
+          (showTmdbId && !rawItem.type)
+        ) {
           if (typeof showTmdbId !== 'number' || showTmdbId <= 0) {
             continue;
           }

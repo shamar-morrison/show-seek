@@ -47,7 +47,12 @@ import {
   transformListItem,
   transformWatchlistItem,
 } from '@/functions/src/trakt/transforms';
-import type { TraktListItem } from '@/functions/src/trakt/types';
+import type { TraktListItem, TraktWatchlistItem } from '@/functions/src/trakt/types';
+import {
+  aggregateCustomLists,
+  aggregateWatchlist,
+  type RawWatchlistItem,
+} from '@/functions/src/trakt/zipAggregator';
 
 const show = {
   ids: { slug: 'breaking-bad', tmdb: 1396, trakt: 1 },
@@ -112,7 +117,7 @@ describe('transformListItem with seasons', () => {
 
 describe('transformWatchlistItem with seasons', () => {
   it('turns a watchlist season into a season entry', () => {
-    expect(transformWatchlistItem(seasonEntry(2))).toEqual({
+    expect(transformWatchlistItem(seasonEntry(2) as TraktWatchlistItem)).toEqual({
       addedAt: new Date('2026-01-02T03:04:05.000Z').getTime(),
       id: 1396,
       media_type: 'season',
@@ -151,5 +156,84 @@ describe('buildCustomListItemsMap with seasons', () => {
       })
     );
     expect(items['season-1396-1']).not.toHaveProperty('traktId');
+  });
+});
+
+describe('ZIP import aggregation with seasons', () => {
+  const rawShow = {
+    ids: { slug: 'breaking-bad', tmdb: 1396, trakt: 1 },
+    title: 'Breaking Bad',
+    year: 2008,
+  };
+  const rawEntries: RawWatchlistItem[] = [
+    { listed_at: '2026-01-01T00:00:00.000Z', show: rawShow, type: 'show' },
+    {
+      listed_at: '2026-01-02T00:00:00.000Z',
+      season: { ids: { tmdb: 3572 }, number: 1 },
+      show: rawShow,
+      type: 'season',
+    },
+    {
+      listed_at: '2026-01-03T00:00:00.000Z',
+      season: { ids: { tmdb: 3573 }, number: 2 },
+      show: rawShow,
+      type: 'season',
+    },
+    {
+      listed_at: '2026-01-04T00:00:00.000Z',
+      season: { ids: { tmdb: 3571 }, number: 0 },
+      show: rawShow,
+      type: 'season',
+    },
+    {
+      episode: { number: 1, season: 1, title: 'Pilot' },
+      listed_at: '2026-01-05T00:00:00.000Z',
+      show: { ...rawShow, ids: { ...rawShow.ids, tmdb: 1399 }, title: 'Other Show' },
+      type: 'episode',
+    },
+  ];
+
+  const keysOf = (items: (TraktListItem | TraktWatchlistItem)[]) =>
+    Object.keys(buildCustomListItemsMap(items as TraktListItem[])).sort();
+
+  it('keeps each season of a watchlist apart from its show', () => {
+    const watchlist = aggregateWatchlist(rawEntries);
+
+    expect(keysOf(watchlist)).toEqual([
+      'season-1396-0',
+      'season-1396-1',
+      'season-1396-2',
+      'tv-1396',
+      'tv-1399',
+    ]);
+    expect(watchlist.find((item) => item.season?.number === 2)).toMatchObject({
+      season: { ids: { tmdb: 3573 }, number: 2 },
+      show: { ids: { tmdb: 1396 }, title: 'Breaking Bad' },
+      type: 'season',
+    });
+  });
+
+  it('keeps seasons in custom lists and counts episodes as their show', () => {
+    const [{ items }] = aggregateCustomLists([
+      { ids: { slug: 'faves', trakt: 77 }, items: rawEntries, name: 'Faves' },
+    ]);
+
+    expect(keysOf(items)).toEqual([
+      'season-1396-0',
+      'season-1396-1',
+      'season-1396-2',
+      'tv-1396',
+      'tv-1399',
+    ]);
+  });
+
+  it('keeps one entry per season when a season is listed twice', () => {
+    const watchlist = aggregateWatchlist([
+      rawEntries[1],
+      { ...rawEntries[1], listed_at: '2026-02-01T00:00:00.000Z' },
+    ]);
+
+    expect(watchlist).toHaveLength(1);
+    expect(watchlist[0].listed_at).toBe('2026-02-01T00:00:00.000Z');
   });
 });

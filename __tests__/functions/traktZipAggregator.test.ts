@@ -706,11 +706,16 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       expect(result.stats.ratings).toBe(4);
       expect(result.ratings).toHaveLength(4);
 
-      // 7 Watchlist Items:
+      // 8 Watchlist Items:
       // Movies (4): Moana 2, Star Trek Section 31, Gladiator II, The Substance
-      // Shows (3): Breaking Bad (folded from season/episode entries), Attack on Titan, IT: Welcome to Derry
-      expect(result.stats.watchlistItems).toBe(7);
-      expect(result.watchlist).toHaveLength(7);
+      // Shows (3): Breaking Bad (folded from its two episode entries), Attack on Titan,
+      //   IT: Welcome to Derry
+      // Seasons (1): Breaking Bad Season 2 (kept as its own season entry)
+      expect(result.stats.watchlistItems).toBe(8);
+      expect(result.watchlist).toHaveLength(8);
+      expect(
+        result.watchlist.find((item) => item.type === 'season')
+      ).toMatchObject({ season: { number: 2 }, show: { ids: { tmdb: 1396 } } });
 
       // 1 Favorite: Wake Up Dead Man (movie: 812583)
       expect(result.stats.favorites).toBe(1);

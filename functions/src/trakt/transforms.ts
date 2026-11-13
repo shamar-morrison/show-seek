@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore';
 import { buildListItemKey } from '../shared/listItemKeys';
+import { buildSeasonEntryTitle, getTraktSeasonNumber } from './seasons';
 import type {
   TraktActivitiesGroup,
   TraktFavorite,
@@ -10,37 +11,10 @@ import type {
   TraktWatchlistItem,
 } from './types';
 
+export { buildSeasonEntryTitle, getTraktSeasonNumber };
+
 export const isListMediaType = (value: unknown): value is 'movie' | 'tv' => value === 'movie' || value === 'tv';
 
-/**
- * The season number of a Trakt list or watchlist entry that stands for one season, or undefined
- * when it isn't a season (or has no usable number, in which case it counts as its show). Episode
- * entries are never seasons: ShowSeek lists don't hold episodes, so they count as their show.
- */
-export const getTraktSeasonNumber = (item: {
-  episode?: unknown;
-  season?: { number?: unknown };
-  type?: string;
-}): number | undefined => {
-  if (item.episode || !item.season) {
-    return undefined;
-  }
-  if (item.type !== undefined && item.type !== 'season') {
-    return undefined;
-  }
-  const seasonNumber = item.season.number;
-  return typeof seasonNumber === 'number' && Number.isInteger(seasonNumber) && seasonNumber >= 0
-    ? seasonNumber
-    : undefined;
-};
-
-/**
- * The display title saved on a season entry before enrichment: "Show · Season N" (or "Show ·
- * Specials"), the shape the app writes, so app versions that predate seasons show something
- * sensible. Enrichment replaces it with TMDB's season name.
- */
-export const buildSeasonEntryTitle = (showTitle: string, seasonNumber: number): string =>
-  `${showTitle} · ${seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`}`;
 
 export const isTimestampLike = (value: unknown): value is { toMillis: () => number } =>
   typeof value === 'object' && value !== null && typeof (value as { toMillis?: unknown }).toMillis === 'function';
