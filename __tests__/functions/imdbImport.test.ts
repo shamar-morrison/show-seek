@@ -164,6 +164,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+  delete process.env.EPISODE_LIST_ENTRIES_UIDS;
 });
 
 describe('importImdbChunk', () => {
@@ -625,7 +626,54 @@ describe('importImdbChunk', () => {
     });
   });
 
+  describe('list episodes rollout', () => {
+    afterEach(() => {
+      delete process.env.EPISODE_LIST_ENTRIES_UIDS;
+    });
+
+    it('keeps skipping list episodes for accounts episodes are not rolled out to', async () => {
+      process.env.EPISODE_LIST_ENTRIES_UIDS = 'someone-else';
+      seedPremiumUser('user-1');
+      mockFetch.mockImplementation(async (url: string) =>
+        url.includes('/find/')
+          ? createFetchResponse({
+              tv_episode_results: [
+                { episode_number: 12, id: 62103, name: 'Phoenix', season_number: 2, show_id: 1396 },
+              ],
+            })
+          : createFetchResponse({ id: 1396, name: 'Breaking Bad', poster_path: null })
+      );
+
+      const result = await callImportImdbChunk({
+        auth: { token: { firebase: { sign_in_provider: 'password' } }, uid: 'user-1' },
+        data: {
+          entities: [
+            {
+              actions: [
+                {
+                  addedAt: 1_704_067_200_000,
+                  isWatchlist: true,
+                  kind: 'list',
+                  listName: 'WATCHLIST',
+                  sourceFileName: 'watchlist.csv',
+                },
+              ],
+              imdbId: 'tt1232247',
+              rawTitleType: 'TV Episode',
+              title: 'Phoenix',
+            },
+          ],
+        },
+      } as any);
+
+      expect(result.imported.listItems).toBe(0);
+      expect(result.skipped.unsupported_list_episode).toBe(1);
+      expect(getDoc('users/user-1/lists/watchlist')).toBeUndefined();
+    });
+  });
+
   it('imports watchlist and list episodes as episode entries in Should Watch and the custom list', async () => {
+    process.env.EPISODE_LIST_ENTRIES_UIDS = 'user-1';
     seedPremiumUser('user-1');
     seedDoc('users/user-1/lists/watchlist', {
       createdAt: 1,
@@ -729,6 +777,7 @@ describe('importImdbChunk', () => {
   });
 
   it('never re-adds an episode already in the list', async () => {
+    process.env.EPISODE_LIST_ENTRIES_UIDS = 'user-1';
     seedPremiumUser('user-1');
     const existing = {
       addedAt: 5,

@@ -1,3 +1,4 @@
+import { canHaveEpisodeListEntries } from '../episodeListRollout';
 import { fetchTMDBJson } from './client';
 import { getTraktEpisodeRef } from './seasons';
 import { TraktSyncError, type TraktIds } from './types';
@@ -90,8 +91,16 @@ const asShowEntry = <T extends TraktEpisodeEntry>(item: T): T => {
  */
 export async function alignTraktEpisodeNumbers<T extends TraktEpisodeEntry>(
   items: T[],
-  lookup: EpisodeNumberLookup = defaultLookup,
-  maxLookups: number = MAX_EPISODE_NUMBER_LOOKUPS
+  {
+    keepEpisodes = true,
+    lookup = defaultLookup,
+    maxLookups = MAX_EPISODE_NUMBER_LOOKUPS,
+  }: {
+    /** False saves every episode as its show, with no TMDB requests (see episodeListRollout). */
+    keepEpisodes?: boolean;
+    lookup?: EpisodeNumberLookup;
+    maxLookups?: number;
+  } = {}
 ): Promise<T[]> {
   if (!Array.isArray(items) || !items.some((item) => item && getTraktEpisodeRef(item))) {
     return items;
@@ -199,7 +208,7 @@ export async function alignTraktEpisodeNumbers<T extends TraktEpisodeEntry>(
       continue;
     }
 
-    const numbers = await confirmNumbers(tvId, item.episode, ref);
+    const numbers = keepEpisodes ? await confirmNumbers(tvId, item.episode, ref) : null;
     if (!numbers) {
       if (!listedShowIds.has(tvId)) {
         listedShowIds.add(tvId);
@@ -216,3 +225,13 @@ export async function alignTraktEpisodeNumbers<T extends TraktEpisodeEntry>(
   }
   return aligned;
 }
+
+/**
+ * A user's Trakt list or watchlist entries ready to key: episodes aligned to TMDB for users who
+ * can have episode list entries, saved as their show for everyone else (see episodeListRollout).
+ */
+export const prepareTraktEpisodeEntries = <T extends TraktEpisodeEntry>(
+  userId: string,
+  items: T[]
+): Promise<T[]> =>
+  alignTraktEpisodeNumbers(items, { keepEpisodes: canHaveEpisodeListEntries(userId) });

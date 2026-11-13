@@ -4,7 +4,7 @@ import {
   buildAlreadyWatchedItemsMap,
   buildCustomListItemsMap,
 } from './builders';
-import { alignTraktEpisodeNumbers } from './episodeNumbers';
+import { prepareTraktEpisodeEntries } from './episodeNumbers';
 import { TRAKT_MANAGED_DEFAULT_LIST_NAMES } from './constants';
 import {
   countManagedListItemsByMediaType,
@@ -82,7 +82,7 @@ export const reconcileCustomListsFromZip = async (
       const result = await reconcileManagedList(
         userId,
         listId,
-        buildCustomListItemsMap(await alignTraktEpisodeNumbers(items || [])),
+        buildCustomListItemsMap(await prepareTraktEpisodeEntries(userId, items || [])),
         {
           createdAt: Timestamp.fromDate(new Date(toMillisOrNow(list.created_at))),
           description: list.description || '',

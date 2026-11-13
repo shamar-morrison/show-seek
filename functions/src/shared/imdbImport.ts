@@ -13,7 +13,7 @@ export type ImdbImportSkipReason =
   | 'invalid_rating'
   | 'invalid_date'
   | 'unsupported_non_title_row'
-  /** No longer recorded (list episodes are imported); kept so older summaries still read. */
+  /** List episodes for accounts episode list entries aren't rolled out to (episodeListRollout). */
   | 'unsupported_list_episode'
   | 'unresolved_imdb_id'
   | 'unsupported_tmdb_result';
