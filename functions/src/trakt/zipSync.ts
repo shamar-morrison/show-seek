@@ -4,7 +4,11 @@ import {
   buildAlreadyWatchedItemsMap,
   buildCustomListItemsMap,
 } from './builders';
-import { prepareTraktEpisodeEntries } from './episodeNumbers';
+import {
+  createEpisodeNumberSession,
+  prepareTraktEpisodeEntries,
+  type EpisodeNumberSession,
+} from './episodeNumbers';
 import { TRAKT_MANAGED_DEFAULT_LIST_NAMES } from './constants';
 import {
   countManagedListItemsByMediaType,
@@ -38,6 +42,8 @@ export interface TraktZipImportResult {
 }
 
 export interface ReconcileCustomListsFromZipOptions {
+  /** The import's shared TMDB lookups for episode numbering. */
+  episodeNumbers?: EpisodeNumberSession;
   preserveLocalItems?: boolean;
 }
 
@@ -82,7 +88,9 @@ export const reconcileCustomListsFromZip = async (
       const result = await reconcileManagedList(
         userId,
         listId,
-        buildCustomListItemsMap(await prepareTraktEpisodeEntries(userId, items || [])),
+        buildCustomListItemsMap(
+          await prepareTraktEpisodeEntries(userId, items || [], options.episodeNumbers)
+        ),
         {
           createdAt: Timestamp.fromDate(new Date(toMillisOrNow(list.created_at))),
           description: list.description || '',
@@ -182,9 +190,12 @@ export const syncTraktZipImport = async (
   );
 
   // 4. Reconcile watchlist
+  // One TMDB lookup budget and season cache for the watchlist and every list in this import.
+  const episodeNumbers = createEpisodeNumberSession();
   const watchlistResult = await syncWatchlist(
     userId,
-    safeData.watchlist
+    safeData.watchlist,
+    episodeNumbers
   );
   if (watchlistResult.shouldEnrich) {
     listsToEnrich.push('watchlist');
@@ -202,7 +213,8 @@ export const syncTraktZipImport = async (
   // 6. Reconcile custom lists from local zip data
   const customListsResult = await reconcileCustomListsFromZip(
     userId,
-    safeData.customLists
+    safeData.customLists,
+    { episodeNumbers }
   );
   listsToEnrich.push(...customListsResult.listsToEnrich);
 

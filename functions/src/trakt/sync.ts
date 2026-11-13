@@ -46,7 +46,11 @@ import {
   TRAKT_TOKEN_REFRESH_THRESHOLD_MS,
 } from './constants';
 import { buildTaskDispatchOptions } from './enrichment';
-import { prepareTraktEpisodeEntries } from './episodeNumbers';
+import {
+  createEpisodeNumberSession,
+  prepareTraktEpisodeEntries,
+  type EpisodeNumberSession,
+} from './episodeNumbers';
 import { canHaveEpisodeListEntries } from '../episodeListRollout';
 import { emptyItemsSynced, getSyncSummaryMode } from './status';
 import {
@@ -586,11 +590,13 @@ export const reconcileRatings = async (
 
 export const syncWatchlist = async (
   userId: string,
-  traktWatchlist: TraktWatchlistItem[]
+  traktWatchlist: TraktWatchlistItem[],
+  /** The run's shared TMDB lookups for episode numbering. */
+  episodeNumbers?: EpisodeNumberSession
 ): Promise<{ changedCount: number; itemCount: number; shouldEnrich: boolean }> => {
   // Episode entries take TMDB's numbering before they are keyed.
   const remoteItems = buildWatchlistItemsMap(
-    await prepareTraktEpisodeEntries(userId, traktWatchlist)
+    await prepareTraktEpisodeEntries(userId, traktWatchlist, episodeNumbers)
   );
   const result = await reconcileManagedList(
     userId,
@@ -648,7 +654,9 @@ export const reconcileCustomLists = async (
   username: string,
   traktLists: TraktList[],
   previousCustomLists: Record<string, TraktIncrementalCustomListState>,
-  bootstrap: boolean
+  bootstrap: boolean,
+  /** The run's shared TMDB lookups for episode numbering. */
+  episodeNumbers?: EpisodeNumberSession
 ): Promise<{
   changedCount: number;
   customLists: Record<string, TraktIncrementalCustomListState>;
@@ -690,7 +698,7 @@ export const reconcileCustomLists = async (
     const result = await reconcileManagedList(
       userId,
       listId,
-      buildCustomListItemsMap(await prepareTraktEpisodeEntries(userId, listItems)),
+      buildCustomListItemsMap(await prepareTraktEpisodeEntries(userId, listItems, episodeNumbers)),
       {
         createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
         description: traktList.description || '',
@@ -830,6 +838,8 @@ export const syncTraktImport = async (
   });
   const listsToEnrich: string[] = [];
   let customListsState = currentIncrementalState?.customLists ?? {};
+  // One TMDB lookup budget and season cache for the watchlist and every list in this run.
+  const episodeNumbers = createEpisodeNumberSession();
   // A step that fails for a ShowSeek-side reason (e.g. a Firestore write) must not stop the
   // others from syncing. Trakt-side failures stop the run: every later step would hit them too.
   const stepFailures: unknown[] = [];
@@ -922,7 +932,7 @@ export const syncTraktImport = async (
   if (shouldSyncWatchlist) {
     try {
       const watchlist = await getWatchlist(accessToken);
-      const result = await syncWatchlist(userId, watchlist);
+      const result = await syncWatchlist(userId, watchlist, episodeNumbers);
       itemsSynced.watchlistItems =
         summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
       if (result.shouldEnrich) {
@@ -964,7 +974,8 @@ export const syncTraktImport = async (
         userProfile.username,
         traktLists,
         currentIncrementalState?.customLists ?? {},
-        bootstrap || forceListResync
+        bootstrap || forceListResync,
+        episodeNumbers
       );
 
       itemsSynced.lists =

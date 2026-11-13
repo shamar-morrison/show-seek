@@ -7559,21 +7559,22 @@ describe('Trakt episode entries', () => {
       expect(getSeason).toHaveBeenCalledTimes(2);
     });
 
-    it('saves episodes as their show once a lookup fails or the budget runs out', async () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    it('fails instead of guessing when a lookup fails, so confirmed episodes are never replaced', async () => {
+      const outage = Object.assign(new Error('TMDB is temporarily unavailable.'), {});
       const failing = {
         getSeason: jest.fn(async () => {
-          throw new Error('TMDB is down');
+          throw outage;
         }),
         findEpisode: jest.fn(async () => null),
       };
       const items = [episodeEntry(1, 64, { tvdb: 1 }), episodeEntry(2, 5, { tvdb: 2 })];
 
-      // Both become the same show, kept once.
-      expect(await alignTraktEpisodeNumbers(items, { lookup: failing })).toEqual([asShow(items[0])]);
-      expect(failing.getSeason).toHaveBeenCalledTimes(1);
+      await expect(alignTraktEpisodeNumbers(items, { lookup: failing })).rejects.toBe(outage);
       expect(failing.findEpisode).not.toHaveBeenCalled();
+    });
 
+    it('saves episodes past the request budget as their show', async () => {
+      const items = [episodeEntry(1, 64, { tvdb: 1 }), episodeEntry(2, 5, { tvdb: 2 })];
       // The first episode is confirmed; the budget then runs out, so the second is the show.
       const budgeted = lookup({ '1396:1': { episodes: [{ id: 1, episode_number: 64 }] } });
       expect(await alignTraktEpisodeNumbers(items, { lookup: budgeted, maxLookups: 1 })).toEqual([
@@ -7581,7 +7582,22 @@ describe('Trakt episode entries', () => {
         asShow(items[1]),
       ]);
       expect(budgeted.getSeason).toHaveBeenCalledTimes(1);
-      warnSpy.mockRestore();
+    });
+
+    it('shares one season cache and budget across the watchlist and every list in a run', async () => {
+      const { createEpisodeNumberSession } =
+        require('@/functions/src/trakt/episodeNumbers') as typeof import('@/functions/src/trakt/episodeNumbers');
+      const deps = lookup({ '1396:2': { episodes: [{ id: 62103, episode_number: 12 }] } });
+      const session = createEpisodeNumberSession({ lookup: deps, maxLookups: 1 });
+      const item = episodeEntry(2, 12, { tmdb: 62103 });
+
+      expect(await alignTraktEpisodeNumbers([item], { session })).toEqual([item]);
+      expect(await alignTraktEpisodeNumbers([item], { session })).toEqual([item]);
+      expect(deps.getSeason).toHaveBeenCalledTimes(1);
+
+      // The run's single request is spent, so a new season can't be checked.
+      const other = episodeEntry(3, 1, { tmdb: 1 });
+      expect(await alignTraktEpisodeNumbers([other], { session })).toEqual([asShow(other)]);
     });
 
     it('saves every episode as its show, with no TMDB request, when episodes are off', async () => {
