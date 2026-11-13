@@ -130,6 +130,39 @@ describe('HistoryService seasons in Already Watched', () => {
     ]);
   });
 
+  it('gives a month an entry when its only activity is an already-watched season', async () => {
+    const februaryAddedAt = new Date('2026-02-10T10:00:00Z').getTime();
+    mockFetchUserCollection.mockImplementation(async (path: string[], mapFn: any) => {
+      if (path[0] === 'lists') {
+        return mapFn({
+          docs: [
+            snapshotDoc('already-watched', {
+              name: 'Already Watched',
+              items: {
+                'season-700-2': {
+                  id: 700,
+                  media_type: 'season',
+                  season_number: 2,
+                  title: 'Other Show · Season 2',
+                  addedAt: februaryAddedAt,
+                  seasonRuntimeMinutes: 600,
+                },
+              },
+            }),
+          ],
+        });
+      }
+      return mapFn({ docs: [] });
+    });
+
+    const result = await historyService.fetchUserHistory({}, 1);
+
+    expect(result.totalWatchMinutes).toBe(600);
+    expect(result.monthlyStats).toEqual([
+      expect.objectContaining({ month: '2026-02', totalWatchMinutes: 600, watched: 0 }),
+    ]);
+  });
+
   it('gives the month detail the same totals', async () => {
     const detail = await historyService.fetchMonthDetail('2026-03', {});
 

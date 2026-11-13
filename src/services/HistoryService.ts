@@ -628,6 +628,9 @@ class HistoryService {
     episodesByMonth.forEach((_, month) => allMonths.add(month));
     ratingsByMonth.forEach((_, month) => allMonths.add(month));
     listItemsByMonth.forEach((_, month) => allMonths.add(month));
+    // Seasons aren't in listItems, so a month holding only an already-watched season (watch
+    // time but no counts) would otherwise get no entry while still counting in the totals.
+    alreadyWatchedSeasonsByMonth.forEach((_, month) => allMonths.add(month));
 
     // Sort months (most recent first)
     const sortedMonths = [...allMonths].sort().reverse();
