@@ -344,6 +344,27 @@ describe('TVSeasonsScreen season actions', () => {
         screen.getByTestId('season-add-to-list-button-1').props.accessibilityState
       ).toMatchObject({ selected: true });
     });
+
+    it("shows the list's own icon for one list and the multiple-lists icon for several", () => {
+      const { FavouriteIcon, CheckListIcon } = jest.requireActual('@hugeicons/core-free-icons');
+      const buttonIcon = (screen: ReturnType<typeof renderWithProviders>) =>
+        screen
+          .getByTestId('season-add-to-list-button-1')
+          .findAll((node: any) => node.props?.icon !== undefined)[0].props.icon;
+
+      const season = { id: 101, media_type: 'season', season_number: 1 };
+      mockListsData = [{ id: 'favorites', items: { 'season-101-1': season } }];
+      mockQueries();
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+      expect(buttonIcon(screen)).toBe(FavouriteIcon);
+
+      mockListsData = [
+        { id: 'favorites', items: { 'season-101-1': season } },
+        { id: 'watchlist', items: { 'season-101-1': season } },
+      ];
+      screen.rerender(<TVSeasonsScreen />);
+      expect(buttonIcon(screen)).toBe(CheckListIcon);
+    });
   });
 
   it('navigates to the TV detail screen when the header show title is pressed', () => {

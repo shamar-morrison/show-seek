@@ -56,6 +56,12 @@ import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { getMarkableEpisodes } from '@/src/utils/episodeEligibility';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { buildSeasonListItem } from '@/src/utils/seasonListItem';
+import {
+  getListColor,
+  getListIconComponent,
+  MULTIPLE_LISTS_COLOR,
+  MultipleListsIcon,
+} from '@/src/utils/listIcons';
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -63,7 +69,6 @@ import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   ArrowLeft01Icon,
-  CheckListIcon,
   Image01Icon,
   Note01Icon,
   NoteDoneIcon,
@@ -187,9 +192,9 @@ export default function TVSeasonsScreen() {
   const toastRef = useRef<ToastRef>(null);
   const [seasonForList, setSeasonForList] = useState<SeasonWithEpisodes | null>(null);
 
-  // Season numbers of this show that are in at least one list, for the add-to-list button state.
-  const seasonNumbersInLists = useMemo(() => {
-    const numbers = new Set<number>();
+  // The lists holding each season of this show, for the add-to-list button's icon.
+  const seasonListIdsByNumber = useMemo(() => {
+    const listIdsBySeason = new Map<number, string[]>();
     lists?.forEach((list) => {
       Object.values(list.items ?? {}).forEach((item) => {
         if (
@@ -197,11 +202,15 @@ export default function TVSeasonsScreen() {
           item.id === tvId &&
           typeof item.season_number === 'number'
         ) {
-          numbers.add(item.season_number);
+          const listIds = listIdsBySeason.get(item.season_number) ?? [];
+          if (!listIds.includes(list.id)) {
+            listIds.push(list.id);
+          }
+          listIdsBySeason.set(item.season_number, listIds);
         }
       });
     });
-    return numbers;
+    return listIdsBySeason;
   }, [lists, tvId]);
 
   const seasonListItem = useMemo(
@@ -994,7 +1003,22 @@ export default function TVSeasonsScreen() {
         const seasonDocId = `season-${tvId}-${seasonData.season_number}`;
         const seasonUserRating = seasonRatingsById.get(seasonDocId) || 0;
         const hasSeasonNote = seasonNotesByNumber.has(seasonData.season_number);
-        const isSeasonInAnyList = seasonNumbersInLists.has(seasonData.season_number);
+        // Same icon rules as a show's page: the list's own icon and color when the season is
+        // in one list, the multiple-lists icon when it's in several.
+        const seasonListIds = seasonListIdsByNumber.get(seasonData.season_number) ?? [];
+        const isSeasonInAnyList = seasonListIds.length > 0;
+        const seasonListIcon =
+          seasonListIds.length === 1
+            ? getListIconComponent(seasonListIds[0])
+            : isSeasonInAnyList
+              ? MultipleListsIcon
+              : PlusSignIcon;
+        const seasonListColor =
+          seasonListIds.length === 1
+            ? getListColor(seasonListIds[0], accentColor)
+            : isSeasonInAnyList
+              ? MULTIPLE_LISTS_COLOR
+              : COLORS.white;
         const isOpeningSeasonNote = openingNoteSeasonNumber === seasonData.season_number;
         const displaySeasonUserRating = Number.isInteger(seasonUserRating)
           ? seasonUserRating.toString()
@@ -1170,11 +1194,7 @@ export default function TVSeasonsScreen() {
                 accessibilityState={{ selected: isSeasonInAnyList }}
                 testID={`season-add-to-list-button-${seasonData.season_number}`}
               >
-                <AppIcon
-                  icon={isSeasonInAnyList ? CheckListIcon : PlusSignIcon}
-                  size={24}
-                  color={isSeasonInAnyList ? accentColor : COLORS.white}
-                />
+                <AppIcon icon={seasonListIcon} size={24} color={seasonListColor} />
               </TouchableOpacity>
               {hasSeasonProgress && (
                 <TouchableOpacity
@@ -1315,7 +1335,7 @@ export default function TVSeasonsScreen() {
       handleOpenSeasonRating,
       handleOpenSeasonNote,
       handleOpenSeasonAddToList,
-      seasonNumbersInLists,
+      seasonListIdsByNumber,
       seasonNotesByNumber,
       openingNoteSeasonNumber,
       episodeTracking,
