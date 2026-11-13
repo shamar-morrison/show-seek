@@ -1384,7 +1384,7 @@
       "checkinsTitle": "İzleme geçmişi ve ilerleme",
       "checkinsDescription": "Kontrol kayıtları film izlemeleri ekler, desteklendiğinde dizileri izlendi olarak işaretler ve satır açıkça eşleştiğinde bölüm ilerlemesini günceller.",
       "skipsTitle": "Atlanan veriler bildirilir",
-      "skipsDescription": "Desteklenmeyen kişiler, görseller, videolar, hatalı satırlar, çözümlenmemiş IMDb kimlikleri ve liste bölümleri atlanır ve son özette sayılır."
+      "skipsDescription": "Desteklenmeyen kişiler, görseller, videolar, hatalı satırlar ve çözümlenmemiş IMDb kimlikleri atlanır ve son özette sayılır. Listelerdeki bölümler bölüm olarak korunur."
     },
     "howItWorks": {
       "selectTitle": "IMDb CSV dışa aktarımlarını seçin",

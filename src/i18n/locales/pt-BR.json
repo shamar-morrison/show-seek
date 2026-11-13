@@ -1384,7 +1384,7 @@
       "checkinsTitle": "Histórico assistido e progresso",
       "checkinsDescription": "Check-ins adicionam visualizações de filmes, marcam séries como assistidas quando compatível e atualizam o progresso de episódios quando a linha pode ser associada corretamente.",
       "skipsTitle": "Os dados ignorados são reportados",
-      "skipsDescription": "Pessoas, imagens e vídeos não compatíveis, linhas malformadas, IDs do IMDb não resolvidos e episódios em listas são ignorados e contabilizados no resumo final."
+      "skipsDescription": "Pessoas, imagens e vídeos não compatíveis, linhas malformadas e IDs do IMDb não resolvidos são ignorados e contabilizados no resumo final. Episódios em listas são mantidos como episódios."
     },
     "howItWorks": {
       "selectTitle": "Escolha seus arquivos CSV exportados do IMDb",

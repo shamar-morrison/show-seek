@@ -1384,7 +1384,7 @@
       "checkinsTitle": "Watched history and progress",
       "checkinsDescription": "Check-ins add movie watches, mark shows watched where supported, and update episode progress when the row maps cleanly.",
       "skipsTitle": "Skipped data is reported",
-      "skipsDescription": "Unsupported people, images, videos, malformed rows, unresolved IMDb IDs, and list episodes are skipped and counted in the final summary."
+      "skipsDescription": "Unsupported people, images, videos, malformed rows and unresolved IMDb IDs are skipped and counted in the final summary. Episodes in lists are kept as episodes."
     },
     "howItWorks": {
       "selectTitle": "Pick your IMDb CSV exports",

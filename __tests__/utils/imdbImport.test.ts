@@ -63,8 +63,24 @@ describe('imdbImport utilities', () => {
     expect(prepared.chunks[0].entities).toHaveLength(2);
     expect(prepared.chunks[0].entities[0].actions.length).toBeGreaterThan(1);
     expect(prepared.stats.ignored.item_notes).toBe(1);
-    expect(prepared.stats.skipped.unsupported_list_episode).toBe(1);
+    expect(prepared.stats.skipped.unsupported_list_episode ?? 0).toBe(0);
     expect(prepared.stats.skipped.unsupported_file).toBe(1);
+  });
+
+  it('sends watchlist and list episode rows on as list actions', () => {
+    const prepared = prepareImdbImport([
+      {
+        fileName: 'watchlist.csv',
+        content: [
+          'Const,Created,Modified,Description,Title,Title Type',
+          'tt1232247,2025-12-22,2025-12-22,,Phoenix,TV Episode',
+        ].join('\n'),
+      },
+    ]);
+
+    const [entity] = prepared.chunks[0].entities;
+    expect(entity.imdbId).toBe('tt1232247');
+    expect(entity.actions).toEqual([expect.objectContaining({ kind: 'list', isWatchlist: true })]);
   });
 
   it('tracks processed entities per file using unique IMDb ids while preserving actions', () => {

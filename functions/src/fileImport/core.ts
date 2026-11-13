@@ -25,7 +25,7 @@ import {
   upsertMovieOrTvRating,
   upsertMovieWatch,
   type ImportWriteContext,
-  type ResolvedListMedia,
+  type ResolvedTitleMedia,
   type TmdbFindResponse,
   type TmdbMovieResult,
   type TmdbTvDetails,
@@ -1204,7 +1204,7 @@ async function writeShow(
   // `following` is decided once every part's episodes are written (the client sends parts in order).
   const isLastPart = !entity.part || entity.part.index === entity.part.total - 1;
   const writesBefore = countWrites(stats);
-  const media: ResolvedListMedia = { kind: 'tv', value: show };
+  const media: ResolvedTitleMedia = { kind: 'tv', value: show };
 
   if (resolution.unmatched > 0) {
     skip(stats, 'unmatched_episode', resolution.unmatched);
@@ -1395,7 +1395,7 @@ async function writeMovie(
   }
 
   const movie = resolution.value;
-  const media: ResolvedListMedia = { kind: 'movie', value: movie };
+  const media: ResolvedTitleMedia = { kind: 'movie', value: movie };
   const writesBefore = countWrites(stats);
 
   const watches = Array.from(new Set(entity.watches)).sort((left, right) => left - right);
@@ -1451,7 +1451,7 @@ async function addToList(
   stats: FileImportStats,
   listId: string,
   addedAt: number,
-  media: ResolvedListMedia
+  media: ResolvedTitleMedia
 ): Promise<void> {
   const didWrite = await upsertListMembership(
     context,
@@ -1469,7 +1469,7 @@ async function addToCustomLists(
   context: FileImportContext,
   stats: FileImportStats,
   lists: FileImportListMembership[],
-  media: ResolvedListMedia
+  media: ResolvedTitleMedia
 ): Promise<void> {
   for (const list of lists) {
     const { created, listId } = await ensureCustomList(context, list.name, list.description);
@@ -1487,7 +1487,7 @@ async function writeRating(
   context: FileImportContext,
   stats: FileImportStats,
   rating: FileImportRating | null,
-  media: ResolvedListMedia
+  media: ResolvedTitleMedia
 ): Promise<void> {
   if (!rating) {
     return;

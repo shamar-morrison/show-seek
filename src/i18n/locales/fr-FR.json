@@ -1384,7 +1384,7 @@
       "checkinsTitle": "Historique de visionnage et progression",
       "checkinsDescription": "Les check-ins ajoutent des vues de films, marquent des séries comme vues lorsque c’est pris en charge et mettent à jour la progression des épisodes quand la ligne est correctement associée.",
       "skipsTitle": "Les données ignorées sont signalées",
-      "skipsDescription": "Les personnes, images et vidéos non prises en charge, les lignes mal formées, les ID IMDb introuvables et les épisodes présents dans des listes sont ignorés et comptabilisés dans le résumé final."
+      "skipsDescription": "Les personnes, images et vidéos non prises en charge, les lignes mal formées et les ID IMDb introuvables sont ignorés et comptabilisés dans le résumé final. Les épisodes présents dans des listes sont conservés en tant qu'épisodes."
     },
     "howItWorks": {
       "selectTitle": "Choisissez vos exports CSV IMDb",

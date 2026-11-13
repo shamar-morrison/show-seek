@@ -1384,7 +1384,7 @@
       "checkinsTitle": "Historial y progreso de reproducción",
       "checkinsDescription": "Los check-ins agregan reproducciones de películas, marcan series como vistas cuando es compatible y actualizan el progreso de episodios cuando la fila se puede relacionar correctamente.",
       "skipsTitle": "Se reportan los datos omitidos",
-      "skipsDescription": "Las personas, imágenes y videos no compatibles, las filas mal formadas, los ID de IMDb sin resolver y los episodios de listas se omiten y se contabilizan en el resumen final."
+      "skipsDescription": "Las personas, imágenes y videos no compatibles, las filas mal formadas y los ID de IMDb sin resolver se omiten y se contabilizan en el resumen final. Los episodios de las listas se guardan como episodios."
     },
     "howItWorks": {
       "selectTitle": "Elige tus archivos CSV exportados de IMDb",

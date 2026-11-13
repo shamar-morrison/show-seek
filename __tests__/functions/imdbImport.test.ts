@@ -625,6 +625,161 @@ describe('importImdbChunk', () => {
     });
   });
 
+  it('imports watchlist and list episodes as episode entries in Should Watch and the custom list', async () => {
+    seedPremiumUser('user-1');
+    seedDoc('users/user-1/lists/watchlist', {
+      createdAt: 1,
+      items: { 'tv-1396': { id: 1396, media_type: 'tv', title: 'Breaking Bad' } },
+      name: 'Should Watch',
+    });
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('/find/tt1232247')) {
+        return createFetchResponse({
+          movie_results: [],
+          person_results: [],
+          tv_episode_results: [
+            {
+              air_date: '2009-05-24',
+              episode_number: 12,
+              id: 62103,
+              name: 'Phoenix',
+              runtime: 47,
+              season_number: 2,
+              show_id: 1396,
+              still_path: '/phoenix.jpg',
+              vote_average: 9.1,
+            },
+          ],
+          tv_results: [],
+        });
+      }
+
+      if (url.includes('/tv/1396')) {
+        return createFetchResponse({
+          genres: [{ id: 18 }, { id: 80 }],
+          id: 1396,
+          name: 'Breaking Bad',
+          poster_path: '/show.jpg',
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    const result = await callImportImdbChunk({
+      auth: { token: { firebase: { sign_in_provider: 'password' } }, uid: 'user-1' },
+      data: {
+        entities: [
+          {
+            actions: [
+              {
+                addedAt: 1_704_067_200_000,
+                isWatchlist: true,
+                kind: 'list',
+                listName: 'WATCHLIST',
+                sourceFileName: 'watchlist.csv',
+              },
+              {
+                addedAt: 1_704_153_600_000,
+                isWatchlist: false,
+                kind: 'list',
+                listName: 'Favourite Episodes',
+                sourceFileName: 'favourite-episodes.csv',
+              },
+            ],
+            imdbId: 'tt1232247',
+            rawTitleType: 'TV Episode',
+            title: 'Phoenix',
+          },
+        ],
+      },
+    } as any);
+
+    const entry = {
+      episode_name: 'Phoenix',
+      episode_number: 12,
+      episodeRuntimeMinutes: 47,
+      first_air_date: '2009-05-24',
+      genre_ids: [18, 80],
+      id: 1396,
+      media_type: 'episode',
+      name: 'Breaking Bad · S2E12 · Phoenix',
+      poster_path: '/show.jpg',
+      release_date: '2009-05-24',
+      runtimeMinutes: 47,
+      season_number: 2,
+      show_name: 'Breaking Bad',
+      still_path: '/phoenix.jpg',
+      title: 'Breaking Bad · S2E12 · Phoenix',
+      vote_average: 9.1,
+    };
+    expect(result.imported.listItems).toBe(2);
+    expect(result.skipped.unsupported_list_episode ?? 0).toBe(0);
+    // The show's own entry, under its legacy-free key, is untouched.
+    expect(getDoc('users/user-1/lists/watchlist')?.items).toEqual({
+      'tv-1396': { id: 1396, media_type: 'tv', title: 'Breaking Bad' },
+      'episode-1396-2-12': { ...entry, addedAt: 1_704_067_200_000 },
+    });
+    expect(getDoc('users/user-1/lists/favourite-episodes')).toMatchObject({
+      items: { 'episode-1396-2-12': { ...entry, addedAt: 1_704_153_600_000 } },
+      name: 'Favourite Episodes',
+    });
+    // The show is looked up once for both lists.
+    expect(mockFetch.mock.calls.filter(([url]) => url.includes('/tv/1396'))).toHaveLength(1);
+  });
+
+  it('never re-adds an episode already in the list', async () => {
+    seedPremiumUser('user-1');
+    const existing = {
+      addedAt: 5,
+      id: 1396,
+      media_type: 'episode',
+      season_number: 2,
+      episode_number: 12,
+    };
+    seedDoc('users/user-1/lists/watchlist', {
+      createdAt: 1,
+      items: { 'episode-1396-2-12': existing },
+      name: 'Should Watch',
+    });
+    mockFetch.mockImplementation(async (url: string) =>
+      url.includes('/find/')
+        ? createFetchResponse({
+            tv_episode_results: [
+              { episode_number: 12, id: 62103, name: 'Phoenix', season_number: 2, show_id: 1396 },
+            ],
+          })
+        : createFetchResponse({ id: 1396, name: 'Breaking Bad', poster_path: null })
+    );
+
+    const result = await callImportImdbChunk({
+      auth: { token: { firebase: { sign_in_provider: 'password' } }, uid: 'user-1' },
+      data: {
+        entities: [
+          {
+            actions: [
+              {
+                addedAt: 1_704_067_200_000,
+                isWatchlist: true,
+                kind: 'list',
+                listName: 'WATCHLIST',
+                sourceFileName: 'watchlist.csv',
+              },
+            ],
+            imdbId: 'tt1232247',
+            rawTitleType: 'TV Episode',
+            title: 'Phoenix',
+          },
+        ],
+      },
+    } as any);
+
+    expect(result.imported.listItems).toBe(0);
+    expect(getDoc('users/user-1/lists/watchlist')?.items).toEqual({
+      'episode-1396-2-12': existing,
+    });
+  });
+
   it('maps episode ratings and check-ins using TMDB episode results and show details once', async () => {
     seedPremiumUser('user-1');
     mockFetch.mockImplementation(async (url: string) => {
