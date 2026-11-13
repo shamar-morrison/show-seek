@@ -10,6 +10,7 @@ import {
   getLegacyListItemKeyForRef,
   getListItemKey,
   getListItemRefCandidateKeys,
+  getListMembershipKey,
   getStoredListItemKeys,
   isRuntimeStampLeftover,
   normalizeListItemsMap,
@@ -74,20 +75,6 @@ export interface ListMediaItem {
   show_name?: string;
 }
 
-/**
- * Membership-index key for an entry: `${id}-${media_type}` for movies and shows (unchanged),
- * `${tvId}-season-${seasonNumber}` for seasons. Null when the entry can't be keyed.
- */
-export const getListMembershipKey = (ref: Partial<ListItemRef> | null | undefined): string | null => {
-  if (!ref || typeof ref.id !== 'number') return null;
-  if (ref.media_type === 'movie' || ref.media_type === 'tv') {
-    return `${ref.id}-${ref.media_type}`;
-  }
-  if (ref.media_type === 'season' && getListItemKey(ref)) {
-    return `${ref.id}-season-${ref.season_number}`;
-  }
-  return null;
-};
 
 export interface UserList {
   id: string;

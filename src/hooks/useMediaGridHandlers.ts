@@ -2,6 +2,8 @@ import { AddToListModalRef } from '@/src/components/AddToListModal';
 import { ToastRef } from '@/src/components/ui/Toast';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { ListMediaItem } from '@/src/services/ListService';
+import { getListItemUiKey } from '@/src/utils/listItemKeys';
+import { getListItemRoute } from '@/src/utils/listItemRoutes';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -20,9 +22,10 @@ export function useMediaGridHandlers(isLoading: boolean) {
   const toastRef = useRef<ToastRef>(null);
   const addToListModalRef = useRef<AddToListModalRef>(null);
 
-  const getItemKey = useCallback((item: Pick<ListMediaItem, 'id' | 'media_type'>) => {
-    return `${item.id}-${item.media_type}`;
-  }, []);
+  const getItemKey = useCallback(
+    (item: Pick<ListMediaItem, 'id' | 'media_type' | 'season_number'>) => getListItemUiKey(item),
+    []
+  );
 
   const toggleSelection = useCallback(
     (item: ListMediaItem) => {
@@ -58,13 +61,7 @@ export function useMediaGridHandlers(isLoading: boolean) {
         return;
       }
 
-      const basePath = `/(tabs)/${currentTab}`;
-
-      if (item.media_type === 'movie') {
-        router.push(`${basePath}/movie/${item.id}` as any);
-      } else {
-        router.push(`${basePath}/tv/${item.id}` as any);
-      }
+      router.push(getListItemRoute(`/(tabs)/${currentTab}`, item) as any);
     },
     [currentTab, isSelectionMode, router, toggleSelection]
   );

@@ -1,4 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import { getListItemUiKey } from '@/src/utils/listItemKeys';
 import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
@@ -195,11 +196,12 @@ export default function FavoritesScreen() {
   }, []);
 
   const removeSelectedItemFromList = useCallback(
-    (mediaId: number, mediaType: 'movie' | 'tv') =>
+    (mediaId: number, mediaType: ListMediaItem['media_type'], seasonNumber?: number) =>
       removeMutation.mutateAsync({
         listId: DEFAULT_LIST_IDS[3],
         mediaId,
         mediaType,
+        seasonNumber,
       }),
     [removeMutation]
   );
@@ -302,7 +304,7 @@ export default function FavoritesScreen() {
     [handleItemPress, handleLongPress, isItemSelected, isSelectionMode, movieLabel, tvShowLabel]
   );
 
-  const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
+  const keyExtractor = useCallback((item: ListMediaItem) => getListItemUiKey(item), []);
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;

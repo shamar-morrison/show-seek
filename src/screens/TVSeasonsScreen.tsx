@@ -97,7 +97,10 @@ export default function TVSeasonsScreen() {
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const tvId = Number(id);
-  const targetSeasonNumber = season ? Number(season) : null;
+  // Season 0 (specials) is a valid target, so check for a number rather than truthiness.
+  const parsedTargetSeason = typeof season === 'string' && season !== '' ? Number(season) : NaN;
+  const targetSeasonNumber =
+    Number.isInteger(parsedTargetSeason) && parsedTargetSeason >= 0 ? parsedTargetSeason : null;
   const [expandedSeason, setExpandedSeason] = useState<number | null>(() => {
     return targetSeasonNumber;
   });
@@ -760,7 +763,7 @@ export default function TVSeasonsScreen() {
 
   useEffect(() => {
     if (
-      !targetSeasonNumber ||
+      targetSeasonNumber === null ||
       hasScrolledToSeason ||
       targetSeasonIndex < 0 ||
       seasonRows.length === 0

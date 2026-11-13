@@ -10,13 +10,17 @@ import { Alert } from 'react-native';
 interface UseListDetailMultiSelectActionsParams {
   sourceListId?: string;
   sourceListName: string;
-  selectedMediaItems: Array<Pick<ListMediaItem, 'id' | 'media_type'>>;
+  selectedMediaItems: Array<Pick<ListMediaItem, 'id' | 'media_type' | 'season_number'>>;
   selectedCount: number;
   isSelectionMode: boolean;
   isRemoving: boolean;
   clearSelection: () => void;
   showToast: (message: string) => void;
-  removeItemFromSource: (mediaId: number, mediaType: 'movie' | 'tv') => Promise<unknown>;
+  removeItemFromSource: (
+    mediaId: number,
+    mediaType: ListMediaItem['media_type'],
+    seasonNumber?: number
+  ) => Promise<unknown>;
   isSearchActive: boolean;
   deactivateSearch: () => void;
   dismissListActionsModal: () => void;
@@ -106,7 +110,7 @@ export function useListDetailMultiSelectActions({
             try {
               for (const item of selectedMediaItems) {
                 try {
-                  await removeItemFromSource(item.id, item.media_type);
+                  await removeItemFromSource(item.id, item.media_type, item.season_number);
                 } catch {
                   failed += 1;
                 } finally {

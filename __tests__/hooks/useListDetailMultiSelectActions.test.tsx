@@ -28,7 +28,7 @@ function createParams(overrides: Partial<HookParams> = {}): HookParams {
     sourceListName: 'Watchlist',
     selectedMediaItems: [
       { id: 1, media_type: 'movie' },
-      { id: 2, media_type: 'tv' },
+      { id: 2, media_type: 'season', season_number: 0 },
     ],
     selectedCount: 2,
     isSelectionMode: true,
@@ -111,8 +111,9 @@ describe('useListDetailMultiSelectActions', () => {
     expect(showToast).toHaveBeenCalledWith('2 items removed');
     expect(clearSelection).toHaveBeenCalledTimes(1);
     expect(removeItemFromSource).toHaveBeenCalledTimes(2);
-    expect(removeItemFromSource).toHaveBeenNthCalledWith(1, 1, 'movie');
-    expect(removeItemFromSource).toHaveBeenNthCalledWith(2, 2, 'tv');
+    expect(removeItemFromSource).toHaveBeenNthCalledWith(1, 1, 'movie', undefined);
+    // A season is removed by its number, including specials (season 0).
+    expect(removeItemFromSource).toHaveBeenNthCalledWith(2, 2, 'season', 0);
   });
 
   it('continues on failures and shows failure summary toast', async () => {

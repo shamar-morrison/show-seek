@@ -103,3 +103,25 @@ export const normalizeListItemsMap = <T extends Partial<ListItemLike>>(
 
   return normalized;
 };
+
+/**
+ * A stable React key / selection key for a list entry. Two seasons of the same show share `id`
+ * and must still get distinct keys, so this uses the storage key when there is one.
+ */
+export const getListItemUiKey = (item: Partial<ListItemLike>): string =>
+  getListItemKey(item) ?? `${item.media_type ?? 'unknown'}-${item.id ?? 'unknown'}`;
+
+/**
+ * Membership-index key for an entry: `${id}-${media_type}` for movies and shows (unchanged),
+ * `${tvId}-season-${seasonNumber}` for seasons. Null when the entry can't be keyed.
+ */
+export const getListMembershipKey = (item: Partial<ListItemLike> | null | undefined): string | null => {
+  if (!item || typeof item.id !== 'number') return null;
+  if (item.media_type === 'movie' || item.media_type === 'tv') {
+    return `${item.id}-${item.media_type}`;
+  }
+  if (item.media_type === 'season' && getListItemKey(item)) {
+    return `${item.id}-season-${item.season_number}`;
+  }
+  return null;
+};

@@ -1,4 +1,6 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import { getListItemUiKey } from '@/src/utils/listItemKeys';
+import { getListItemRoute } from '@/src/utils/listItemRoutes';
 import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
@@ -269,8 +271,8 @@ export default function CustomListDetailScreen() {
   }, []);
 
   const removeSelectedItemFromList = useCallback(
-    (mediaId: number, mediaType: 'movie' | 'tv') =>
-      removeMutation.mutateAsync({ listId: id, mediaId, mediaType }),
+    (mediaId: number, mediaType: ListMediaItem['media_type'], seasonNumber?: number) =>
+      removeMutation.mutateAsync({ listId: id, mediaId, mediaType, seasonNumber }),
     [id, removeMutation]
   );
 
@@ -319,11 +321,7 @@ export default function CustomListDetailScreen() {
       setShuffleModalVisible(false);
       // Small delay to let modal close, then navigate
       setTimeout(() => {
-        const route =
-          item.media_type === 'movie'
-            ? `/(tabs)/library/movie/${item.id}`
-            : `/(tabs)/library/tv/${item.id}`;
-        router.push(route as any);
+        router.push(getListItemRoute('/(tabs)/library', item) as any);
       }, 300);
     },
     [router]
@@ -442,7 +440,7 @@ export default function CustomListDetailScreen() {
     [handleItemPress, handleLongPress, isItemSelected, isSelectionMode]
   );
 
-  const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
+  const keyExtractor = useCallback((item: ListMediaItem) => getListItemUiKey(item), []);
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
