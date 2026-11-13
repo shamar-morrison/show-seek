@@ -3,11 +3,8 @@ import { db } from '@/src/firebase/config';
 import { toMillis } from '@/src/utils/timestamps';
 import { getSignedInUser } from '@/src/services/serviceSupport';
 import { EPISODE_PAGES_COLLECTION } from '@/functions/src/shared/episodePages';
-import {
-  getListItemPageDocId,
-  LIST_ITEM_PAGES_COLLECTION,
-} from '@/functions/src/shared/listPages';
-import { isSeasonListItemKey } from '@/functions/src/shared/listItemKeys';
+import { getListItemPageDocId, LIST_ITEM_PAGES_COLLECTION } from '@/functions/src/shared/listPages';
+import { isEpisodeListItemKey, isSeasonListItemKey } from '@/functions/src/shared/listItemKeys';
 import { getUnstampedListItemRuntimeKey } from '@/src/utils/listFilters';
 import { getSeasonRuntimeMinutes } from '@/src/utils/seasonListItem';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
@@ -52,10 +49,14 @@ export interface UnstampedListItem {
   itemKey: string;
   /** Overflow page holding the item (0 or absent = the list document). */
   page?: number;
-  /** For a season, `mediaId` is the show's ID and `seasonNumber` is set. */
-  mediaType: 'movie' | 'tv' | 'season';
+  /**
+   * For a season, `mediaId` is the show's ID and `seasonNumber` is set; an episode also has
+   * `episodeNumber`. Episodes are only looked up by `resolveListItemRuntimes`.
+   */
+  mediaType: 'movie' | 'tv' | 'season' | 'episode';
   mediaId: number;
   seasonNumber?: number;
+  episodeNumber?: number;
   addedAt: number;
 }
 
@@ -109,6 +110,16 @@ async function defaultGetSeasonRuntime(
 ): Promise<number | null> {
   const season = await tmdbApi.getSeasonDetails(tvShowId, seasonNumber);
   return getSeasonRuntimeMinutes(season?.episodes) ?? null;
+}
+
+async function defaultGetEpisodeRuntime(
+  tvShowId: number,
+  seasonNumber: number,
+  episodeNumber: number
+): Promise<number | null> {
+  const episode = await tmdbApi.getEpisodeDetails(tvShowId, seasonNumber, episodeNumber);
+  const runtime = episode?.runtime;
+  return typeof runtime === 'number' && runtime > 0 ? runtime : null;
 }
 
 async function defaultGetMovieRuntime(movieId: number): Promise<number | null> {
@@ -166,6 +177,10 @@ function defaultStampRuntimes(stamps: RuntimeStamps): void {
       if (isSeasonListItemKey(itemKey)) {
         updates[`items.${itemKey}.seasonRuntimeMinutes`] = minutes;
       }
+      // The same for episodes, whose code reads only `episodeRuntimeMinutes`.
+      if (isEpisodeListItemKey(itemKey)) {
+        updates[`items.${itemKey}.episodeRuntimeMinutes`] = minutes;
+      }
       updatesByPage.set(page, updates);
     });
     updatesByPage.forEach((updates, page) => {
@@ -194,7 +209,8 @@ function defaultStampRuntimes(stamps: RuntimeStamps): void {
 
 const isAbortError = (error: unknown): boolean => {
   const status =
-    (error as { status?: number })?.status ?? (error as { response?: { status?: number } })?.response?.status;
+    (error as { status?: number })?.status ??
+    (error as { response?: { status?: number } })?.response?.status;
   const code = (error as { code?: string })?.code;
   const message = ((error as { message?: string })?.message ?? '').toLowerCase();
   return (
@@ -218,7 +234,7 @@ const attemptedThisSession = new Set<string>();
 
 const episodeAttemptKey = (tvShowId: number): string => `show:${tvShowId}`;
 const listItemAttemptKey = (
-  item: Pick<UnstampedListItem, 'mediaType' | 'mediaId' | 'seasonNumber'>
+  item: Pick<UnstampedListItem, 'mediaType' | 'mediaId' | 'seasonNumber' | 'episodeNumber'>
 ): string => getUnstampedListItemRuntimeKey(item);
 
 /**
@@ -278,6 +294,9 @@ export async function resolveMissingRuntimes(
       const arr = seasonItems.get(key) ?? [];
       arr.push(item);
       seasonItems.set(key, arr);
+    } else if (item.mediaType === 'episode') {
+      // Stats leave episode entries out (their watches come from episode tracking).
+      return;
     } else {
       const arr = movieItems.get(item.mediaId) ?? [];
       arr.push(item);
@@ -314,10 +333,7 @@ export async function resolveMissingRuntimes(
     ),
   ]
     .sort((a, b) => b.recency - a.recency)
-    .slice(
-      0,
-      Math.max(0, Math.min(maxLookups, MAX_BACKFILL_LOOKUPS_PER_LOAD))
-    );
+    .slice(0, Math.max(0, Math.min(maxLookups, MAX_BACKFILL_LOOKUPS_PER_LOAD)));
 
   const measuredShowRuntimes = new Map<number, number>();
   const measuredMovieRuntimes = new Map<number, number>();
@@ -387,6 +403,7 @@ export async function resolveMissingRuntimes(
   });
 
   listItems.forEach((item) => {
+    if (item.mediaType === 'episode') return;
     if (item.mediaType === 'tv') {
       const measured = measuredShowRuntimes.get(item.mediaId);
       listItemMinutes.set(
@@ -477,7 +494,7 @@ export function backfillRuntimes(
   freshItems.forEach((i) => {
     if (i.mediaType === 'tv') distinctFreshShows.add(i.mediaId);
     else if (i.mediaType === 'season') distinctFreshSeasons.add(listItemAttemptKey(i));
-    else distinctFreshMovies.add(i.mediaId);
+    else if (i.mediaType !== 'episode') distinctFreshMovies.add(i.mediaId);
   });
   const reservation = Math.max(
     0,
@@ -540,6 +557,11 @@ export interface ListRuntimeLookupOptions {
   getShowRuntime?: (tvShowId: number) => Promise<number | null>;
   getMovieRuntime?: (movieId: number) => Promise<number | null>;
   getSeasonRuntime?: (tvShowId: number, seasonNumber: number) => Promise<number | null>;
+  getEpisodeRuntime?: (
+    tvShowId: number,
+    seasonNumber: number,
+    episodeNumber: number
+  ) => Promise<number | null>;
   stampRuntimes?: (stamps: RuntimeStamps) => void;
   /** Called after each batch with the titles looked up so far and every runtime found. */
   onProgress?: (progress: { done: number; total: number; runtimes: Map<string, number> }) => void;
@@ -566,6 +588,7 @@ export async function resolveListItemRuntimes(
     getShowRuntime = defaultGetShowRuntime,
     getMovieRuntime = defaultGetMovieRuntime,
     getSeasonRuntime = defaultGetSeasonRuntime,
+    getEpisodeRuntime = defaultGetEpisodeRuntime,
     stampRuntimes = defaultStampRuntimes,
     onProgress,
     isCancelled,
@@ -574,10 +597,18 @@ export async function resolveListItemRuntimes(
   // One lookup per title, newest additions first so the cap keeps the most recent ones.
   const titles = new Map<
     string,
-    Pick<UnstampedListItem, 'mediaType' | 'mediaId' | 'seasonNumber'> & { recency: number }
+    Pick<UnstampedListItem, 'mediaType' | 'mediaId' | 'seasonNumber' | 'episodeNumber'> & {
+      recency: number;
+    }
   >();
   items.forEach((item) => {
     if (item.mediaType === 'season' && item.seasonNumber === undefined) return;
+    if (
+      item.mediaType === 'episode' &&
+      (item.seasonNumber === undefined || item.episodeNumber === undefined)
+    ) {
+      return;
+    }
     const key = getUnstampedListItemRuntimeKey(item);
     const recency = toMillis(item.addedAt) ?? 0;
     const existing = titles.get(key);
@@ -586,6 +617,7 @@ export async function resolveListItemRuntimes(
         mediaType: item.mediaType,
         mediaId: item.mediaId,
         seasonNumber: item.seasonNumber,
+        episodeNumber: item.episodeNumber,
         recency,
       });
     }
@@ -602,14 +634,20 @@ export async function resolveListItemRuntimes(
     if (isCancelled?.()) break;
     const batch = lookups.slice(i, i + BACKFILL_BATCH_SIZE);
     const results = await Promise.all(
-      batch.map(async ([key, { mediaType, mediaId, seasonNumber }]) => {
+      batch.map(async ([key, { mediaType, mediaId, seasonNumber, episodeNumber }]) => {
         try {
           const minutes =
             mediaType === 'tv'
               ? await getShowRuntime(mediaId)
               : mediaType === 'season'
                 ? await getSeasonRuntime(mediaId, seasonNumber as number)
-                : await getMovieRuntime(mediaId);
+                : mediaType === 'episode'
+                  ? await getEpisodeRuntime(
+                      mediaId,
+                      seasonNumber as number,
+                      episodeNumber as number
+                    )
+                  : await getMovieRuntime(mediaId);
           return { key, minutes, error: undefined as unknown };
         } catch (error) {
           return { key, minutes: null, error };

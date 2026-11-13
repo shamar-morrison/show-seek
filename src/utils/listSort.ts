@@ -35,8 +35,9 @@ export function getItemUserRating(
 }
 
 /**
- * Compares two entries by title (A-Z when `direction` is 1). Seasons sort by their show's name
- * and then season number, so "Season 2" comes before "Season 10" and specials come first.
+ * Compares two entries by title (A-Z when `direction` is 1). Seasons and episodes sort by their
+ * show's name, then by number: the show first, then each season followed by its episodes, so
+ * "Season 2" comes before "Season 10", specials come first, and S2E9 comes before S2E10.
  */
 export function compareListItemTitles(
   a: ListMediaItem,
@@ -44,15 +45,22 @@ export function compareListItemTitles(
   direction: 1 | -1
 ): number {
   const showOrTitle = (item: ListMediaItem) =>
-    (item.media_type === 'season' && item.show_name
+    ((item.media_type === 'season' || item.media_type === 'episode') && item.show_name
       ? item.show_name
       : item.title || item.name || ''
     ).toLowerCase();
   const byTitle = showOrTitle(a).localeCompare(showOrTitle(b));
   if (byTitle !== 0) return byTitle * direction;
 
-  // Same show: the show itself first, then its seasons in order.
-  const seasonOrder = (item: ListMediaItem) =>
-    item.media_type === 'season' ? (item.season_number ?? 0) : -1;
-  return (seasonOrder(a) - seasonOrder(b)) * direction;
+  // Same show: the show itself first, then each season's entry followed by its episodes.
+  const order = (item: ListMediaItem): [number, number] => {
+    if (item.media_type === 'season') return [item.season_number ?? 0, -1];
+    if (item.media_type === 'episode') {
+      return [item.season_number ?? 0, item.episode_number ?? 0];
+    }
+    return [-1, -1];
+  };
+  const [seasonA, episodeA] = order(a);
+  const [seasonB, episodeB] = order(b);
+  return (seasonA - seasonB || episodeA - episodeB) * direction;
 }

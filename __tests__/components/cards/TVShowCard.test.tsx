@@ -17,9 +17,12 @@ jest.mock('@/src/hooks/useNavigation', () => ({
   useCurrentTab: () => 'home',
 }));
 
+const mockGetListsForListItem = jest.fn((_item: unknown) => [] as string[]);
+
 jest.mock('@/src/hooks/useListMembership', () => ({
   useListMembership: () => ({
     getListsForMedia: () => [],
+    getListsForListItem: (item: unknown) => mockGetListsForListItem(item),
   }),
 }));
 
@@ -70,6 +73,35 @@ describe('TVShowCard', () => {
     });
     mockUsePreferences.mockReturnValue({
       preferences: { dataSaver: false, showOriginalTitles: false },
+    });
+  });
+
+  it('stands for one episode: shows its label, opens it and checks its own list membership', () => {
+    const { getByText, queryByText, UNSAFE_getByType } = render(
+      <TVShowCard show={show} seasonNumber={2} episodeNumber={12} entryLabel="S2E12 · Phoenix" />
+    );
+
+    expect(getByText('S2E12 · Phoenix')).toBeTruthy();
+    expect(queryByText('7.5')).toBeNull();
+    expect(mockGetListsForListItem).toHaveBeenCalledWith({
+      id: 321,
+      media_type: 'episode',
+      season_number: 2,
+      episode_number: 12,
+    });
+    expect(mockResolvePosterPath).toHaveBeenCalledWith('episode', 321, '/poster.jpg');
+
+    fireEvent.press(UNSAFE_getByType(TouchableOpacity));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/home/tv/321/season/2/episode/12');
+  });
+
+  it('stands for one season when only a season number is given', () => {
+    render(<TVShowCard show={show} seasonNumber={0} entryLabel="Specials" />);
+
+    expect(mockGetListsForListItem).toHaveBeenCalledWith({
+      id: 321,
+      media_type: 'season',
+      season_number: 0,
     });
   });
 

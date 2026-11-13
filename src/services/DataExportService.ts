@@ -393,6 +393,7 @@ function csvLine(row: CsvRow): string {
 function listItemTypeLabel(mediaType: ListMediaItem['media_type']): string {
   if (mediaType === 'movie') return 'Movie';
   if (mediaType === 'season') return 'Season';
+  if (mediaType === 'episode') return 'Episode';
   return 'TV';
 }
 
@@ -408,9 +409,13 @@ function generateCSV(data: ExportData): string {
         title: item.title || item.name || 'Unknown',
         type: listItemTypeLabel(item.media_type),
         date: formatDate(item.addedAt),
-        // For a season this is the show's TMDB ID, with the season number alongside.
+        // For a season or episode this is the show's TMDB ID, with its numbers alongside.
         tmdbId: item.id,
-        season: item.media_type === 'season' ? item.season_number : undefined,
+        season:
+          item.media_type === 'season' || item.media_type === 'episode'
+            ? item.season_number
+            : undefined,
+        episode: item.media_type === 'episode' ? item.episode_number : undefined,
       });
     });
   });

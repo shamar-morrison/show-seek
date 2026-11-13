@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { getSeasonEntryDisplay } from '@/src/utils/seasonListItem';
+import { getListEntryDisplay } from '@/src/utils/listEntryDisplay';
 import { useTranslation } from 'react-i18next';
 import { getListItemUiKey } from '@/src/utils/listItemKeys';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
@@ -95,12 +95,10 @@ const MediaGridItem = memo<{
     );
 
     const { t } = useTranslation();
-    // A season shows its show's name, then "Season X" under it, with no rating.
-    const seasonDisplay =
-      item.media_type === 'season'
-        ? getSeasonEntryDisplay(item, (number) => t('media.seasonNumber', { number }))
-        : null;
-    const displayTitle = seasonDisplay ? seasonDisplay.title : item.title || item.name;
+    // A season or episode shows its show's name, then "Season X" or "S2E12 · Name" under it,
+    // with no rating.
+    const entryDisplay = getListEntryDisplay(item, t);
+    const displayTitle = entryDisplay ? entryDisplay.title : item.title || item.name;
     const releaseDate = item.release_date || item.first_air_date;
     const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
 
@@ -145,10 +143,10 @@ const MediaGridItem = memo<{
           <Text style={mediaCardStyles.title} numberOfLines={1}>
             {displayTitle}
           </Text>
-          {seasonDisplay ? (
+          {entryDisplay ? (
             <View style={mediaMetaStyles.yearRatingContainer}>
               <Text style={mediaMetaStyles.year} numberOfLines={1}>
-                {seasonDisplay.seasonLabel}
+                {entryDisplay.label}
               </Text>
             </View>
           ) : (

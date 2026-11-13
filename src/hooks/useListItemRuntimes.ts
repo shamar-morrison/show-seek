@@ -49,16 +49,18 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
   const missingItems = useMemo<UnstampedListItem[]>(() => {
     if (!list?.items) return [];
     return Object.entries(list.items).flatMap(([itemKey, item]): UnstampedListItem[] => {
-      // Skip incomplete entries (no id or type): there is nothing to look up for them.
-      // Episodes aren't looked up yet.
+      // Skip incomplete entries (no id or type, or a season or episode without its numbers):
+      // there is nothing to look up for them.
       if (typeof item?.id !== 'number' || getStoredListItemRuntime(item) !== undefined) {
         return [];
       }
       const mediaType = item.media_type;
+      const hasSeason = typeof item.season_number === 'number';
       if (
         mediaType !== 'movie' &&
         mediaType !== 'tv' &&
-        !(mediaType === 'season' && typeof item.season_number === 'number')
+        !(mediaType === 'season' && hasSeason) &&
+        !(mediaType === 'episode' && hasSeason && typeof item.episode_number === 'number')
       ) {
         return [];
       }
@@ -73,6 +75,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
           mediaType,
           mediaId: item.id,
           seasonNumber: item.season_number,
+          episodeNumber: item.episode_number,
           addedAt: item.addedAt,
         },
       ];
@@ -142,7 +145,9 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
                   items[itemKey] =
                     item.media_type === 'season'
                       ? { ...item, runtimeMinutes: minutes, seasonRuntimeMinutes: minutes }
-                      : { ...item, runtimeMinutes: minutes };
+                      : item.media_type === 'episode'
+                        ? { ...item, runtimeMinutes: minutes, episodeRuntimeMinutes: minutes }
+                        : { ...item, runtimeMinutes: minutes };
                   changed = true;
                 }
               });

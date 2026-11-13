@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { getSeasonEntryDisplay } from '@/src/utils/seasonListItem';
+import { getListEntryDisplay } from '@/src/utils/listEntryDisplay';
 import { useTranslation } from 'react-i18next';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
@@ -66,11 +66,9 @@ export const MediaListCard = memo<MediaListCardProps>(
     });
 
     const { t } = useTranslation();
-    // A season shows its show's name, then "Season X" under it, with no rating.
-    const seasonDisplay =
-      item.media_type === 'season'
-        ? getSeasonEntryDisplay(item, (number) => t('media.seasonNumber', { number }))
-        : null;
+    // A season or episode shows its show's name, then "Season X" or "S2E12 · Name" under it,
+    // with no rating.
+    const entryDisplay = getListEntryDisplay(item, t);
 
     const year = item.release_date
       ? new Date(item.release_date).getFullYear()
@@ -116,11 +114,11 @@ export const MediaListCard = memo<MediaListCardProps>(
         </View>
         <View style={listCardStyles.info}>
           <Text style={styles.title} numberOfLines={2}>
-            {seasonDisplay ? seasonDisplay.title : item.title || item.name}
+            {entryDisplay ? entryDisplay.title : item.title || item.name}
           </Text>
-          {seasonDisplay && (
+          {entryDisplay && (
             <Text style={styles.subtitle} numberOfLines={1}>
-              {seasonDisplay.seasonLabel}
+              {entryDisplay.label}
             </Text>
           )}
           {subtitle && (
@@ -128,7 +126,7 @@ export const MediaListCard = memo<MediaListCardProps>(
               {subtitle}
             </Text>
           )}
-          {!seasonDisplay && (
+          {!entryDisplay && (
             <View style={styles.metaContainer}>
               {year && <Text style={metaTextStyles.secondary}>{year}</Text>}
               {item.vote_average > 0 && year && <Text style={metaTextStyles.secondary}> • </Text>}
@@ -140,7 +138,7 @@ export const MediaListCard = memo<MediaListCardProps>(
               )}
             </View>
           )}
-          {item.media_type && !hideMediaType && !seasonDisplay && (
+          {item.media_type && !hideMediaType && !entryDisplay && (
             <Text style={styles.mediaType}>
               {item.media_type === 'movie' ? movieLabel : tvShowLabel}
             </Text>

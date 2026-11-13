@@ -13,6 +13,7 @@ export function getMediaTypeLabel(t: TFunction, value: MediaTypeFilter): string 
   if (value === 'movie') return t('media.movies');
   if (value === 'tv') return t('media.tvShows');
   if (value === 'season') return t('media.seasons');
+  if (value === 'episode') return t('media.episodes');
   return t('library.allMedia');
 }
 

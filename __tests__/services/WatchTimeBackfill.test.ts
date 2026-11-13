@@ -5,6 +5,7 @@ import {
   MAX_BACKFILL_LOOKUPS_PER_LOAD,
   backfillRuntimes,
   resetBackfillSessionForTests,
+  resolveListItemRuntimes,
   resolveMissingRuntimes,
   type RuntimeStamps,
   type UnstampedEpisode,
@@ -138,11 +139,10 @@ describe('WatchTimeBackfill', () => {
     const getMovieRuntime = jest.fn(async () => 120);
     const stamps: RuntimeStamps[] = [];
 
-    const result = await resolveMissingRuntimes(
-      [],
-      [listItem({ mediaId: 101 })],
-      { getMovieRuntime, stampRuntimes: (s) => stamps.push(s) }
-    );
+    const result = await resolveMissingRuntimes([], [listItem({ mediaId: 101 })], {
+      getMovieRuntime,
+      stampRuntimes: (s) => stamps.push(s),
+    });
 
     expect(result.listItemMinutes.get('already-watched/movie-101')).toBe(120);
     expect(stamps).toHaveLength(1);
@@ -223,16 +223,12 @@ describe('backfillRuntimes', () => {
     const getShowRuntime = jest.fn(async () => 42);
     const stampRuntimes = jest.fn();
 
-    expect(await runBackfill([ep(500, '1_1')], [], { getShowRuntime, stampRuntimes })).toBe(
-      true
-    );
+    expect(await runBackfill([ep(500, '1_1')], [], { getShowRuntime, stampRuntimes })).toBe(true);
     expect(getShowRuntime).toHaveBeenCalledTimes(1);
 
     // Settle-triggered refetches find nothing new: no TMDB, no stamps, false.
     // This is what guarantees refresh-on-settle always terminates.
-    expect(await runBackfill([ep(500, '1_1')], [], { getShowRuntime, stampRuntimes })).toBe(
-      false
-    );
+    expect(await runBackfill([ep(500, '1_1')], [], { getShowRuntime, stampRuntimes })).toBe(false);
     expect(getShowRuntime).toHaveBeenCalledTimes(1);
     expect(stampRuntimes).toHaveBeenCalledTimes(1);
   });
@@ -241,9 +237,7 @@ describe('backfillRuntimes', () => {
     const getShowRuntime = jest.fn(async () => null);
     const stampRuntimes = jest.fn();
 
-    expect(await runBackfill([ep(700, '1_1')], [], { getShowRuntime, stampRuntimes })).toBe(
-      false
-    );
+    expect(await runBackfill([ep(700, '1_1')], [], { getShowRuntime, stampRuntimes })).toBe(false);
     expect(stampRuntimes).not.toHaveBeenCalled();
   });
 
@@ -266,9 +260,7 @@ describe('backfillRuntimes', () => {
     // Month detail loading after overview in the same session: budget spent,
     // so nothing is issued and it settles false (estimates stay this session).
     const secondBatch = [ep(4000, '1_1', 9500), ep(4001, '1_1', 9600)];
-    expect(await runBackfill(secondBatch, [], { getShowRuntime, stampRuntimes })).toBe(
-      false
-    );
+    expect(await runBackfill(secondBatch, [], { getShowRuntime, stampRuntimes })).toBe(false);
     expect(getShowRuntime).toHaveBeenCalledTimes(10);
   });
 
@@ -301,11 +293,10 @@ describe('backfillRuntimes', () => {
     const getShowRuntime = jest.fn(async () => 42);
     const stampRuntimes = jest.fn();
 
-    await runBackfill(
-      [ep(6000, '1_1', 100), ep(6001, '1_1', 200), ep(6002, '1_1', 300)],
-      [],
-      { getShowRuntime, stampRuntimes }
-    );
+    await runBackfill([ep(6000, '1_1', 100), ep(6001, '1_1', 200), ep(6002, '1_1', 300)], [], {
+      getShowRuntime,
+      stampRuntimes,
+    });
     expect(getShowRuntime).toHaveBeenCalledTimes(3);
 
     // 7 of budget left: the next call resolves exactly 7 of 9 fresh shows.
@@ -395,8 +386,64 @@ describe('WatchTimeBackfill seasons', () => {
     expect(result.listItemMinutes.get('already-watched/season-1396-3')).toBe(300);
     // Unknown season runtimes count 0 and are never saved.
     expect(result.listItemMinutes.get('already-watched/season-1396-0')).toBe(0);
-    expect(stamps[0].itemsByList.get('already-watched')).toEqual(
-      new Map([['season-1396-3', 300]])
+    expect(stamps[0].itemsByList.get('already-watched')).toEqual(new Map([['season-1396-3', 300]]));
+  });
+
+  it('leaves episode entries out of stats and never looks them up', async () => {
+    const getMovieRuntime = jest.fn(async () => 120);
+    const getShowRuntime = jest.fn(async () => 45);
+    const getSeasonRuntime = jest.fn(async () => 300);
+
+    const result = await resolveMissingRuntimes(
+      [],
+      [
+        {
+          listId: 'already-watched',
+          itemKey: 'episode-1396-2-12',
+          mediaType: 'episode',
+          mediaId: 1396,
+          seasonNumber: 2,
+          episodeNumber: 12,
+          addedAt: 1000,
+        },
+      ],
+      { getMovieRuntime, getShowRuntime, getSeasonRuntime, stampRuntimes: jest.fn() }
+    );
+
+    expect(getMovieRuntime).not.toHaveBeenCalled();
+    expect(getShowRuntime).not.toHaveBeenCalled();
+    expect(getSeasonRuntime).not.toHaveBeenCalled();
+    expect(result.listItemMinutes.size).toBe(0);
+  });
+
+  it("saves an episode's runtime to the field episode-aware versions read", async () => {
+    const { doc, updateDoc } = jest.requireMock('firebase/firestore');
+    (doc as jest.Mock).mockImplementation((_db: unknown, ...segments: string[]) => ({
+      path: segments.join('/'),
+    }));
+    (updateDoc as jest.Mock).mockClear().mockResolvedValue(undefined);
+
+    await resolveListItemRuntimes(
+      [
+        {
+          listId: 'watchlist',
+          itemKey: 'episode-1396-2-12',
+          mediaType: 'episode',
+          mediaId: 1396,
+          seasonNumber: 2,
+          episodeNumber: 12,
+          addedAt: 1000,
+        },
+      ],
+      { getEpisodeRuntime: async () => 47 }
+    );
+
+    expect(updateDoc).toHaveBeenCalledWith(
+      { path: 'users/test-user-id/lists/watchlist' },
+      {
+        'items.episode-1396-2-12.runtimeMinutes': 47,
+        'items.episode-1396-2-12.episodeRuntimeMinutes': 47,
+      }
     );
   });
 

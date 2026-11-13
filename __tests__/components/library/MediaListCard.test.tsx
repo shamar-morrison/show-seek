@@ -5,8 +5,10 @@ import React from 'react';
 
 jest.mock('react-native', () => {
   const React = require('react');
-  const createComponent = (name: string) => ({ children, ...props }: any) =>
-    React.createElement(name, props, children);
+  const createComponent =
+    (name: string) =>
+    ({ children, ...props }: any) =>
+      React.createElement(name, props, children);
 
   const Pressable = ({ children, disabled, onPress, onLongPress, ...props }: any) =>
     React.createElement(
@@ -38,7 +40,8 @@ jest.mock('@/src/components/ui/AnimatedCheck', () => ({
 }));
 
 jest.mock('@/src/components/ui/ListMembershipBadge', () => ({
-  ListMembershipBadge: () => require('react').createElement('View', { testID: 'list-membership-badge' }),
+  ListMembershipBadge: () =>
+    require('react').createElement('View', { testID: 'list-membership-badge' }),
 }));
 
 jest.mock('@/src/components/ui/MediaImage', () => ({
@@ -48,8 +51,11 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
     overrides: {},
-    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
-      fallbackPosterPath,
+    resolvePosterPath: (
+      _mediaType: 'movie' | 'tv',
+      _mediaId: number,
+      fallbackPosterPath: string | null
+    ) => fallbackPosterPath,
   }),
 }));
 
@@ -86,6 +92,32 @@ describe('MediaListCard', () => {
     expect(getByText('Game of Thrones')).toBeTruthy();
     expect(getByText('Season 5')).toBeTruthy();
     expect(queryByText('8.4')).toBeNull();
+    expect(queryByText('TV Show')).toBeNull();
+  });
+
+  it("shows an episode as its show's name with its code and name under it and no rating", () => {
+    const { getByText, queryByText } = render(
+      <MediaListCard
+        item={{
+          ...item,
+          id: 1396,
+          media_type: 'episode',
+          season_number: 2,
+          episode_number: 12,
+          episode_name: 'Phoenix',
+          show_name: 'Breaking Bad',
+          title: 'Breaking Bad · S2E12 · Phoenix',
+          vote_average: 9.3,
+        }}
+        onPress={jest.fn()}
+        movieLabel="Movie"
+        tvShowLabel="TV Show"
+      />
+    );
+
+    expect(getByText('Breaking Bad')).toBeTruthy();
+    expect(getByText('S2E12 · Phoenix')).toBeTruthy();
+    expect(queryByText('9.3')).toBeNull();
     expect(queryByText('TV Show')).toBeNull();
   });
 

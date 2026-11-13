@@ -1,6 +1,6 @@
 import { ListMediaItem } from '../services/ListService';
 
-export type MediaTypeFilter = 'all' | 'movie' | 'tv' | 'season';
+export type MediaTypeFilter = 'all' | 'movie' | 'tv' | 'season' | 'episode';
 
 export type GenreOperator = 'and' | 'or';
 
@@ -99,29 +99,40 @@ export function getListItemMediaKey(
 }
 
 /**
- * The key a runtime lookup reports under, for an entry described by type, ID and season
- * number: the same key `getListItemMediaKey` gives the entry.
+ * The key a runtime lookup reports under, for an entry described by type, ID and season and
+ * episode numbers: the same key `getListItemMediaKey` gives the entry.
  */
 export function getUnstampedListItemRuntimeKey(item: {
   mediaType: ListMediaItem['media_type'];
   mediaId: number;
   seasonNumber?: number;
+  episodeNumber?: number;
 }): string {
   return getListItemMediaKey({
     id: item.mediaId,
     media_type: item.mediaType,
     season_number: item.seasonNumber,
+    episode_number: item.episodeNumber,
   });
 }
 
 /**
- * The runtime saved on an entry. A season only trusts `seasonRuntimeMinutes`: an app version
- * that predates seasons may have saved a wrong `runtimeMinutes` on it.
+ * The runtime saved on an entry. A season only trusts `seasonRuntimeMinutes` and an episode
+ * only `episodeRuntimeMinutes`: an app version that predates them may have saved a wrong
+ * `runtimeMinutes` on it.
  */
 export function getStoredListItemRuntime(
-  item: Pick<ListMediaItem, 'media_type' | 'runtimeMinutes' | 'seasonRuntimeMinutes'>
+  item: Pick<
+    ListMediaItem,
+    'media_type' | 'runtimeMinutes' | 'seasonRuntimeMinutes' | 'episodeRuntimeMinutes'
+  >
 ): number | undefined {
-  const minutes = item.media_type === 'season' ? item.seasonRuntimeMinutes : item.runtimeMinutes;
+  const minutes =
+    item.media_type === 'season'
+      ? item.seasonRuntimeMinutes
+      : item.media_type === 'episode'
+        ? item.episodeRuntimeMinutes
+        : item.runtimeMinutes;
   return minutes != null && minutes > 0 ? minutes : undefined;
 }
 

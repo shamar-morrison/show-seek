@@ -1,6 +1,7 @@
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
+import { collapseSeasonsToShows } from '@/src/utils/listItemShows';
 import { filterNonScriptedTV } from '@/src/utils/nonScriptedFilter';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -116,9 +117,11 @@ export async function getUserWatchlist(
     const listName = list.name || listId;
     const itemsMap = (list.items || {}) as Record<string, ListMediaItem>;
 
-    // Sort by addedAt descending and take the first few
-    const items = Object.values(itemsMap)
-      .sort((a, b) => compareAddedAt(a, b, -1))
+    // Newest first, each show once (its seasons and episodes count as the show, keeping its
+    // newest entry), then the first few
+    const items = collapseSeasonsToShows(
+      Object.values(itemsMap).sort((a, b) => compareAddedAt(a, b, -1))
+    )
       .slice(0, limitCount)
       .map((item) => ({
         id: item.id,

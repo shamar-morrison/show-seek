@@ -47,6 +47,39 @@ describe('resolveListItemRuntimes', () => {
     expect(stamps[0].itemsByList.get('other')?.get('movie-1')).toBe(120);
   });
 
+  it('looks episodes up as episodes, never as movies or the show', async () => {
+    const getEpisodeRuntime = jest.fn(async (_tvId: number, s: number, e: number) =>
+      s === 2 && e === 12 ? 47 : null
+    );
+    const getMovieRuntime = jest.fn(async () => 120);
+    const getShowRuntime = jest.fn(async () => 45);
+    const stamps: RuntimeStamps[] = [];
+    const episode = (episodeNumber?: number): UnstampedListItem => ({
+      listId: 'my-list',
+      itemKey: `episode-1396-2-${episodeNumber}`,
+      mediaType: 'episode',
+      mediaId: 1396,
+      seasonNumber: 2,
+      episodeNumber,
+      addedAt: 1000,
+    });
+
+    const result = await resolveListItemRuntimes([episode(12), episode(13), episode(undefined)], {
+      getEpisodeRuntime,
+      getMovieRuntime,
+      getShowRuntime,
+      stampRuntimes: (s) => stamps.push(s),
+    });
+
+    // An episode without its number can't be looked up.
+    expect(getEpisodeRuntime).toHaveBeenCalledTimes(2);
+    expect(getEpisodeRuntime).toHaveBeenCalledWith(1396, 2, 12);
+    expect(getMovieRuntime).not.toHaveBeenCalled();
+    expect(getShowRuntime).not.toHaveBeenCalled();
+    expect(result).toEqual(new Map([['episode:1396:2:12', 47]]));
+    expect(stamps[0].itemsByList.get('my-list')).toEqual(new Map([['episode-1396-2-12', 47]]));
+  });
+
   it('saves each item in the document that holds it and skips titles with no runtime', async () => {
     const stamps: RuntimeStamps[] = [];
 

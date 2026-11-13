@@ -23,7 +23,8 @@ export function useMediaGridHandlers(isLoading: boolean) {
   const addToListModalRef = useRef<AddToListModalRef>(null);
 
   const getItemKey = useCallback(
-    (item: Pick<ListMediaItem, 'id' | 'media_type' | 'season_number'>) => getListItemUiKey(item),
+    (item: Pick<ListMediaItem, 'id' | 'media_type' | 'season_number' | 'episode_number'>) =>
+      getListItemUiKey(item),
     []
   );
 
