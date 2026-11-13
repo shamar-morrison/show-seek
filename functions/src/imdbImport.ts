@@ -2,7 +2,6 @@ import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { commitEpisodeWrites, planEpisodeWrites, readEpisodeTracking } from './episodePagesAdmin';
-import { canHaveEpisodeListEntries } from './episodeListRollout';
 import {
   DEFAULT_LIST_NAMES,
   assertPremiumUser,
@@ -246,12 +245,6 @@ async function applyImportAction(
       }
       return;
     case 'list':
-      if (resolvedResult.kind === 'episode' && !canHaveEpisodeListEntries(context.userId)) {
-        // Not rolled out to this account yet (see episodeListRollout).
-        incrementSkipped(stats, 'unsupported_list_episode');
-        return;
-      }
-
       {
         // An episode is saved as its own entry: IMDb watchlist episodes go to Should Watch and
         // list episodes to the matching custom list, the only lists that take episodes.

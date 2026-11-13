@@ -5,8 +5,8 @@ import {
   buildCustomListItemsMap,
 } from './builders';
 import {
+  alignTraktEpisodeNumbers,
   createEpisodeNumberSession,
-  prepareTraktEpisodeEntries,
   type EpisodeNumberSession,
 } from './episodeNumbers';
 import { TRAKT_MANAGED_DEFAULT_LIST_NAMES } from './constants';
@@ -89,7 +89,7 @@ export const reconcileCustomListsFromZip = async (
         userId,
         listId,
         buildCustomListItemsMap(
-          await prepareTraktEpisodeEntries(userId, items || [], options.episodeNumbers)
+          await alignTraktEpisodeNumbers(items || [], { session: options.episodeNumbers })
         ),
         {
           createdAt: Timestamp.fromDate(new Date(toMillisOrNow(list.created_at))),

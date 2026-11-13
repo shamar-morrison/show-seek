@@ -2254,9 +2254,9 @@
   },
   "whatsNew": {
     "title": "O que há de novo no ShowSeek?",
-    "seasonLists": {
-      "title": "Adicione temporadas às listas",
-      "description": "Quer só uma temporada? Toque em Adicionar à lista em qualquer temporada em Temporadas e episódios de uma série para salvá-la em qualquer uma das suas listas."
+    "episodeLists": {
+      "title": "Adicione episódios às listas",
+      "description": "Quer salvar um só episódio? Toque em Adicionar à lista na página de qualquer episódio para salvá-lo em Pendentes ou em uma das suas listas. Quando você o marcar como visto, ele sai de Pendentes."
     }
   },
   "shuffle": {
