@@ -1858,9 +1858,9 @@
   },
   "whatsNew": {
     "title": "What's New in ShowSeek?",
-    "seasonLists": {
-      "title": "Add seasons to lists",
-      "description": "Only want one season? Tap Add to List on any season in a show's Seasons & Episodes to save it to any of your lists."
+    "episodeLists": {
+      "title": "Add episodes to lists",
+      "description": "Want to save a single episode? Tap Add to List on any episode's page to save it to Should Watch or one of your own lists. Once you mark it watched, it leaves Should Watch."
     }
   },
   "posterPicker": {

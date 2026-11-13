@@ -2241,9 +2241,9 @@
   },
   "whatsNew": {
     "title": "¿Qué hay de nuevo en ShowSeek?",
-    "seasonLists": {
-      "title": "Agrega temporadas a tus listas",
-      "description": "¿Solo quieres una temporada? Toca Agregar a lista en cualquier temporada de Temporadas y episodios de una serie para guardarla en cualquiera de tus listas."
+    "episodeLists": {
+      "title": "Agrega episodios a tus listas",
+      "description": "¿Quieres guardar un solo episodio? Toca Agregar a lista en la página de cualquier episodio para guardarlo en Pendientes o en una de tus listas. Cuando lo marques como visto, saldrá de Pendientes."
     }
   },
   "posterPicker": {

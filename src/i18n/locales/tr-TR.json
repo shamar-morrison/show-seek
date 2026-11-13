@@ -1858,9 +1858,9 @@
   },
   "whatsNew": {
     "title": "ShowSeek'te neler yeni?",
-    "seasonLists": {
-      "title": "Sezonları listelere ekleyin",
-      "description": "Yalnızca bir sezon mu istiyorsunuz? Bir dizinin Sezonlar ve bölümler ekranında herhangi bir sezonda Listeye ekle'ye dokunarak onu listelerinizden birine kaydedin."
+    "episodeLists": {
+      "title": "Bölümleri listelere ekleyin",
+      "description": "Tek bir bölümü mü kaydetmek istiyorsunuz? Herhangi bir bölümün sayfasında Listeye ekle'ye dokunarak onu İzlenmeli listesine veya kendi listelerinizden birine kaydedin. İzlendi olarak işaretlediğinizde İzlenmeli listesinden çıkar."
     }
   },
   "posterPicker": {

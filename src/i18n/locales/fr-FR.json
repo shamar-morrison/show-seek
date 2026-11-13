@@ -2006,9 +2006,9 @@
   },
   "whatsNew": {
     "title": "Quoi de neuf sur ShowSeek ?",
-    "seasonLists": {
-      "title": "Ajoutez des saisons à vos listes",
-      "description": "Une seule saison vous intéresse ? Touchez Ajouter à une liste sur n'importe quelle saison dans Saisons et épisodes d'une série pour l'enregistrer dans vos listes."
+    "episodeLists": {
+      "title": "Ajoutez des épisodes à vos listes",
+      "description": "Envie de garder un seul épisode ? Touchez Ajouter à une liste sur la page de n'importe quel épisode pour l'enregistrer dans À voir ou dans l'une de vos listes. Une fois marqué comme vu, il quitte À voir."
     }
   },
   "posterPicker": {
