@@ -59,6 +59,7 @@ import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { buildEpisodeListItem } from '@/src/utils/episodeListItem';
 import { parseEpisodeRouteParams } from '@/src/utils/episodeRouteParams';
 import { getListMembershipIcon } from '@/src/utils/listIcons';
+import { isTmdb404 } from '@/src/utils/tmdbErrors';
 import { hasListItemByRef } from '@/src/utils/listItemKeys';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
@@ -521,6 +522,27 @@ export default function EpisodeDetailScreen() {
       <SafeAreaView style={screenStyles.container} edges={['top']}>
         <Stack.Screen options={{ headerShown: false }} />
         <FullScreenLoading />
+      </SafeAreaView>
+    );
+  }
+
+  // TMDB no longer has this episode (removed or renumbered since it was saved to a list):
+  // retrying can't help, so offer the show instead.
+  const isEpisodeMissing = isTmdb404(episodeDetailsQuery.error) && !tvShowQuery.isError;
+
+  if (isEpisodeMissing) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['top']}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <AppErrorState
+          title={t('episodeDetail.notFoundTitle')}
+          message={t('episodeDetail.notOnTmdb')}
+          onRetry={handleTVShowPress}
+          retryLabel={t('episodeDetail.goToShow')}
+          retryTestID="episode-missing-go-to-show"
+          onSecondaryAction={handleBack}
+          secondaryActionLabel={t('common.goBack')}
+        />
       </SafeAreaView>
     );
   }

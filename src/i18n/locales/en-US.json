@@ -2078,7 +2078,10 @@
     "year": "Year"
   },
   "episodeDetail": {
-    "failedToLoad": "Failed to load episode details"
+    "failedToLoad": "Failed to load episode details",
+    "notFoundTitle": "Episode not found",
+    "notOnTmdb": "TMDB doesn't have this episode anymore. It may have been removed or renumbered.",
+    "goToShow": "Go to show"
   },
   "filters": {
     "anyRating": "Any rating",

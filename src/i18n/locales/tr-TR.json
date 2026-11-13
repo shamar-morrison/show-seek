@@ -2078,7 +2078,10 @@
     "year": "Yıl"
   },
   "episodeDetail": {
-    "failedToLoad": "Bölüm ayrıntıları yüklenemedi"
+    "failedToLoad": "Bölüm ayrıntıları yüklenemedi",
+    "notFoundTitle": "Bölüm bulunamadı",
+    "notOnTmdb": "TMDB'de bu bölüm artık yok. Kaldırılmış ya da yeniden numaralandırılmış olabilir.",
+    "goToShow": "Diziye git"
   },
   "filters": {
     "anyRating": "Tüm puanlar",

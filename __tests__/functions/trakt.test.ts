@@ -7508,32 +7508,110 @@ describe('Trakt episode entries', () => {
       expect(aligned.episode).toMatchObject({ number: 2, season: 3 });
     });
 
-    it("keeps Trakt's numbers when nothing confirms other ones", async () => {
-      const deps = lookup({});
-      const items = [episodeEntry(9, 1, { tvdb: 1 })];
+    const asShow = (item: ReturnType<typeof episodeEntry>) => {
+      const { episode: _episode, ...rest } = item;
+      return { ...rest, type: 'show' };
+    };
 
-      expect(await alignTraktEpisodeNumbers(items, deps)).toEqual(items);
+    it('saves an episode TMDB has nowhere as its show, so it always opens', async () => {
+      const deps = lookup({ '1396:9': { episodes: [{ id: 5, episode_number: 2 }] } });
+      const item = episodeEntry(9, 1, { tvdb: 1 });
+
+      expect(await alignTraktEpisodeNumbers([item], deps)).toEqual([asShow(item)]);
     });
 
-    it("keeps Trakt's numbers for the rest once a lookup fails or the budget runs out", async () => {
+    it("keeps Trakt's numbers when TMDB has an episode there and nothing says otherwise", async () => {
+      const deps = lookup({ '1396:2': { episodes: [{ id: 999, episode_number: 12 }] } });
+      // Trakt's TMDB ID isn't in the season and /find knows nothing better.
+      const item = episodeEntry(2, 12, { tmdb: 62103, tvdb: 7 });
+
+      expect(await alignTraktEpisodeNumbers([item], deps)).toEqual([item]);
+      expect(deps.findEpisode).toHaveBeenCalledWith('7', 'tvdb_id');
+    });
+
+    it('drops the show entry when Trakt lists the show itself, or another episode became it', async () => {
+      const deps = lookup({});
+      const showItem = { id: 1, listed_at: 'x', rank: 1, show, type: 'show' as const };
+      const missingA = episodeEntry(9, 1);
+      const missingB = episodeEntry(9, 2);
+
+      expect(await alignTraktEpisodeNumbers([missingA, missingB], deps)).toEqual([asShow(missingA)]);
+      expect(await alignTraktEpisodeNumbers([missingA, showItem], deps)).toEqual([showItem]);
+    });
+
+    it('retries a rate-limited lookup before giving up', async () => {
+      const { TraktSyncError: SyncError } = require('@/functions/src/trakt/types');
+      const getSeason = jest
+        .fn()
+        .mockRejectedValueOnce(
+          new SyncError('rate limited', 'rate_limited', true, { retryAfterSeconds: 0 })
+        )
+        .mockResolvedValueOnce({ episodes: [{ id: 62103, episode_number: 12 }] });
+      const item = episodeEntry(2, 12, { tmdb: 62103 });
+
+      expect(
+        await alignTraktEpisodeNumbers([item], { getSeason, findEpisode: jest.fn() })
+      ).toEqual([item]);
+      expect(getSeason).toHaveBeenCalledTimes(2);
+    });
+
+    it('saves episodes as their show once a lookup fails or the budget runs out', async () => {
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const failing = {
         getSeason: jest.fn(async () => {
-          throw new Error('rate limited');
+          throw new Error('TMDB is down');
         }),
         findEpisode: jest.fn(async () => null),
       };
       const items = [episodeEntry(1, 64, { tvdb: 1 }), episodeEntry(2, 5, { tvdb: 2 })];
 
-      expect(await alignTraktEpisodeNumbers(items, failing)).toEqual(items);
+      // Both become the same show, kept once.
+      expect(await alignTraktEpisodeNumbers(items, failing)).toEqual([asShow(items[0])]);
       expect(failing.getSeason).toHaveBeenCalledTimes(1);
       expect(failing.findEpisode).not.toHaveBeenCalled();
 
-      const budgeted = lookup({});
-      await alignTraktEpisodeNumbers(items, budgeted, 1);
+      // The first episode is confirmed; the budget then runs out, so the second is the show.
+      const budgeted = lookup({ '1396:1': { episodes: [{ id: 1, episode_number: 64 }] } });
+      expect(await alignTraktEpisodeNumbers(items, budgeted, 1)).toEqual([
+        items[0],
+        asShow(items[1]),
+      ]);
       expect(budgeted.getSeason).toHaveBeenCalledTimes(1);
-      expect(budgeted.findEpisode).not.toHaveBeenCalled();
       warnSpy.mockRestore();
+    });
+
+    it('turns a show entry folded from an unconfirmed episode into the episode once confirmed', async () => {
+      const listSet = jest.fn().mockResolvedValue(undefined);
+      const item = episodeEntry(2, 12, { tmdb: 62103 });
+      const listedAt = new Date(item.listed_at).getTime();
+      const confirmed = await alignTraktEpisodeNumbers(
+        [item],
+        lookup({ '1396:2': { episodes: [{ id: 62103, episode_number: 12 }] } })
+      );
+
+      await (__test__ as any).reconcileManagedList(
+        'user-1',
+        'watchlist',
+        buildWatchlistItemsMap(confirmed as any),
+        { id: 'watchlist', name: 'Should Watch' },
+        createDocSnapshotWithSet(
+          'users/user-1/lists/watchlist',
+          {
+            // Saved as the show by an earlier sync that couldn't confirm the episode.
+            items: { 'tv-1396': { addedAt: listedAt, id: 1396, media_type: 'tv' } },
+            metadata: { itemCount: 1, needsEnrichment: false },
+            name: 'Should Watch',
+          },
+          listSet
+        ),
+        { preserveLocalItems: true, recencyField: 'addedAt', removeFoldedSeasonShows: true }
+      );
+
+      const write = listSet.mock.calls[0][0];
+      expect(write.items['tv-1396']).toBe('FIELD_DELETE');
+      expect(write.items['episode-1396-2-12']).toEqual(
+        expect.objectContaining({ media_type: 'episode' })
+      );
     });
   });
 

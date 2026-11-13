@@ -1930,7 +1930,10 @@
     "year": "Ano"
   },
   "episodeDetail": {
-    "failedToLoad": "Falha ao carregar detalhes do episódio"
+    "failedToLoad": "Falha ao carregar detalhes do episódio",
+    "notFoundTitle": "Episódio não encontrado",
+    "notOnTmdb": "O TMDB já não tem este episódio. Pode ter sido removido ou renumerado.",
+    "goToShow": "Ir para a série"
   },
   "filters": {
     "anyRating": "Qualquer avaliação",

@@ -354,8 +354,30 @@ jest.mock('@/src/components/ui/AnimatedScrollHeader', () => ({
 jest.mock('@/src/components/ui/AppErrorState', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  const AppErrorState = ({ message }: { message: string }) =>
-    React.createElement(Text, null, message);
+  const { TouchableOpacity } = require('react-native');
+  const AppErrorState = ({
+    message,
+    onRetry,
+    retryLabel,
+    retryTestID,
+  }: {
+    message: string;
+    onRetry?: () => void;
+    retryLabel?: string;
+    retryTestID?: string;
+  }) =>
+    React.createElement(
+      React.Fragment,
+      null,
+      React.createElement(Text, null, message),
+      onRetry
+        ? React.createElement(
+            TouchableOpacity,
+            { onPress: onRetry, testID: retryTestID },
+            React.createElement(Text, null, retryLabel ?? 'Retry')
+          )
+        : null
+    );
   AppErrorState.displayName = 'AppErrorState';
   return AppErrorState;
 });
@@ -514,6 +536,50 @@ describe('EpisodeDetailScreen', () => {
     ];
     screen.rerender(<EpisodeDetailScreen />);
     expect(buttonIcon(screen)).toBe(CheckListIcon);
+  });
+
+  it("offers the show instead of a retry when TMDB doesn't have the episode anymore", () => {
+    const fallback = mockUseQuery.getMockImplementation()!;
+    mockUseQuery.mockImplementation((args: { queryKey: unknown[] }) =>
+      args.queryKey[args.queryKey.length - 1] === 'details'
+        ? {
+            data: undefined,
+            isLoading: false,
+            isError: true,
+            error: { status: 404, message: 'The resource you requested could not be found.' },
+            refetch: jest.fn(),
+          }
+        : fallback(args)
+    );
+
+    const { getByText, getByTestId, queryByText } = render(<EpisodeDetailScreen />);
+
+    expect(
+      getByText("TMDB doesn't have this episode anymore. It may have been removed or renumbered.")
+    ).toBeTruthy();
+    expect(queryByText('Failed to load episode details')).toBeNull();
+    fireEvent.press(getByTestId('episode-missing-go-to-show'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/discover/tv/10');
+  });
+
+  it('keeps the usual retry for other errors', () => {
+    const fallback = mockUseQuery.getMockImplementation()!;
+    mockUseQuery.mockImplementation((args: { queryKey: unknown[] }) =>
+      args.queryKey[args.queryKey.length - 1] === 'details'
+        ? {
+            data: undefined,
+            isLoading: false,
+            isError: true,
+            error: { status: 500, message: 'TMDB request failed' },
+            refetch: jest.fn(),
+          }
+        : fallback(args)
+    );
+
+    const { getByText, queryByTestId } = render(<EpisodeDetailScreen />);
+
+    expect(getByText('Failed to load episode details')).toBeTruthy();
+    expect(queryByTestId('episode-missing-go-to-show')).toBeNull();
   });
 
   it('asks a guest to sign in instead of opening Add to List', () => {

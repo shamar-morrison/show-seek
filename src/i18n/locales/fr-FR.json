@@ -2112,7 +2112,10 @@
     "year": "Année"
   },
   "episodeDetail": {
-    "failedToLoad": "Échec du chargement des détails de l'épisode"
+    "failedToLoad": "Échec du chargement des détails de l'épisode",
+    "notFoundTitle": "Épisode introuvable",
+    "notOnTmdb": "TMDB n'a plus cet épisode. Il a peut-être été supprimé ou renuméroté.",
+    "goToShow": "Voir la série"
   },
   "filters": {
     "anyRating": "Toute note",
