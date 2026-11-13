@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  runTransaction,
   setDoc,
   updateDoc,
   writeBatch,
@@ -521,41 +522,75 @@ describe('ListService', () => {
       season_number: 2,
       episode_number: 5,
     };
+    const savedEntry = { id: 1396, media_type: 'episode', season_number: 2, episode_number: 5 };
+    /** Runs the transaction against a document holding `items`; returns its update spy. */
+    const withDocument = (items: Record<string, unknown> | null) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => items !== null,
+          data: () => (items === null ? undefined : { items }),
+        }),
+        update: jest.fn(),
+      };
+      (runTransaction as jest.Mock).mockImplementation(
+        async (_db: unknown, run: (tx: typeof transaction) => Promise<unknown>) => run(transaction)
+      );
+      return transaction;
+    };
 
-    it('updates only the given fields of an entry in the list document', async () => {
+    it('updates only the given fields of an entry still in the list document', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const transaction = withDocument({ 'episode-1396-2-5': savedEntry });
 
-      await listService.updateListItemFields('watchlist', episodeRef, 0, {
+      const updated = await listService.updateListItemFields('watchlist', episodeRef, 0, {
         episode_name: 'Breakage',
         still_path: undefined,
       });
 
-      expect(updateDoc).toHaveBeenCalledWith(mockDocRef, {
+      expect(updated).toBe(true);
+      expect(transaction.get).toHaveBeenCalledWith(mockDocRef);
+      expect(transaction.update).toHaveBeenCalledWith(mockDocRef, {
         'items.episode-1396-2-5.episode_name': 'Breakage',
       });
+      expect(updateDoc).not.toHaveBeenCalled();
     });
 
     it('updates an entry on its overflow page', async () => {
       (doc as jest.Mock).mockImplementation((_db: unknown, ...segments: string[]) => ({
         path: segments.join('/'),
       }));
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const transaction = withDocument({ 'episode-1396-2-5': savedEntry });
 
       await listService.updateListItemFields('watchlist', episodeRef, 3, {
         release_date: '2009-04-05',
       });
 
-      const [ref, updates] = (updateDoc as jest.Mock).mock.calls[0];
+      const [ref, updates] = transaction.update.mock.calls[0];
       expect(ref.path).toContain('watchlist');
       expect(ref.path).toMatch(/3$/);
       expect(updates).toEqual({ 'items.episode-1396-2-5.release_date': '2009-04-05' });
     });
 
+    it('never re-creates an entry removed meanwhile, or writes to a missing page', async () => {
+      (doc as jest.Mock).mockReturnValue({ path: 'x' });
+
+      let transaction = withDocument({ 'tv-1396': { id: 1396, media_type: 'tv' } });
+      expect(
+        await listService.updateListItemFields('watchlist', episodeRef, 0, { episode_name: 'X' })
+      ).toBe(false);
+      expect(transaction.update).not.toHaveBeenCalled();
+
+      transaction = withDocument(null);
+      expect(
+        await listService.updateListItemFields('watchlist', episodeRef, 2, { episode_name: 'X' })
+      ).toBe(false);
+      expect(transaction.update).not.toHaveBeenCalled();
+    });
+
     it('writes nothing with no fields to change', async () => {
-      await listService.updateListItemFields('watchlist', episodeRef, 0, {});
-      expect(updateDoc).not.toHaveBeenCalled();
+      expect(await listService.updateListItemFields('watchlist', episodeRef, 0, {})).toBe(false);
+      expect(runTransaction).not.toHaveBeenCalled();
     });
   });
 

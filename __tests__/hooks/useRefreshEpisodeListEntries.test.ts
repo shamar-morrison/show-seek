@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react-native';
 
 const mockUpdateListItemFields = jest.fn();
 const mockSetQueryData = jest.fn();
+const mockInvalidateQueries = jest.fn();
 
 jest.mock('@/src/services/ListService', () => ({
   listService: {
@@ -14,7 +15,10 @@ jest.mock('@/src/context/auth', () => ({
 }));
 
 jest.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ setQueryData: mockSetQueryData }),
+  useQueryClient: () => ({
+    setQueryData: mockSetQueryData,
+    invalidateQueries: mockInvalidateQueries,
+  }),
 }));
 
 import { useRefreshEpisodeListEntries } from '@/src/hooks/useRefreshEpisodeListEntries';
@@ -51,7 +55,7 @@ const expectedFields = {
 describe('useRefreshEpisodeListEntries', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUpdateListItemFields.mockResolvedValue(undefined);
+    mockUpdateListItemFields.mockResolvedValue(true);
   });
 
   it('updates each outdated entry in the document that holds it, once', async () => {
@@ -80,6 +84,29 @@ describe('useRefreshEpisodeListEntries', () => {
 
     rerender({ lists: [...lists] });
     expect(mockUpdateListItemFields).toHaveBeenCalledTimes(2);
+  });
+
+  it('reloads the lists, and patches nothing, when an entry was removed meanwhile', async () => {
+    mockUpdateListItemFields.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+    renderHook(() =>
+      useRefreshEpisodeListEntries({
+        tvId: 1396,
+        seasonNumber: 2,
+        episodeNumber: 5,
+        episode,
+        lists,
+      })
+    );
+
+    await waitFor(() =>
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['lists', 'test-user'] })
+    );
+    // Only the list that still holds the entry is patched in the cache.
+    const updater = mockSetQueryData.mock.calls[0][1];
+    const updated = updater(lists);
+    expect(updated[0]).toBe(lists[0]);
+    expect(updated[1].items['episode-1396-2-5']).toEqual({ ...savedEntry, ...expectedFields });
   });
 
   it('writes nothing when no saved entry is out of date', () => {

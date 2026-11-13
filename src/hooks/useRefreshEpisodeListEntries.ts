@@ -9,8 +9,8 @@ import { useEffect, useRef } from 'react';
 /**
  * When an episode's screen opens, brings its saved list entries up to date with TMDB (name, air
  * date, still, runtime), once per screen. Entries saved before the episode aired otherwise keep
- * a placeholder name and no air date. Writes only the lists whose entry is out of date, and
- * updates the cached lists so nothing is read again.
+ * a placeholder name and no air date. Writes only the lists whose entry is out of date (never
+ * re-creating one removed meanwhile), and updates the cached lists so nothing is read again.
  */
 export function useRefreshEpisodeListEntries({
   tvId,
@@ -54,13 +54,13 @@ export function useRefreshEpisodeListEntries({
     void Promise.all(
       outdated.map(async ({ list, fields }) => {
         try {
-          await listService.updateListItemFields(
+          const updated = await listService.updateListItemFields(
             list.id,
             ref,
             list.overflowItemPages?.[itemKey] ?? 0,
             fields
           );
-          return { listId: list.id, fields };
+          return updated ? { listId: list.id, fields } : { listId: list.id, fields: null };
         } catch (error) {
           console.warn('[useRefreshEpisodeListEntries] Refresh failed:', error);
           return null;
@@ -68,9 +68,16 @@ export function useRefreshEpisodeListEntries({
       })
     ).then((results) => {
       const updated = new Map<string, Partial<ListMediaItem>>();
+      let isCacheStale = false;
       results.forEach((result) => {
-        if (result) updated.set(result.listId, result.fields);
+        if (!result) return;
+        if (result.fields) updated.set(result.listId, result.fields);
+        // The entry is gone from that list, so the cached lists are out of date.
+        else isCacheStale = true;
       });
+      if (isCacheStale) {
+        void queryClient.invalidateQueries({ queryKey: ['lists', userId] });
+      }
       if (updated.size === 0) return;
       queryClient.setQueryData<UserList[]>(['lists', userId], (cachedLists) =>
         cachedLists?.map((list) => {

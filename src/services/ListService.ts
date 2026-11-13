@@ -995,15 +995,18 @@ class ListService {
   /**
    * Update some fields of an entry already in a list, in the document that holds it (the list
    * document, or overflow page `page`), without touching its `addedAt` or the list's
-   * `updatedAt`. Writing to the wrong document would create a partial entry there, so `page`
-   * must come from the list's layout (`overflowItemPages`).
+   * `updatedAt`. The entry is read in the same transaction and nothing is written when it isn't
+   * there (removed meanwhile, e.g. by a Stremio watch or another device, or held by another
+   * page): a field-path update would otherwise create a partial entry with no id or type.
+   *
+   * @returns Whether the entry was found and updated.
    */
   async updateListItemFields(
     listId: string,
     item: ListItemRef,
     page: number,
     fields: Partial<Omit<ListMediaItem, 'id' | 'media_type' | 'addedAt'>>
-  ) {
+  ): Promise<boolean> {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
@@ -1019,13 +1022,27 @@ class ListService {
         }
       });
       if (Object.keys(updates).length === 0) {
-        return;
+        return false;
       }
       const ref =
         page > 0
           ? this.getListItemPageRef(user.uid, listId, page)
           : this.getUserListRef(user.uid, listId);
-      await Promise.race([updateDoc(ref, updates), timeout.promise]);
+      return await Promise.race([
+        runTransaction(db, async (transaction) => {
+          const snapshot = await transaction.get(ref);
+          const items = snapshot.exists()
+            ? (snapshot.data()?.items as Record<string, unknown> | undefined)
+            : undefined;
+          const savedItem = items?.[itemKey] as Partial<ListItemRef> | undefined;
+          if (!savedItem || typeof savedItem.id !== 'number') {
+            return false;
+          }
+          transaction.update(ref, updates);
+          return true;
+        }),
+        timeout.promise,
+      ]);
     } catch (error) {
       console.error('[ListService] updateListItemFields error:', { error, listId, item });
       throw new Error(getFirestoreErrorMessage(error));
