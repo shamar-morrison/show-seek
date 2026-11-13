@@ -100,6 +100,7 @@ import {
   clearTraktTokensIfRefreshTokenUnchanged,
   createOAuthState,
   enrichMediaItem,
+  enrichMediaItems,
   exchangeAuthorizationCode,
   isRunFatalSyncError,
   needsMediaEnrichment,
@@ -6730,9 +6731,17 @@ describe('Trakt list item enrichment', () => {
     expect(
       needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: '/p.jpg', vote_average: 7, genre_ids: [18] })
     ).toBe(false);
-    // Season entries are saved complete by the app and never enriched, even with no genres.
+    // A complete season (as the app saves it, or after enrichment) isn't looked up again, even
+    // when its show has no genres.
     expect(
-      needsMediaEnrichment({ id: 1, media_type: 'season', season_number: 2, genre_ids: [] })
+      needsMediaEnrichment({
+        genre_ids: [],
+        id: 1,
+        media_type: 'season',
+        poster_path: null,
+        season_name: 'Season 2',
+        season_number: 2,
+      })
     ).toBe(false);
   });
 
@@ -7003,5 +7012,132 @@ describe('reconcileManagedList with season entries', () => {
 
     expect(result).toMatchObject({ changedCount: 0, didRemoteChange: false, didWrite: false });
     expect(listSet).not.toHaveBeenCalled();
+  });
+});
+
+describe('enriching season entries', () => {
+  const tmdbResponse = (body: unknown, status = 200) => ({
+    headers: { get: () => null },
+    json: jest.fn().mockResolvedValue(body),
+    ok: status < 400,
+    status,
+  });
+  const syncedSeason = (seasonNumber: number) => ({
+    addedAt: 1,
+    id: 1396,
+    media_type: 'season',
+    name: `Breaking Bad · Season ${seasonNumber}`,
+    season_number: seasonNumber,
+    show_name: 'Breaking Bad',
+    title: `Breaking Bad · Season ${seasonNumber}`,
+  });
+  const show = {
+    first_air_date: '2008-01-20',
+    genres: [{ id: 18 }, { id: 80 }],
+    name: 'Breaking Bad',
+    poster_path: '/show.jpg',
+    vote_average: 8.9,
+  };
+
+  it('flags synced seasons, but not seasons the app saved complete', () => {
+    expect(needsMediaEnrichment(syncedSeason(2))).toBe(true);
+    expect(
+      needsMediaEnrichment({ ...syncedSeason(2), poster_path: null, season_name: 'Season 2' })
+    ).toBe(false);
+    expect(needsMediaEnrichment({ id: 1396, media_type: 'season' })).toBe(false);
+  });
+
+  it("fills in a show's seasons from one TMDB call", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce(
+      tmdbResponse({
+        ...show,
+        'season/0': { air_date: null, episodes: [], name: 'Specials', poster_path: null },
+        'season/2': {
+          air_date: '2009-03-08',
+          episodes: [{ runtime: 47 }, { runtime: null }, { runtime: 48 }],
+          name: 'Season 2',
+          poster_path: '/s2.jpg',
+          vote_average: 8.4,
+        },
+      })
+    );
+
+    const enriched = await enrichMediaItems({
+      'season-1396-2': syncedSeason(2),
+      'season-1396-0': syncedSeason(0),
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain(
+      '/tv/1396?append_to_response=season/2,season/0'
+    );
+    expect(enriched['season-1396-2']).toMatchObject({
+      first_air_date: '2009-03-08',
+      genre_ids: [18, 80],
+      poster_path: '/s2.jpg',
+      release_date: '2009-03-08',
+      runtimeMinutes: 95,
+      season_name: 'Season 2',
+      seasonRuntimeMinutes: 95,
+      // The synced title stays, so the next sync doesn't see a change.
+      title: 'Breaking Bad · Season 2',
+      vote_average: 8.4,
+    });
+    expect(enriched['season-1396-0']).toMatchObject({
+      poster_path: '/show.jpg',
+      season_name: 'Specials',
+      vote_average: 8.9,
+    });
+    expect(enriched['season-1396-0']).not.toHaveProperty('seasonRuntimeMinutes');
+  });
+
+  it("gives a season TMDB doesn't have the show's details, so it isn't looked up again", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce(tmdbResponse(show));
+
+    const enriched = await enrichMediaItem(syncedSeason(7));
+
+    expect(enriched).toMatchObject({
+      genre_ids: [18, 80],
+      poster_path: '/show.jpg',
+      season_name: 'Season 7',
+      vote_average: 8.9,
+    });
+    expect(needsMediaEnrichment(enriched)).toBe(false);
+  });
+
+  it('falls back to separate calls when the combined call finds nothing', async () => {
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce(tmdbResponse({}, 404))
+      .mockResolvedValueOnce(tmdbResponse(show))
+      .mockResolvedValueOnce(tmdbResponse({ name: 'Season 3', poster_path: '/s3.jpg' }));
+
+    const enriched = await enrichMediaItem(syncedSeason(3));
+
+    expect((global.fetch as jest.Mock).mock.calls.map(([url]) => url.split('?')[0])).toEqual([
+      expect.stringContaining('/tv/1396'),
+      expect.stringContaining('/tv/1396'),
+      expect.stringContaining('/tv/1396/season/3'),
+    ]);
+    expect(enriched).toMatchObject({ poster_path: '/s3.jpg', season_name: 'Season 3' });
+  });
+
+  it('moves season entries off a full list document like other entries', () => {
+    const items = Object.fromEntries(
+      Array.from({ length: 2500 }, (_, i) => [
+        `movie-${i + 1}`,
+        { id: i + 1, media_type: 'movie', title: `Movie ${i + 1}` },
+      ])
+    );
+    const list = {
+      items: { ...items, 'season-1396-2': syncedSeason(2) },
+      layout: { overflowItemPages: {}, pageCount: 0, pageSizes: [2501] },
+    };
+
+    const result = planEnrichmentRelocation(list, {
+      'season-1396-2': { ...syncedSeason(2), poster_path: '/s2.jpg', season_name: 'Season 2' },
+    });
+
+    expect(Object.keys(result.itemsToMove)).toEqual(['season-1396-2']);
+    expect(result.removeFromListDocKeys).toEqual(['season-1396-2']);
   });
 });

@@ -405,6 +405,18 @@ export interface TMDBShowDetails {
   vote_average: number;
 }
 
+/** A season's details from TMDB (`/tv/{id}/season/{n}`, or `season/{n}` appended to the show). */
+export interface TMDBSeasonDetails {
+  air_date?: string | null;
+  episodes?: { runtime?: number | null }[];
+  name?: string;
+  poster_path?: string | null;
+  vote_average?: number;
+}
+
+/** A show's details with seasons appended (`append_to_response=season/1,season/2`). */
+export type TMDBShowWithSeasons = TMDBShowDetails & Record<`season/${number}`, TMDBSeasonDetails | undefined>;
+
 export interface TMDBSeasonResponse {
   episodes: {
     air_date: string | null;
