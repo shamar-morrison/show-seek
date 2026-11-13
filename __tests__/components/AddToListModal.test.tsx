@@ -637,7 +637,7 @@ describe('AddToListModal (bulk mode)', () => {
 
       await waitFor(() => {
         expect(onShowToast).toHaveBeenCalledWith(
-          "1 episode wasn't added: episodes can only go in Should Watch and custom lists"
+          "1 episode wasn't added to lists that can't hold episodes. Episodes can only go in Should Watch and custom lists."
         );
       });
       expect(mockAddMutateAsync).toHaveBeenCalledTimes(1);
@@ -651,7 +651,7 @@ describe('AddToListModal (bulk mode)', () => {
       });
     });
 
-    it('moves an episode to the lists that can take it and skips the others', async () => {
+    it('moves an episode to the lists that can take it and says it skipped the others', async () => {
       const onShowToast = jest.fn();
       mockListsState.data = [
         {
@@ -693,7 +693,10 @@ describe('AddToListModal (bulk mode)', () => {
       expect(mockAddMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ listId: 'watchlist' })
       );
-      expect(onShowToast).toHaveBeenCalledWith('Lists updated');
+      // Favorites can't take episodes, so that part of the move is reported.
+      expect(onShowToast).toHaveBeenCalledWith(
+        "1 episode wasn't added to lists that can't hold episodes. Episodes can only go in Should Watch and custom lists."
+      );
     });
   });
 

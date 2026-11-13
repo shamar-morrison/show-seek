@@ -491,9 +491,14 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         // Whether the item is now in at least one target list. An item no target can take
         // (an episode moved only to lists like Already Watched) stays in its source list.
         let isInSomeTarget = false;
+        // Whether a chosen list couldn't take the item (an episode and Already Watched).
+        let wasSkippedForSomeTarget = false;
 
         for (const targetList of targetLists) {
-          if (!canListHoldEntry(targetList.id, selectedMedia.media_type)) continue;
+          if (!canListHoldEntry(targetList.id, selectedMedia.media_type)) {
+            wasSkippedForSomeTarget = true;
+            continue;
+          }
           isInSomeTarget = true;
           const alreadyInTargetList = hasListItemByRef(targetList.items, selectedMedia);
           if (alreadyInTargetList) continue;
@@ -515,8 +520,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           }
         }
 
-        if (!isInSomeTarget) {
+        if (wasSkippedForSomeTarget) {
           skippedEpisodes += 1;
+        }
+
+        if (!isInSomeTarget) {
           continue;
         }
 
