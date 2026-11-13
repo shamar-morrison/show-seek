@@ -2141,7 +2141,14 @@
     "reminderHint": "Yalnızca yakında çıkacak yapımlarda görünür",
     "dragHandle": "{{name}} öğesini yeniden sıralamak için sürükleyin",
     "position": "Sıra {{position}}",
-    "saveFailed": "Yeni sıra kaydedilemedi. Lütfen tekrar deneyin."
+    "saveFailed": "Yeni sıra kaydedilemedi. Lütfen tekrar deneyin.",
+    "seasonsDescription": "Sezonlar ve bölümler ekranında her sezondaki sıralarını değiştirmek için düğmeleri sürükleyin.",
+    "markAllHint": "Yalnızca sezonda işaretlenecek bölüm varsa görünür",
+    "progressCardHint": "Yalnızca sezona başladığınızda görünür",
+    "tabs": {
+      "titles": "Filmler ve diziler",
+      "seasons": "Sezonlar"
+    }
   },
   "lists": {
     "alreadyWatched": "Daha önce izlenenler",

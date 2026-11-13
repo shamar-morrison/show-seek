@@ -1,5 +1,6 @@
 import { auditedGetDoc, auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
 import { resolveDetailActionOrder } from '@/src/utils/detailActionOrder';
+import { resolveSeasonActionOrder } from '@/src/utils/seasonActionOrder';
 import {
   getSignedInUser,
   requireSignedInUser,
@@ -74,6 +75,9 @@ class PreferencesService {
       ),
       detailActionOrder: Array.isArray(data?.preferences?.detailActionOrder)
         ? resolveDetailActionOrder(data.preferences.detailActionOrder)
+        : undefined,
+      seasonActionOrder: Array.isArray(data?.preferences?.seasonActionOrder)
+        ? resolveSeasonActionOrder(data.preferences.seasonActionOrder)
         : undefined,
       use24HourTime:
         typeof data?.preferences?.use24HourTime === 'boolean'

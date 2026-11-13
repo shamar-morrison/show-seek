@@ -83,6 +83,8 @@ jest.mock('@/src/hooks/useProgressiveRender', () => ({
   useProgressiveRender: () => ({ isReady: true }),
 }));
 
+let mockSeasonActionOrder: string[] | undefined;
+
 jest.mock('@/src/hooks/usePreferences', () => ({
   usePreferences: () => ({
     preferences: {
@@ -90,6 +92,7 @@ jest.mock('@/src/hooks/usePreferences', () => ({
       markPreviousEpisodesWatched: false,
       allowUnreleasedEpisodeWatches: false,
       showOriginalTitles: false,
+      seasonActionOrder: mockSeasonActionOrder,
     },
   }),
 }));
@@ -283,6 +286,61 @@ describe('TVSeasonsScreen season actions', () => {
       } as any;
     });
   }
+
+  describe('button order', () => {
+    const buttonOrder = (screen: ReturnType<typeof renderWithProviders>) =>
+      screen
+        .getAllByTestId(/^season-(mark-all|rate|note|add-to-list|share-card)-button-1$/)
+        .map((node) => node.props.testID.replace(/^season-|-button-1$/g, ''));
+
+    afterEach(() => {
+      mockSeasonActionOrder = undefined;
+      mockEpisodeTracking = null;
+    });
+
+    it('keeps the original order by default', () => {
+      // A watched episode shows both buttons that only sometimes apply (unmark all, progress card).
+      mockEpisodeTracking = { episodes: { '1_1': { seasonNumber: 1, episodeNumber: 1 } } };
+      mockQueries();
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+
+      expect(buttonOrder(screen)).toEqual([
+        'mark-all',
+        'rate',
+        'note',
+        'add-to-list',
+        'share-card',
+      ]);
+    });
+
+    it('shows the buttons in the order chosen in settings', () => {
+      mockEpisodeTracking = { episodes: { '1_1': { seasonNumber: 1, episodeNumber: 1 } } };
+      mockSeasonActionOrder = ['list', 'shareCard', 'note', 'rating', 'markAll'];
+      mockQueries();
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+
+      expect(buttonOrder(screen)).toEqual([
+        'add-to-list',
+        'share-card',
+        'note',
+        'rate',
+        'mark-all',
+      ]);
+    });
+
+    it('leaves out buttons that do not apply, keeping the others in order', () => {
+      mockEpisodeTracking = null;
+      mockSeasonActionOrder = ['shareCard', 'list', 'markAll', 'note', 'rating'];
+      mockQueries();
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+
+      // Nothing watched: no progress card. The aired episode can still be marked, so mark all shows.
+      expect(buttonOrder(screen)).toEqual(['add-to-list', 'mark-all', 'note', 'rate']);
+    });
+  });
 
   describe('add to list', () => {
     afterEach(() => {
