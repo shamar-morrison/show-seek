@@ -64,9 +64,10 @@ export const TRAKT_INCREMENTAL_SCHEMA_VERSION = 1;
 /**
  * Version of how the watchlist and custom lists are read from Trakt. A sync whose saved state has
  * an older version re-reads those two (even if Trakt reports no change) and saves this version;
- * everything else stays incremental. 1: seasons are kept as season entries.
+ * everything else stays incremental. 1: seasons are kept as season entries. 2: episodes are kept
+ * as episode entries.
  */
-export const TRAKT_LISTS_SCHEMA_VERSION = 1;
+export const TRAKT_LISTS_SCHEMA_VERSION = 2;
 
 export const ACTIVE_RUN_STATUSES = new Set<SyncStatusState>(['queued', 'in_progress', 'retrying']);
 export const DEFAULT_ENRICHMENT_LIST_IDS = ['already-watched', 'watchlist', 'favorites'] as const;

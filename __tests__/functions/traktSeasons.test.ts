@@ -131,7 +131,7 @@ describe('transformWatchlistItem with seasons', () => {
 });
 
 describe('buildCustomListItemsMap with seasons', () => {
-  it('keys the show, each season and an episode (as its show) apart', () => {
+  it('keys the show, each season and an episode apart', () => {
     const items = buildCustomListItemsMap([
       { id: 1, listed_at: '2026-01-01T00:00:00.000Z', rank: 1, show, type: 'show' },
       seasonEntry(1),
@@ -146,7 +146,22 @@ describe('buildCustomListItemsMap with seasons', () => {
       },
     ]);
 
-    expect(Object.keys(items).sort()).toEqual(['season-1396-0', 'season-1396-1', 'tv-1396']);
+    expect(Object.keys(items).sort()).toEqual([
+      'episode-1396-1-1',
+      'season-1396-0',
+      'season-1396-1',
+      'tv-1396',
+    ]);
+    expect(items['episode-1396-1-1']).toEqual({
+      addedAt: new Date('2026-01-03T00:00:00.000Z').getTime(),
+      episode_number: 1,
+      id: 1396,
+      media_type: 'episode',
+      name: 'Breaking Bad · S1E1 · Pilot',
+      season_number: 1,
+      show_name: 'Breaking Bad',
+      title: 'Breaking Bad · S1E1 · Pilot',
+    });
     expect(items['season-1396-1']).toEqual(
       expect.objectContaining({
         id: 1396,
@@ -197,16 +212,20 @@ describe('ZIP import aggregation with seasons', () => {
   const keysOf = (items: (TraktListItem | TraktWatchlistItem)[]) =>
     Object.keys(buildCustomListItemsMap(items as TraktListItem[])).sort();
 
-  it('keeps each season of a watchlist apart from its show', () => {
+  it('keeps each season and episode of a watchlist apart from its show', () => {
     const watchlist = aggregateWatchlist(rawEntries);
 
     expect(keysOf(watchlist)).toEqual([
+      'episode-1399-1-1',
       'season-1396-0',
       'season-1396-1',
       'season-1396-2',
       'tv-1396',
-      'tv-1399',
     ]);
+    expect(watchlist.find((item) => item.type === 'episode')).toMatchObject({
+      episode: { number: 1, season: 1, title: 'Pilot' },
+      show: { ids: { tmdb: 1399 }, title: 'Other Show' },
+    });
     expect(watchlist.find((item) => item.season?.number === 2)).toMatchObject({
       season: { ids: { tmdb: 3573 }, number: 2 },
       show: { ids: { tmdb: 1396 }, title: 'Breaking Bad' },
@@ -214,18 +233,31 @@ describe('ZIP import aggregation with seasons', () => {
     });
   });
 
-  it('keeps seasons in custom lists and counts episodes as their show', () => {
+  it('keeps seasons and episodes in custom lists', () => {
     const [{ items }] = aggregateCustomLists([
       { ids: { slug: 'faves', trakt: 77 }, items: rawEntries, name: 'Faves' },
     ]);
 
     expect(keysOf(items)).toEqual([
+      'episode-1399-1-1',
       'season-1396-0',
       'season-1396-1',
       'season-1396-2',
       'tv-1396',
-      'tv-1399',
     ]);
+  });
+
+  it('counts an episode without usable numbers as its show', () => {
+    const watchlist = aggregateWatchlist([
+      {
+        episode: { number: undefined, season: 1, title: 'Unknown' },
+        listed_at: '2026-01-05T00:00:00.000Z',
+        show: rawShow,
+        type: 'episode',
+      },
+    ]);
+
+    expect(keysOf(watchlist)).toEqual(['tv-1396']);
   });
 
   it('keeps one entry per season when a season is listed twice', () => {
@@ -282,7 +314,24 @@ describe('findFoldedSeasonShowKeys', () => {
     ).toEqual([]);
   });
 
-  it('keeps a show Trakt still lists itself (as a show, or through an episode)', () => {
+  it('finds a show entry that an earlier sync folded from an episode', () => {
+    expect(
+      findFoldedSeasonShowKeys(
+        {
+          'episode-1396-2-12': {
+            addedAt: T1,
+            episode_number: 12,
+            id: 1396,
+            media_type: 'episode',
+            season_number: 2,
+          },
+        },
+        { 'tv-1396': tv(1396, T1) }
+      )
+    ).toEqual(['tv-1396']);
+  });
+
+  it('keeps a show Trakt still lists itself', () => {
     expect(
       findFoldedSeasonShowKeys(
         { 'season-1396-2': season(1396, 2, T1), 'tv-1396': tv(1396, T1) },

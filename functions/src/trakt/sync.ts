@@ -46,6 +46,7 @@ import {
   TRAKT_TOKEN_REFRESH_THRESHOLD_MS,
 } from './constants';
 import { buildTaskDispatchOptions } from './enrichment';
+import { alignTraktEpisodeNumbers } from './episodeNumbers';
 import { emptyItemsSynced, getSyncSummaryMode } from './status';
 import {
   didActivityFieldChange,
@@ -586,7 +587,8 @@ export const syncWatchlist = async (
   userId: string,
   traktWatchlist: TraktWatchlistItem[]
 ): Promise<{ changedCount: number; itemCount: number; shouldEnrich: boolean }> => {
-  const remoteItems = buildWatchlistItemsMap(traktWatchlist);
+  // Episode entries take TMDB's numbering before they are keyed.
+  const remoteItems = buildWatchlistItemsMap(await alignTraktEpisodeNumbers(traktWatchlist));
   const result = await reconcileManagedList(
     userId,
     'watchlist',
@@ -685,7 +687,7 @@ export const reconcileCustomLists = async (
     const result = await reconcileManagedList(
       userId,
       listId,
-      buildCustomListItemsMap(listItems),
+      buildCustomListItemsMap(await alignTraktEpisodeNumbers(listItems)),
       {
         createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
         description: traktList.description || '',

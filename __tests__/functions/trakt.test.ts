@@ -112,6 +112,7 @@ import {
   requestOAuthToken,
   runTraktSync,
   TRAKT_INVALID_GRANT_MESSAGE,
+  TRAKT_LISTS_SCHEMA_VERSION,
   TRAKT_OAUTH_STATE_TTL_MS,
   TraktOAuthError,
   TraktSyncError,
@@ -2074,7 +2075,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities: lastActivitiesBefore,
-            listsSchemaVersion: 1,
+            listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -2308,7 +2309,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities: lastActivitiesBefore,
-            listsSchemaVersion: 1,
+            listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -2536,7 +2537,7 @@ describe('Trakt sync Firestore sanitization', () => {
               },
             },
             lastActivities: lastActivitiesBefore,
-            listsSchemaVersion: 1,
+            listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -2763,7 +2764,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities: lastActivitiesBefore,
-            listsSchemaVersion: 1,
+            listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -2949,7 +2950,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities,
-            listsSchemaVersion: 1,
+            listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -3018,7 +3019,7 @@ describe('Trakt sync Firestore sanitization', () => {
     const savedState = batchSet.mock.calls
       .map(([_ref, data]) => data)
       .find((data) => data?.traktIncrementalState)?.traktIncrementalState;
-    expect(savedState).toMatchObject({ listsSchemaVersion: 1, schemaVersion: 1 });
+    expect(savedState).toMatchObject({ listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION, schemaVersion: 1 });
   });
 
   it('reports only the changed incremental bucket when a single activity group changes', async () => {
@@ -3098,7 +3099,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities: lastActivitiesBefore,
-            listsSchemaVersion: 1,
+            listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -7126,12 +7127,31 @@ describe('one-time re-read of the watchlist and lists', () => {
     });
   });
 
-  it('stays incremental once the lists have been re-read', () => {
+  it('re-reads the watchlist and lists once more for a sync state from before episodes', () => {
     expect(
       getSyncSteps({
         bootstrap: false,
         lastActivities: activities,
         listsSchemaVersion: 1,
+        previousActivities: activities,
+      })
+    ).toMatchObject({
+      forceListResync: true,
+      shouldSyncCustomLists: true,
+      shouldSyncFavorites: false,
+      shouldSyncRatings: false,
+      shouldSyncWatched: false,
+      shouldSyncWatchlist: true,
+    });
+    expect(TRAKT_LISTS_SCHEMA_VERSION).toBe(2);
+  });
+
+  it('stays incremental once the lists have been re-read', () => {
+    expect(
+      getSyncSteps({
+        bootstrap: false,
+        lastActivities: activities,
+        listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
         previousActivities: activities,
       })
     ).toMatchObject({
@@ -7146,7 +7166,7 @@ describe('one-time re-read of the watchlist and lists', () => {
       getSyncSteps({
         bootstrap: false,
         lastActivities: { ...activities, watchlist: { updated_at: '2024-02-01T00:00:00.000Z' } },
-        listsSchemaVersion: 1,
+        listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
         previousActivities: activities,
       })
     ).toMatchObject({ shouldSyncCustomLists: false, shouldSyncWatchlist: true });
@@ -7321,5 +7341,287 @@ describe('enriching season entries', () => {
 
     expect(Object.keys(result.itemsToMove)).toEqual(['season-1396-2']);
     expect(result.removeFromListDocKeys).toEqual(['season-1396-2']);
+  });
+});
+
+describe('Trakt episode entries', () => {
+  const {
+    buildWatchlistItemsMap,
+    getTraktEpisodeRef,
+    transformListItem,
+  } = require('@/functions/src/trakt') as typeof import('@/functions/src/trakt');
+  const { alignTraktEpisodeNumbers } =
+    require('@/functions/src/trakt/episodeNumbers') as typeof import('@/functions/src/trakt/episodeNumbers');
+
+  const show = { ids: { slug: 'breaking-bad', tmdb: 1396, trakt: 1 }, title: 'Breaking Bad', year: 2008 };
+  const episodeEntry = (
+    season: number,
+    number: number,
+    ids: Record<string, unknown> = { slug: 'e', trakt: 5 },
+    listedAt = '2025-12-22T16:33:54.000Z'
+  ) => ({
+    episode: { ids, number, season, title: 'Phoenix' },
+    id: 9,
+    listed_at: listedAt,
+    rank: 8,
+    show,
+    type: 'episode' as const,
+  });
+
+  describe('getTraktEpisodeRef', () => {
+    it('reads the numbers of an episode entry, including zeros', () => {
+      expect(getTraktEpisodeRef(episodeEntry(2, 12))).toEqual({ seasonNumber: 2, episodeNumber: 12 });
+      expect(getTraktEpisodeRef(episodeEntry(0, 0))).toEqual({ seasonNumber: 0, episodeNumber: 0 });
+    });
+
+    it('ignores other entry types and episodes without usable numbers', () => {
+      expect(getTraktEpisodeRef({ show, type: 'show' } as any)).toBeUndefined();
+      expect(getTraktEpisodeRef({ ...episodeEntry(2, 12), type: 'show' })).toBeUndefined();
+      expect(
+        getTraktEpisodeRef({ episode: { number: 1.5, season: 2 }, type: 'episode' })
+      ).toBeUndefined();
+      expect(getTraktEpisodeRef({ episode: { season: 2 } })).toBeUndefined();
+    });
+  });
+
+  it('keeps a watchlist episode as an episode entry, without an episode name', () => {
+    const items = buildWatchlistItemsMap([
+      episodeEntry(2, 12) as any,
+      { id: 1, listed_at: '2025-01-01T00:00:00.000Z', rank: 1, show, type: 'show' },
+    ]);
+
+    expect(Object.keys(items).sort()).toEqual(['episode-1396-2-12', 'tv-1396']);
+    expect(items['episode-1396-2-12']).toEqual({
+      addedAt: new Date('2025-12-22T16:33:54.000Z').getTime(),
+      episode_number: 12,
+      id: 1396,
+      media_type: 'episode',
+      name: 'Breaking Bad · S2E12 · Phoenix',
+      season_number: 2,
+      show_name: 'Breaking Bad',
+      title: 'Breaking Bad · S2E12 · Phoenix',
+    });
+  });
+
+  it('transforms a custom list episode into an episode entry', () => {
+    expect(transformListItem(episodeEntry(2, 12) as any)).toEqual({
+      addedAt: new Date('2025-12-22T16:33:54.000Z').getTime(),
+      episodeNumber: 12,
+      mediaType: 'episode',
+      seasonNumber: 2,
+      showName: 'Breaking Bad',
+      title: 'Breaking Bad · S2E12 · Phoenix',
+      tmdbId: 1396,
+    });
+  });
+
+  it('removes a watchlist show an earlier sync folded from an episode', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const listedAt = new Date('2025-12-22T16:33:54.000Z').getTime();
+
+    await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'watchlist',
+      buildWatchlistItemsMap([episodeEntry(2, 12) as any]),
+      { id: 'watchlist', name: 'Should Watch' },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/watchlist',
+        {
+          items: {
+            // Written by an earlier sync for S2E12: the show, at the episode's time.
+            'tv-1396': { addedAt: listedAt, id: 1396, media_type: 'tv', title: 'Breaking Bad' },
+            'movie-27205': { addedAt: 5, id: 27205, media_type: 'movie', title: 'Inception' },
+          },
+          metadata: { itemCount: 2, needsEnrichment: false },
+          name: 'Should Watch',
+        },
+        listSet
+      ),
+      { preserveLocalItems: true, recencyField: 'addedAt', removeFoldedSeasonShows: true }
+    );
+
+    const write = listSet.mock.calls[0][0];
+    expect(write.items['tv-1396']).toBe('FIELD_DELETE');
+    expect(write.items).not.toHaveProperty(['movie-27205']);
+    expect(write.items['episode-1396-2-12']).toEqual(
+      expect.objectContaining({ media_type: 'episode', episode_number: 12 })
+    );
+    expect(write.metadata.needsEnrichment).toBe(true);
+  });
+
+  describe('alignTraktEpisodeNumbers', () => {
+    const lookup = (
+      seasons: Record<string, { episodes: { id?: number; episode_number?: number; season_number?: number }[] } | null>,
+      finds: Record<string, unknown> = {}
+    ) => ({
+      getSeason: jest.fn(async (tvId: number, s: number) => seasons[`${tvId}:${s}`] ?? null),
+      findEpisode: jest.fn(async (id: string) => (finds[id] as any) ?? null),
+    });
+
+    it('makes no request without episode entries', async () => {
+      const deps = lookup({});
+      const items = [{ id: 1, listed_at: 'x', rank: 1, show, type: 'show' as const }];
+      expect(await alignTraktEpisodeNumbers(items, deps)).toBe(items);
+      expect(deps.getSeason).not.toHaveBeenCalled();
+    });
+
+    it("keeps numbers TMDB confirms, with one season request per show and season", async () => {
+      const deps = lookup({
+        '1396:2': { episodes: [{ id: 62103, episode_number: 12 }, { id: 62104, episode_number: 13 }] },
+      });
+      const items = [episodeEntry(2, 12, { tmdb: 62103 }), episodeEntry(2, 13)];
+
+      const aligned = await alignTraktEpisodeNumbers(items, deps);
+
+      expect(aligned).toEqual(items);
+      expect(deps.getSeason).toHaveBeenCalledTimes(1);
+      expect(deps.findEpisode).not.toHaveBeenCalled();
+    });
+
+    it("takes TMDB's numbers for Trakt's TMDB episode ID within the season", async () => {
+      const deps = lookup({ '1396:1': { episodes: [{ id: 777, episode_number: 3, season_number: 1 }] } });
+
+      const [aligned] = await alignTraktEpisodeNumbers([episodeEntry(1, 26, { tmdb: 777 })], deps);
+
+      expect(aligned.episode).toMatchObject({ number: 3, season: 1, title: 'Phoenix' });
+    });
+
+    it('finds an episode TMDB numbers differently by its TVDB, then IMDb, ID', async () => {
+      const deps = lookup(
+        { '1396:1': { episodes: [{ id: 1, episode_number: 1 }] } },
+        {
+          '4242': { tv_episode_results: [{ show_id: 999, season_number: 5, episode_number: 5 }] },
+          tt42: { tv_episode_results: [{ show_id: 1396, season_number: 3, episode_number: 2 }] },
+        }
+      );
+
+      const [aligned] = await alignTraktEpisodeNumbers(
+        [episodeEntry(1, 64, { imdb: 'tt42', tvdb: 4242 })],
+        deps
+      );
+
+      // The TVDB match belongs to another show, so the IMDb one is used.
+      expect(deps.findEpisode.mock.calls).toEqual([
+        ['4242', 'tvdb_id'],
+        ['tt42', 'imdb_id'],
+      ]);
+      expect(aligned.episode).toMatchObject({ number: 2, season: 3 });
+    });
+
+    it("keeps Trakt's numbers when nothing confirms other ones", async () => {
+      const deps = lookup({});
+      const items = [episodeEntry(9, 1, { tvdb: 1 })];
+
+      expect(await alignTraktEpisodeNumbers(items, deps)).toEqual(items);
+    });
+
+    it("keeps Trakt's numbers for the rest once a lookup fails or the budget runs out", async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const failing = {
+        getSeason: jest.fn(async () => {
+          throw new Error('rate limited');
+        }),
+        findEpisode: jest.fn(async () => null),
+      };
+      const items = [episodeEntry(1, 64, { tvdb: 1 }), episodeEntry(2, 5, { tvdb: 2 })];
+
+      expect(await alignTraktEpisodeNumbers(items, failing)).toEqual(items);
+      expect(failing.getSeason).toHaveBeenCalledTimes(1);
+      expect(failing.findEpisode).not.toHaveBeenCalled();
+
+      const budgeted = lookup({});
+      await alignTraktEpisodeNumbers(items, budgeted, 1);
+      expect(budgeted.getSeason).toHaveBeenCalledTimes(1);
+      expect(budgeted.findEpisode).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('enriching episode entries', () => {
+    const tmdbResponse = (body: unknown, status = 200) => ({
+      headers: { get: () => null },
+      json: jest.fn().mockResolvedValue(body),
+      ok: status < 400,
+      status,
+    });
+    const syncedEpisode = (s: number, e: number) => ({
+      addedAt: 1,
+      episode_number: e,
+      id: 1396,
+      media_type: 'episode',
+      name: `Breaking Bad · S${s}E${e}`,
+      season_number: s,
+      show_name: 'Breaking Bad',
+      title: `Breaking Bad · S${s}E${e}`,
+    });
+    const tmdbShow = {
+      first_air_date: '2008-01-20',
+      genres: [{ id: 18 }],
+      name: 'Breaking Bad',
+      poster_path: '/show.jpg',
+      vote_average: 8.9,
+    };
+
+    it('flags synced episodes, but not episodes the app saved complete', () => {
+      expect(needsMediaEnrichment(syncedEpisode(2, 12))).toBe(true);
+      expect(
+        needsMediaEnrichment({ ...syncedEpisode(2, 12), poster_path: null, episode_name: 'Phoenix' })
+      ).toBe(false);
+      expect(needsMediaEnrichment({ id: 1396, media_type: 'episode', season_number: 2 })).toBe(false);
+    });
+
+    it("fills in a show's episodes and seasons from one TMDB call", async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce(
+        tmdbResponse({
+          ...tmdbShow,
+          'season/2': {
+            air_date: '2009-03-08',
+            episodes: [
+              {
+                air_date: '2009-05-24',
+                episode_number: 12,
+                name: 'Phoenix',
+                runtime: 47,
+                still_path: '/phoenix.jpg',
+                vote_average: 9.1,
+              },
+            ],
+            name: 'Season 2',
+            poster_path: '/s2.jpg',
+          },
+        })
+      );
+
+      const enriched = await enrichMediaItems({
+        'episode-1396-2-12': syncedEpisode(2, 12),
+        'episode-1396-2-99': syncedEpisode(2, 99),
+      });
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain(
+        '/tv/1396?append_to_response=season/2'
+      );
+      expect(enriched['episode-1396-2-12']).toMatchObject({
+        episode_name: 'Phoenix',
+        episodeRuntimeMinutes: 47,
+        first_air_date: '2009-05-24',
+        genre_ids: [18],
+        poster_path: '/s2.jpg',
+        release_date: '2009-05-24',
+        runtimeMinutes: 47,
+        still_path: '/phoenix.jpg',
+        // The synced title stays, so the next sync doesn't see a change.
+        title: 'Breaking Bad · S2E12',
+        vote_average: 9.1,
+      });
+      // An episode TMDB doesn't have gets the show's details, so it isn't looked up again.
+      expect(enriched['episode-1396-2-99']).toMatchObject({
+        episode_name: 'Episode 99',
+        poster_path: '/s2.jpg',
+        still_path: null,
+        vote_average: 8.9,
+      });
+      expect(needsMediaEnrichment(enriched['episode-1396-2-99'])).toBe(false);
+    });
   });
 });

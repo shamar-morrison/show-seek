@@ -410,7 +410,14 @@ export interface TMDBShowDetails {
 /** A season's details from TMDB (`/tv/{id}/season/{n}`, or `season/{n}` appended to the show). */
 export interface TMDBSeasonDetails {
   air_date?: string | null;
-  episodes?: { runtime?: number | null }[];
+  episodes?: {
+    air_date?: string | null;
+    episode_number?: number;
+    name?: string;
+    runtime?: number | null;
+    still_path?: string | null;
+    vote_average?: number;
+  }[];
   name?: string;
   poster_path?: string | null;
   vote_average?: number;

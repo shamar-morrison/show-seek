@@ -1,6 +1,11 @@
 import { Timestamp } from 'firebase-admin/firestore';
 import { buildListItemKey } from '../shared/listItemKeys';
-import { buildSeasonEntryTitle, getTraktSeasonNumber } from './seasons';
+import {
+  buildEpisodeEntryTitle,
+  buildSeasonEntryTitle,
+  getTraktEpisodeRef,
+  getTraktSeasonNumber,
+} from './seasons';
 import type {
   TraktActivitiesGroup,
   TraktFavorite,
@@ -11,13 +16,15 @@ import type {
   TraktWatchlistItem,
 } from './types';
 
-export { buildSeasonEntryTitle, getTraktSeasonNumber };
+export { buildEpisodeEntryTitle, buildSeasonEntryTitle, getTraktEpisodeRef, getTraktSeasonNumber };
 
 export const isListMediaType = (value: unknown): value is 'movie' | 'tv' => value === 'movie' || value === 'tv';
 
-/** Any media type a list entry can have: a movie, a show, or one season of a show. */
-export const isListEntryMediaType = (value: unknown): value is 'movie' | 'tv' | 'season' =>
-  isListMediaType(value) || value === 'season';
+/** Any media type a list entry can have: a movie, a show, or one season or episode of a show. */
+export const isListEntryMediaType = (
+  value: unknown
+): value is 'movie' | 'tv' | 'season' | 'episode' =>
+  isListMediaType(value) || value === 'season' || value === 'episode';
 
 
 export const isTimestampLike = (value: unknown): value is { toMillis: () => number } =>
@@ -161,12 +168,12 @@ export const shouldApplyRemoteManagedValue = (
 };
 
 /**
- * Show entries that an earlier sync created by folding a Trakt season into its show, and that
- * the season's own entry now replaces. A local `tv-X` entry qualifies only when:
- * - Trakt lists seasons of X but not X itself (no show entry, and no episode, which also counts
- *   as the show), and
- * - its `addedAt` is exactly the `listed_at` of one of those seasons, which is what folding
- *   wrote. A show added in ShowSeek, or listed on Trakt as a show, has its own time.
+ * Show entries that an earlier sync created by folding a Trakt season or episode into its show,
+ * and that the season's or episode's own entry now replaces. A local `tv-X` entry qualifies only
+ * when:
+ * - Trakt lists seasons or episodes of X but not X itself, and
+ * - its `addedAt` is exactly the `listed_at` of one of those seasons or episodes, which is what
+ *   folding wrote. A show added in ShowSeek, or listed on Trakt as a show, has its own time.
  */
 export const findFoldedSeasonShowKeys = (
   remoteItems: Record<string, Record<string, unknown>>,
@@ -174,7 +181,8 @@ export const findFoldedSeasonShowKeys = (
 ): string[] => {
   const seasonTimesByShow = new Map<number, Set<number>>();
   Object.values(remoteItems).forEach((item) => {
-    if (item?.media_type !== 'season' || typeof item.id !== 'number') return;
+    if (item?.media_type !== 'season' && item?.media_type !== 'episode') return;
+    if (typeof item.id !== 'number') return;
     const addedAt = getComparableMillis(item.addedAt);
     if (addedAt === null) return;
     const times = seasonTimesByShow.get(item.id) ?? new Set<number>();
@@ -359,10 +367,14 @@ export const transformRating = (traktRating: TraktRating): Record<string, unknow
 
 export interface TransformedListItem {
   addedAt: number;
-  /** For a season, the show's TMDB ID is `tmdbId` and the season is `seasonNumber`. */
-  mediaType: 'movie' | 'tv' | 'season';
+  /**
+   * For a season, the show's TMDB ID is `tmdbId` and the season is `seasonNumber`; an episode
+   * also has `episodeNumber`.
+   */
+  mediaType: 'movie' | 'tv' | 'season' | 'episode';
   seasonNumber?: number;
-  /** The show's own title, for a season. */
+  episodeNumber?: number;
+  /** The show's own title, for a season or episode. */
   showName?: string;
   title: string;
   tmdbId: number;
@@ -387,6 +399,29 @@ export const transformListItem = (traktItem: TraktListItem): TransformedListItem
       seasonNumber,
       showName,
       title: buildSeasonEntryTitle(showName, seasonNumber),
+      tmdbId: showTmdbId,
+    }) as TransformedListItem;
+  }
+
+  const episodeRef = getTraktEpisodeRef(traktItem);
+  if (episodeRef && traktItem.show) {
+    const showTmdbId = traktItem.show.ids?.tmdb;
+    if (!showTmdbId) {
+      return null;
+    }
+    const showName = traktItem.show.title;
+    return stripUndefinedDeep({
+      addedAt: toMillisOrNow(traktItem.listed_at),
+      episodeNumber: episodeRef.episodeNumber,
+      mediaType: 'episode',
+      seasonNumber: episodeRef.seasonNumber,
+      showName,
+      title: buildEpisodeEntryTitle(
+        showName,
+        episodeRef.seasonNumber,
+        episodeRef.episodeNumber,
+        traktItem.episode?.title
+      ),
       tmdbId: showTmdbId,
     }) as TransformedListItem;
   }
@@ -441,6 +476,32 @@ export const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<st
       media_type: 'season',
       name: title,
       season_number: seasonNumber,
+      show_name: traktItem.show.title,
+      title,
+    }) as Record<string, unknown>;
+  }
+
+  const episodeRef = getTraktEpisodeRef(traktItem);
+  if (episodeRef && traktItem.show) {
+    const showTmdbId = traktItem.show.ids?.tmdb;
+    if (!showTmdbId) {
+      return null;
+    }
+    const title = buildEpisodeEntryTitle(
+      traktItem.show.title,
+      episodeRef.seasonNumber,
+      episodeRef.episodeNumber,
+      traktItem.episode?.title
+    );
+    // No episode name here: enrichment fills it from TMDB, and a synced copy of Trakt's would
+    // differ from it and be rewritten on every sync.
+    return stripUndefinedDeep({
+      addedAt: toMillisOrNow(traktItem.listed_at),
+      episode_number: episodeRef.episodeNumber,
+      id: showTmdbId,
+      media_type: 'episode',
+      name: title,
+      season_number: episodeRef.seasonNumber,
       show_name: traktItem.show.title,
       title,
     }) as Record<string, unknown>;
