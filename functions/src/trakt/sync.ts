@@ -39,6 +39,7 @@ import {
 } from './client';
 import {
   TRAKT_INCREMENTAL_SCHEMA_VERSION,
+  TRAKT_LISTS_SCHEMA_VERSION,
   TRAKT_MANAGED_DEFAULT_LIST_NAMES,
   TRAKT_SYNC_QUEUE_FUNCTION,
   TRAKT_SYNC_RECONNECT_MESSAGE,
@@ -68,6 +69,7 @@ import type {
   TraktFavorite,
   TraktIncrementalCustomListState,
   TraktIncrementalState,
+  TraktLastActivities,
   TraktList,
   TraktRating,
   TraktTaskDispatchOptions,
@@ -722,6 +724,48 @@ export const isRunFatalSyncError = (error: unknown): boolean => {
   return false;
 };
 
+/**
+ * Which sync steps run: everything on a first sync, otherwise only the groups Trakt reports as
+ * changed. When how lists are read has changed (TRAKT_LISTS_SCHEMA_VERSION, e.g. seasons kept as
+ * seasons), the watchlist and every custom list are re-read once so existing synced lists pick
+ * up the change.
+ */
+export const getSyncSteps = ({
+  bootstrap,
+  lastActivities,
+  listsSchemaVersion,
+  previousActivities,
+}: {
+  bootstrap: boolean;
+  lastActivities: TraktLastActivities;
+  listsSchemaVersion: number | undefined;
+  previousActivities: TraktLastActivities | undefined;
+}) => {
+  const forceListResync = listsSchemaVersion !== TRAKT_LISTS_SCHEMA_VERSION;
+  return {
+    forceListResync,
+    shouldSyncCustomLists:
+      bootstrap ||
+      forceListResync ||
+      hasActivityGroupChanged(previousActivities?.lists, lastActivities.lists),
+    shouldSyncFavorites:
+      bootstrap || hasActivityGroupChanged(previousActivities?.favorites, lastActivities.favorites),
+    shouldSyncRatings:
+      bootstrap ||
+      didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'rated_at') ||
+      didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'rated_at'),
+    shouldSyncWatched:
+      bootstrap ||
+      didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'watched_at') ||
+      didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'watched_at') ||
+      didActivityFieldChange(previousActivities?.episodes, lastActivities.episodes, 'watched_at'),
+    shouldSyncWatchlist:
+      bootstrap ||
+      forceListResync ||
+      hasActivityGroupChanged(previousActivities?.watchlist, lastActivities.watchlist),
+  };
+};
+
 export const syncTraktImport = async (
   userId: string,
   accessToken: string,
@@ -736,22 +780,19 @@ export const syncTraktImport = async (
   const summaryMode = getSyncSummaryMode(currentIncrementalState);
   const lastActivities = await getLastActivities(accessToken);
   const bootstrap = summaryMode === 'bootstrap';
-  const previousActivities = currentIncrementalState?.lastActivities;
-  const shouldSyncWatched =
-    bootstrap ||
-    didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'watched_at') ||
-    didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'watched_at') ||
-    didActivityFieldChange(previousActivities?.episodes, lastActivities.episodes, 'watched_at');
-  const shouldSyncRatings =
-    bootstrap ||
-    didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'rated_at') ||
-    didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'rated_at');
-  const shouldSyncWatchlist =
-    bootstrap || hasActivityGroupChanged(previousActivities?.watchlist, lastActivities.watchlist);
-  const shouldSyncFavorites =
-    bootstrap || hasActivityGroupChanged(previousActivities?.favorites, lastActivities.favorites);
-  const shouldSyncCustomLists =
-    bootstrap || hasActivityGroupChanged(previousActivities?.lists, lastActivities.lists);
+  const {
+    forceListResync,
+    shouldSyncCustomLists,
+    shouldSyncFavorites,
+    shouldSyncRatings,
+    shouldSyncWatched,
+    shouldSyncWatchlist,
+  } = getSyncSteps({
+    bootstrap,
+    lastActivities,
+    listsSchemaVersion: currentIncrementalState?.listsSchemaVersion,
+    previousActivities: currentIncrementalState?.lastActivities,
+  });
   const listsToEnrich: string[] = [];
   let customListsState = currentIncrementalState?.customLists ?? {};
   // A step that fails for a ShowSeek-side reason (e.g. a Firestore write) must not stop the
@@ -888,7 +929,7 @@ export const syncTraktImport = async (
         userProfile.username,
         traktLists,
         currentIncrementalState?.customLists ?? {},
-        bootstrap
+        bootstrap || forceListResync
       );
 
       itemsSynced.lists =
@@ -919,6 +960,7 @@ export const syncTraktImport = async (
       bootstrapCompletedAt: currentIncrementalState?.bootstrapCompletedAt ?? Timestamp.now(),
       customLists: customListsState,
       lastActivities,
+      listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
       schemaVersion: TRAKT_INCREMENTAL_SCHEMA_VERSION,
       updatedAt: Timestamp.now(),
     },

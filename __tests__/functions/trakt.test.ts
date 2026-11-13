@@ -102,6 +102,7 @@ import {
   enrichMediaItem,
   enrichMediaItems,
   exchangeAuthorizationCode,
+  getSyncSteps,
   isRunFatalSyncError,
   needsMediaEnrichment,
   planEnrichmentRelocation,
@@ -2073,6 +2074,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities: lastActivitiesBefore,
+            listsSchemaVersion: 1,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -2306,6 +2308,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities: lastActivitiesBefore,
+            listsSchemaVersion: 1,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -2533,6 +2536,7 @@ describe('Trakt sync Firestore sanitization', () => {
               },
             },
             lastActivities: lastActivitiesBefore,
+            listsSchemaVersion: 1,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -2759,6 +2763,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities: lastActivitiesBefore,
+            listsSchemaVersion: 1,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -2944,6 +2949,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities,
+            listsSchemaVersion: 1,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -3009,6 +3015,10 @@ describe('Trakt sync Firestore sanitization', () => {
       summaryMode: 'incremental',
     });
     expect((global.fetch as jest.Mock).mock.calls).toHaveLength(1);
+    const savedState = batchSet.mock.calls
+      .map(([_ref, data]) => data)
+      .find((data) => data?.traktIncrementalState)?.traktIncrementalState;
+    expect(savedState).toMatchObject({ listsSchemaVersion: 1, schemaVersion: 1 });
   });
 
   it('reports only the changed incremental bucket when a single activity group changes', async () => {
@@ -3088,6 +3098,7 @@ describe('Trakt sync Firestore sanitization', () => {
             bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
             customLists: {},
             lastActivities: lastActivitiesBefore,
+            listsSchemaVersion: 1,
             schemaVersion: 1,
             updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
           },
@@ -7012,6 +7023,61 @@ describe('reconcileManagedList with season entries', () => {
 
     expect(result).toMatchObject({ changedCount: 0, didRemoteChange: false, didWrite: false });
     expect(listSet).not.toHaveBeenCalled();
+  });
+});
+
+describe('one-time re-read of the watchlist and lists', () => {
+  const activities = {
+    episodes: { watched_at: '2024-01-03T00:00:00.000Z' },
+    favorites: { updated_at: '2024-01-04T00:00:00.000Z' },
+    lists: { updated_at: '2024-01-05T00:00:00.000Z' },
+    movies: { rated_at: '2024-01-02T00:00:00.000Z', watched_at: '2024-01-01T00:00:00.000Z' },
+    shows: { rated_at: '2024-01-02T00:00:00.000Z', watched_at: '2024-01-03T00:00:00.000Z' },
+    watchlist: { updated_at: '2024-01-04T00:00:00.000Z' },
+  };
+
+  it('re-reads only the watchlist and lists for a sync state from before seasons', () => {
+    expect(
+      getSyncSteps({
+        bootstrap: false,
+        lastActivities: activities,
+        listsSchemaVersion: undefined,
+        previousActivities: activities,
+      })
+    ).toEqual({
+      forceListResync: true,
+      shouldSyncCustomLists: true,
+      shouldSyncFavorites: false,
+      shouldSyncRatings: false,
+      shouldSyncWatched: false,
+      shouldSyncWatchlist: true,
+    });
+  });
+
+  it('stays incremental once the lists have been re-read', () => {
+    expect(
+      getSyncSteps({
+        bootstrap: false,
+        lastActivities: activities,
+        listsSchemaVersion: 1,
+        previousActivities: activities,
+      })
+    ).toMatchObject({
+      forceListResync: false,
+      shouldSyncCustomLists: false,
+      shouldSyncWatchlist: false,
+    });
+  });
+
+  it('still syncs a list group Trakt reports as changed', () => {
+    expect(
+      getSyncSteps({
+        bootstrap: false,
+        lastActivities: { ...activities, watchlist: { updated_at: '2024-02-01T00:00:00.000Z' } },
+        listsSchemaVersion: 1,
+        previousActivities: activities,
+      })
+    ).toMatchObject({ shouldSyncCustomLists: false, shouldSyncWatchlist: true });
   });
 });
 

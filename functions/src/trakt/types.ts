@@ -127,6 +127,8 @@ export interface TraktIncrementalState {
   bootstrapCompletedAt: FirebaseFirestore.Timestamp;
   customLists: Record<string, TraktIncrementalCustomListState>;
   lastActivities: TraktLastActivities;
+  /** TRAKT_LISTS_SCHEMA_VERSION when the watchlist and lists were last fully read; absent before. */
+  listsSchemaVersion?: number;
   schemaVersion: typeof TRAKT_INCREMENTAL_SCHEMA_VERSION;
   updatedAt: FirebaseFirestore.Timestamp;
 }

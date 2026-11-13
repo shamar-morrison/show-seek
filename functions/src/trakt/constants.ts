@@ -61,6 +61,12 @@ export const FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN = /too many index entries/i;
 /** Firestore's 1 MiB document limit: "... exceeds the maximum allowed size of 1,048,576 bytes". */
 export const FIRESTORE_DOCUMENT_SIZE_LIMIT_PATTERN = /exceeds the maximum allowed size/i;
 export const TRAKT_INCREMENTAL_SCHEMA_VERSION = 1;
+/**
+ * Version of how the watchlist and custom lists are read from Trakt. A sync whose saved state has
+ * an older version re-reads those two (even if Trakt reports no change) and saves this version;
+ * everything else stays incremental. 1: seasons are kept as season entries.
+ */
+export const TRAKT_LISTS_SCHEMA_VERSION = 1;
 
 export const ACTIVE_RUN_STATUSES = new Set<SyncStatusState>(['queued', 'in_progress', 'retrying']);
 export const DEFAULT_ENRICHMENT_LIST_IDS = ['already-watched', 'watchlist', 'favorites'] as const;
