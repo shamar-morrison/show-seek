@@ -12,6 +12,36 @@ import type {
 
 export const isListMediaType = (value: unknown): value is 'movie' | 'tv' => value === 'movie' || value === 'tv';
 
+/**
+ * The season number of a Trakt list or watchlist entry that stands for one season, or undefined
+ * when it isn't a season (or has no usable number, in which case it counts as its show). Episode
+ * entries are never seasons: ShowSeek lists don't hold episodes, so they count as their show.
+ */
+export const getTraktSeasonNumber = (item: {
+  episode?: unknown;
+  season?: { number?: unknown };
+  type?: string;
+}): number | undefined => {
+  if (item.episode || !item.season) {
+    return undefined;
+  }
+  if (item.type !== undefined && item.type !== 'season') {
+    return undefined;
+  }
+  const seasonNumber = item.season.number;
+  return typeof seasonNumber === 'number' && Number.isInteger(seasonNumber) && seasonNumber >= 0
+    ? seasonNumber
+    : undefined;
+};
+
+/**
+ * The display title saved on a season entry before enrichment: "Show · Season N" (or "Show ·
+ * Specials"), the shape the app writes, so app versions that predate seasons show something
+ * sensible. Enrichment replaces it with TMDB's season name.
+ */
+export const buildSeasonEntryTitle = (showTitle: string, seasonNumber: number): string =>
+  `${showTitle} · ${seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`}`;
+
 export const isTimestampLike = (value: unknown): value is { toMillis: () => number } =>
   typeof value === 'object' && value !== null && typeof (value as { toMillis?: unknown }).toMillis === 'function';
 
@@ -314,11 +344,38 @@ export const transformRating = (traktRating: TraktRating): Record<string, unknow
   ) as Record<string, unknown>;
 };
 
-export const transformListItem = (
-  traktItem: TraktListItem
-): { addedAt: number; mediaType: 'movie' | 'tv'; title: string; tmdbId: number; traktId?: number } | null => {
+export interface TransformedListItem {
+  addedAt: number;
+  /** For a season, the show's TMDB ID is `tmdbId` and the season is `seasonNumber`. */
+  mediaType: 'movie' | 'tv' | 'season';
+  seasonNumber?: number;
+  /** The show's own title, for a season. */
+  showName?: string;
+  title: string;
+  tmdbId: number;
+  traktId?: number;
+}
+
+export const transformListItem = (traktItem: TraktListItem): TransformedListItem | null => {
   if (!traktItem) {
     return null;
+  }
+
+  const seasonNumber = getTraktSeasonNumber(traktItem);
+  if (seasonNumber !== undefined && traktItem.show) {
+    const showTmdbId = traktItem.show.ids?.tmdb;
+    if (!showTmdbId) {
+      return null;
+    }
+    const showName = traktItem.show.title;
+    return stripUndefinedDeep({
+      addedAt: toMillisOrNow(traktItem.listed_at),
+      mediaType: 'season',
+      seasonNumber,
+      showName,
+      title: buildSeasonEntryTitle(showName, seasonNumber),
+      tmdbId: showTmdbId,
+    }) as TransformedListItem;
   }
 
   let tmdbId: number | undefined;
@@ -350,18 +407,30 @@ export const transformListItem = (
     title,
     tmdbId,
     traktId,
-  }) as {
-    addedAt: number;
-    mediaType: 'movie' | 'tv';
-    title: string;
-    tmdbId: number;
-    traktId?: number;
-  };
+  }) as TransformedListItem;
 };
 
 export const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<string, unknown> | null => {
   if (!traktItem) {
     return null;
+  }
+
+  const seasonNumber = getTraktSeasonNumber(traktItem);
+  if (seasonNumber !== undefined && traktItem.show) {
+    const showTmdbId = traktItem.show.ids?.tmdb;
+    if (!showTmdbId) {
+      return null;
+    }
+    const title = buildSeasonEntryTitle(traktItem.show.title, seasonNumber);
+    return stripUndefinedDeep({
+      addedAt: toMillisOrNow(traktItem.listed_at),
+      id: showTmdbId,
+      media_type: 'season',
+      name: title,
+      season_number: seasonNumber,
+      show_name: traktItem.show.title,
+      title,
+    }) as Record<string, unknown>;
   }
 
   let tmdbId: number | undefined;

@@ -197,6 +197,12 @@ export interface TraktShow {
   year: number;
 }
 
+/** A season inside a Trakt list or watchlist entry; its ids are the season's own (not the show's). */
+export interface TraktSeason {
+  ids?: Partial<TraktIds>;
+  number?: number;
+}
+
 export interface TraktEpisode {
   ids: TraktIds;
   number: number;
@@ -255,6 +261,7 @@ export interface TraktListItem {
   movie?: TraktMovie;
   notes?: string;
   rank: number;
+  season?: TraktSeason;
   show?: TraktShow;
   type: 'episode' | 'movie' | 'person' | 'season' | 'show';
 }
@@ -266,6 +273,7 @@ export interface TraktWatchlistItem {
   movie?: TraktMovie;
   notes?: string;
   rank: number;
+  season?: TraktSeason;
   show?: TraktShow;
   type: 'episode' | 'movie' | 'season' | 'show';
 }

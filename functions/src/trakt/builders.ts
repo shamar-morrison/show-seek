@@ -1,5 +1,5 @@
 import { Timestamp } from 'firebase-admin/firestore';
-import { buildListItemKey } from '../shared/listItemKeys';
+import { buildListItemKey, getListItemKey } from '../shared/listItemKeys';
 import {
   isListMediaType,
   stripUndefinedDeep,
@@ -89,13 +89,28 @@ export const buildCustomListItemsMap = (
       continue;
     }
 
-    items[buildListItemKey(transformed.mediaType, transformed.tmdbId)] = stripUndefinedDeep(
+    const itemKey = getListItemKey({
+      id: transformed.tmdbId,
+      media_type: transformed.mediaType,
+      season_number: transformed.seasonNumber,
+    });
+    if (!itemKey) {
+      continue;
+    }
+    items[itemKey] = stripUndefinedDeep(
       {
         addedAt: transformed.addedAt,
         id: transformed.tmdbId,
         media_type: transformed.mediaType,
         title: transformed.title,
         traktId: transformed.traktId,
+        ...(transformed.mediaType === 'season'
+          ? {
+              name: transformed.title,
+              season_number: transformed.seasonNumber,
+              show_name: transformed.showName,
+            }
+          : {}),
       },
       true
     ) as Record<string, unknown>;

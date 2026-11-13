@@ -1,0 +1,155 @@
+/**
+ * Trakt season entries: list and watchlist entries for one season are kept as season entries
+ * (keyed `season-{tvId}-{n}`) instead of being folded into their show.
+ */
+class MockTimestamp {
+  private readonly millis: number;
+
+  constructor(millis: number) {
+    this.millis = millis;
+  }
+
+  static fromDate(date: Date): MockTimestamp {
+    return new MockTimestamp(date.getTime());
+  }
+
+  static fromMillis(millis: number): MockTimestamp {
+    return new MockTimestamp(millis);
+  }
+
+  static now(): MockTimestamp {
+    return new MockTimestamp(Date.now());
+  }
+
+  toDate(): Date {
+    return new Date(this.millis);
+  }
+
+  toMillis(): number {
+    return this.millis;
+  }
+}
+
+jest.mock(
+  'firebase-admin/firestore',
+  () => ({
+    FieldValue: {
+      delete: jest.fn(() => 'FIELD_DELETE'),
+    },
+    Timestamp: MockTimestamp,
+  }),
+  { virtual: true }
+);
+
+import { buildCustomListItemsMap } from '@/functions/src/trakt/builders';
+import {
+  getTraktSeasonNumber,
+  transformListItem,
+  transformWatchlistItem,
+} from '@/functions/src/trakt/transforms';
+import type { TraktListItem } from '@/functions/src/trakt/types';
+
+const show = {
+  ids: { slug: 'breaking-bad', tmdb: 1396, trakt: 1 },
+  title: 'Breaking Bad',
+  year: 2008,
+};
+
+// The shape Trakt's list items and watchlist endpoints return for a season.
+const seasonEntry = (number: number | undefined, listedAt = '2026-01-02T03:04:05.000Z') =>
+  ({
+    id: 100 + (number ?? 0),
+    listed_at: listedAt,
+    rank: 1,
+    season: { ids: { tmdb: 3570 + (number ?? 0), tvdb: 30270 }, number },
+    show,
+    type: 'season',
+  }) as TraktListItem;
+
+describe('getTraktSeasonNumber', () => {
+  it('reads the number of a season entry, including specials', () => {
+    expect(getTraktSeasonNumber(seasonEntry(3))).toBe(3);
+    expect(getTraktSeasonNumber(seasonEntry(0))).toBe(0);
+  });
+
+  it('treats entries without a usable season as not seasons', () => {
+    expect(getTraktSeasonNumber(seasonEntry(undefined))).toBeUndefined();
+    expect(getTraktSeasonNumber({ season: { number: -1 }, type: 'season' })).toBeUndefined();
+    expect(getTraktSeasonNumber({ type: 'show' })).toBeUndefined();
+    // Episode entries carry their season number too, but aren't seasons.
+    expect(
+      getTraktSeasonNumber({ episode: { number: 1 }, season: { number: 2 }, type: 'episode' })
+    ).toBeUndefined();
+  });
+});
+
+describe('transformListItem with seasons', () => {
+  it('turns a season entry into a season of its show', () => {
+    expect(transformListItem(seasonEntry(3))).toEqual({
+      addedAt: new Date('2026-01-02T03:04:05.000Z').getTime(),
+      mediaType: 'season',
+      seasonNumber: 3,
+      showName: 'Breaking Bad',
+      title: 'Breaking Bad · Season 3',
+      tmdbId: 1396,
+    });
+    expect(transformListItem(seasonEntry(0))?.title).toBe('Breaking Bad · Specials');
+  });
+
+  it('keeps a season entry without a number as its show', () => {
+    expect(transformListItem(seasonEntry(undefined))).toMatchObject({
+      mediaType: 'tv',
+      tmdbId: 1396,
+    });
+  });
+
+  it('skips a season whose show has no TMDB ID', () => {
+    expect(
+      transformListItem({ ...seasonEntry(2), show: { ...show, ids: { slug: 'x', trakt: 9 } } })
+    ).toBeNull();
+  });
+});
+
+describe('transformWatchlistItem with seasons', () => {
+  it('turns a watchlist season into a season entry', () => {
+    expect(transformWatchlistItem(seasonEntry(2))).toEqual({
+      addedAt: new Date('2026-01-02T03:04:05.000Z').getTime(),
+      id: 1396,
+      media_type: 'season',
+      name: 'Breaking Bad · Season 2',
+      season_number: 2,
+      show_name: 'Breaking Bad',
+      title: 'Breaking Bad · Season 2',
+    });
+  });
+});
+
+describe('buildCustomListItemsMap with seasons', () => {
+  it('keys the show, each season and an episode (as its show) apart', () => {
+    const items = buildCustomListItemsMap([
+      { id: 1, listed_at: '2026-01-01T00:00:00.000Z', rank: 1, show, type: 'show' },
+      seasonEntry(1),
+      seasonEntry(0),
+      {
+        episode: { ids: { slug: 'e', trakt: 5 }, number: 1, season: 1, title: 'Pilot' },
+        id: 7,
+        listed_at: '2026-01-03T00:00:00.000Z',
+        rank: 4,
+        show,
+        type: 'episode',
+      },
+    ]);
+
+    expect(Object.keys(items).sort()).toEqual(['season-1396-0', 'season-1396-1', 'tv-1396']);
+    expect(items['season-1396-1']).toEqual(
+      expect.objectContaining({
+        id: 1396,
+        media_type: 'season',
+        name: 'Breaking Bad · Season 1',
+        season_number: 1,
+        show_name: 'Breaking Bad',
+      })
+    );
+    expect(items['season-1396-1']).not.toHaveProperty('traktId');
+  });
+});
