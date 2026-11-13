@@ -156,6 +156,22 @@ export const countManagedListItemsByMediaType = (
 export const countMediaTypeChanges = (mediaTypes: ('movie' | 'tv')[], mediaType: 'movie' | 'tv'): number =>
   mediaTypes.filter((value) => value === mediaType).length;
 
+/**
+ * True when the old numeric key holds this same title. TMDB movie and show IDs overlap, so the key
+ * of a show can hold a movie (or the other way round); only an entry for this title may be cleared.
+ */
+const isLegacyEntryFor = (
+  existingItemsRaw: Record<string, unknown> | undefined,
+  legacyKey: string | null,
+  mediaType: unknown,
+  mediaId: unknown
+): legacyKey is string => {
+  const legacyEntry = legacyKey && existingItemsRaw ? existingItemsRaw[legacyKey] : undefined;
+  return (
+    isPlainObject(legacyEntry) && legacyEntry.media_type === mediaType && legacyEntry.id === mediaId
+  );
+};
+
 export const reconcileManagedList = async (
   userId: string,
   listId: string,
@@ -205,9 +221,8 @@ export const reconcileManagedList = async (
     const existingItem = existingItems[remoteKey];
     // Seasons never have a legacy numeric key; that key would belong to the show or a movie.
     const legacyKey = getLegacyListItemKeyForRef(remoteItem as Partial<ListItemRef>);
-    const hasLegacyKey = Boolean(
-      legacyKey && existingItemsRaw && legacyKey !== remoteKey && legacyKey in existingItemsRaw
-    );
+    const hasLegacyKey =
+      legacyKey !== remoteKey && isLegacyEntryFor(existingItemsRaw, legacyKey, mediaType, mediaId);
     const shouldApplyRemote = shouldApplyRemoteManagedValue(existingItem, remoteItem, options.recencyField);
     const nextItem =
       !existingItem || shouldApplyRemote ? mergeManagedValue(existingItem, remoteItem) : existingItem;
@@ -239,8 +254,10 @@ export const reconcileManagedList = async (
     : [];
   foldedShowKeys.forEach((showKey) => {
     itemDeletes.add(showKey);
-    const legacyKey = getLegacyListItemKeyForRef(existingItems[showKey] as Partial<ListItemRef>);
-    if (legacyKey && existingItemsRaw && legacyKey in existingItemsRaw) {
+    // The show may be stored under its old numeric key; clear it only if it holds this show.
+    const foldedShow = existingItems[showKey];
+    const legacyKey = getLegacyListItemKeyForRef(foldedShow as Partial<ListItemRef>);
+    if (isLegacyEntryFor(existingItemsRaw, legacyKey, 'tv', foldedShow.id)) {
       itemDeletes.add(legacyKey);
     }
     hasItemWrites = true;

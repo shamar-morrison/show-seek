@@ -7026,6 +7026,78 @@ describe('reconcileManagedList with season entries', () => {
   });
 });
 
+describe('watchlist cleanup and old numeric keys', () => {
+  const seasonListedAt = new Date('2025-01-26T07:45:16.000Z').getTime();
+  const remoteSeason = {
+    'season-1396-2': {
+      addedAt: seasonListedAt,
+      id: 1396,
+      media_type: 'season',
+      season_number: 2,
+      title: 'Breaking Bad · Season 2',
+    },
+  };
+  const foldedShow = { addedAt: seasonListedAt, id: 1396, media_type: 'tv', title: 'Breaking Bad' };
+
+  const reconcileWatchlist = async (items: Record<string, unknown>) => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'watchlist',
+      remoteSeason,
+      { id: 'watchlist', name: 'Should Watch' },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/watchlist',
+        { items, metadata: { itemCount: 2, needsEnrichment: false }, name: 'Should Watch' },
+        listSet
+      ),
+      { preserveLocalItems: true, recencyField: 'addedAt', removeFoldedSeasonShows: true }
+    );
+    return listSet.mock.calls[0][0].items;
+  };
+
+  it('keeps a movie stored under the same number as the folded show', async () => {
+    const written = await reconcileWatchlist({
+      'tv-1396': foldedShow,
+      // An old-format movie entry that happens to share the show's TMDB number.
+      '1396': { addedAt: 5, id: 1396, media_type: 'movie', title: 'A Movie' },
+    });
+
+    expect(written['tv-1396']).toBe('FIELD_DELETE');
+    expect(written).not.toHaveProperty('1396');
+  });
+
+  it('keeps a movie stored under the number of a show Trakt sends', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'watchlist',
+      { 'tv-1396': { addedAt: 9, id: 1396, media_type: 'tv', title: 'Breaking Bad' } },
+      { id: 'watchlist', name: 'Should Watch' },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/watchlist',
+        {
+          items: { '1396': { addedAt: 5, id: 1396, media_type: 'movie', title: 'A Movie' } },
+          metadata: { itemCount: 1, needsEnrichment: false },
+          name: 'Should Watch',
+        },
+        listSet
+      ),
+      { preserveLocalItems: true, recencyField: 'addedAt' }
+    );
+
+    const written = listSet.mock.calls[0][0].items;
+    expect(written['tv-1396']).toEqual(expect.objectContaining({ media_type: 'tv' }));
+    expect(written).not.toHaveProperty('1396');
+  });
+
+  it('removes the folded show when it is stored under its old numeric key', async () => {
+    const written = await reconcileWatchlist({ '1396': foldedShow });
+
+    expect(written['1396']).toBe('FIELD_DELETE');
+  });
+});
+
 describe('one-time re-read of the watchlist and lists', () => {
   const activities = {
     episodes: { watched_at: '2024-01-03T00:00:00.000Z' },
