@@ -73,6 +73,12 @@ export interface ListMediaItem {
   season_name?: string;
   /** The show's own name, kept apart from the combined display title. */
   show_name?: string;
+  /**
+   * A season's total runtime (sum of its episodes), written only by app versions that know
+   * seasons. Season code reads this rather than `runtimeMinutes`, which an older app version
+   * may have filled with a wrong value (it looks seasons up as movies).
+   */
+  seasonRuntimeMinutes?: number;
 }
 
 

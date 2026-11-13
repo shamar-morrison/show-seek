@@ -7,7 +7,9 @@ import {
   type SeasonWithEpisodes,
 } from '@/src/components/tv/SeasonItem';
 import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
+import AddToListModal, { type AddToListModalRef } from '@/src/components/AddToListModal';
 import RatingModal from '@/src/components/RatingModal';
+import Toast, { type ToastRef } from '@/src/components/ui/Toast';
 import NoteModal, { type NoteModalRef } from '@/src/components/NotesModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
@@ -53,6 +55,7 @@ import type { Note } from '@/src/types/note';
 import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { getMarkableEpisodes } from '@/src/utils/episodeEligibility';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
+import { buildSeasonListItem } from '@/src/utils/seasonListItem';
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -60,9 +63,11 @@ import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import {
   ArrowLeft01Icon,
+  CheckListIcon,
   Image01Icon,
   Note01Icon,
   NoteDoneIcon,
+  PlusSignIcon,
   Search01Icon,
   StarIcon,
   Tick02Icon,
@@ -178,6 +183,47 @@ export default function TVSeasonsScreen() {
   const [selectedSeasonForRating, setSelectedSeasonForRating] = useState<SeasonWithEpisodes | null>(
     null
   );
+  const addToListModalRef = useRef<AddToListModalRef>(null);
+  const toastRef = useRef<ToastRef>(null);
+  const [seasonForList, setSeasonForList] = useState<SeasonWithEpisodes | null>(null);
+
+  // Season numbers of this show that are in at least one list, for the add-to-list button state.
+  const seasonNumbersInLists = useMemo(() => {
+    const numbers = new Set<number>();
+    lists?.forEach((list) => {
+      Object.values(list.items ?? {}).forEach((item) => {
+        if (
+          item?.media_type === 'season' &&
+          item.id === tvId &&
+          typeof item.season_number === 'number'
+        ) {
+          numbers.add(item.season_number);
+        }
+      });
+    });
+    return numbers;
+  }, [lists, tvId]);
+
+  const seasonListItem = useMemo(
+    () =>
+      show && seasonForList
+        ? buildSeasonListItem(
+            show,
+            seasonForList,
+            t('media.seasonNumber', { number: seasonForList.season_number })
+          )
+        : undefined,
+    [seasonForList, show, t]
+  );
+
+  // The modal reads its item when presented, so present it once the chosen season has rendered.
+  useEffect(() => {
+    if (seasonForList) {
+      void addToListModalRef.current?.present();
+    }
+  }, [seasonForList]);
+
+  const handleCloseSeasonAddToList = useCallback(() => setSeasonForList(null), []);
 
   const handleEpisodePress = useCallback(
     (episode: Episode, seasonNumber: number) => {
@@ -585,6 +631,17 @@ export default function TVSeasonsScreen() {
     return map;
   }, [ratings]);
 
+  const handleOpenSeasonAddToList = useCallback(
+    (seasonData: SeasonWithEpisodes) => {
+      if (isAccountRequired()) {
+        return;
+      }
+
+      setSeasonForList(seasonData);
+    },
+    [isAccountRequired]
+  );
+
   const handleOpenSeasonRating = useCallback(
     (seasonData: SeasonWithEpisodes) => {
       if (isAccountRequired()) {
@@ -937,6 +994,7 @@ export default function TVSeasonsScreen() {
         const seasonDocId = `season-${tvId}-${seasonData.season_number}`;
         const seasonUserRating = seasonRatingsById.get(seasonDocId) || 0;
         const hasSeasonNote = seasonNotesByNumber.has(seasonData.season_number);
+        const isSeasonInAnyList = seasonNumbersInLists.has(seasonData.season_number);
         const isOpeningSeasonNote = openingNoteSeasonNumber === seasonData.season_number;
         const displaySeasonUserRating = Number.isInteger(seasonUserRating)
           ? seasonUserRating.toString()
@@ -1100,6 +1158,24 @@ export default function TVSeasonsScreen() {
                   <AppIcon icon={Note01Icon} size={24} color={COLORS.white} />
                 )}
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.seasonActionButton,
+                  isSeasonInAnyList && styles.seasonActionButtonActive,
+                ]}
+                onPress={() => handleOpenSeasonAddToList(seasonData)}
+                activeOpacity={ACTIVE_OPACITY}
+                accessibilityRole="button"
+                accessibilityLabel={t('media.addToList')}
+                accessibilityState={{ selected: isSeasonInAnyList }}
+                testID={`season-add-to-list-button-${seasonData.season_number}`}
+              >
+                <AppIcon
+                  icon={isSeasonInAnyList ? CheckListIcon : PlusSignIcon}
+                  size={24}
+                  color={isSeasonInAnyList ? accentColor : COLORS.white}
+                />
+              </TouchableOpacity>
               {hasSeasonProgress && (
                 <TouchableOpacity
                   style={styles.seasonActionButton}
@@ -1238,6 +1314,8 @@ export default function TVSeasonsScreen() {
       handleMarkAllUnwatched,
       handleOpenSeasonRating,
       handleOpenSeasonNote,
+      handleOpenSeasonAddToList,
+      seasonNumbersInLists,
       seasonNotesByNumber,
       openingNoteSeasonNumber,
       episodeTracking,
@@ -1416,6 +1494,13 @@ export default function TVSeasonsScreen() {
         />
       ) : null}
       <NoteModal ref={noteSheetRef} />
+      <AddToListModal
+        ref={addToListModalRef}
+        mediaItem={seasonListItem}
+        onShowToast={(message) => toastRef.current?.show(message)}
+        onDismiss={handleCloseSeasonAddToList}
+      />
+      <Toast ref={toastRef} />
     </View>
   );
 }

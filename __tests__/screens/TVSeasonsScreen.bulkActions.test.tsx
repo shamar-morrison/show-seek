@@ -46,6 +46,7 @@ const mockSeason = {
   ],
 };
 
+const mockAddToListPresent = jest.fn().mockResolvedValue(undefined);
 jest.mock('@tanstack/react-query', () => {
   const actual = jest.requireActual('@tanstack/react-query');
 
@@ -194,6 +195,25 @@ jest.mock('@/src/components/ui/LoadingModal', () => {
       </View>
     );
   };
+});
+
+jest.mock('@/src/components/AddToListModal', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockAddToListModal = React.forwardRef((props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      present: (...args: any[]) => mockAddToListPresent(props.mediaItem, ...args),
+      dismiss: jest.fn().mockResolvedValue(undefined),
+    }));
+    return <View testID="season-add-to-list-modal" />;
+  });
+  MockAddToListModal.displayName = 'MockAddToListModal';
+  return { __esModule: true, default: MockAddToListModal };
+});
+
+jest.mock('@/src/components/ui/Toast', () => {
+  const React = require('react');
+  return { __esModule: true, default: React.forwardRef(() => null) };
 });
 
 jest.mock('@/src/components/tv/EpisodeItem', () => ({

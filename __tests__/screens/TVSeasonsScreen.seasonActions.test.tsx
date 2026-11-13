@@ -21,6 +21,7 @@ let mockNotesData: Array<{
 const mockNotePresent = jest.fn().mockResolvedValue(undefined);
 const mockPush = jest.fn();
 
+const mockAddToListPresent = jest.fn().mockResolvedValue(undefined);
 jest.mock('@tanstack/react-query', () => {
   const actual = jest.requireActual('@tanstack/react-query');
   return {
@@ -93,9 +94,11 @@ jest.mock('@/src/hooks/usePreferences', () => ({
   }),
 }));
 
+let mockListsData: Array<{ id: string; items: Record<string, object> }> = [];
+
 jest.mock('@/src/hooks/useLists', () => ({
   useMediaLists: () => ({ membership: {} }),
-  useLists: () => ({ data: [] }),
+  useLists: () => ({ data: mockListsData }),
 }));
 
 jest.mock('@/src/context/PremiumContext', () => ({
@@ -171,6 +174,25 @@ jest.mock('@/src/components/NotesModal', () => {
     __esModule: true,
     default: MockNoteModal,
   };
+});
+
+jest.mock('@/src/components/AddToListModal', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockAddToListModal = React.forwardRef((props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      present: (...args: any[]) => mockAddToListPresent(props.mediaItem, ...args),
+      dismiss: jest.fn().mockResolvedValue(undefined),
+    }));
+    return <View testID="season-add-to-list-modal" />;
+  });
+  MockAddToListModal.displayName = 'MockAddToListModal';
+  return { __esModule: true, default: MockAddToListModal };
+});
+
+jest.mock('@/src/components/ui/Toast', () => {
+  const React = require('react');
+  return { __esModule: true, default: React.forwardRef(() => null) };
 });
 
 jest.mock('@/src/components/tv/EpisodeItem', () => ({
@@ -259,6 +281,68 @@ describe('TVSeasonsScreen season actions', () => {
       } as any;
     });
   }
+
+  describe('add to list', () => {
+    afterEach(() => {
+      mockListsData = [];
+    });
+
+    it('opens the list sheet with the season as a list entry', async () => {
+      mockQueries();
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+
+      fireEvent.press(screen.getByTestId('season-add-to-list-button-1'));
+
+      await waitFor(() => expect(mockAddToListPresent).toHaveBeenCalledTimes(1));
+      expect(mockAddToListPresent.mock.calls[0][0]).toEqual({
+        id: 101,
+        media_type: 'season',
+        season_number: 1,
+        season_name: 'Season 1',
+        show_name: 'Mock Show',
+        title: 'Mock Show · Season 1',
+        name: 'Mock Show · Season 1',
+        poster_path: '/season1.jpg',
+        vote_average: 0,
+        release_date: '2020-01-01',
+        first_air_date: '2020-01-01',
+        genre_ids: [18, 35],
+        runtimeMinutes: 42,
+        seasonRuntimeMinutes: 42,
+      });
+    });
+
+    it('marks the button when that season is in a list, but not when only the show is', () => {
+      mockListsData = [
+        {
+          id: 'watchlist',
+          items: {
+            'tv-101': { id: 101, media_type: 'tv' },
+            'season-101-2': { id: 101, media_type: 'season', season_number: 2 },
+          },
+        },
+      ];
+      mockQueries();
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+      expect(
+        screen.getByTestId('season-add-to-list-button-1').props.accessibilityState
+      ).toMatchObject({ selected: false });
+
+      mockListsData = [
+        {
+          id: 'favorites',
+          items: { 'season-101-1': { id: 101, media_type: 'season', season_number: 1 } },
+        },
+      ];
+      screen.rerender(<TVSeasonsScreen />);
+
+      expect(
+        screen.getByTestId('season-add-to-list-button-1').props.accessibilityState
+      ).toMatchObject({ selected: true });
+    });
+  });
 
   it('navigates to the TV detail screen when the header show title is pressed', () => {
     mockQueries();
