@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Episode, type Video } from '@/src/api/tmdb';
+import AddToListModal, { type AddToListModalRef } from '@/src/components/AddToListModal';
 import type { ShareCardData } from '@/src/components/shareCard/shareCardTypes';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CrewSection } from '@/src/components/detail/CrewSection';
@@ -51,10 +52,13 @@ import { useNotePress } from '@/src/hooks/useNotePress';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
+import { useRefreshEpisodeListEntries } from '@/src/hooks/useRefreshEpisodeListEntries';
 import { useEpisodeRating, useSeasonRating } from '@/src/hooks/useRatings';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
+import { buildEpisodeListItem } from '@/src/utils/episodeListItem';
 import { parseEpisodeRouteParams } from '@/src/utils/episodeRouteParams';
+import { hasListItemByRef } from '@/src/utils/listItemKeys';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -65,11 +69,13 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Calendar03Icon,
+  CheckListIcon,
   Clock01Icon,
   FavouriteIcon,
   Image01Icon,
   NoteDoneIcon,
   PlayIcon,
+  PlusSignIcon,
   StarIcon,
   Note01Icon,
   Tick02Icon,
@@ -116,6 +122,7 @@ export default function EpisodeDetailScreen() {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const openShareCard = useOpenShareCard();
   const noteSheetRef = useRef<NoteModalRef>(null);
+  const addToListModalRef = useRef<AddToListModalRef>(null);
   const toastRef = React.useRef<ToastRef>(null);
   const {
     sheetRef: personFavoriteSheetRef,
@@ -460,6 +467,44 @@ export default function EpisodeDetailScreen() {
     return map;
   }, [episodeTracking]);
 
+  // The list entry for this episode: the show's ID and genres, the season's poster (else the
+  // show's), and the episode's own name, air date, rating and runtime.
+  const episodeListItem = useMemo(
+    () =>
+      tvShow && episode
+        ? buildEpisodeListItem(
+            tvShow,
+            // The route's numbers, so the entry matches the one checked for membership.
+            { ...episode, season_number: seasonNumber, episode_number: episodeNumber },
+            season?.poster_path,
+            (s, e) => t('media.seasonEpisode', { season: s, episode: e })
+          )
+        : undefined,
+    [episode, episodeNumber, season?.poster_path, seasonNumber, t, tvShow]
+  );
+
+  const isEpisodeInAnyList = useMemo(
+    () =>
+      !!lists?.some((list) =>
+        hasListItemByRef(list.items, {
+          id: tvId,
+          media_type: 'episode',
+          season_number: seasonNumber,
+          episode_number: episodeNumber,
+        })
+      ),
+    [episodeNumber, lists, seasonNumber, tvId]
+  );
+
+  // Entries saved before this episode aired get its name, air date, still and runtime.
+  useRefreshEpisodeListEntries({ tvId, seasonNumber, episodeNumber, episode, lists });
+
+  const handleOpenAddToList = useCallback(() => {
+    if (isAccountRequired()) return;
+    if (!episodeListItem) return;
+    void addToListModalRef.current?.present();
+  }, [episodeListItem, isAccountRequired]);
+
   const trailer = useMemo(() => {
     return videos.find((v) => v.type === 'Trailer' && v.site === 'YouTube');
   }, [videos]);
@@ -626,6 +671,31 @@ export default function EpisodeDetailScreen() {
           {/* Action Buttons */}
           <View style={styles.actionButtonsContainer}>
             <View style={styles.secondaryActions}>
+              <TouchableOpacity
+                style={[
+                  styles.actionButtonWrapper,
+                  isEpisodeInAnyList && {
+                    backgroundColor: hexToRGBA(accentColor, 0.15),
+                    borderColor: hexToRGBA(accentColor, 0.5),
+                  },
+                ]}
+                onPress={handleOpenAddToList}
+                disabled={!episodeListItem}
+                activeOpacity={ACTIVE_OPACITY}
+                accessibilityRole="button"
+                accessibilityLabel={t('media.addToList')}
+                accessibilityState={{ selected: isEpisodeInAnyList }}
+                testID="episode-add-to-list-action"
+              >
+                <View style={styles.iconButton}>
+                  <AppIcon
+                    icon={isEpisodeInAnyList ? CheckListIcon : PlusSignIcon}
+                    size={24}
+                    color={isEpisodeInAnyList ? accentColor : COLORS.text}
+                  />
+                </View>
+              </TouchableOpacity>
+
               <View
                 style={[
                   styles.actionButtonWrapper,
@@ -870,6 +940,11 @@ export default function EpisodeDetailScreen() {
         />
       )}
       <NoteModal ref={noteSheetRef} />
+      <AddToListModal
+        ref={addToListModalRef}
+        mediaItem={episodeListItem}
+        onShowToast={(message) => toastRef.current?.show(message)}
+      />
       <ListActionsModal ref={personFavoriteSheetRef} actions={personFavoriteActions} />
       <Toast ref={toastRef} />
     </SafeAreaView>

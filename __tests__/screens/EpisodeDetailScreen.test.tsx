@@ -14,6 +14,9 @@ const mockNoteModalPresent = jest.fn();
 const mockResolvePosterPath = jest.fn();
 const mockToggleFavoriteEpisodeMutate = jest.fn();
 const mockToggleFavoriteEpisodeMutateAsync = jest.fn();
+const mockAddToListPresent = jest.fn();
+const mockRefreshEpisodeListEntries = jest.fn();
+let mockLists: { id: string; items: Record<string, unknown> }[] = [];
 let mockIsWatched = false;
 let mockPreferences = {
   showOriginalTitles: false,
@@ -252,7 +255,7 @@ jest.mock('@/src/hooks/useFavoriteEpisodes', () => ({
 
 jest.mock('@/src/hooks/useLists', () => ({
   useMediaLists: () => ({ membership: {} }),
-  useLists: () => ({ data: [{ id: 'currently-watching', items: {} }] }),
+  useLists: () => ({ data: mockLists }),
 }));
 
 jest.mock('@/src/hooks/useNotes', () => ({
@@ -295,6 +298,23 @@ jest.mock('@/src/components/NotesModal', () => {
     __esModule: true,
     default: NoteModal,
   };
+});
+
+jest.mock('@/src/hooks/useRefreshEpisodeListEntries', () => ({
+  useRefreshEpisodeListEntries: (args: unknown) => mockRefreshEpisodeListEntries(args),
+}));
+
+jest.mock('@/src/components/AddToListModal', () => {
+  const React = require('react');
+  const MockAddToListModal = React.forwardRef((props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      present: () => mockAddToListPresent(props.mediaItem),
+      dismiss: jest.fn().mockResolvedValue(undefined),
+    }));
+    return null;
+  });
+  MockAddToListModal.displayName = 'MockAddToListModal';
+  return { __esModule: true, default: MockAddToListModal };
 });
 
 jest.mock('@/src/components/RatingButton', () => () => null);
@@ -390,6 +410,7 @@ describe('EpisodeDetailScreen', () => {
     jest.clearAllMocks();
     mockIsWatched = false;
     mockSeasonProgress = null;
+    mockLists = [{ id: 'currently-watching', items: {} }];
     mockPreferences = {
       showOriginalTitles: false,
       allowUnreleasedEpisodeWatches: false,
@@ -413,6 +434,79 @@ describe('EpisodeDetailScreen', () => {
     mockEnsureNoteLoadedForEdit.mockResolvedValue(null);
 
     setMockQueries();
+  });
+
+  it('puts Add to List first in the action row and opens it with the episode entry', () => {
+    const { getByTestId, UNSAFE_root } = render(<EpisodeDetailScreen />);
+
+    const actionIds = UNSAFE_root.findAll(
+      (node: { type: unknown; props: { testID?: unknown } }) =>
+        typeof node.type === 'string' &&
+        typeof node.props.testID === 'string' &&
+        /^episode-.+-action$/.test(node.props.testID)
+    ).map((node: { props: { testID?: unknown } }) => node.props.testID);
+    expect(actionIds[0]).toBe('episode-add-to-list-action');
+    expect(actionIds).toContain('episode-favorite-action');
+
+    const button = getByTestId('episode-add-to-list-action');
+    expect(button.props.accessibilityState).toEqual({ selected: false });
+    fireEvent.press(button);
+
+    expect(mockAddToListPresent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 10,
+        media_type: 'episode',
+        season_number: 1,
+        episode_number: 2,
+        episode_name: 'Pilot',
+        show_name: 'Loaded Show',
+        title: 'Loaded Show · S1E2 · Pilot',
+        poster_path: '/show.jpg',
+        still_path: '/still.jpg',
+        release_date: '2024-01-01',
+        episodeRuntimeMinutes: 42,
+      })
+    );
+  });
+
+  it('highlights Add to List when the episode is in a list', () => {
+    mockLists = [
+      {
+        id: 'watchlist',
+        items: {
+          'episode-10-1-2': { id: 10, media_type: 'episode', season_number: 1, episode_number: 2 },
+        },
+      },
+    ];
+
+    const { getByTestId } = render(<EpisodeDetailScreen />);
+
+    expect(getByTestId('episode-add-to-list-action').props.accessibilityState).toEqual({
+      selected: true,
+    });
+  });
+
+  it('asks a guest to sign in instead of opening Add to List', () => {
+    mockIsAccountRequired.mockReturnValueOnce(true);
+    const { getByTestId } = render(<EpisodeDetailScreen />);
+
+    fireEvent.press(getByTestId('episode-add-to-list-action'));
+
+    expect(mockAddToListPresent).not.toHaveBeenCalled();
+  });
+
+  it('refreshes saved entries of this episode with its loaded details', () => {
+    render(<EpisodeDetailScreen />);
+
+    expect(mockRefreshEpisodeListEntries).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tvId: 10,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episode: expect.objectContaining({ name: 'Pilot' }),
+        lists: mockLists,
+      })
+    );
   });
 
   it('shows a spinner and disables the favorite button while the favorite mutation is pending', () => {

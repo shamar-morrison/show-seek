@@ -5,6 +5,7 @@ import { listService } from '@/src/services/ListService';
 import { useQuery } from '@tanstack/react-query';
 
 const mockInvalidateQueries = jest.fn();
+const mockGetQueryData = jest.fn();
 
 // Mock dependencies
 jest.mock('@/src/services/EpisodeTrackingService', () => ({
@@ -42,6 +43,7 @@ jest.mock('@/src/services/EpisodeTrackingService', () => ({
 jest.mock('@/src/services/ListService', () => ({
   listService: {
     addToList: jest.fn().mockResolvedValue(undefined),
+    removeManyFromList: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -54,7 +56,7 @@ jest.mock('@/src/firebase/config', () => ({
 
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: jest.fn(() => ({
-    getQueryData: jest.fn(),
+    getQueryData: mockGetQueryData,
     setQueryData: jest.fn(),
     invalidateQueries: mockInvalidateQueries,
   })),
@@ -625,6 +627,150 @@ describe('useMarkEpisodeWatched', () => {
   });
 });
 
+describe('auto-remove from Should Watch', () => {
+  const showMetadata = { tvShowName: 'Test Show', posterPath: '/test.jpg' };
+  const episode = (episodeNumber: number): Episode => ({
+    id: episodeNumber,
+    name: `Episode ${episodeNumber}`,
+    episode_number: episodeNumber,
+    season_number: 1,
+    air_date: '2024-01-01',
+    overview: '',
+    still_path: null,
+    runtime: null,
+    vote_average: 8,
+  });
+  const listed = (seasonNumber: number, episodeNumber: number) => ({
+    [`episode-123-${seasonNumber}-${episodeNumber}`]: {
+      id: 123,
+      media_type: 'episode',
+      season_number: seasonNumber,
+      episode_number: episodeNumber,
+    },
+  });
+  const ref = (seasonNumber: number, episodeNumber: number) => ({
+    id: 123,
+    media_type: 'episode',
+    season_number: seasonNumber,
+    episode_number: episodeNumber,
+  });
+  let cache: Record<string, unknown>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    cache = {
+      'lists/test-user-123': [
+        { id: 'watchlist', items: { ...listed(1, 2), ...listed(1, 4), 'tv-123': { id: 123 } } },
+        { id: 'my-list', items: listed(1, 3) },
+      ],
+    };
+    mockGetQueryData.mockImplementation((key: unknown[]) => cache[key.join('/')]);
+  });
+
+  it('removes the watched episode and the earlier ones it marked, in one write', async () => {
+    const { result } = renderHook(() => useMarkEpisodeWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodeNumber: 4,
+        episodeData: { episodeId: 4, episodeName: 'Episode 4', episodeAirDate: '2024-01-01' },
+        showMetadata,
+        previousEpisodesOptions: {
+          seasonEpisodes: [1, 2, 3, 4, 5].map(episode),
+          shouldMarkPrevious: true,
+        },
+      });
+    });
+
+    expect(listService.removeManyFromList).toHaveBeenCalledTimes(1);
+    expect(listService.removeManyFromList).toHaveBeenCalledWith('watchlist', [
+      ref(1, 4),
+      ref(1, 2),
+    ]);
+  });
+
+  it('removes the episodes of a season marked watched that are in Should Watch', async () => {
+    const { result } = renderHook(() => useMarkAllEpisodesWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodes: [1, 2, 3, 4].map(episode),
+        showMetadata,
+      });
+    });
+
+    expect(listService.removeManyFromList).toHaveBeenCalledWith('watchlist', [
+      ref(1, 2),
+      ref(1, 4),
+    ]);
+  });
+
+  it('removes only the episodes a cancelled show-wide run marked', async () => {
+    (episodeTrackingService.markMultipleEpisodesWatched as jest.Mock).mockResolvedValueOnce({
+      markedCount: 2,
+      wasCancelled: true,
+    });
+    const { result } = renderHook(() => useMarkShowAllEpisodesWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        episodesToMark: [1, 2, 3, 4].map((n) => ({ seasonNumber: 1, episode: episode(n) })),
+        showMetadata,
+      });
+    });
+
+    expect(listService.removeManyFromList).toHaveBeenCalledWith('watchlist', [ref(1, 2)]);
+  });
+
+  it('writes nothing when the setting is off or no watched episode is in Should Watch', async () => {
+    const { result } = renderHook(() => useMarkEpisodeWatched());
+    const markEpisode = (episodeNumber: number) =>
+      result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodeNumber,
+        episodeData: { episodeId: 1, episodeName: 'Episode', episodeAirDate: '2024-01-01' },
+        showMetadata,
+      });
+
+    await act(async () => {
+      // Episode 3 is only in a custom list.
+      await markEpisode(3);
+    });
+    cache['preferences/test-user-123'] = { autoRemoveFromShouldWatch: false };
+    await act(async () => {
+      await markEpisode(2);
+    });
+
+    expect(listService.removeManyFromList).not.toHaveBeenCalled();
+  });
+
+  it('never fails marking an episode watched when removing it fails', async () => {
+    (listService.removeManyFromList as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useMarkEpisodeWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeData: { episodeId: 2, episodeName: 'Episode 2', episodeAirDate: '2024-01-01' },
+        showMetadata,
+      });
+    });
+
+    expect(episodeTrackingService.markEpisodeWatched).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});
+
 describe('useMarkShowAllEpisodesUnwatched', () => {
   const seasonOneEpisodes: Episode[] = [
     {
@@ -720,4 +866,3 @@ describe('useMarkShowAllEpisodesUnwatched', () => {
     expect(episodeTrackingService.markAllEpisodesUnwatched).not.toHaveBeenCalled();
   });
 });
-

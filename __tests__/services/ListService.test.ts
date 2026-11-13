@@ -514,6 +514,51 @@ describe('ListService', () => {
     });
   });
 
+  describe('updateListItemFields', () => {
+    const episodeRef = {
+      id: 1396,
+      media_type: 'episode' as const,
+      season_number: 2,
+      episode_number: 5,
+    };
+
+    it('updates only the given fields of an entry in the list document', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await listService.updateListItemFields('watchlist', episodeRef, 0, {
+        episode_name: 'Breakage',
+        still_path: undefined,
+      });
+
+      expect(updateDoc).toHaveBeenCalledWith(mockDocRef, {
+        'items.episode-1396-2-5.episode_name': 'Breakage',
+      });
+    });
+
+    it('updates an entry on its overflow page', async () => {
+      (doc as jest.Mock).mockImplementation((_db: unknown, ...segments: string[]) => ({
+        path: segments.join('/'),
+      }));
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await listService.updateListItemFields('watchlist', episodeRef, 3, {
+        release_date: '2009-04-05',
+      });
+
+      const [ref, updates] = (updateDoc as jest.Mock).mock.calls[0];
+      expect(ref.path).toContain('watchlist');
+      expect(ref.path).toMatch(/3$/);
+      expect(updates).toEqual({ 'items.episode-1396-2-5.release_date': '2009-04-05' });
+    });
+
+    it('writes nothing with no fields to change', async () => {
+      await listService.updateListItemFields('watchlist', episodeRef, 0, {});
+      expect(updateDoc).not.toHaveBeenCalled();
+    });
+  });
+
   describe('removeManyFromList', () => {
     it('removes several entries in one write, clearing legacy keys only for movies and shows', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };

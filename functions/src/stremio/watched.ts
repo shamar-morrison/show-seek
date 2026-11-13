@@ -7,7 +7,12 @@ import {
   stagePagedListWrites,
   type PagedList,
 } from '../listPagesAdmin';
-import { buildListItemKey, getLegacyListItemKey, hasExistingListItem } from '../shared/listItemKeys';
+import {
+  buildEpisodeListItemKey,
+  buildListItemKey,
+  getLegacyListItemKey,
+  hasExistingListItem,
+} from '../shared/listItemKeys';
 import { STREMIO_MAX_FREE_LIST_ITEMS } from './constants';
 import type { MappedTitle } from './tmdb';
 import { hasActiveAddonToken } from './tokens';
@@ -130,6 +135,8 @@ export async function writeStremioWatch(
     }
     const watching = preferenceEnabled(userData, 'autoAddToWatching')
       ? await readPagedList(lists.doc('currently-watching'), transaction) : null;
+    const watchlist = preferenceEnabled(userData, 'autoRemoveFromShouldWatch')
+      ? await readPagedList(lists.doc('watchlist'), transaction) : null;
 
     stageEpisodeWrites(
       transaction,
@@ -162,6 +169,22 @@ export async function writeStremioWatch(
       first_air_date: show.first_air_date,
       genre_ids: show.genres.map((genre) => genre.id),
     }, isPremium, receivedAt) : undefined;
+    const listedEpisodeKey = buildEpisodeListItemKey(
+      show.id,
+      episode.season_number,
+      episode.episode_number
+    );
+    if (watchlist?.exists && listedEpisodeKey in asMap(watchlist.items)) {
+      // The watched episode leaves Should Watch (document and every overflow page). Episodes
+      // never have a legacy numeric key, so the show's entry is untouched.
+      stagePagedListWrites(
+        transaction,
+        watchlist,
+        planPagedListWrites(watchlist, { delete: [listedEpisodeKey] }),
+        { updatedAt: receivedAt },
+        receivedAt
+      );
+    }
     return { outcome: 'written', ...(listOutcome ? { listOutcome } : {}) };
   });
 }

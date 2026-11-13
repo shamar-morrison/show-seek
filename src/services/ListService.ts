@@ -227,7 +227,14 @@ class ListService {
   private async loadMergedListDocs(
     userId: string,
     audit: ListAuditInfo
-  ): Promise<{ id: string; data: DocumentData; items: Record<string, ListMediaItem>; layout: ListPageLayout }[]> {
+  ): Promise<
+    {
+      id: string;
+      data: DocumentData;
+      items: Record<string, ListMediaItem>;
+      layout: ListPageLayout;
+    }[]
+  > {
     const readStartedAt = this.layoutWrites.startRead();
     const snapshot = await auditedGetDocs(this.getUserListsCollection(userId), {
       path: `users/${userId}/lists`,
@@ -334,7 +341,11 @@ class ListService {
   }
 
   /** Loads one list with its items merged across overflow pages; null if it doesn't exist. */
-  async getUserList(userId: string, listId: string, audit: ListAuditInfo): Promise<UserList | null> {
+  async getUserList(
+    userId: string,
+    listId: string,
+    audit: ListAuditInfo
+  ): Promise<UserList | null> {
     const readStartedAt = this.layoutWrites.startRead();
     const snapshot = await auditedGetDoc(this.getUserListRef(userId, listId), {
       path: `users/${userId}/lists/${listId}`,
@@ -976,6 +987,48 @@ class ListService {
         items,
       });
       throw new Error(message);
+    } finally {
+      timeout.cancel();
+    }
+  }
+
+  /**
+   * Update some fields of an entry already in a list, in the document that holds it (the list
+   * document, or overflow page `page`), without touching its `addedAt` or the list's
+   * `updatedAt`. Writing to the wrong document would create a partial entry there, so `page`
+   * must come from the list's layout (`overflowItemPages`).
+   */
+  async updateListItemFields(
+    listId: string,
+    item: ListItemRef,
+    page: number,
+    fields: Partial<Omit<ListMediaItem, 'id' | 'media_type' | 'addedAt'>>
+  ) {
+    const timeout = createTimeoutWithCleanup(10000);
+
+    try {
+      const user = requireSignedInUser();
+      const itemKey = getListItemKey(item);
+      if (!itemKey) {
+        throw new Error('This item cannot be updated');
+      }
+      const updates: Record<string, unknown> = {};
+      Object.entries(fields).forEach(([field, value]) => {
+        if (value !== undefined) {
+          updates[`items.${itemKey}.${field}`] = value;
+        }
+      });
+      if (Object.keys(updates).length === 0) {
+        return;
+      }
+      const ref =
+        page > 0
+          ? this.getListItemPageRef(user.uid, listId, page)
+          : this.getUserListRef(user.uid, listId);
+      await Promise.race([updateDoc(ref, updates), timeout.promise]);
+    } catch (error) {
+      console.error('[ListService] updateListItemFields error:', { error, listId, item });
+      throw new Error(getFirestoreErrorMessage(error));
     } finally {
       timeout.cancel();
     }

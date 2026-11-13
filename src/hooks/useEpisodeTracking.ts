@@ -7,8 +7,10 @@ import { useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
 import { auth } from '../firebase/config';
 import { episodeTrackingService } from '../services/EpisodeTrackingService';
-import { listService } from '../services/ListService';
+import { listService, type UserList } from '../services/ListService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
+import { DEFAULT_PREFERENCES, type UserPreferences } from '../types/preferences';
+import { hasListItemByRef, type ListItemRef } from '../utils/listItemKeys';
 
 const getUserId = () => {
   const currentUser = auth.currentUser;
@@ -149,7 +151,10 @@ const maybeAutoAddToWatching = async ({
     posterPath: string | null;
   };
   autoAddOptions?: WatchingAutoAddOptions;
-  logPrefix: 'useMarkEpisodeWatched' | 'useMarkAllEpisodesWatched' | 'useMarkShowAllEpisodesWatched';
+  logPrefix:
+    | 'useMarkEpisodeWatched'
+    | 'useMarkAllEpisodesWatched'
+    | 'useMarkShowAllEpisodesWatched';
 }) => {
   const shouldAutoAdd = autoAddOptions?.shouldAutoAdd ?? true;
 
@@ -189,6 +194,59 @@ const maybeAutoAddToWatching = async ({
   } catch (autoAddError) {
     // Log but don't throw - auto-add is non-critical
     console.error(`[${logPrefix}] Auto-add to Watching list failed:`, autoAddError);
+  }
+};
+
+/**
+ * Removes episodes that were just marked watched from Should Watch, when the "Auto-remove from
+ * Should Watch" setting is on (it is by default), in one write. Only episodes the cached lists
+ * show in Should Watch are removed, so nothing is written when none of them is there.
+ * Non-critical: failures are logged, never thrown.
+ */
+const maybeAutoRemoveFromShouldWatch = async ({
+  queryClient,
+  tvShowId,
+  episodes,
+  logPrefix,
+}: {
+  queryClient: ReturnType<typeof useQueryClient>;
+  tvShowId: number;
+  episodes: { seasonNumber: number; episodeNumber: number }[];
+  logPrefix:
+    | 'useMarkEpisodeWatched'
+    | 'useMarkAllEpisodesWatched'
+    | 'useMarkShowAllEpisodesWatched';
+}) => {
+  const userId = getUserId();
+  if (!userId || episodes.length === 0) return;
+
+  const preferences = queryClient.getQueryData<UserPreferences>(['preferences', userId]);
+  const shouldAutoRemove =
+    preferences?.autoRemoveFromShouldWatch ?? DEFAULT_PREFERENCES.autoRemoveFromShouldWatch;
+  if (!shouldAutoRemove) return;
+
+  const shouldWatch = queryClient
+    .getQueryData<UserList[]>(['lists', userId])
+    ?.find((list) => list.id === 'watchlist');
+  if (!shouldWatch?.items) return;
+
+  const listedEpisodes = episodes
+    .map(
+      ({ seasonNumber, episodeNumber }): ListItemRef => ({
+        id: tvShowId,
+        media_type: 'episode',
+        season_number: seasonNumber,
+        episode_number: episodeNumber,
+      })
+    )
+    .filter((ref) => hasListItemByRef(shouldWatch.items, ref));
+  if (listedEpisodes.length === 0) return;
+
+  try {
+    await listService.removeManyFromList('watchlist', listedEpisodes);
+    console.log(`[${logPrefix}] Auto-removed from Should Watch:`, listedEpisodes.length);
+  } catch (autoRemoveError) {
+    console.error(`[${logPrefix}] Auto-remove from Should Watch failed:`, autoRemoveError);
   }
 };
 
@@ -304,6 +362,9 @@ export const useMarkEpisodeWatched = () => {
 
       // Handle marking previous episodes as watched (non-blocking)
       const { previousEpisodesOptions } = params;
+      const watchedEpisodes = [
+        { seasonNumber: params.seasonNumber, episodeNumber: params.episodeNumber },
+      ];
       if (
         previousEpisodesOptions?.shouldMarkPrevious &&
         previousEpisodesOptions.seasonEpisodes.length > 0 &&
@@ -321,6 +382,12 @@ export const useMarkEpisodeWatched = () => {
               previousEpisodes,
               params.showMetadata
             );
+            previousEpisodes.forEach((ep) =>
+              watchedEpisodes.push({
+                seasonNumber: params.seasonNumber,
+                episodeNumber: ep.episode_number,
+              })
+            );
 
             console.log(
               '[useMarkEpisodeWatched] Auto-marked previous episodes:',
@@ -335,6 +402,13 @@ export const useMarkEpisodeWatched = () => {
           );
         }
       }
+
+      await maybeAutoRemoveFromShouldWatch({
+        queryClient,
+        tvShowId: params.tvShowId,
+        episodes: watchedEpisodes,
+        logPrefix: 'useMarkEpisodeWatched',
+      });
     },
     onSuccess: async (_result, params) => {
       // Record engagement for in-app review prompt
@@ -395,6 +469,16 @@ export const useMarkAllEpisodesWatched = () => {
         tvShowId: params.tvShowId,
         showMetadata: params.showMetadata,
         autoAddOptions: params.autoAddOptions,
+        logPrefix: 'useMarkAllEpisodesWatched',
+      });
+
+      await maybeAutoRemoveFromShouldWatch({
+        queryClient,
+        tvShowId: params.tvShowId,
+        episodes: params.episodes.map((episode) => ({
+          seasonNumber: params.seasonNumber,
+          episodeNumber: episode.episode_number,
+        })),
         logPrefix: 'useMarkAllEpisodesWatched',
       });
     },
@@ -490,11 +574,7 @@ export const useSetHiddenFromProgress = () => {
         await queryClient.cancelQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
       }
       const previous = userId
-        ? queryClient.getQueryData<TVShowEpisodeTracking[]>([
-            'episodeTracking',
-            'allShows',
-            userId,
-          ])
+        ? queryClient.getQueryData<TVShowEpisodeTracking[]>(['episodeTracking', 'allShows', userId])
         : undefined;
       if (userId) {
         patchHiddenInAllShowsCache(queryClient, userId, [params.tvShowId], params.hidden);
@@ -503,10 +583,7 @@ export const useSetHiddenFromProgress = () => {
     },
     onError: (_error, _params, context) => {
       if (context?.userId && context.previous) {
-        queryClient.setQueryData(
-          ['episodeTracking', 'allShows', context.userId],
-          context.previous
-        );
+        queryClient.setQueryData(['episodeTracking', 'allShows', context.userId], context.previous);
       }
     },
     onSettled: async (_result, _error, params) => {
@@ -534,11 +611,7 @@ export const useBulkSetHiddenFromProgress = () => {
         await queryClient.cancelQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
       }
       const previous = userId
-        ? queryClient.getQueryData<TVShowEpisodeTracking[]>([
-            'episodeTracking',
-            'allShows',
-            userId,
-          ])
+        ? queryClient.getQueryData<TVShowEpisodeTracking[]>(['episodeTracking', 'allShows', userId])
         : undefined;
       if (userId) {
         patchHiddenInAllShowsCache(queryClient, userId, params.tvShowIds, params.hidden);
@@ -547,10 +620,7 @@ export const useBulkSetHiddenFromProgress = () => {
     },
     onError: (_error, _params, context) => {
       if (context?.userId && context.previous) {
-        queryClient.setQueryData(
-          ['episodeTracking', 'allShows', context.userId],
-          context.previous
-        );
+        queryClient.setQueryData(['episodeTracking', 'allShows', context.userId], context.previous);
       }
     },
     onSettled: async (_result, _error, params) => {
@@ -589,6 +659,19 @@ export const useMarkShowAllEpisodesWatched = () => {
           tvShowId: params.tvShowId,
           showMetadata: params.showMetadata,
           autoAddOptions: params.autoAddOptions,
+          logPrefix: 'useMarkShowAllEpisodesWatched',
+        });
+
+        // Episodes are marked in order, so a cancelled run marked the first `markedCount`.
+        await maybeAutoRemoveFromShouldWatch({
+          queryClient,
+          tvShowId: params.tvShowId,
+          episodes: params.episodesToMark
+            .slice(0, result.markedCount)
+            .map(({ seasonNumber, episode }) => ({
+              seasonNumber,
+              episodeNumber: episode.episode_number,
+            })),
           logPrefix: 'useMarkShowAllEpisodesWatched',
         });
       }
@@ -687,5 +770,3 @@ export const useDeleteShowTracking = () => {
     },
   });
 };
-
-
