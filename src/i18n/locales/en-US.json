@@ -2141,7 +2141,14 @@
     "reminderHint": "Only shows for upcoming titles",
     "dragHandle": "Drag to reorder {{name}}",
     "position": "Position {{position}}",
-    "saveFailed": "Couldn't save the new order. Please try again."
+    "saveFailed": "Couldn't save the new order. Please try again.",
+    "seasonsDescription": "Drag the buttons to change their order on each season in a show's Seasons & Episodes.",
+    "markAllHint": "Only shows when a season has episodes to mark",
+    "progressCardHint": "Only shows once you've started the season",
+    "tabs": {
+      "titles": "Movies & TV",
+      "seasons": "Seasons"
+    }
   },
   "lists": {
     "alreadyWatched": "Already Watched",

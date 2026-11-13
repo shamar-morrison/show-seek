@@ -1959,7 +1959,14 @@
     "reminderHint": "Solo aparece en títulos por estrenar",
     "dragHandle": "Arrastra para reordenar {{name}}",
     "position": "Posición {{position}}",
-    "saveFailed": "No se pudo guardar el nuevo orden. Inténtalo de nuevo."
+    "saveFailed": "No se pudo guardar el nuevo orden. Inténtalo de nuevo.",
+    "seasonsDescription": "Arrastra los botones para cambiar su orden en cada temporada de Temporadas y episodios.",
+    "markAllHint": "Solo aparece si la temporada tiene episodios por marcar",
+    "progressCardHint": "Solo aparece cuando ya empezaste la temporada",
+    "tabs": {
+      "titles": "Películas y series",
+      "seasons": "Temporadas"
+    }
   },
   "lists": {
     "alreadyWatched": "Ya vistos",

@@ -1993,7 +1993,14 @@
     "reminderHint": "Só aparece em títulos que ainda vão estrear",
     "dragHandle": "Arraste para reordenar {{name}}",
     "position": "Posição {{position}}",
-    "saveFailed": "Não foi possível guardar a nova ordem. Tente novamente."
+    "saveFailed": "Não foi possível guardar a nova ordem. Tente novamente.",
+    "seasonsDescription": "Arraste os botões para mudar a ordem em cada temporada em Temporadas e episódios.",
+    "markAllHint": "Só aparece se a temporada tiver episódios por marcar",
+    "progressCardHint": "Só aparece depois de começar a temporada",
+    "tabs": {
+      "titles": "Filmes e séries",
+      "seasons": "Temporadas"
+    }
   },
   "lists": {
     "alreadyWatched": "Já vistos",

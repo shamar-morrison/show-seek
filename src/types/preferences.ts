@@ -3,6 +3,7 @@
  */
 
 import type { DetailActionButtonId } from '@/src/utils/detailActionOrder';
+import type { SeasonActionButtonId } from '@/src/utils/seasonActionOrder';
 import type { ProfileBackground } from '@/src/utils/profileBackground';
 
 /**
@@ -51,6 +52,7 @@ export interface UserPreferences {
   showOriginalTitles: boolean; // Show movie/TV titles in original language when available
   posterOverrides?: Record<string, string>; // Per-user poster overrides keyed by "movie_<id>" / "tv_<id>"
   detailActionOrder?: DetailActionButtonId[]; // Order of the action buttons on movie/TV pages; unset = default
+  seasonActionOrder?: SeasonActionButtonId[]; // Order of the action buttons on each season of a show; unset = default
   use24HourTime?: boolean; // Show clock times as 24-hour (21:05); unset = follow the phone's setting
   profileBackground?: ProfileBackground | null; // Poster/backdrop behind the profile; null or unset = none
 }

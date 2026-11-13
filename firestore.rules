@@ -112,6 +112,10 @@ service cloud.firestore {
             request.resource.data.preferences.detailActionOrder is list
             && request.resource.data.preferences.detailActionOrder.size() <= 10
           ))
+          && (!('seasonActionOrder' in request.resource.data.preferences) || (
+            request.resource.data.preferences.seasonActionOrder is list
+            && request.resource.data.preferences.seasonActionOrder.size() <= 10
+          ))
           && (!('posterOverrides' in request.resource.data.preferences) || (
             request.resource.data.preferences.posterOverrides is map
             && request.resource.data.preferences.posterOverrides.size() <= 1000

@@ -3,11 +3,16 @@ import React from 'react';
 import { Alert } from 'react-native';
 
 let mockSavedOrder = ['list', 'rating', 'reminder', 'note', 'shareCard'];
+let mockSeasonOrder = ['markAll', 'rating', 'note', 'list', 'shareCard'];
 const mockMutate = jest.fn();
 let mockGridProps: any;
 
 jest.mock('@/src/hooks/useDetailActionOrder', () => ({
   useDetailActionOrder: () => mockSavedOrder,
+}));
+
+jest.mock('@/src/hooks/useSeasonActionOrder', () => ({
+  useSeasonActionOrder: () => mockSeasonOrder,
 }));
 
 jest.mock('@/src/hooks/usePreferences', () => ({
@@ -63,6 +68,7 @@ describe('ActionButtonsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSavedOrder = ['list', 'rating', 'reminder', 'note', 'shareCard'];
+    mockSeasonOrder = ['markAll', 'rating', 'note', 'list', 'shareCard'];
   });
 
   it('lists the buttons in the saved order with drag handles and positions', () => {
@@ -127,5 +133,78 @@ describe('ActionButtonsScreen', () => {
       { key: 'detailActionOrder', value: ['list', 'rating', 'reminder', 'note', 'shareCard'] },
       expect.any(Object)
     );
+  });
+});
+
+describe('ActionButtonsScreen seasons tab', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSavedOrder = ['list', 'rating', 'reminder', 'note', 'shareCard'];
+    mockSeasonOrder = ['markAll', 'rating', 'note', 'list', 'shareCard'];
+  });
+
+  const openSeasonsTab = (screen: ReturnType<typeof render>) =>
+    fireEvent.press(screen.getByTestId('action-buttons-tabs-tab-seasons'));
+
+  it('opens on movie and TV show buttons', () => {
+    const screen = render(<ActionButtonsScreen />);
+
+    expect(
+      screen.getByTestId('action-buttons-tabs-tab-titles').props.accessibilityState
+    ).toEqual({ selected: true });
+    expect(screen.getByText('actionButtons.description')).toBeTruthy();
+    expect(rowOrder(screen.getAllByTestId)).toEqual(mockSavedOrder);
+  });
+
+  it("lists a season's buttons in their saved order, with hints for the ones that come and go", () => {
+    mockSeasonOrder = ['list', 'markAll', 'rating', 'note', 'shareCard'];
+    const screen = render(<ActionButtonsScreen />);
+
+    openSeasonsTab(screen);
+
+    expect(screen.getByText('actionButtons.seasonsDescription')).toBeTruthy();
+    expect(rowOrder(screen.getAllByTestId)).toEqual(mockSeasonOrder);
+    expect(screen.getByText('watched.markAll')).toBeTruthy();
+    expect(screen.getByText('actionButtons.markAllHint')).toBeTruthy();
+    expect(screen.getByText('actionButtons.progressCardHint')).toBeTruthy();
+    expect(screen.queryByText('actionButtons.reminderHint')).toBeNull();
+  });
+
+  it('saves a new season order to its own preference', () => {
+    const screen = render(<ActionButtonsScreen />);
+    openSeasonsTab(screen);
+    const next = ['shareCard', 'list', 'note', 'rating', 'markAll'];
+
+    act(() => mockGridProps.onDragEnd({ data: next }));
+
+    expect(rowOrder(screen.getAllByTestId)).toEqual(next);
+    expect(mockMutate).toHaveBeenCalledWith(
+      { key: 'seasonActionOrder', value: next },
+      expect.any(Object)
+    );
+  });
+
+  it('resets only the season order', () => {
+    mockSeasonOrder = ['note', 'list', 'rating', 'markAll', 'shareCard'];
+    const screen = render(<ActionButtonsScreen />);
+    openSeasonsTab(screen);
+
+    fireEvent.press(screen.getByTestId('action-buttons-reset'));
+
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+    expect(mockMutate).toHaveBeenCalledWith(
+      { key: 'seasonActionOrder', value: ['markAll', 'rating', 'note', 'list', 'shareCard'] },
+      expect.any(Object)
+    );
+  });
+
+  it('shows the movie and TV show order again when switching back', () => {
+    mockSavedOrder = ['note', 'list', 'rating', 'reminder', 'shareCard'];
+    const screen = render(<ActionButtonsScreen />);
+    openSeasonsTab(screen);
+
+    fireEvent.press(screen.getByTestId('action-buttons-tabs-tab-titles'));
+
+    expect(rowOrder(screen.getAllByTestId)).toEqual(mockSavedOrder);
   });
 });

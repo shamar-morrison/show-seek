@@ -2175,7 +2175,14 @@
     "reminderHint": "Uniquement pour les titres à venir",
     "dragHandle": "Faire glisser pour réordonner {{name}}",
     "position": "Position {{position}}",
-    "saveFailed": "Impossible d'enregistrer le nouvel ordre. Veuillez réessayer."
+    "saveFailed": "Impossible d'enregistrer le nouvel ordre. Veuillez réessayer.",
+    "seasonsDescription": "Faites glisser les boutons pour changer leur ordre sur chaque saison dans Saisons et épisodes.",
+    "markAllHint": "Uniquement si la saison a des épisodes à marquer",
+    "progressCardHint": "Uniquement une fois la saison commencée",
+    "tabs": {
+      "titles": "Films et séries",
+      "seasons": "Saisons"
+    }
   },
   "lists": {
     "alreadyWatched": "Déjà vus",
