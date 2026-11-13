@@ -1,4 +1,5 @@
 import RatingButton from '@/src/components/RatingButton';
+import { getListMembershipTint } from '@/src/utils/listIcons';
 import ReminderButton from '@/src/components/ReminderButton';
 import { ACTIVE_OPACITY, COLORS, hexToRGBA } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -80,12 +81,8 @@ export function MediaActionButtons({
   const order = useDetailActionOrder();
 
   // Glassmorphism active-state tints (mirrors show-seek-web action buttons).
-  const listTintColor = listColor ?? COLORS.success;
   const listTintStyle = isInAnyList
-    ? {
-        backgroundColor: hexToRGBA(listTintColor, 0.15),
-        borderColor: hexToRGBA(listTintColor, 0.5),
-      }
+    ? getListMembershipTint({ color: listColor ?? COLORS.success })
     : undefined;
   const ratedTintStyle =
     userRating > 0

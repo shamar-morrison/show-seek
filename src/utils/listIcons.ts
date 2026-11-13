@@ -1,5 +1,5 @@
 import { DEFAULT_ACCENT_COLOR } from '@/src/constants/accentColors';
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, hexToRGBA } from '@/src/constants/theme';
 import {
   Bookmark02Icon,
   Cancel01Icon,
@@ -84,3 +84,18 @@ export const getListMembershipIcon = (
   }
   return { icon: MultipleListsIcon, color: MULTIPLE_LISTS_COLOR };
 };
+
+/**
+ * The active background and border of an add-to-list button for an entry in lists: a tint of
+ * the color from getListMembershipIcon (the list's own color, or the multiple-lists color), as
+ * on movie and show pages. Undefined when the entry is in no list.
+ */
+export const getListMembershipTint = (
+  membershipIcon: { color: string } | null | undefined
+): { backgroundColor: string; borderColor: string } | undefined =>
+  membershipIcon
+    ? {
+        backgroundColor: hexToRGBA(membershipIcon.color, 0.15),
+        borderColor: hexToRGBA(membershipIcon.color, 0.5),
+      }
+    : undefined;

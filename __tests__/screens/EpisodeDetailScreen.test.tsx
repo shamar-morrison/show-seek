@@ -525,6 +525,15 @@ describe('EpisodeDetailScreen', () => {
     mockLists = [{ id: 'watchlist', items: { 'episode-10-1-2': entry } }];
     screen.rerender(<EpisodeDetailScreen />);
     expect(buttonIcon(screen)).toBe(Bookmark02Icon);
+    // The button is tinted with the list's color, as on movie and show pages.
+    const { hexToRGBA } = jest.requireActual('@/src/constants/theme');
+    const { StyleSheet } = jest.requireActual('react-native');
+    expect(
+      StyleSheet.flatten(screen.getByTestId('episode-add-to-list-action').props.style)
+    ).toMatchObject({
+      backgroundColor: hexToRGBA('#3b82f6', 0.15),
+      borderColor: hexToRGBA('#3b82f6', 0.5),
+    });
 
     mockLists = [{ id: 'my-list', items: { 'episode-10-1-2': entry } }];
     screen.rerender(<EpisodeDetailScreen />);

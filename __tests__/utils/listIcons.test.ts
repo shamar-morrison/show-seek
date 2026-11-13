@@ -1,4 +1,9 @@
-import { getListMembershipIcon, MULTIPLE_LISTS_COLOR } from '@/src/utils/listIcons';
+import { hexToRGBA } from '@/src/constants/theme';
+import {
+  getListMembershipIcon,
+  getListMembershipTint,
+  MULTIPLE_LISTS_COLOR,
+} from '@/src/utils/listIcons';
 import {
   Bookmark02Icon,
   CheckListIcon,
@@ -28,5 +33,24 @@ describe('getListMembershipIcon', () => {
       icon: CheckListIcon,
       color: MULTIPLE_LISTS_COLOR,
     });
+  });
+});
+
+describe('getListMembershipTint', () => {
+  it("tints with the list's color, or the multiple-lists color, never the accent", () => {
+    expect(getListMembershipTint(getListMembershipIcon(['watchlist'], '#ff0000'))).toEqual({
+      backgroundColor: hexToRGBA('#3b82f6', 0.15),
+      borderColor: hexToRGBA('#3b82f6', 0.5),
+    });
+    expect(
+      getListMembershipTint(getListMembershipIcon(['watchlist', 'my-list'], '#ff0000'))
+    ).toEqual({
+      backgroundColor: hexToRGBA(MULTIPLE_LISTS_COLOR, 0.15),
+      borderColor: hexToRGBA(MULTIPLE_LISTS_COLOR, 0.5),
+    });
+  });
+
+  it('adds no tint for an entry in no list', () => {
+    expect(getListMembershipTint(getListMembershipIcon([], '#ff0000'))).toBeUndefined();
   });
 });

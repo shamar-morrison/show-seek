@@ -423,6 +423,23 @@ describe('TVSeasonsScreen season actions', () => {
       screen.rerender(<TVSeasonsScreen />);
       expect(buttonIcon(screen)).toBe(CheckListIcon);
     });
+
+    it("tints the button with the list's color, not the accent color", () => {
+      const { hexToRGBA } = jest.requireActual('@/src/constants/theme');
+      const { StyleSheet } = jest.requireActual('react-native');
+      const season = { id: 101, media_type: 'season', season_number: 1 };
+      mockListsData = [{ id: 'watchlist', items: { 'season-101-1': season } }];
+      mockQueries();
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+
+      expect(
+        StyleSheet.flatten(screen.getByTestId('season-add-to-list-button-1').props.style)
+      ).toMatchObject({
+        backgroundColor: hexToRGBA('#3b82f6', 0.15),
+        borderColor: hexToRGBA('#3b82f6', 0.5),
+      });
+    });
   });
 
   it('navigates to the TV detail screen when the header show title is pressed', () => {

@@ -58,7 +58,7 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { buildEpisodeListItem } from '@/src/utils/episodeListItem';
 import { parseEpisodeRouteParams } from '@/src/utils/episodeRouteParams';
-import { getListMembershipIcon } from '@/src/utils/listIcons';
+import { getListMembershipIcon, getListMembershipTint } from '@/src/utils/listIcons';
 import { isTmdb404 } from '@/src/utils/tmdbErrors';
 import { hasListItemByRef } from '@/src/utils/listItemKeys';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
@@ -703,10 +703,7 @@ export default function EpisodeDetailScreen() {
               <TouchableOpacity
                 style={[
                   styles.actionButtonWrapper,
-                  isEpisodeInAnyList && {
-                    backgroundColor: hexToRGBA(accentColor, 0.15),
-                    borderColor: hexToRGBA(accentColor, 0.5),
-                  },
+                  getListMembershipTint(episodeListMembershipIcon),
                 ]}
                 onPress={handleOpenAddToList}
                 disabled={!episodeListItem}

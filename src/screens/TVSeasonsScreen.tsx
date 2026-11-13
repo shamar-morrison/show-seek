@@ -58,7 +58,7 @@ import { getMarkableEpisodes } from '@/src/utils/episodeEligibility';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { buildSeasonListItem } from '@/src/utils/seasonListItem';
 import type { SeasonActionButtonId } from '@/src/utils/seasonActionOrder';
-import { getListMembershipIcon } from '@/src/utils/listIcons';
+import { getListMembershipIcon, getListMembershipTint } from '@/src/utils/listIcons';
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -1176,10 +1176,7 @@ export default function TVSeasonsScreen() {
           list: (
             <TouchableOpacity
               key="list"
-              style={[
-                styles.seasonActionButton,
-                isSeasonInAnyList && styles.seasonActionButtonActive,
-              ]}
+              style={[styles.seasonActionButton, getListMembershipTint(seasonListMembershipIcon)]}
               onPress={() => handleOpenSeasonAddToList(seasonData)}
               activeOpacity={ACTIVE_OPACITY}
               accessibilityRole="button"
