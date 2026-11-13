@@ -15,7 +15,7 @@ import {
   withPages,
   type ListItemChanges,
 } from '../listPagesAdmin';
-import { getLegacyListItemKey } from '../shared/listItemKeys';
+import { getLegacyListItemKeyForRef, getListItemKey, type ListItemRef } from '../shared/listItemKeys';
 import {
   buildAlreadyWatchedItemsMap,
   buildCustomListItemsMap,
@@ -50,6 +50,7 @@ import {
   didActivityFieldChange,
   hasActivityGroupChanged,
   hasManagedFieldChanges,
+  isListEntryMediaType,
   isListMediaType,
   isPlainObject,
   mergeManagedValue,
@@ -190,13 +191,20 @@ export const reconcileManagedList = async (
     const mediaType = remoteItem.media_type;
     const mediaId = remoteItem.id;
 
-    if (!isListMediaType(mediaType) || typeof mediaId !== 'number') {
+    if (
+      !isListEntryMediaType(mediaType) ||
+      typeof mediaId !== 'number' ||
+      getListItemKey(remoteItem as Partial<ListItemRef>) !== remoteKey
+    ) {
       return;
     }
 
     const existingItem = existingItems[remoteKey];
-    const legacyKey = getLegacyListItemKey(mediaId);
-    const hasLegacyKey = Boolean(existingItemsRaw && legacyKey !== remoteKey && legacyKey in existingItemsRaw);
+    // Seasons never have a legacy numeric key; that key would belong to the show or a movie.
+    const legacyKey = getLegacyListItemKeyForRef(remoteItem as Partial<ListItemRef>);
+    const hasLegacyKey = Boolean(
+      legacyKey && existingItemsRaw && legacyKey !== remoteKey && legacyKey in existingItemsRaw
+    );
     const shouldApplyRemote = shouldApplyRemoteManagedValue(existingItem, remoteItem, options.recencyField);
     const nextItem =
       !existingItem || shouldApplyRemote ? mergeManagedValue(existingItem, remoteItem) : existingItem;
@@ -207,13 +215,16 @@ export const reconcileManagedList = async (
       itemSets[remoteKey] = nextItem;
       hasItemWrites = true;
       if (isRemoteChange) {
-        changedMediaTypes.push(mediaType);
+        // Per-type change counts only cover movies and shows (Already Watched).
+        if (isListMediaType(mediaType)) {
+          changedMediaTypes.push(mediaType);
+        }
         changedCount += 1;
         addedOrUpdatedCount += 1;
       }
     }
 
-    if (hasLegacyKey) {
+    if (hasLegacyKey && legacyKey) {
       itemDeletes.add(legacyKey);
       hasItemWrites = true;
     }
@@ -234,8 +245,8 @@ export const reconcileManagedList = async (
         changedMediaTypes.push(mediaType);
       }
       if (typeof mediaId === 'number' && existingItemsRaw) {
-        const legacyKey = getLegacyListItemKey(mediaId);
-        if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
+        const legacyKey = getLegacyListItemKeyForRef(existingItem as Partial<ListItemRef>);
+        if (legacyKey && legacyKey !== existingKey && legacyKey in existingItemsRaw) {
           itemDeletes.add(legacyKey);
           hasItemWrites = true;
         }

@@ -15,6 +15,10 @@ export { buildSeasonEntryTitle, getTraktSeasonNumber };
 
 export const isListMediaType = (value: unknown): value is 'movie' | 'tv' => value === 'movie' || value === 'tv';
 
+/** Any media type a list entry can have: a movie, a show, or one season of a show. */
+export const isListEntryMediaType = (value: unknown): value is 'movie' | 'tv' | 'season' =>
+  isListMediaType(value) || value === 'season';
+
 
 export const isTimestampLike = (value: unknown): value is { toMillis: () => number } =>
   typeof value === 'object' && value !== null && typeof (value as { toMillis?: unknown }).toMillis === 'function';

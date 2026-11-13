@@ -1,7 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore';
-import { buildListItemKey, getListItemKey } from '../shared/listItemKeys';
+import { getListItemKey, type ListItemRef } from '../shared/listItemKeys';
 import {
-  isListMediaType,
   stripUndefinedDeep,
   transformFavorite,
   transformListItem,
@@ -33,13 +32,13 @@ export const buildManagedListItemsMap = (
       return;
     }
 
-    const mediaType = item.media_type;
-    const mediaId = item.id;
-    if (!isListMediaType(mediaType) || typeof mediaId !== 'number') {
+    // Movies, shows and seasons (keyed season-{tvId}-{n}); anything else is skipped.
+    const itemKey = getListItemKey(item as Partial<ListItemRef>);
+    if (!itemKey) {
       return;
     }
 
-    mappedItems[buildListItemKey(mediaType, mediaId)] = item;
+    mappedItems[itemKey] = item;
   });
 
   return mappedItems;

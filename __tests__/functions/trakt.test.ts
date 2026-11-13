@@ -6894,3 +6894,114 @@ describe('enrichment on a full list document', () => {
     expect(result.removeFromListDocKeys).toEqual(['movie-3']);
   });
 });
+
+describe('reconcileManagedList with season entries', () => {
+  const seasonItem = (seasonNumber: number) => ({
+    addedAt: new Date('2026-01-02T00:00:00.000Z').getTime(),
+    id: 1396,
+    media_type: 'season',
+    name: `Breaking Bad · Season ${seasonNumber}`,
+    season_number: seasonNumber,
+    show_name: 'Breaking Bad',
+    title: `Breaking Bad · Season ${seasonNumber}`,
+  });
+
+  it('replaces a folded show with its seasons in a Trakt custom list', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+
+    const result = await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'trakt_77',
+      { 'season-1396-2': seasonItem(2), 'season-1396-0': seasonItem(0) },
+      { name: 'Faves' },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/trakt_77',
+        {
+          items: {
+            // What earlier syncs wrote for those seasons: the show itself.
+            'tv-1396': {
+              addedAt: new Date('2026-01-02T00:00:00.000Z').getTime(),
+              id: 1396,
+              media_type: 'tv',
+              title: 'Breaking Bad',
+            },
+          },
+          metadata: { itemCount: 1, needsEnrichment: false },
+          name: 'Faves',
+        },
+        listSet
+      ),
+      { preserveLocalItems: false, recencyField: 'addedAt' }
+    );
+
+    expect(result).toMatchObject({
+      changedMediaTypes: ['tv'],
+      didRemoteChange: true,
+      shouldEnrich: true,
+    });
+    const written = listSet.mock.calls[0][0].items;
+    expect(written['tv-1396']).toBe('FIELD_DELETE');
+    expect(written['season-1396-2']).toEqual(
+      expect.objectContaining({ media_type: 'season', season_number: 2 })
+    );
+    expect(written['season-1396-0']).toEqual(
+      expect.objectContaining({ media_type: 'season', season_number: 0 })
+    );
+  });
+
+  it('never clears a numeric key for a season (it belongs to the show or a movie)', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const legacyMovie = { addedAt: 1, id: 1396, media_type: 'movie', title: 'A Movie' };
+
+    await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'watchlist',
+      { 'season-1396-1': seasonItem(1) },
+      { id: 'watchlist', name: 'Should Watch' },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/watchlist',
+        {
+          items: { '1396': legacyMovie },
+          metadata: { itemCount: 1, needsEnrichment: false },
+          name: 'Should Watch',
+        },
+        listSet
+      ),
+      { preserveLocalItems: true, recencyField: 'addedAt' }
+    );
+
+    const written = listSet.mock.calls[0][0].items;
+    expect(written).toHaveProperty(['season-1396-1']);
+    expect(written).not.toHaveProperty('1396');
+  });
+
+  it('leaves an unchanged season alone on the next sync', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const enriched = {
+      ...seasonItem(2),
+      poster_path: '/s2.jpg',
+      season_name: 'Season 2',
+      vote_average: 8.2,
+    };
+
+    const result = await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'trakt_77',
+      { 'season-1396-2': seasonItem(2) },
+      { name: 'Faves' },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/trakt_77',
+        {
+          items: { 'season-1396-2': enriched },
+          metadata: { itemCount: 1, needsEnrichment: false },
+          name: 'Faves',
+        },
+        listSet
+      ),
+      { preserveLocalItems: false, recencyField: 'addedAt' }
+    );
+
+    expect(result).toMatchObject({ changedCount: 0, didRemoteChange: false, didWrite: false });
+    expect(listSet).not.toHaveBeenCalled();
+  });
+});
