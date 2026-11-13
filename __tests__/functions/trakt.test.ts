@@ -4705,6 +4705,83 @@ describe('Trakt sync Firestore sanitization', () => {
     expect(payload.metadata.lastUpdated).toBeInstanceOf(MockTimestamp);
   });
 
+  it('leaves a custom list TMDB could not check untouched and syncs the others', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const existingListRef = { delete: jest.fn(), path: 'users/user-1/lists/trakt_1' };
+    const usersCollection = {
+      doc: jest.fn(() => ({
+        collection: jest.fn(() => ({
+          doc: jest.fn(() => ({
+            get: jest.fn().mockResolvedValue({ data: () => undefined, exists: false }),
+            set: listSet,
+          })),
+          get: jest.fn().mockResolvedValue({ docs: [{ id: 'trakt_1', ref: existingListRef }] }),
+        })),
+      })),
+    };
+    firestoreFn.mockImplementation(() => ({ collection: jest.fn(() => usersCollection) }));
+    const traktResponse = (body: unknown) => ({
+      headers: { get: () => null },
+      json: jest.fn().mockResolvedValue(body),
+      ok: true,
+      status: 200,
+      text: jest.fn(),
+    });
+    (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+      if (url.includes('themoviedb.org')) {
+        return { headers: { get: () => null }, json: jest.fn(), ok: false, status: 503 };
+      }
+      if (url.includes('/lists/with-episodes/items')) {
+        return traktResponse([
+          {
+            episode: { ids: { slug: 'e', tmdb: 62103, trakt: 5 }, number: 12, season: 2, title: 'Phoenix' },
+            id: 9,
+            listed_at: '2025-12-22T16:34:01.000Z',
+            rank: 1,
+            show: { ids: { slug: 'bb', tmdb: 1396, trakt: 1 }, title: 'Breaking Bad', year: 2008 },
+            type: 'episode',
+          },
+        ]);
+      }
+      return traktResponse([
+        {
+          id: 1,
+          listed_at: '2024-01-03T00:00:00.000Z',
+          movie: { ids: { slug: 'm', tmdb: 101, trakt: 202 }, title: 'Example Movie', year: 2024 },
+          rank: 1,
+          type: 'movie',
+        },
+      ]);
+    });
+    const list = (trakt: number, slug: string) => ({
+      created_at: '2024-01-01T00:00:00.000Z',
+      description: '',
+      ids: { slug, trakt },
+      name: slug,
+      privacy: 'private',
+      updated_at: '2026-01-02T00:00:00.000Z',
+    });
+    const previousState = { slug: 'with-episodes', updatedAt: '2025-01-01T00:00:00.000Z' };
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const result = await (__test__ as any).reconcileCustomLists(
+      'user-1',
+      'access-token',
+      'showseek-user',
+      [list(1, 'with-episodes'), list(2, 'movies-only')],
+      { '1': previousState },
+      false
+    );
+
+    expect(result.lookupFailure).toMatchObject({ category: 'tmdb_unavailable' });
+    // Only the movies-only list was written; the other kept its saved state, so it is re-read.
+    expect(listSet).toHaveBeenCalledTimes(1);
+    expect(listSet.mock.calls[0][0]).toMatchObject({ name: 'movies-only' });
+    expect(result.customLists['1']).toEqual(previousState);
+    expect(existingListRef.delete).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   it('warns when episode watchedAt strings are invalid before falling back to now', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
@@ -5225,6 +5302,10 @@ describe('Trakt sync Firestore sanitization', () => {
     ).toBe(true);
     expect(isRunFatalSyncError(new TraktSyncError('write failed', 'internal', false))).toBe(false);
     expect(isRunFatalSyncError(new TraktSyncError('too big', 'storage_limit', false))).toBe(false);
+    // TMDB couldn't check a list's episodes: only that list waits.
+    expect(
+      isRunFatalSyncError(new TraktSyncError('no TMDB', 'tmdb_unavailable', true))
+    ).toBe(false);
     expect(isRunFatalSyncError(new Error('Firestore write failed'))).toBe(false);
   });
 
@@ -7560,16 +7641,18 @@ describe('Trakt episode entries', () => {
     });
 
     it('fails instead of guessing when a lookup fails, so confirmed episodes are never replaced', async () => {
-      const outage = Object.assign(new Error('TMDB is temporarily unavailable.'), {});
       const failing = {
         getSeason: jest.fn(async () => {
-          throw outage;
+          throw new TraktSyncError('TMDB is temporarily unavailable.', 'upstream_unavailable', true);
         }),
         findEpisode: jest.fn(async () => null),
       };
       const items = [episodeEntry(1, 64, { tvdb: 1 }), episodeEntry(2, 5, { tvdb: 2 })];
 
-      await expect(alignTraktEpisodeNumbers(items, { lookup: failing })).rejects.toBe(outage);
+      await expect(alignTraktEpisodeNumbers(items, { lookup: failing })).rejects.toMatchObject({
+        category: 'tmdb_unavailable',
+        retryable: true,
+      });
       expect(failing.findEpisode).not.toHaveBeenCalled();
     });
 

@@ -9,6 +9,11 @@ export type TraktSyncErrorCategory =
   | 'reauth_required'
   | 'storage_limit'
   | 'rate_limited'
+  /**
+   * TMDB couldn't be reached to check the numbering of Trakt episode entries. Only the list
+   * being checked waits; the rest of the sync goes on (see isRunFatalSyncError).
+   */
+  | 'tmdb_unavailable'
   | 'upstream_blocked'
   | 'upstream_unavailable';
 export type TraktOAuthFailureReason =

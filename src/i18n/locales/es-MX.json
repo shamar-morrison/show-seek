@@ -1803,7 +1803,9 @@
       "uploadFailed": "Error al subir el archivo zip. Comprueba tu conexión a internet e inténtalo de nuevo.",
       "tryAgain": "Intentar de nuevo",
       "backToSettings": "Volver a Configuración"
-    }
+    },
+    "tmdbRetryingSubtitle": "No se pudo conectar con TMDB para revisar los episodios de algunas de tus listas. Todo lo demás se sincronizó y ShowSeek seguirá intentándolo automáticamente.",
+    "tmdbUnavailableMessage": "No se pudo conectar con TMDB para revisar los episodios de algunas de tus listas. Todo lo demás se sincronizó. Vuelve a sincronizar más tarde."
   },
   "homeCustomization": {
     "title": "Personalizar inicio",

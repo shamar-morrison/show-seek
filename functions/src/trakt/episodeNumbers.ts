@@ -59,6 +59,28 @@ interface TraktEpisodeEntry {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * A failed numbering lookup, as the `tmdb_unavailable` error the sync handles per list (it
+ * isn't run-fatal). Retryable unless TMDB itself said retrying can't help (e.g. a bad key).
+ */
+const toTmdbUnavailableError = (error: unknown): TraktSyncError => {
+  const source = error instanceof TraktSyncError ? error : undefined;
+  return new TraktSyncError(
+    "Couldn't reach TMDB to check episode numbering.",
+    'tmdb_unavailable',
+    source ? source.retryable : true,
+    {
+      endpoint: source?.endpoint,
+      retryAfterSeconds: source?.retryAfterSeconds,
+      statusCode: source?.statusCode,
+    }
+  );
+};
+
+/** Whether an error is a failed TMDB lookup for episode numbering. */
+export const isTmdbUnavailableError = (error: unknown): error is TraktSyncError =>
+  error instanceof TraktSyncError && error.category === 'tmdb_unavailable';
+
 /** What a lookup returns once the run's request budget is spent. */
 const BUDGET_SPENT = Symbol('budgetSpent');
 type Looked<R> = R | typeof BUDGET_SPENT;
@@ -67,11 +89,12 @@ type Looked<R> = R | typeof BUDGET_SPENT;
  * TMDB lookups for one sync run or ZIP import, shared by the watchlist and every list: one
  * request budget, and each show's season fetched once.
  *
- * A lookup that fails (an outage, a timeout, or a rate limit that outlasts the retries) throws,
- * so the sync step fails instead of guessing: the run then doesn't save its progress, and the
- * task queue retries it later. Saving unconfirmed episodes as their show would instead replace
- * episode entries already confirmed in custom lists, which are only re-read when Trakt reports
- * a change.
+ * A lookup that fails (an outage, a timeout, or a rate limit that outlasts the retries) throws a
+ * `tmdb_unavailable` error instead of guessing. The sync then leaves that list untouched, syncs
+ * everything else, and fails the run at the end so it doesn't save its progress and the task
+ * queue retries it. Saving unconfirmed episodes as their show would instead replace episode
+ * entries already confirmed in custom lists, which are only re-read when Trakt reports a
+ * change.
  */
 export interface EpisodeNumberSession {
   /** The season's episodes, null when TMDB has no such season, or BUDGET_SPENT. */
@@ -106,7 +129,7 @@ export const createEpisodeNumberSession = ({
           await sleep(Math.min(retryAfterMs, MAX_RATE_LIMIT_WAIT_MS));
           continue;
         }
-        throw error;
+        throw toTmdbUnavailableError(error);
       }
     }
   };

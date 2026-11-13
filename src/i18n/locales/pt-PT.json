@@ -1803,7 +1803,9 @@
       "uploadFailed": "Falha ao enviar o ficheiro zip. Verifique a sua ligação e tente novamente.",
       "tryAgain": "Tentar novamente",
       "backToSettings": "Voltar às Definições"
-    }
+    },
+    "tmdbRetryingSubtitle": "Não foi possível aceder ao TMDB para verificar os episódios de algumas das suas listas. Tudo o resto foi sincronizado, e o ShowSeek vai continuar a tentar automaticamente.",
+    "tmdbUnavailableMessage": "Não foi possível aceder ao TMDB para verificar os episódios de algumas das suas listas. Tudo o resto foi sincronizado. Tente sincronizar novamente mais tarde."
   },
   "homeCustomization": {
     "title": "Personalizar início",

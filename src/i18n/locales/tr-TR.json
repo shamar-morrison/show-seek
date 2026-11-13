@@ -1803,7 +1803,9 @@
       "uploadFailed": "Zip arşivi yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",
       "tryAgain": "Tekrar Dene",
       "backToSettings": "Ayarlara Dön"
-    }
+    },
+    "tmdbRetryingSubtitle": "Bazı listelerinizdeki bölümleri kontrol etmek için TMDB'ye ulaşılamadı. Geri kalan her şey eşitlendi ve ShowSeek otomatik olarak denemeye devam edecek.",
+    "tmdbUnavailableMessage": "Bazı listelerinizdeki bölümleri kontrol etmek için TMDB'ye ulaşılamadı. Geri kalan her şey eşitlendi. Daha sonra yeniden eşitlemeyi deneyin."
   },
   "homeCustomization": {
     "title": "Ana sayfayı özelleştir",

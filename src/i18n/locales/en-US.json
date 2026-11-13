@@ -1803,7 +1803,9 @@
       "uploadFailed": "Failed to upload the zip archive. Please verify your internet connection and try again.",
       "tryAgain": "Try Again",
       "backToSettings": "Back to Settings"
-    }
+    },
+    "tmdbRetryingSubtitle": "Couldn't reach TMDB to check the episodes in some of your lists. Everything else synced, and ShowSeek will keep trying automatically.",
+    "tmdbUnavailableMessage": "Couldn't reach TMDB to check the episodes in some of your lists. Everything else synced. Try syncing again later."
   },
   "homeCustomization": {
     "title": "Customize Home",

@@ -180,6 +180,51 @@ describe('TraktSettingsScreen', () => {
     mockTraktState.isSyncing = false;
   });
 
+  it('says TMDB, not Trakt, is holding up a retrying sync', () => {
+    mockTraktState.isSyncing = true;
+    mockTraktState.syncStatus = {
+      attempt: 1,
+      connected: true,
+      errorCategory: 'tmdb_unavailable',
+      maxAttempts: 5,
+      status: 'retrying',
+      synced: false,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(
+      getByText(
+        "Couldn't reach TMDB to check the episodes in some of your lists. Everything else synced, and ShowSeek will keep trying automatically."
+      )
+    ).toBeTruthy();
+    expect(
+      queryByText('Trakt temporarily blocked this sync. ShowSeek will keep trying automatically.')
+    ).toBeNull();
+
+    mockTraktState.isSyncing = false;
+  });
+
+  it('explains a sync that failed because TMDB was unreachable', () => {
+    mockTraktState.syncStatus = {
+      connected: true,
+      errorCategory: 'tmdb_unavailable',
+      errorMessage: "Couldn't reach TMDB to check episode numbering.",
+      errors: ["Couldn't reach TMDB to check episode numbering."],
+      status: 'failed',
+      synced: false,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(
+      getByText(
+        "Couldn't reach TMDB to check the episodes in some of your lists. Everything else synced. Try syncing again later."
+      )
+    ).toBeTruthy();
+    expect(queryByText("Couldn't reach TMDB to check episode numbering.")).toBeNull();
+  });
+
   it('shows an inline error and keeps import available when the first sync fails', () => {
     mockTraktState.syncStatus = {
       connected: true,
