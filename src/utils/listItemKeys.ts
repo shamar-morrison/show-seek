@@ -1,21 +1,35 @@
 import {
-  buildListItemKey,
+  getListItemKey,
   hasExistingListItem,
-  type ListItemMediaType,
+  type ListEntryMediaType,
   type ListItemsMap,
 } from '@/functions/src/shared/listItemKeys';
 
 export {
   buildListItemKey,
+  buildSeasonListItemKey,
+  findListItemByRef,
   getLegacyListItemKey,
+  getLegacyListItemKeyForRef,
   getListItemCandidateKeys,
   getListItemFromMap,
+  getListItemKey,
+  getListItemRefCandidateKeys,
+  hasListItemByRef,
+  isSeasonListItemKey,
+  isSeasonListItemRef,
 } from '@/functions/src/shared/listItemKeys';
-export type { ListItemMediaType, ListItemsMap } from '@/functions/src/shared/listItemKeys';
+export type {
+  ListEntryMediaType,
+  ListItemMediaType,
+  ListItemRef,
+  ListItemsMap,
+} from '@/functions/src/shared/listItemKeys';
 
 export interface ListItemLike {
   id: number;
-  media_type: ListItemMediaType;
+  media_type: ListEntryMediaType;
+  season_number?: number;
 }
 
 export const hasListItemInMap = hasExistingListItem;
@@ -40,16 +54,8 @@ export const getStoredListItemKeys = <T extends Partial<ListItemLike>>(
 ): Record<string, string> => {
   const storedKeys: Record<string, string> = {};
   Object.entries(items ?? {}).forEach(([key, value]) => {
-    const mediaId = value?.id;
-    if (
-      typeof mediaId !== 'number' ||
-      !Number.isInteger(mediaId) ||
-      (value?.media_type !== 'movie' && value?.media_type !== 'tv')
-    ) {
-      return;
-    }
-    const normalizedKey = buildListItemKey(value.media_type, mediaId);
-    if (normalizedKey !== key) {
+    const normalizedKey = getListItemKey(value);
+    if (normalizedKey && normalizedKey !== key) {
       storedKeys[normalizedKey] = key;
     }
   });
@@ -72,20 +78,13 @@ export const normalizeListItemsMap = <T extends Partial<ListItemLike>>(
       return;
     }
 
-    const mediaId = value?.id;
-
-    if (
-      !value ||
-      typeof mediaId !== 'number' ||
-      !Number.isFinite(mediaId) ||
-      !Number.isInteger(mediaId) ||
-      (value.media_type !== 'movie' && value.media_type !== 'tv')
-    ) {
+    const normalizedKey = getListItemKey(value);
+    if (!normalizedKey) {
       normalized[key] = value;
       return;
     }
 
-    normalized[buildListItemKey(value.media_type, mediaId)] = value;
+    normalized[normalizedKey] = value;
   });
 
   // A leftover never replaces the real item; its runtime is kept if the item has none.

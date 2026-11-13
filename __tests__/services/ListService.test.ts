@@ -355,6 +355,72 @@ describe('ListService', () => {
     });
   });
 
+  describe('season entries', () => {
+    const seasonItem = {
+      id: 1396,
+      title: 'Breaking Bad · Season 3',
+      poster_path: '/season3.jpg',
+      media_type: 'season' as const,
+      vote_average: 8.4,
+      release_date: '2010-03-21',
+      season_number: 3,
+      season_name: 'Season 3',
+      show_name: 'Breaking Bad',
+    };
+
+    it('adds a season under its own key without clearing the numeric key of the show', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await listService.addToList('watchlist', seasonItem);
+
+      const update = (updateDoc as jest.Mock).mock.calls[0][1];
+      expect(update['items.season-1396-3']).toEqual(
+        expect.objectContaining({ id: 1396, media_type: 'season', season_number: 3 })
+      );
+      expect(update).not.toHaveProperty('items.1396');
+      expect(mockTrackAddToList).toHaveBeenCalledWith({
+        listKind: 'watchlist',
+        mediaType: 'season',
+      });
+    });
+
+    it('adds specials (season 0)', async () => {
+      (doc as jest.Mock).mockReturnValue({ path: 'x' });
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await listService.addToList('watchlist', { ...seasonItem, season_number: 0 });
+
+      expect((updateDoc as jest.Mock).mock.calls[0][1]).toHaveProperty(['items.season-1396-0']);
+    });
+
+    it('refuses a season without a season number', async () => {
+      const { season_number: _omit, ...withoutNumber } = seasonItem;
+
+      await expect(listService.addToList('watchlist', withoutNumber)).rejects.toThrow();
+      expect(updateDoc).not.toHaveBeenCalled();
+    });
+
+    it('removes only the season entry', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await listService.removeFromList('watchlist', 1396, 'season', 3);
+
+      expect(updateDoc).toHaveBeenCalledWith(mockDocRef, {
+        'items.season-1396-3': '__deleteField__',
+        updatedAt: expect.any(Number),
+      });
+    });
+
+    it('refuses to remove a season without its number', async () => {
+      await expect(listService.removeFromList('watchlist', 1396, 'season')).rejects.toThrow();
+      expect(updateDoc).not.toHaveBeenCalled();
+    });
+  });
+
   describe('createList', () => {
     it('should create list with URL-friendly ID', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/my-new-list' };
@@ -548,6 +614,8 @@ describe('ListService', () => {
               items: {
                 101: { id: 101, media_type: 'movie' },
                 202: { id: 202, media_type: 'tv' },
+                'season-202-1': { id: 202, media_type: 'season', season_number: 1 },
+                'season-202-0': { id: 202, media_type: 'season', season_number: 0 },
               },
             }),
           },
@@ -581,6 +649,8 @@ describe('ListService', () => {
       expect(membership).toEqual({
         '101-movie': ['watchlist', 'favorites'],
         '202-tv': ['watchlist'],
+        '202-season-1': ['watchlist'],
+        '202-season-0': ['watchlist'],
         '303-movie': ['custom-1'],
       });
       expect(getDocs).toHaveBeenCalledTimes(1);
