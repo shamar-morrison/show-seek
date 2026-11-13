@@ -2325,6 +2325,7 @@
   },
   "tvSeasons": {
     "failedToLoadSeasons": "No se pudieron cargar las temporadas",
+    "searchPlaceholder": "Buscar por nombre, número o año…",
     "rateSeason": "Puntuar"
   },
   "whereToWatch": {

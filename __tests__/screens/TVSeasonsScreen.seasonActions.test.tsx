@@ -40,19 +40,22 @@ jest.mock('expo-router', () => ({
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 jest.mock('@shopify/flash-list', () => {
   const React = require('react');
   const { View } = require('react-native');
 
-  const FlashList = React.forwardRef(({ data, renderItem }: any, ref: any) => {
+  const FlashList = React.forwardRef(({ data, renderItem, ListEmptyComponent }: any, ref: any) => {
     React.useImperativeHandle(ref, () => ({
       scrollToIndex: jest.fn().mockResolvedValue(undefined),
+      scrollToOffset: jest.fn(),
     }));
 
     return (
       <View>
+        {(data || []).length === 0 && ListEmptyComponent}
         {(data || []).map((item: any, index: number) => (
           <View key={item.key ?? `${index}`}>{renderItem({ item, index, target: 'Cell' })}</View>
         ))}
@@ -231,11 +234,11 @@ describe('TVSeasonsScreen season actions', () => {
     jest.restoreAllMocks();
   });
 
-  function mockQueries(overview = 'Overview') {
+  function mockQueries(overview = 'Overview', seasons: any[] = [buildSeason(overview)]) {
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
       if (Array.isArray(queryKey) && queryKey[2] === 'all-seasons') {
         return {
-          data: [buildSeason(overview)],
+          data: seasons,
           isLoading: false,
           isError: false,
         } as any;
@@ -433,5 +436,96 @@ describe('TVSeasonsScreen season actions', () => {
 
     expect(screen.getByTestId('season-note-button-1')).toBeTruthy();
     expect(screen.getByLabelText('Edit Note')).toBeTruthy();
+  });
+
+  describe('season search', () => {
+    beforeEach(() => {
+      const globalAny = global as any;
+      globalAny.requestAnimationFrame = (callback: (timestamp: number) => void) => {
+        callback(0);
+        return 1;
+      };
+      globalAny.cancelAnimationFrame = jest.fn();
+    });
+
+    const buildNamedSeason = (seasonNumber: number, name: string, airDates: string[]) => ({
+      ...buildSeason('Overview'),
+      id: seasonNumber,
+      season_number: seasonNumber,
+      name,
+      air_date: airDates[0],
+      episodes: airDates.map((airDate, index) => ({
+        ...buildSeason('Overview').episodes[0],
+        id: seasonNumber * 100 + index,
+        episode_number: index + 1,
+        air_date: airDate,
+        season_number: seasonNumber,
+      })),
+    });
+
+    const searchSeasons = [
+      buildNamedSeason(0, 'Specials', ['2018-12-24']),
+      buildNamedSeason(1, 'Book One: Water', ['2019-09-01', '2020-05-01']),
+      buildNamedSeason(2, 'Book Two: Earth', ['2021-03-01']),
+      buildNamedSeason(12, 'Season 12', ['2022-01-01']),
+    ];
+
+    const typeSearch = async (screen: ReturnType<typeof renderWithProviders>, text: string) => {
+      fireEvent.changeText(screen.getByPlaceholderText('Search by name, number or year…'), text);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      });
+    };
+
+    it('hides the search button when the show has a single season', () => {
+      mockQueries();
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+
+      expect(screen.queryByTestId('header-search-button')).toBeNull();
+    });
+
+    it('filters seasons by name, year and season number', async () => {
+      mockQueries('Overview', searchSeasons);
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+      fireEvent.press(screen.getByTestId('header-search-button'));
+
+      expect(screen.queryByTestId('header-mark-all-button')).toBeNull();
+
+      await typeSearch(screen, 'earth');
+      expect(screen.getByText('Book Two: Earth')).toBeTruthy();
+      expect(screen.queryByText('Book One: Water')).toBeNull();
+
+      // A season that runs across the new year matches both years
+      await typeSearch(screen, '2020');
+      expect(screen.getByText('Book One: Water')).toBeTruthy();
+      expect(screen.queryByText('Book Two: Earth')).toBeNull();
+
+      await typeSearch(screen, '12');
+      expect(screen.getByText('Season 12')).toBeTruthy();
+      expect(screen.queryByText('Book One: Water')).toBeNull();
+
+      await typeSearch(screen, 'nothing like this');
+      expect(screen.getByText('No results found')).toBeTruthy();
+    });
+
+    it('restores the full list and header when the search is closed', async () => {
+      mockQueries('Overview', searchSeasons);
+
+      const screen = renderWithProviders(<TVSeasonsScreen />);
+      fireEvent.press(screen.getByTestId('header-search-button'));
+      await typeSearch(screen, 'earth');
+
+      fireEvent.press(screen.getByTestId('searchable-header-clear'));
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      });
+
+      expect(screen.getByTestId('header-mark-all-button')).toBeTruthy();
+      expect(screen.getByText('Specials')).toBeTruthy();
+      expect(screen.getByText('Book One: Water')).toBeTruthy();
+      expect(screen.getByText('Season 12')).toBeTruthy();
+    });
   });
 });

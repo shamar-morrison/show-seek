@@ -2361,6 +2361,7 @@
   },
   "tvSeasons": {
     "failedToLoadSeasons": "Sezonlar yüklenemedi",
+    "searchPlaceholder": "Ad, numara veya yıla göre ara…",
     "rateSeason": "Puanla"
   },
   "whereToWatch": {

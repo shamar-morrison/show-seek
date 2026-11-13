@@ -2361,6 +2361,7 @@
   },
   "tvSeasons": {
     "failedToLoadSeasons": "Failed to load seasons",
+    "searchPlaceholder": "Search by name, number or year…",
     "rateSeason": "Rate"
   },
   "whereToWatch": {

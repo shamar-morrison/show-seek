@@ -2395,6 +2395,7 @@
   },
   "tvSeasons": {
     "failedToLoadSeasons": "Échec du chargement des saisons",
+    "searchPlaceholder": "Rechercher par nom, numéro ou année…",
     "rateSeason": "Noter"
   },
   "whereToWatch": {

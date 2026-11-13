@@ -11,6 +11,8 @@ import RatingModal from '@/src/components/RatingModal';
 import NoteModal, { type NoteModalRef } from '@/src/components/NotesModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -32,12 +34,14 @@ import {
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useRatings } from '@/src/hooks/useRatings';
 import {
   buildTVSeasonsListRows,
+  filterSeasonsBySearch,
   getSeasonHeaderRowIndex,
   type TVSeasonsListRow,
 } from '@/src/screens/tvSeasonsListRows';
@@ -59,18 +63,31 @@ import {
   Image01Icon,
   Note01Icon,
   NoteDoneIcon,
+  Search01Icon,
   StarIcon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  Text,
+  TouchableOpacity,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCROLL_INITIAL_DELAY = 300;
 const SCROLL_RETRY_INTERVAL = 100;
 const SCROLL_MAX_ATTEMPTS = 20;
 type OptimisticBulkAction = { action: 'mark' | 'unmark'; seasonNumber: number } | null;
+// Filtering happens in filterSeasonsBySearch; useHeaderSearch only holds the search state.
+const NO_ITEMS: never[] = [];
+const getNoSearchText = () => '';
 
 export default function TVSeasonsScreen() {
   const styles = useSeasonScreenStyles();
@@ -313,10 +330,51 @@ export default function TVSeasonsScreen() {
     ? getDisplayMediaTitle(show, !!preferences?.showOriginalTitles)
     : '';
   const seasons: SeasonWithEpisodes[] = seasonQueries.data || [];
-  const seasonRows = useMemo(
-    () => buildTVSeasonsListRows(seasons, expandedSeason),
-    [seasons, expandedSeason]
+
+  const {
+    searchQuery,
+    debouncedQuery,
+    isSearchActive,
+    activateSearch,
+    deactivateSearch,
+    setSearchQuery,
+  } = useHeaderSearch({ items: NO_ITEMS, getSearchableText: getNoSearchText, debounceMs: 150 });
+  const isFiltering = debouncedQuery.trim().length > 0;
+  const getSeasonLabel = useCallback(
+    (seasonData: SeasonWithEpisodes) =>
+      seasonData.name || t('media.seasonNumber', { number: seasonData.season_number }),
+    [t]
   );
+  const visibleSeasons = useMemo(
+    () => filterSeasonsBySearch(seasons, debouncedQuery, getSeasonLabel),
+    [seasons, debouncedQuery, getSeasonLabel]
+  );
+
+  const seasonRows = useMemo(
+    () => buildTVSeasonsListRows(visibleSeasons, expandedSeason),
+    [visibleSeasons, expandedSeason]
+  );
+
+  // Results start at the top; clearing the search returns to where the full list was.
+  const fullListOffsetRef = useRef(0);
+  const lastSearchQueryRef = useRef(debouncedQuery);
+  const handleListScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isFiltering) return;
+      fullListOffsetRef.current = event.nativeEvent.contentOffset.y;
+    },
+    [isFiltering]
+  );
+  useEffect(() => {
+    if (lastSearchQueryRef.current === debouncedQuery) return;
+    lastSearchQueryRef.current = debouncedQuery;
+
+    const offset = isFiltering ? 0 : fullListOffsetRef.current;
+    const frameId = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset, animated: false });
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [debouncedQuery, isFiltering]);
   const targetSeasonIndex = useMemo(
     () => getSeasonHeaderRowIndex(seasonRows, targetSeasonNumber),
     [seasonRows, targetSeasonNumber]
@@ -1231,50 +1289,71 @@ export default function TVSeasonsScreen() {
     <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <SafeAreaView edges={['top']} style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => router.back()}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
+      {isSearchActive ? (
+        <SearchableHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onClose={deactivateSearch}
+          placeholder={t('tvSeasons.searchPlaceholder')}
+        />
+      ) : (
+        <SafeAreaView edges={['top']} style={styles.header}>
           <TouchableOpacity
-            onPress={handleShowTitlePress}
+            style={styles.headerButton}
+            onPress={() => router.back()}
             activeOpacity={ACTIVE_OPACITY}
-            accessibilityRole="link"
-            accessibilityLabel={displayShowTitle}
-            testID="header-show-title"
           >
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {displayShowTitle}
-            </Text>
+            <AppIcon icon={ArrowLeft01Icon} size={24} color={COLORS.white} />
           </TouchableOpacity>
-          <Text style={styles.headerSubtitle}>{t('media.seasonsAndEpisodes')}</Text>
-        </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.headerActionButton,
-            (isShowFullyWatched || isAnyBulkActionPending) && styles.headerActionButtonDisabled,
-            pressed && !isShowFullyWatched && !isAnyBulkActionPending && { opacity: 0.7 },
-          ]}
-          onPress={handleHeaderMarkAllPress}
-          disabled={isShowFullyWatched || isAnyBulkActionPending}
-          accessibilityState={{ disabled: isShowFullyWatched || isAnyBulkActionPending }}
-          aria-disabled={isShowFullyWatched || isAnyBulkActionPending}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={t('watched.markAll')}
-          testID="header-mark-all-button"
-        >
-          <AppIcon
-            icon={Tick02Icon}
-            size={22}
-            color={isShowFullyWatched ? COLORS.textSecondary : COLORS.white}
-          />
-        </Pressable>
-      </SafeAreaView>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={handleShowTitlePress}
+              activeOpacity={ACTIVE_OPACITY}
+              accessibilityRole="link"
+              accessibilityLabel={displayShowTitle}
+              testID="header-show-title"
+            >
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {displayShowTitle}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.headerSubtitle}>{t('media.seasonsAndEpisodes')}</Text>
+          </View>
+          {seasons.length > 1 ? (
+            <Pressable
+              style={({ pressed }) => [styles.headerActionButton, pressed && { opacity: 0.7 }]}
+              onPress={activateSearch}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.search')}
+              testID="header-search-button"
+            >
+              <AppIcon icon={Search01Icon} size={22} color={COLORS.white} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            style={({ pressed }) => [
+              styles.headerActionButton,
+              (isShowFullyWatched || isAnyBulkActionPending) && styles.headerActionButtonDisabled,
+              pressed && !isShowFullyWatched && !isAnyBulkActionPending && { opacity: 0.7 },
+            ]}
+            onPress={handleHeaderMarkAllPress}
+            disabled={isShowFullyWatched || isAnyBulkActionPending}
+            accessibilityState={{ disabled: isShowFullyWatched || isAnyBulkActionPending }}
+            aria-disabled={isShowFullyWatched || isAnyBulkActionPending}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('watched.markAll')}
+            testID="header-mark-all-button"
+          >
+            <AppIcon
+              icon={Tick02Icon}
+              size={22}
+              color={isShowFullyWatched ? COLORS.textSecondary : COLORS.white}
+            />
+          </Pressable>
+        </SafeAreaView>
+      )}
 
       <FlashList
         ref={listRef}
@@ -1285,6 +1364,11 @@ export default function TVSeasonsScreen() {
         drawDistance={600}
         contentContainerStyle={styles.seasonsListContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        ListEmptyComponent={isFiltering ? <SearchEmptyState /> : null}
       />
 
       <LoadingModal
