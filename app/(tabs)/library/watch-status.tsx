@@ -64,6 +64,7 @@ export default function WatchStatusScreen() {
           mediaType: mediaItem.media_type,
           mediaId: mediaItem.id,
           posterPath: mediaItem.poster_path,
+          seasonNumber: mediaItem.season_number,
         }));
 
       // Count total items
