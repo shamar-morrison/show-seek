@@ -1,11 +1,15 @@
 import { useAuth } from '@/src/context/auth';
 import type { UserList } from '@/src/services/ListService';
 import { resolveListItemRuntimes, type UnstampedListItem } from '@/src/services/WatchTimeBackfill';
-import { getMediaKey } from '@/src/utils/listFilters';
+import {
+  getListItemMediaKey,
+  getStoredListItemRuntime,
+  getUnstampedListItemRuntimeKey,
+} from '@/src/utils/listFilters';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-/** Runtimes found this session, keyed by `${mediaType}:${id}`, shared across list screens. */
+/** Runtimes found this session, keyed by `getListItemMediaKey`, shared across list screens. */
 const sessionRuntimes = new Map<string, number>();
 /** Titles already looked up this session (found or not), so they are never looked up twice. */
 const attemptedTitles = new Set<string>();
@@ -22,8 +26,6 @@ interface RuntimeLookupState {
   done: number;
   total: number;
 }
-
-const hasRuntime = (minutes: number | undefined) => minutes != null && minutes > 0;
 
 /**
  * Fills in runtimes for a list's items that have none stored, for the runtime filter.
@@ -52,8 +54,10 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
         .filter(
           ([, item]) =>
             typeof item?.id === 'number' &&
-            (item.media_type === 'movie' || item.media_type === 'tv') &&
-            !hasRuntime(item.runtimeMinutes)
+            (item.media_type === 'movie' ||
+              item.media_type === 'tv' ||
+              (item.media_type === 'season' && typeof item.season_number === 'number')) &&
+            getStoredListItemRuntime(item) === undefined
         )
         .map(([itemKey, item]) => {
           // Cached lists use normalized keys; saves must target the key the item is stored
@@ -65,6 +69,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
             page: list.overflowItemPages?.[storedKey] ?? 0,
             mediaType: item.media_type,
             mediaId: item.id,
+            seasonNumber: item.season_number,
             addedAt: item.addedAt,
           };
         })
@@ -79,7 +84,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
   const missingSignature = useMemo(
     () =>
       missingItems
-        .map((item) => getMediaKey(item.mediaType, item.mediaId))
+        .map((item) => getUnstampedListItemRuntimeKey(item))
         .sort()
         .join(','),
     [missingItems]
@@ -89,7 +94,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
     if (!enabled || !userId || missingItems.length === 0) return;
 
     const toLookUp = missingItems.filter((item) => {
-      const key = getMediaKey(item.mediaType, item.mediaId);
+      const key = getUnstampedListItemRuntimeKey(item);
       return !attemptedTitles.has(key) && !sessionRuntimes.has(key);
     });
     if (toLookUp.length === 0) return;
@@ -99,7 +104,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
     const listId = missingItems[0].listId;
     const queryKey = ['lists', userId];
     let cancelled = false;
-    const total = new Set(toLookUp.map((item) => getMediaKey(item.mediaType, item.mediaId))).size;
+    const total = new Set(toLookUp.map((item) => getUnstampedListItemRuntimeKey(item))).size;
     setState((prev) => ({ ...prev, isResolving: true, done: 0, total }));
 
     const rememberFound = (found: Map<string, number>) => {
@@ -118,9 +123,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
       .then((found) => {
         rememberFound(found);
         if (!cancelled) {
-          toLookUp.forEach((item) =>
-            attemptedTitles.add(getMediaKey(item.mediaType, item.mediaId))
-          );
+          toLookUp.forEach((item) => attemptedTitles.add(getUnstampedListItemRuntimeKey(item)));
         }
 
         // Keep the cached list in step with the saved runtimes so they survive restarts.
@@ -131,9 +134,12 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
               let changed = false;
               const items = { ...cachedList.items };
               Object.entries(cachedList.items).forEach(([itemKey, item]) => {
-                const minutes = found.get(getMediaKey(item.media_type, item.id));
-                if (minutes !== undefined && !hasRuntime(item.runtimeMinutes)) {
-                  items[itemKey] = { ...item, runtimeMinutes: minutes };
+                const minutes = found.get(getListItemMediaKey(item));
+                if (minutes !== undefined && getStoredListItemRuntime(item) === undefined) {
+                  items[itemKey] =
+                    item.media_type === 'season'
+                      ? { ...item, runtimeMinutes: minutes, seasonRuntimeMinutes: minutes }
+                      : { ...item, runtimeMinutes: minutes };
                   changed = true;
                 }
               });
@@ -166,7 +172,7 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
     () =>
       !state.isResolving &&
       missingItems.every((item) => {
-        const key = getMediaKey(item.mediaType, item.mediaId);
+        const key = getUnstampedListItemRuntimeKey(item);
         // state.runtimes mirrors the session's found runtimes and changes when a run ends.
         return state.runtimes.has(key) || attemptedTitles.has(key);
       }),

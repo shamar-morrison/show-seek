@@ -30,6 +30,8 @@ interface MediaListCardProps {
   isSelected?: boolean;
   movieLabel: string;
   tvShowLabel: string;
+  /** Label for season entries; falls back to `tvShowLabel` when not given. */
+  seasonLabel?: string;
 }
 
 export const MediaListCard = memo<MediaListCardProps>(
@@ -44,6 +46,7 @@ export const MediaListCard = memo<MediaListCardProps>(
     isSelected = false,
     movieLabel,
     tvShowLabel,
+    seasonLabel,
   }) => {
     const { accentColor } = useAccentColor();
     const { resolvePosterPath } = usePosterOverrides();
@@ -126,7 +129,11 @@ export const MediaListCard = memo<MediaListCardProps>(
           </View>
           {item.media_type && !hideMediaType && (
             <Text style={styles.mediaType}>
-              {item.media_type === 'movie' ? movieLabel : tvShowLabel}
+              {item.media_type === 'movie'
+                ? movieLabel
+                : item.media_type === 'season'
+                  ? (seasonLabel ?? tvShowLabel)
+                  : tvShowLabel}
             </Text>
           )}
         </View>

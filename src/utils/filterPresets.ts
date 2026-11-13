@@ -95,7 +95,7 @@ const toUserRating = (value: unknown): UserRatingFilter => {
 };
 
 const toMediaTypeFilter = (value: unknown): MediaTypeFilter =>
-  value === 'movie' || value === 'tv' ? value : 'all';
+  value === 'movie' || value === 'tv' || value === 'season' ? value : 'all';
 
 const DISCOVER_SORT_VALUES: readonly string[] = DISCOVER_SORT_OPTIONS.map((o) => o.value);
 

@@ -1,4 +1,5 @@
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
+import { getListItemUiKey } from '@/src/utils/listItemKeys';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { LatestTrailersSection } from '@/src/components/LatestTrailersSection';
@@ -270,7 +271,8 @@ function UserListSection({
         data={items}
         renderItem={({ item }) => {
           const posterPathOverride = resolvePosterPath(item.media_type, item.id, item.poster_path);
-          if (item.media_type === 'tv') {
+          if (item.media_type === 'tv' || item.media_type === 'season') {
+            const isSeason = item.media_type === 'season';
             const show: TVShow = {
               id: item.id,
               name: item.name || item.title,
@@ -290,8 +292,10 @@ function UserListSection({
               <TVShowCard
                 show={show}
                 posterPathOverride={posterPathOverride}
+                seasonNumber={isSeason ? item.season_number : undefined}
+                // Long-press adds the show to lists; a season is managed from its own screen.
                 onLongPress={
-                  onMediaLongPress
+                  onMediaLongPress && !isSeason
                     ? (selectedShow) => onMediaLongPress(selectedShow, 'tv')
                     : undefined
                 }
@@ -328,7 +332,7 @@ function UserListSection({
             />
           );
         }}
-        keyExtractor={(item) => `${item.media_type}-${item.id}`}
+        keyExtractor={(item) => getListItemUiKey(item)}
         extraData={listExtraData}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContent}

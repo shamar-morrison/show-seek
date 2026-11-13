@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { getListItemUiKey } from '@/src/utils/listItemKeys';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
@@ -67,7 +68,7 @@ const MediaGridItem = memo<{
   itemWidth: number;
   itemHorizontalMargin: number;
   resolvePosterPath: (
-    mediaType: PosterOverrideMediaType,
+    mediaType: PosterOverrideMediaType | 'season',
     mediaId: number,
     fallbackPosterPath: string | null | undefined
   ) => string | null;
@@ -222,10 +223,7 @@ export const MediaGrid = memo(
         [getListIds, isItemSelected]
       );
 
-      const keyExtractor = useCallback(
-        (item: ListMediaItem) => `${item.id}-${item.media_type}`,
-        []
-      );
+      const keyExtractor = useCallback((item: ListMediaItem) => getListItemUiKey(item), []);
 
       const contentContainerStyle = useMemo(
         () => ({

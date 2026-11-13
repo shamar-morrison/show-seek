@@ -27,7 +27,12 @@ import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiS
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { ActiveFiltersBar } from '@/src/components/library/ActiveFiltersBar';
 import { useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
-import { compareMissingLast, getItemRuntime, getItemUserRating } from '@/src/utils/listSort';
+import {
+  compareMissingLast,
+  compareListItemTitles,
+  getItemRuntime,
+  getItemUserRating,
+} from '@/src/utils/listSort';
 import { useListItemRuntimes } from '@/src/hooks/useListItemRuntimes';
 import { useUserRatingMap } from '@/src/hooks/useRatings';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
@@ -71,6 +76,7 @@ export default function CustomListDetailScreen() {
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
+  const seasonLabel = t('media.season');
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -174,13 +180,8 @@ export default function CustomListDetailScreen() {
             getItemRuntime(b, runtimes),
             direction
           );
-        case 'alphabetical': {
-          // Movies use title, TV shows use name
-          const titleA = (a.title || a.name || '').toLowerCase();
-          const titleB = (b.title || b.name || '').toLowerCase();
-          // Ascending: A-Z
-          return titleA.localeCompare(titleB) * direction;
-        }
+        case 'alphabetical':
+          return compareListItemTitles(a, b, direction);
         default:
           return 0;
       }
@@ -435,6 +436,7 @@ export default function CustomListDetailScreen() {
         isSelected={isItemSelected(item)}
         movieLabel={movieLabel}
         tvShowLabel={tvShowLabel}
+        seasonLabel={seasonLabel}
       />
     ),
     [handleItemPress, handleLongPress, isItemSelected, isSelectionMode]

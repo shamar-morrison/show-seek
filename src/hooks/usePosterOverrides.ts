@@ -26,7 +26,7 @@ export function usePosterOverrides() {
 
   const resolvePosterPath = useCallback(
     (
-      mediaType: PosterOverrideMediaType,
+      mediaType: PosterOverrideMediaType | 'season',
       mediaId: number,
       fallbackPosterPath: string | null | undefined
     ) => resolvePosterPathForMedia(overrides, mediaType, mediaId, fallbackPosterPath),

@@ -60,9 +60,7 @@ describe('getListItemRoute', () => {
     expect(getListItemRoute('/(tabs)/library', { id: 1, media_type: 'movie' })).toBe(
       '/(tabs)/library/movie/1'
     );
-    expect(getListItemRoute('/(tabs)/home', { id: 2, media_type: 'tv' })).toBe(
-      '/(tabs)/home/tv/2'
-    );
+    expect(getListItemRoute('/(tabs)/home', { id: 2, media_type: 'tv' })).toBe('/(tabs)/home/tv/2');
     expect(
       getListItemRoute('/(tabs)/home', { id: 2, media_type: 'season', season_number: 0 })
     ).toBe('/(tabs)/home/tv/2/seasons?season=0');

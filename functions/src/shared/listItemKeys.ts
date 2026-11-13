@@ -29,10 +29,10 @@ export const isSeasonListItemKey = (key: string): boolean => SEASON_LIST_ITEM_KE
 
 export const getLegacyListItemKey = (mediaId: number): string => String(mediaId);
 
-export const getListItemCandidateKeys = (mediaType: ListItemMediaType, mediaId: number): string[] => [
-  buildListItemKey(mediaType, mediaId),
-  getLegacyListItemKey(mediaId),
-];
+export const getListItemCandidateKeys = (
+  mediaType: ListItemMediaType,
+  mediaId: number
+): string[] => [buildListItemKey(mediaType, mediaId), getLegacyListItemKey(mediaId)];
 
 const isWholeNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0;
@@ -69,7 +69,9 @@ export const getListItemKey = (ref: Partial<ListItemRef> | null | undefined): st
  * key; seasons never do, so a season must never touch the numeric key (that would hit the show,
  * or a movie with the same number).
  */
-export const getListItemRefCandidateKeys = (ref: Partial<ListItemRef> | null | undefined): string[] => {
+export const getListItemRefCandidateKeys = (
+  ref: Partial<ListItemRef> | null | undefined
+): string[] => {
   if (!ref || typeof ref.id !== 'number') {
     return [];
   }

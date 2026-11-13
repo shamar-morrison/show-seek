@@ -13,7 +13,8 @@ import type {
   MonthWatchedItem,
 } from '../types/history';
 import { fetchUserCollection } from './firestoreHelpers';
-import { listService, type UserList } from './ListService';
+import { listService, type ListMediaItem, type UserList } from './ListService';
+import { getStoredListItemRuntime } from '../utils/listFilters';
 import { episodeTrackingService } from './EpisodeTrackingService';
 import { getListPageCount } from '@/functions/src/shared/listPages';
 import { normalizeRatingItem, type RatingItem } from './RatingService';
@@ -42,6 +43,52 @@ const TIME_OF_DAY = {
   EVENING: { start: 17, end: 21, labelKey: 'stats.timeOfDay.evening' },
   NIGHT: { start: 21, end: 5, labelKey: 'stats.timeOfDay.night' },
 } as const;
+
+/** A season in "Already Watched", for watch time only. */
+interface AlreadyWatchedSeasonEntry {
+  timestamp: number;
+  listId: string;
+  itemKey: string;
+  page: number;
+  mediaId: number;
+  seasonNumber: number;
+  /** Runtime saved by a season-aware app version; `runtimeMinutes` isn't trusted on seasons. */
+  seasonRuntimeMinutes?: number;
+}
+
+function toAlreadyWatchedSeason(
+  list: Pick<UserList, 'id' | 'overflowItemPages'>,
+  itemKey: string,
+  item: ListMediaItem,
+  addedAtMillis: number
+): AlreadyWatchedSeasonEntry | null {
+  if (list.id !== 'already-watched' || typeof item.season_number !== 'number') {
+    return null;
+  }
+  return {
+    timestamp: addedAtMillis,
+    listId: list.id,
+    itemKey,
+    page: list.overflowItemPages?.[itemKey] ?? 0,
+    mediaId: item.id,
+    seasonNumber: item.season_number,
+    seasonRuntimeMinutes: getStoredListItemRuntime(item),
+  };
+}
+
+const toUnstampedSeason = (season: AlreadyWatchedSeasonEntry): UnstampedListItem => ({
+  listId: season.listId,
+  itemKey: season.itemKey,
+  page: season.page,
+  mediaType: 'season',
+  mediaId: season.mediaId,
+  seasonNumber: season.seasonNumber,
+  addedAt: season.timestamp,
+});
+
+/** Watch minutes of already-watched seasons; one not yet looked up counts 0. */
+const sumSeasonMinutes = (seasons: AlreadyWatchedSeasonEntry[] | undefined): number =>
+  (seasons ?? []).reduce((acc, season) => acc + (season.seasonRuntimeMinutes ?? 0), 0);
 
 class HistoryService {
   private sortMonthWatchedItems(items: MonthWatchedItem[]): MonthWatchedItem[] {
@@ -469,11 +516,24 @@ class HistoryService {
       runtimeMinutes?: number;
     }[] = [];
 
+    // Seasons in "Already Watched" add their runtime to watch time, unless that show's
+    // episodes are tracked (they're already counted). They never add to the watched counts,
+    // and seasons are left out of the added-to-lists stats, which are split movies / TV.
+    const trackedShowIds = new Set<number>(episodes.map((e) => e.tvShowId));
+    const alreadyWatchedSeasons: AlreadyWatchedSeasonEntry[] = [];
+
     lists.forEach((list) => {
       if (list.items) {
         Object.entries(list.items).forEach(([itemKey, item]) => {
           const addedAtMillis = toMillis(item.addedAt);
           if (addedAtMillis !== null && addedAtMillis >= cutoffTimestamp) {
+            if (item.media_type === 'season') {
+              const season = toAlreadyWatchedSeason(list, itemKey, item, addedAtMillis);
+              if (season && !trackedShowIds.has(season.mediaId)) {
+                alreadyWatchedSeasons.push(season);
+              }
+              return;
+            }
             listItems.push({
               timestamp: addedAtMillis,
               genreIds: item.genre_ids,
@@ -512,16 +572,21 @@ class HistoryService {
         });
       }
     });
-    const unstampedListItems: UnstampedListItem[] = alreadyWatchedItems
-      .filter((i) => !(i.runtimeMinutes != null && i.runtimeMinutes > 0))
-      .map((i) => ({
-        listId: i.listId,
-        itemKey: i.itemKey,
-        page: i.page,
-        mediaType: i.mediaType,
-        mediaId: i.mediaId,
-        addedAt: i.timestamp,
-      }));
+    const unstampedListItems: UnstampedListItem[] = [
+      ...alreadyWatchedItems
+        .filter((i) => !(i.runtimeMinutes != null && i.runtimeMinutes > 0))
+        .map((i) => ({
+          listId: i.listId,
+          itemKey: i.itemKey,
+          page: i.page,
+          mediaType: i.mediaType,
+          mediaId: i.mediaId,
+          addedAt: i.timestamp,
+        })),
+      ...alreadyWatchedSeasons
+        .filter((i) => i.seasonRuntimeMinutes === undefined)
+        .map(toUnstampedSeason),
+    ];
     backfillRuntimes(unstampedEpisodes, unstampedListItems, {
       onStampsSettled: onBackfillSettled,
     });
@@ -556,6 +621,7 @@ class HistoryService {
     );
     const listItemsByMonth = this.groupByMonth(listItems);
     const alreadyWatchedByMonth = this.groupByMonth(alreadyWatchedItems);
+    const alreadyWatchedSeasonsByMonth = this.groupByMonth(alreadyWatchedSeasons);
 
     // Get all months in the period
     const allMonths = new Set<string>();
@@ -577,7 +643,8 @@ class HistoryService {
       const totalWatchedForMonth = monthEpisodes.length + monthAlreadyWatched.length;
       const totalWatchMinutesForMonth =
         monthEpisodes.reduce((acc, e) => acc + episodeWatchMinutes(e), 0) +
-        monthAlreadyWatched.reduce((acc, i) => acc + alreadyWatchedWatchMinutes(i), 0);
+        monthAlreadyWatched.reduce((acc, i) => acc + alreadyWatchedWatchMinutes(i), 0) +
+        sumSeasonMinutes(alreadyWatchedSeasonsByMonth.get(month));
 
       // Calculate average rating
       let averageRating: number | null = null;
@@ -663,7 +730,8 @@ class HistoryService {
       addedSplit: this.buildAddedSplit(listItems),
       totalWatchMinutes:
         recentEpisodes.reduce((acc, e) => acc + episodeWatchMinutes(e), 0) +
-        alreadyWatchedItems.reduce((acc, i) => acc + alreadyWatchedWatchMinutes(i), 0),
+        alreadyWatchedItems.reduce((acc, i) => acc + alreadyWatchedWatchMinutes(i), 0) +
+        sumSeasonMinutes(alreadyWatchedSeasons),
     };
   }
 
@@ -708,6 +776,8 @@ class HistoryService {
     lists.forEach((list) => {
       if (list.items) {
         Object.values(list.items).forEach((item) => {
+          // Added-to-lists stats are split movies / TV; seasons are left out.
+          if (item.media_type === 'season') return;
           const addedAtMillis = toMillis(item.addedAt);
           if (addedAtMillis !== null && addedAtMillis >= startOfMonth && addedAtMillis <= endOfMonth) {
             // Create a unique key for this media item
@@ -781,10 +851,23 @@ class HistoryService {
     const alreadyWatchedList = lists.find((l) => l.id === 'already-watched');
     const unstampedDetailItems: UnstampedListItem[] = [];
     const stampedDetailMinutes = new Map<string, number>();
+    // Seasons add watch time only (see fetchUserHistory), and none when the show is tracked.
+    const trackedShowIds = new Set<number>(episodes.map((e) => e.tvShowId));
+    const monthAlreadyWatchedSeasons: AlreadyWatchedSeasonEntry[] = [];
     if (alreadyWatchedList?.items) {
       Object.entries(alreadyWatchedList.items).forEach(([itemKey, item]) => {
         const addedAtMillis = toMillis(item.addedAt);
         if (addedAtMillis !== null && addedAtMillis >= startOfMonth && addedAtMillis <= endOfMonth) {
+          if (item.media_type === 'season') {
+            const season = toAlreadyWatchedSeason(alreadyWatchedList, itemKey, item, addedAtMillis);
+            if (season && !trackedShowIds.has(season.mediaId)) {
+              monthAlreadyWatchedSeasons.push(season);
+              if (season.seasonRuntimeMinutes === undefined) {
+                unstampedDetailItems.push(toUnstampedSeason(season));
+              }
+            }
+            return;
+          }
           alreadyWatchedMediaCount += 1;
           detailAlreadyWatchedRefs.push({ itemKey, mediaType: item.media_type });
           if (item.runtimeMinutes != null && item.runtimeMinutes > 0) {
@@ -893,7 +976,9 @@ class HistoryService {
             ? e.runtimeMinutes
             : EPISODE_RUNTIME_FALLBACK_MINUTES),
         0
-      ) + monthAlreadyWatchedMinutes.reduce((acc, entry) => acc + entry.minutes, 0);
+      ) +
+      monthAlreadyWatchedMinutes.reduce((acc, entry) => acc + entry.minutes, 0) +
+      sumSeasonMinutes(monthAlreadyWatchedSeasons);
 
     // Calculate top genres
     const genreIdCounts = new Map<number, number>();

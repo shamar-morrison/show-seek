@@ -51,13 +51,15 @@ function buildEnrichmentTargets(listItems: ListMediaItem[]): WatchProviderEnrich
   const targets: WatchProviderEnrichmentTarget[] = [];
 
   listItems.forEach((item) => {
-    const key = `${item.media_type}-${item.id}`;
+    // A season streams wherever its show does.
+    const mediaType = item.media_type === 'season' ? 'tv' : item.media_type;
+    const key = `${mediaType}-${item.id}`;
     if (seen.has(key)) {
       return;
     }
 
     seen.add(key);
-    targets.push({ key, id: item.id, mediaType: item.media_type });
+    targets.push({ key, id: item.id, mediaType });
   });
 
   return targets;

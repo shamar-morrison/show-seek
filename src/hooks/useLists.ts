@@ -272,8 +272,9 @@ export const useAddToList = () => {
       // Record engagement for in-app review prompt
       void recordEngagement();
 
-      // Only prefetch for TV shows - movies already have release_date in the list item
-      if (mediaItem.media_type === 'tv') {
+      // Only prefetch for TV shows (a season tracks its show) - movies already have
+      // release_date in the list item
+      if (mediaItem.media_type === 'tv' || mediaItem.media_type === 'season') {
         void queryClient.prefetchQuery(calendarTvQueryOptions(mediaItem.id));
       }
 

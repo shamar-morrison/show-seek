@@ -7,6 +7,9 @@ import {
   getListItemPageDocId,
   LIST_ITEM_PAGES_COLLECTION,
 } from '@/functions/src/shared/listPages';
+import { isSeasonListItemKey } from '@/functions/src/shared/listItemKeys';
+import { getUnstampedListItemRuntimeKey } from '@/src/utils/listFilters';
+import { getSeasonRuntimeMinutes } from '@/src/utils/seasonListItem';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
 /**
@@ -49,14 +52,20 @@ export interface UnstampedListItem {
   itemKey: string;
   /** Overflow page holding the item (0 or absent = the list document). */
   page?: number;
-  mediaType: 'movie' | 'tv';
+  /** For a season, `mediaId` is the show's ID and `seasonNumber` is set. */
+  mediaType: 'movie' | 'tv' | 'season';
   mediaId: number;
+  seasonNumber?: number;
   addedAt: number;
 }
+
+export { getUnstampedListItemRuntimeKey };
 
 export interface BackfillDeps {
   getShowRuntime?: (tvShowId: number) => Promise<number | null>;
   getMovieRuntime?: (movieId: number) => Promise<number | null>;
+  /** A season's total runtime: the sum of its episodes' runtimes. */
+  getSeasonRuntime?: (tvShowId: number, seasonNumber: number) => Promise<number | null>;
   /** Fire-and-forget stamp sink. Defaults to real Firestore writes. */
   stampRuntimes?: (stamps: RuntimeStamps) => void;
   /** Called when a background backfill run settles; true when values were stamped. */
@@ -92,6 +101,14 @@ async function defaultGetShowRuntime(tvShowId: number): Promise<number | null> {
   const details = await tmdbApi.getTVShowDetails(tvShowId);
   const runtime = details?.episode_run_time?.[0];
   return typeof runtime === 'number' && runtime > 0 ? runtime : null;
+}
+
+async function defaultGetSeasonRuntime(
+  tvShowId: number,
+  seasonNumber: number
+): Promise<number | null> {
+  const season = await tmdbApi.getSeasonDetails(tvShowId, seasonNumber);
+  return getSeasonRuntimeMinutes(season?.episodes) ?? null;
 }
 
 async function defaultGetMovieRuntime(movieId: number): Promise<number | null> {
@@ -144,6 +161,11 @@ function defaultStampRuntimes(stamps: RuntimeStamps): void {
       const page = stamps.itemPages?.get(`${listId}/${itemKey}`) ?? 0;
       const updates = updatesByPage.get(page) ?? {};
       updates[`items.${itemKey}.runtimeMinutes`] = minutes;
+      // Seasons are always stored under their season key. Their runtime is also written to
+      // the field only season-aware app versions write, which is the one they read back.
+      if (isSeasonListItemKey(itemKey)) {
+        updates[`items.${itemKey}.seasonRuntimeMinutes`] = minutes;
+      }
       updatesByPage.set(page, updates);
     });
     updatesByPage.forEach((updates, page) => {
@@ -195,8 +217,9 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 const attemptedThisSession = new Set<string>();
 
 const episodeAttemptKey = (tvShowId: number): string => `show:${tvShowId}`;
-const listItemAttemptKey = (mediaType: 'movie' | 'tv', mediaId: number): string =>
-  `${mediaType}:${mediaId}`;
+const listItemAttemptKey = (
+  item: Pick<UnstampedListItem, 'mediaType' | 'mediaId' | 'seasonNumber'>
+): string => getUnstampedListItemRuntimeKey(item);
 
 /**
  * TMDB lookups issued this session across all backfillRuntimes calls.
@@ -225,6 +248,7 @@ export async function resolveMissingRuntimes(
   const {
     getShowRuntime = defaultGetShowRuntime,
     getMovieRuntime = defaultGetMovieRuntime,
+    getSeasonRuntime = defaultGetSeasonRuntime,
     stampRuntimes = defaultStampRuntimes,
     maxLookups = MAX_BACKFILL_LOOKUPS_PER_LOAD,
   } = deps;
@@ -238,14 +262,22 @@ export async function resolveMissingRuntimes(
     showWatchedAt.set(ep.tvShowId, Math.max(showWatchedAt.get(ep.tvShowId) ?? 0, ep.watchedAt));
   });
 
-  // Dedupe list items by media (shows resolve via show runtime, movies via movie runtime).
+  // Dedupe list items by media (shows resolve via show runtime, movies via movie runtime,
+  // seasons via the sum of their episodes).
   const showItems = new Map<number, UnstampedListItem[]>();
   const movieItems = new Map<number, UnstampedListItem[]>();
+  const seasonItems = new Map<string, UnstampedListItem[]>();
   listItems.forEach((item) => {
     if (item.mediaType === 'tv') {
       const arr = showItems.get(item.mediaId) ?? [];
       arr.push(item);
       showItems.set(item.mediaId, arr);
+    } else if (item.mediaType === 'season') {
+      if (item.seasonNumber === undefined) return;
+      const key = getUnstampedListItemRuntimeKey(item);
+      const arr = seasonItems.get(key) ?? [];
+      arr.push(item);
+      seasonItems.set(key, arr);
     } else {
       const arr = movieItems.get(item.mediaId) ?? [];
       arr.push(item);
@@ -259,7 +291,8 @@ export async function resolveMissingRuntimes(
 
   type Lookup =
     | { kind: 'show'; id: number; recency: number }
-    | { kind: 'movie'; id: number; recency: number };
+    | { kind: 'movie'; id: number; recency: number }
+    | { kind: 'season'; id: number; seasonNumber: number; key: string; recency: number };
 
   const lookups: Lookup[] = [
     ...[...showWatchedAt.entries()].map(([id, recency]): Lookup => ({ kind: 'show', id, recency })),
@@ -268,6 +301,15 @@ export async function resolveMissingRuntimes(
         kind: 'movie',
         id,
         recency: Math.max(...(movieItems.get(id) ?? []).map((i) => toMillis(i.addedAt) ?? 0)),
+      })
+    ),
+    ...[...seasonItems.entries()].map(
+      ([key, items]): Lookup => ({
+        kind: 'season',
+        id: items[0].mediaId,
+        seasonNumber: items[0].seasonNumber as number,
+        key,
+        recency: Math.max(...items.map((i) => toMillis(i.addedAt) ?? 0)),
       })
     ),
   ]
@@ -279,6 +321,7 @@ export async function resolveMissingRuntimes(
 
   const measuredShowRuntimes = new Map<number, number>();
   const measuredMovieRuntimes = new Map<number, number>();
+  const measuredSeasonRuntimes = new Map<string, number>();
 
   let aborted = false;
   for (let i = 0; i < lookups.length && !aborted; i += BACKFILL_BATCH_SIZE) {
@@ -287,7 +330,11 @@ export async function resolveMissingRuntimes(
       batch.map(async (lookup) => {
         try {
           const minutes =
-            lookup.kind === 'show' ? await getShowRuntime(lookup.id) : await getMovieRuntime(lookup.id);
+            lookup.kind === 'show'
+              ? await getShowRuntime(lookup.id)
+              : lookup.kind === 'season'
+                ? await getSeasonRuntime(lookup.id, lookup.seasonNumber)
+                : await getMovieRuntime(lookup.id);
           return { lookup, minutes };
         } catch (error) {
           return { lookup, minutes: null, error };
@@ -302,6 +349,7 @@ export async function resolveMissingRuntimes(
       }
       if (typeof minutes === 'number' && minutes > 0) {
         if (lookup.kind === 'show') measuredShowRuntimes.set(lookup.id, minutes);
+        else if (lookup.kind === 'season') measuredSeasonRuntimes.set(lookup.key, minutes);
         else measuredMovieRuntimes.set(lookup.id, minutes);
       }
     }
@@ -357,7 +405,11 @@ export async function resolveMissingRuntimes(
         }
       }
     } else {
-      const measured = measuredMovieRuntimes.get(item.mediaId);
+      // Movies and seasons: unmeasured ones count 0 until looked up.
+      const measured =
+        item.mediaType === 'season'
+          ? measuredSeasonRuntimes.get(getUnstampedListItemRuntimeKey(item))
+          : measuredMovieRuntimes.get(item.mediaId);
       listItemMinutes.set(`${item.listId}/${item.itemKey}`, measured ?? 0);
       if (measured !== undefined) {
         let listStamps = stamps.itemsByList.get(item.listId);
@@ -408,15 +460,11 @@ export function backfillRuntimes(
   const freshEpisodes = episodes.filter(
     (e) => !attemptedThisSession.has(episodeAttemptKey(e.tvShowId))
   );
-  const freshItems = listItems.filter(
-    (i) => !attemptedThisSession.has(listItemAttemptKey(i.mediaType, i.mediaId))
-  );
+  const freshItems = listItems.filter((i) => !attemptedThisSession.has(listItemAttemptKey(i)));
 
   // Record up front so overlapping runs never resolve the same title twice.
   freshEpisodes.forEach((e) => attemptedThisSession.add(episodeAttemptKey(e.tvShowId)));
-  freshItems.forEach((i) =>
-    attemptedThisSession.add(listItemAttemptKey(i.mediaType, i.mediaId))
-  );
+  freshItems.forEach((i) => attemptedThisSession.add(listItemAttemptKey(i)));
 
   // Reserve session budget synchronously so overlapping runs (e.g. Stats
   // then MonthDetail in quick succession) observe each other's holds and
@@ -425,14 +473,16 @@ export function backfillRuntimes(
   const distinctFreshShows = new Set<number>();
   freshEpisodes.forEach((e) => distinctFreshShows.add(e.tvShowId));
   const distinctFreshMovies = new Set<number>();
+  const distinctFreshSeasons = new Set<string>();
   freshItems.forEach((i) => {
     if (i.mediaType === 'tv') distinctFreshShows.add(i.mediaId);
+    else if (i.mediaType === 'season') distinctFreshSeasons.add(listItemAttemptKey(i));
     else distinctFreshMovies.add(i.mediaId);
   });
   const reservation = Math.max(
     0,
     Math.min(
-      distinctFreshShows.size + distinctFreshMovies.size,
+      distinctFreshShows.size + distinctFreshMovies.size + distinctFreshSeasons.size,
       MAX_BACKFILL_LOOKUPS_PER_LOAD - sessionLookupsSpent
     )
   );
@@ -458,9 +508,14 @@ export function backfillRuntimes(
         issuedLookups += 1;
         return (deps.getMovieRuntime ?? defaultGetMovieRuntime)(movieId);
       };
+      const countingGetSeasonRuntime = async (tvShowId: number, seasonNumber: number) => {
+        issuedLookups += 1;
+        return (deps.getSeasonRuntime ?? defaultGetSeasonRuntime)(tvShowId, seasonNumber);
+      };
       await resolveMissingRuntimes(freshEpisodes, freshItems, {
         getShowRuntime: countingGetShowRuntime,
         getMovieRuntime: countingGetMovieRuntime,
+        getSeasonRuntime: countingGetSeasonRuntime,
         maxLookups: reservation,
         stampRuntimes: (stamps) => {
           didStamp = true;
@@ -484,6 +539,7 @@ export const MAX_FILTER_RUNTIME_LOOKUPS = 300;
 export interface ListRuntimeLookupOptions {
   getShowRuntime?: (tvShowId: number) => Promise<number | null>;
   getMovieRuntime?: (movieId: number) => Promise<number | null>;
+  getSeasonRuntime?: (tvShowId: number, seasonNumber: number) => Promise<number | null>;
   stampRuntimes?: (stamps: RuntimeStamps) => void;
   /** Called after each batch with the titles looked up so far and every runtime found. */
   onProgress?: (progress: { done: number; total: number; runtimes: Map<string, number> }) => void;
@@ -500,7 +556,7 @@ export interface ListRuntimeLookupOptions {
  * are saved back to the items (one write per list document or overflow page) when the run
  * ends, so later visits need no lookups.
  *
- * @returns Measured runtimes keyed by `${mediaType}:${mediaId}`.
+ * @returns Measured runtimes keyed by `getUnstampedListItemRuntimeKey`.
  */
 export async function resolveListItemRuntimes(
   items: UnstampedListItem[],
@@ -509,19 +565,29 @@ export async function resolveListItemRuntimes(
   const {
     getShowRuntime = defaultGetShowRuntime,
     getMovieRuntime = defaultGetMovieRuntime,
+    getSeasonRuntime = defaultGetSeasonRuntime,
     stampRuntimes = defaultStampRuntimes,
     onProgress,
     isCancelled,
   } = options;
 
   // One lookup per title, newest additions first so the cap keeps the most recent ones.
-  const titles = new Map<string, { mediaType: 'movie' | 'tv'; mediaId: number; recency: number }>();
+  const titles = new Map<
+    string,
+    Pick<UnstampedListItem, 'mediaType' | 'mediaId' | 'seasonNumber'> & { recency: number }
+  >();
   items.forEach((item) => {
-    const key = `${item.mediaType}:${item.mediaId}`;
+    if (item.mediaType === 'season' && item.seasonNumber === undefined) return;
+    const key = getUnstampedListItemRuntimeKey(item);
     const recency = toMillis(item.addedAt) ?? 0;
     const existing = titles.get(key);
     if (!existing || recency > existing.recency) {
-      titles.set(key, { mediaType: item.mediaType, mediaId: item.mediaId, recency });
+      titles.set(key, {
+        mediaType: item.mediaType,
+        mediaId: item.mediaId,
+        seasonNumber: item.seasonNumber,
+        recency,
+      });
     }
   });
   const lookups = [...titles.entries()]
@@ -536,10 +602,14 @@ export async function resolveListItemRuntimes(
     if (isCancelled?.()) break;
     const batch = lookups.slice(i, i + BACKFILL_BATCH_SIZE);
     const results = await Promise.all(
-      batch.map(async ([key, { mediaType, mediaId }]) => {
+      batch.map(async ([key, { mediaType, mediaId, seasonNumber }]) => {
         try {
           const minutes =
-            mediaType === 'tv' ? await getShowRuntime(mediaId) : await getMovieRuntime(mediaId);
+            mediaType === 'tv'
+              ? await getShowRuntime(mediaId)
+              : mediaType === 'season'
+                ? await getSeasonRuntime(mediaId, seasonNumber as number)
+                : await getMovieRuntime(mediaId);
           return { key, minutes, error: undefined as unknown };
         } catch (error) {
           return { key, minutes: null, error };
@@ -573,7 +643,7 @@ export async function resolveListItemRuntimes(
     itemPages: new Map(),
   };
   items.forEach((item) => {
-    const minutes = runtimes.get(`${item.mediaType}:${item.mediaId}`);
+    const minutes = runtimes.get(getUnstampedListItemRuntimeKey(item));
     if (minutes === undefined) return;
     let listStamps = stamps.itemsByList.get(item.listId);
     if (!listStamps) {

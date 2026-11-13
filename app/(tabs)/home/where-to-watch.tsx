@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, WatchProvider } from '@/src/api/tmdb';
+import { collapseSeasonsToShows } from '@/src/utils/listItemShows';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
@@ -125,8 +126,9 @@ export default function WhereToWatchScreen() {
     [lists, selectedListId]
   );
 
+  // Streaming availability is per show, so a listed season counts as its show (once).
   const selectedListItems = useMemo(
-    () => (selectedList ? Object.values(selectedList.items || {}) : []),
+    () => (selectedList ? collapseSeasonsToShows(Object.values(selectedList.items || {})) : []),
     [selectedList]
   );
 

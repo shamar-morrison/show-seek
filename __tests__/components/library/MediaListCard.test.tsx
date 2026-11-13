@@ -64,6 +64,28 @@ const item: ListMediaItem = {
 };
 
 describe('MediaListCard', () => {
+  it('labels a season entry as a season', () => {
+    const { getByText, queryByText } = render(
+      <MediaListCard
+        item={{
+          ...item,
+          id: 1396,
+          media_type: 'season',
+          season_number: 3,
+          title: 'Breaking Bad · Season 3',
+        }}
+        onPress={jest.fn()}
+        movieLabel="Movie"
+        tvShowLabel="TV Show"
+        seasonLabel="Season"
+      />
+    );
+
+    expect(getByText('Breaking Bad · Season 3')).toBeTruthy();
+    expect(getByText('Season')).toBeTruthy();
+    expect(queryByText('TV Show')).toBeNull();
+  });
+
   it('shows selection badge and check when selected in selection mode', () => {
     const { getByTestId } = render(
       <MediaListCard

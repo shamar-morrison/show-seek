@@ -143,6 +143,49 @@ describe('DataExportService', () => {
     expect(writtenContent).toContain('List: My List,"Bad, ""Good""\nTitle",Movie,');
   });
 
+  it('exports season list entries as seasons with their season number', async () => {
+    (Sharing.isAvailableAsync as jest.Mock).mockResolvedValue(true);
+    const listDocs = {
+      docs: [
+        {
+          id: 'favorites',
+          data: () => ({
+            name: 'Favorites',
+            items: {
+              'season-1396-0': {
+                id: 1396,
+                title: 'Breaking Bad · Specials',
+                media_type: 'season',
+                season_number: 0,
+                poster_path: null,
+                vote_average: 0,
+                release_date: '',
+              },
+            },
+          }),
+        },
+      ],
+    };
+    mockAuditedGetDocs
+      .mockResolvedValueOnce(listDocs)
+      .mockResolvedValueOnce({ docs: [] })
+      .mockResolvedValueOnce({ docs: [] });
+
+    await exportUserData('csv');
+    expect(getWrittenContent()).toContain(
+      'List: Favorites,Breaking Bad · Specials,Season,,,1396,0,,'
+    );
+
+    (FileSystem.writeAsStringAsync as jest.Mock).mockClear();
+    mockAuditedGetDocs
+      .mockResolvedValueOnce(listDocs)
+      .mockResolvedValueOnce({ docs: [] })
+      .mockResolvedValueOnce({ docs: [] });
+
+    await exportUserData('markdown');
+    expect(getWrittenContent()).toContain('- **Breaking Bad · Specials** (Season)');
+  });
+
   it('skips invalid legacy ratings during export instead of producing malformed rows', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     (Sharing.isAvailableAsync as jest.Mock).mockResolvedValueOnce(true);

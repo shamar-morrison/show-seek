@@ -24,9 +24,9 @@ export function useListFilterFieldOptions(genreMap: Record<number, string>) {
   const { t } = useTranslation();
 
   return useMemo(() => {
-    const mediaTypeOptions: SelectOption[] = (['all', 'movie', 'tv'] as MediaTypeFilter[]).map(
-      (value) => ({ label: getMediaTypeLabel(t, value), value })
-    );
+    const mediaTypeOptions: SelectOption[] = (
+      ['all', 'movie', 'tv', 'season'] as MediaTypeFilter[]
+    ).map((value) => ({ label: getMediaTypeLabel(t, value), value }));
 
     const genreOptions: MultiSelectOption[] = Object.entries(genreMap)
       .map(([id, name]) => ({ label: name, value: Number(id) }))

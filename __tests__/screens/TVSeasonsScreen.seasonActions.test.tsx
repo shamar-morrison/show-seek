@@ -192,7 +192,9 @@ jest.mock('@/src/components/AddToListModal', () => {
 
 jest.mock('@/src/components/ui/Toast', () => {
   const React = require('react');
-  return { __esModule: true, default: React.forwardRef(() => null) };
+  const MockToast = React.forwardRef(() => null);
+  MockToast.displayName = 'MockToast';
+  return { __esModule: true, default: MockToast };
 });
 
 jest.mock('@/src/components/tv/EpisodeItem', () => ({
