@@ -15,7 +15,7 @@ import {
   withPages,
   type ListItemChanges,
 } from '../listPagesAdmin';
-import { getLegacyListItemKey } from '../shared/listItemKeys';
+import { getLegacyListItemKeyForRef, getListItemKey, type ListItemRef } from '../shared/listItemKeys';
 import {
   buildAlreadyWatchedItemsMap,
   buildCustomListItemsMap,
@@ -39,6 +39,7 @@ import {
 } from './client';
 import {
   TRAKT_INCREMENTAL_SCHEMA_VERSION,
+  TRAKT_LISTS_SCHEMA_VERSION,
   TRAKT_MANAGED_DEFAULT_LIST_NAMES,
   TRAKT_SYNC_QUEUE_FUNCTION,
   TRAKT_SYNC_RECONNECT_MESSAGE,
@@ -50,6 +51,8 @@ import {
   didActivityFieldChange,
   hasActivityGroupChanged,
   hasManagedFieldChanges,
+  findFoldedSeasonShowKeys,
+  isListEntryMediaType,
   isListMediaType,
   isPlainObject,
   mergeManagedValue,
@@ -66,6 +69,7 @@ import type {
   TraktFavorite,
   TraktIncrementalCustomListState,
   TraktIncrementalState,
+  TraktLastActivities,
   TraktList,
   TraktRating,
   TraktTaskDispatchOptions,
@@ -152,6 +156,22 @@ export const countManagedListItemsByMediaType = (
 export const countMediaTypeChanges = (mediaTypes: ('movie' | 'tv')[], mediaType: 'movie' | 'tv'): number =>
   mediaTypes.filter((value) => value === mediaType).length;
 
+/**
+ * True when the old numeric key holds this same title. TMDB movie and show IDs overlap, so the key
+ * of a show can hold a movie (or the other way round); only an entry for this title may be cleared.
+ */
+const isLegacyEntryFor = (
+  existingItemsRaw: Record<string, unknown> | undefined,
+  legacyKey: string | null,
+  mediaType: unknown,
+  mediaId: unknown
+): legacyKey is string => {
+  const legacyEntry = legacyKey && existingItemsRaw ? existingItemsRaw[legacyKey] : undefined;
+  return (
+    isPlainObject(legacyEntry) && legacyEntry.media_type === mediaType && legacyEntry.id === mediaId
+  );
+};
+
 export const reconcileManagedList = async (
   userId: string,
   listId: string,
@@ -190,13 +210,19 @@ export const reconcileManagedList = async (
     const mediaType = remoteItem.media_type;
     const mediaId = remoteItem.id;
 
-    if (!isListMediaType(mediaType) || typeof mediaId !== 'number') {
+    if (
+      !isListEntryMediaType(mediaType) ||
+      typeof mediaId !== 'number' ||
+      getListItemKey(remoteItem as Partial<ListItemRef>) !== remoteKey
+    ) {
       return;
     }
 
     const existingItem = existingItems[remoteKey];
-    const legacyKey = getLegacyListItemKey(mediaId);
-    const hasLegacyKey = Boolean(existingItemsRaw && legacyKey !== remoteKey && legacyKey in existingItemsRaw);
+    // Seasons never have a legacy numeric key; that key would belong to the show or a movie.
+    const legacyKey = getLegacyListItemKeyForRef(remoteItem as Partial<ListItemRef>);
+    const hasLegacyKey =
+      legacyKey !== remoteKey && isLegacyEntryFor(existingItemsRaw, legacyKey, mediaType, mediaId);
     const shouldApplyRemote = shouldApplyRemoteManagedValue(existingItem, remoteItem, options.recencyField);
     const nextItem =
       !existingItem || shouldApplyRemote ? mergeManagedValue(existingItem, remoteItem) : existingItem;
@@ -207,16 +233,36 @@ export const reconcileManagedList = async (
       itemSets[remoteKey] = nextItem;
       hasItemWrites = true;
       if (isRemoteChange) {
-        changedMediaTypes.push(mediaType);
+        // Per-type change counts only cover movies and shows (Already Watched).
+        if (isListMediaType(mediaType)) {
+          changedMediaTypes.push(mediaType);
+        }
         changedCount += 1;
         addedOrUpdatedCount += 1;
       }
     }
 
-    if (hasLegacyKey) {
+    if (hasLegacyKey && legacyKey) {
       itemDeletes.add(legacyKey);
       hasItemWrites = true;
     }
+  });
+
+  // Show entries folded from a season by earlier syncs go, now that the season has its own entry.
+  const foldedShowKeys = options.removeFoldedSeasonShows
+    ? findFoldedSeasonShowKeys(remoteItems, existingItems)
+    : [];
+  foldedShowKeys.forEach((showKey) => {
+    itemDeletes.add(showKey);
+    // The show may be stored under its old numeric key; clear it only if it holds this show.
+    const foldedShow = existingItems[showKey];
+    const legacyKey = getLegacyListItemKeyForRef(foldedShow as Partial<ListItemRef>);
+    if (isLegacyEntryFor(existingItemsRaw, legacyKey, 'tv', foldedShow.id)) {
+      itemDeletes.add(legacyKey);
+    }
+    hasItemWrites = true;
+    changedMediaTypes.push('tv');
+    changedCount += 1;
   });
 
   if (!preserveLocalItems) {
@@ -234,8 +280,8 @@ export const reconcileManagedList = async (
         changedMediaTypes.push(mediaType);
       }
       if (typeof mediaId === 'number' && existingItemsRaw) {
-        const legacyKey = getLegacyListItemKey(mediaId);
-        if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
+        const legacyKey = getLegacyListItemKeyForRef(existingItem as Partial<ListItemRef>);
+        if (legacyKey && legacyKey !== existingKey && legacyKey in existingItemsRaw) {
           itemDeletes.add(legacyKey);
           hasItemWrites = true;
         }
@@ -253,7 +299,11 @@ export const reconcileManagedList = async (
   const didRemoteChange =
     changedCount > 0 || (baseDataChanged && Boolean(options.countBaseDataChangesAsRemoteChange));
   const nextItemCount = preserveLocalItems
-    ? new Set([...Object.keys(existingItems), ...Object.keys(remoteItems)]).size
+    ? new Set(
+        [...Object.keys(existingItems), ...Object.keys(remoteItems)].filter(
+          (key) => !foldedShowKeys.includes(key)
+        )
+      ).size
     : Object.keys(remoteItems).length;
   const metadataChanged =
     existingMetadata.itemCount !== nextItemCount || Boolean(existingMetadata.needsEnrichment) !== nextNeedsEnrichment;
@@ -549,6 +599,7 @@ export const syncWatchlist = async (
     {
       preserveLocalItems: true,
       recencyField: 'addedAt',
+      removeFoldedSeasonShows: true,
     }
   );
 
@@ -690,6 +741,48 @@ export const isRunFatalSyncError = (error: unknown): boolean => {
   return false;
 };
 
+/**
+ * Which sync steps run: everything on a first sync, otherwise only the groups Trakt reports as
+ * changed. When how lists are read has changed (TRAKT_LISTS_SCHEMA_VERSION, e.g. seasons kept as
+ * seasons), the watchlist and every custom list are re-read once so existing synced lists pick
+ * up the change.
+ */
+export const getSyncSteps = ({
+  bootstrap,
+  lastActivities,
+  listsSchemaVersion,
+  previousActivities,
+}: {
+  bootstrap: boolean;
+  lastActivities: TraktLastActivities;
+  listsSchemaVersion: number | undefined;
+  previousActivities: TraktLastActivities | undefined;
+}) => {
+  const forceListResync = listsSchemaVersion !== TRAKT_LISTS_SCHEMA_VERSION;
+  return {
+    forceListResync,
+    shouldSyncCustomLists:
+      bootstrap ||
+      forceListResync ||
+      hasActivityGroupChanged(previousActivities?.lists, lastActivities.lists),
+    shouldSyncFavorites:
+      bootstrap || hasActivityGroupChanged(previousActivities?.favorites, lastActivities.favorites),
+    shouldSyncRatings:
+      bootstrap ||
+      didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'rated_at') ||
+      didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'rated_at'),
+    shouldSyncWatched:
+      bootstrap ||
+      didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'watched_at') ||
+      didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'watched_at') ||
+      didActivityFieldChange(previousActivities?.episodes, lastActivities.episodes, 'watched_at'),
+    shouldSyncWatchlist:
+      bootstrap ||
+      forceListResync ||
+      hasActivityGroupChanged(previousActivities?.watchlist, lastActivities.watchlist),
+  };
+};
+
 export const syncTraktImport = async (
   userId: string,
   accessToken: string,
@@ -704,22 +797,19 @@ export const syncTraktImport = async (
   const summaryMode = getSyncSummaryMode(currentIncrementalState);
   const lastActivities = await getLastActivities(accessToken);
   const bootstrap = summaryMode === 'bootstrap';
-  const previousActivities = currentIncrementalState?.lastActivities;
-  const shouldSyncWatched =
-    bootstrap ||
-    didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'watched_at') ||
-    didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'watched_at') ||
-    didActivityFieldChange(previousActivities?.episodes, lastActivities.episodes, 'watched_at');
-  const shouldSyncRatings =
-    bootstrap ||
-    didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'rated_at') ||
-    didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'rated_at');
-  const shouldSyncWatchlist =
-    bootstrap || hasActivityGroupChanged(previousActivities?.watchlist, lastActivities.watchlist);
-  const shouldSyncFavorites =
-    bootstrap || hasActivityGroupChanged(previousActivities?.favorites, lastActivities.favorites);
-  const shouldSyncCustomLists =
-    bootstrap || hasActivityGroupChanged(previousActivities?.lists, lastActivities.lists);
+  const {
+    forceListResync,
+    shouldSyncCustomLists,
+    shouldSyncFavorites,
+    shouldSyncRatings,
+    shouldSyncWatched,
+    shouldSyncWatchlist,
+  } = getSyncSteps({
+    bootstrap,
+    lastActivities,
+    listsSchemaVersion: currentIncrementalState?.listsSchemaVersion,
+    previousActivities: currentIncrementalState?.lastActivities,
+  });
   const listsToEnrich: string[] = [];
   let customListsState = currentIncrementalState?.customLists ?? {};
   // A step that fails for a ShowSeek-side reason (e.g. a Firestore write) must not stop the
@@ -856,7 +946,7 @@ export const syncTraktImport = async (
         userProfile.username,
         traktLists,
         currentIncrementalState?.customLists ?? {},
-        bootstrap
+        bootstrap || forceListResync
       );
 
       itemsSynced.lists =
@@ -887,6 +977,7 @@ export const syncTraktImport = async (
       bootstrapCompletedAt: currentIncrementalState?.bootstrapCompletedAt ?? Timestamp.now(),
       customLists: customListsState,
       lastActivities,
+      listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
       schemaVersion: TRAKT_INCREMENTAL_SCHEMA_VERSION,
       updatedAt: Timestamp.now(),
     },

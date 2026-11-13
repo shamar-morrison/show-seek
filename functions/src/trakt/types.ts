@@ -127,6 +127,8 @@ export interface TraktIncrementalState {
   bootstrapCompletedAt: FirebaseFirestore.Timestamp;
   customLists: Record<string, TraktIncrementalCustomListState>;
   lastActivities: TraktLastActivities;
+  /** TRAKT_LISTS_SCHEMA_VERSION when the watchlist and lists were last fully read; absent before. */
+  listsSchemaVersion?: number;
   schemaVersion: typeof TRAKT_INCREMENTAL_SCHEMA_VERSION;
   updatedAt: FirebaseFirestore.Timestamp;
 }
@@ -197,6 +199,12 @@ export interface TraktShow {
   year: number;
 }
 
+/** A season inside a Trakt list or watchlist entry; its ids are the season's own (not the show's). */
+export interface TraktSeason {
+  ids?: Partial<TraktIds>;
+  number?: number;
+}
+
 export interface TraktEpisode {
   ids: TraktIds;
   number: number;
@@ -255,6 +263,7 @@ export interface TraktListItem {
   movie?: TraktMovie;
   notes?: string;
   rank: number;
+  season?: TraktSeason;
   show?: TraktShow;
   type: 'episode' | 'movie' | 'person' | 'season' | 'show';
 }
@@ -266,6 +275,7 @@ export interface TraktWatchlistItem {
   movie?: TraktMovie;
   notes?: string;
   rank: number;
+  season?: TraktSeason;
   show?: TraktShow;
   type: 'episode' | 'movie' | 'season' | 'show';
 }
@@ -397,6 +407,18 @@ export interface TMDBShowDetails {
   vote_average: number;
 }
 
+/** A season's details from TMDB (`/tv/{id}/season/{n}`, or `season/{n}` appended to the show). */
+export interface TMDBSeasonDetails {
+  air_date?: string | null;
+  episodes?: { runtime?: number | null }[];
+  name?: string;
+  poster_path?: string | null;
+  vote_average?: number;
+}
+
+/** A show's details with seasons appended (`append_to_response=season/1,season/2`). */
+export type TMDBShowWithSeasons = TMDBShowDetails & Record<`season/${number}`, TMDBSeasonDetails | undefined>;
+
 export interface TMDBSeasonResponse {
   episodes: {
     air_date: string | null;
@@ -480,6 +502,11 @@ export interface ReconcileManagedListOptions {
   countBaseDataChangesAsRemoteChange?: boolean;
   preserveLocalItems?: boolean;
   recencyField?: string;
+  /**
+   * Remove show entries that earlier syncs made by folding a season into its show, now that the
+   * season has its own entry (see findFoldedSeasonShowKeys). For lists that keep local items.
+   */
+  removeFoldedSeasonShows?: boolean;
 }
 
 export interface StartTraktZipImportRequest {

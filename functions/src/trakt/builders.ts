@@ -1,7 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore';
-import { buildListItemKey } from '../shared/listItemKeys';
+import { getListItemKey, type ListItemRef } from '../shared/listItemKeys';
 import {
-  isListMediaType,
   stripUndefinedDeep,
   transformFavorite,
   transformListItem,
@@ -33,13 +32,13 @@ export const buildManagedListItemsMap = (
       return;
     }
 
-    const mediaType = item.media_type;
-    const mediaId = item.id;
-    if (!isListMediaType(mediaType) || typeof mediaId !== 'number') {
+    // Movies, shows and seasons (keyed season-{tvId}-{n}); anything else is skipped.
+    const itemKey = getListItemKey(item as Partial<ListItemRef>);
+    if (!itemKey) {
       return;
     }
 
-    mappedItems[buildListItemKey(mediaType, mediaId)] = item;
+    mappedItems[itemKey] = item;
   });
 
   return mappedItems;
@@ -89,13 +88,28 @@ export const buildCustomListItemsMap = (
       continue;
     }
 
-    items[buildListItemKey(transformed.mediaType, transformed.tmdbId)] = stripUndefinedDeep(
+    const itemKey = getListItemKey({
+      id: transformed.tmdbId,
+      media_type: transformed.mediaType,
+      season_number: transformed.seasonNumber,
+    });
+    if (!itemKey) {
+      continue;
+    }
+    items[itemKey] = stripUndefinedDeep(
       {
         addedAt: transformed.addedAt,
         id: transformed.tmdbId,
         media_type: transformed.mediaType,
         title: transformed.title,
         traktId: transformed.traktId,
+        ...(transformed.mediaType === 'season'
+          ? {
+              name: transformed.title,
+              season_number: transformed.seasonNumber,
+              show_name: transformed.showName,
+            }
+          : {}),
       },
       true
     ) as Record<string, unknown>;

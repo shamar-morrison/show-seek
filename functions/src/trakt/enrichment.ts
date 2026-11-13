@@ -12,7 +12,7 @@ import {
 } from '../listPagesAdmin';
 import { buildListItemKey } from '../shared/listItemKeys';
 import { LIST_PAGE_CAPACITY } from '../shared/listPages';
-import { estimateEntriesSize } from '../shared/pagedMap';
+import { estimateEntriesSize, isCanonicalListItemKey } from '../shared/pagedMap';
 import {
   ACTIVE_RUN_STATUSES,
   DEFAULT_ENRICHMENT_LIST_IDS,
@@ -38,8 +38,10 @@ import type {
   ListEnrichmentStatusResponse,
   SyncTaskPayload,
   TMDBMovieDetails,
+  TMDBSeasonDetails,
   TMDBSeasonResponse,
   TMDBShowDetails,
+  TMDBShowWithSeasons,
   TraktEnrichmentStatus,
   TraktTaskDispatchOptions,
   TraktUserDoc,
@@ -177,20 +179,156 @@ const getGenreIds = (details: { genre_ids?: number[]; genres?: { id: number }[] 
  * True for items TMDB enrichment has never filled in (e.g. fresh from Trakt, which only gives
  * ids and titles). Enriched items always have `poster_path` set, even if TMDB has no poster (null).
  */
-export const needsMediaEnrichment = (item: Record<string, unknown> | undefined): boolean =>
-  !!item &&
-  typeof item.id === 'number' &&
-  // Only movies and shows are enriched; season entries are saved complete by the app.
-  (item.media_type === 'movie' || item.media_type === 'tv') &&
-  (item.poster_path === undefined ||
-    item.vote_average === undefined ||
-    // Enrichment used to read genre_ids from TMDB details (which only return `genres`), so
-    // items it enriched have an empty list. They're looked up again to fill in their genres.
-    (Array.isArray(item.genre_ids) && item.genre_ids.length === 0));
+export const needsMediaEnrichment = (item: Record<string, unknown> | undefined): boolean => {
+  if (!item || typeof item.id !== 'number') {
+    return false;
+  }
+  // A season synced from Trakt has only its show and number. The app saves seasons complete,
+  // and enrichment always sets both fields (even when TMDB has no such season), so a season is
+  // only ever looked up once.
+  if (item.media_type === 'season') {
+    return typeof item.season_number === 'number' &&
+      (item.poster_path === undefined || item.season_name === undefined);
+  }
+  return (
+    (item.media_type === 'movie' || item.media_type === 'tv') &&
+    (item.poster_path === undefined ||
+      item.vote_average === undefined ||
+      // Enrichment used to read genre_ids from TMDB details (which only return `genres`), so
+      // items it enriched have an empty list. They're looked up again to fill in their genres.
+      (Array.isArray(item.genre_ids) && item.genre_ids.length === 0))
+  );
+};
 
-export const enrichMediaItem = async (item: Record<string, unknown>): Promise<Record<string, unknown>> => {
+/** TMDB allows up to 20 appended requests per call. */
+const MAX_APPENDED_SEASONS = 20;
+
+export interface SeasonDetailsLookupResult {
+  /** The show, or null when TMDB no longer has it. */
+  show: TMDBShowDetails | null;
+  /** The season, or null when TMDB has no such season for the show. */
+  season: TMDBSeasonDetails | null;
+}
+
+export type SeasonDetailsLookup = (
+  tvId: number,
+  seasonNumber: number
+) => Promise<SeasonDetailsLookupResult>;
+
+/**
+ * Looks up seasons for one enrichment run, one TMDB call per show: every season of that show in
+ * the run (up to 20 per call) is appended to the show request. If that call comes back empty,
+ * the show and each season are fetched on their own, so one season TMDB doesn't have can't hide
+ * the others.
+ */
+export const createSeasonDetailsLookup = (
+  items: Record<string, unknown>[]
+): SeasonDetailsLookup => {
+  const seasonsByShow = new Map<number, number[]>();
+  items.forEach((item) => {
+    if (item?.media_type !== 'season' || typeof item.id !== 'number') return;
+    if (typeof item.season_number !== 'number') return;
+    const seasons = seasonsByShow.get(item.id) ?? [];
+    if (!seasons.includes(item.season_number)) seasons.push(item.season_number);
+    seasonsByShow.set(item.id, seasons);
+  });
+
+  const requests = new Map<string, Promise<Map<number, SeasonDetailsLookupResult>>>();
+
+  const fetchChunk = async (tvId: number, seasonNumbers: number[]) => {
+    const results = new Map<number, SeasonDetailsLookupResult>();
+    const appended = seasonNumbers.map((n) => `season/${n}`).join(',');
+    const combined = await fetchTMDBJson<TMDBShowWithSeasons>(
+      `/tv/${tvId}?append_to_response=${appended}`
+    );
+    if (combined) {
+      seasonNumbers.forEach((n) => {
+        results.set(n, { season: combined[`season/${n}`] ?? null, show: combined });
+      });
+      return results;
+    }
+    const show = await fetchTMDBJson<TMDBShowDetails>(`/tv/${tvId}`);
+    for (const n of seasonNumbers) {
+      const season = show
+        ? await fetchTMDBJson<TMDBSeasonDetails>(`/tv/${tvId}/season/${n}`)
+        : null;
+      results.set(n, { season, show });
+    }
+    return results;
+  };
+
+  return async (tvId, seasonNumber) => {
+    const seasons = seasonsByShow.get(tvId) ?? [seasonNumber];
+    if (!seasons.includes(seasonNumber)) seasons.push(seasonNumber);
+    const chunkIndex = Math.floor(seasons.indexOf(seasonNumber) / MAX_APPENDED_SEASONS);
+    const requestKey = `${tvId}:${chunkIndex}`;
+    let request = requests.get(requestKey);
+    if (!request) {
+      const chunk = seasons.slice(
+        chunkIndex * MAX_APPENDED_SEASONS,
+        (chunkIndex + 1) * MAX_APPENDED_SEASONS
+      );
+      request = fetchChunk(tvId, chunk);
+      requests.set(requestKey, request);
+    }
+    return (await request).get(seasonNumber) ?? { season: null, show: null };
+  };
+};
+
+const sumEpisodeRuntimes = (season: TMDBSeasonDetails | null): number | undefined => {
+  const total = (season?.episodes ?? []).reduce(
+    (sum, episode) =>
+      typeof episode.runtime === 'number' && episode.runtime > 0 ? sum + episode.runtime : sum,
+    0
+  );
+  return total > 0 ? total : undefined;
+};
+
+/**
+ * Fills in a season entry from TMDB. The season's poster (else the show's), name, rating and air
+ * date; the show's genres; and the season's runtime. A season TMDB doesn't have gets the show's
+ * details and a "Season N" name, so it isn't looked up again. The title and show name are left
+ * as synced, so the next sync doesn't see them as changed.
+ */
+const enrichSeasonItem = async (
+  item: Record<string, unknown>,
+  lookupSeason: SeasonDetailsLookup
+): Promise<Record<string, unknown>> => {
+  const tvId = item.id as number;
+  const seasonNumber = item.season_number as number;
+  const { season, show } = await lookupSeason(tvId, seasonNumber);
+  const runtime = sumEpisodeRuntimes(season);
+  const airDate = season?.air_date ?? '';
+
+  return {
+    ...item,
+    genre_ids: show ? getGenreIds(show) : (item.genre_ids ?? []),
+    poster_path: season?.poster_path ?? show?.poster_path ?? null,
+    season_name:
+      season?.name?.trim() || (seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`),
+    vote_average:
+      typeof season?.vote_average === 'number' && season.vote_average > 0
+        ? season.vote_average
+        : (show?.vote_average ?? 0),
+    ...(item.release_date ? {} : { first_air_date: airDate, release_date: airDate }),
+    ...(item.show_name || !show?.name ? {} : { show_name: show.name }),
+    ...(runtime ? { runtimeMinutes: runtime, seasonRuntimeMinutes: runtime } : {}),
+  };
+};
+
+export const enrichMediaItem = async (
+  item: Record<string, unknown>,
+  lookupSeason?: SeasonDetailsLookup
+): Promise<Record<string, unknown>> => {
   if (!item || typeof item.id !== 'number' || typeof item.media_type !== 'string') {
     return item;
+  }
+
+  if (item.media_type === 'season') {
+    if (typeof item.season_number !== 'number') {
+      return item;
+    }
+    return enrichSeasonItem(item, lookupSeason ?? createSeasonDetailsLookup([item]));
   }
 
   const enrichedItem = { ...item };
@@ -232,12 +370,14 @@ export const enrichMediaItems = async (
 ): Promise<Record<string, Record<string, unknown>>> => {
   const enrichedItems: Record<string, Record<string, unknown>> = {};
   const itemKeys = Object.keys(items);
+  // Seasons of the same show share one TMDB call for the whole run.
+  const lookupSeason = createSeasonDetailsLookup(Object.values(items));
 
   for (let index = 0; index < itemKeys.length; index += batchSize) {
     const batch = itemKeys.slice(index, index + batchSize);
     const batchResults = await Promise.all(
       batch.map(async (key) => {
-        const enriched = await enrichMediaItem(items[key]);
+        const enriched = await enrichMediaItem(items[key], lookupSeason);
         return { item: enriched, key };
       })
     );
@@ -257,7 +397,6 @@ export const enrichMediaItems = async (
 /** Above this estimated size, the list document is treated as full (Firestore caps it at 1 MiB). */
 const LIST_DOCUMENT_SAFE_BYTES = 800_000;
 
-const CANONICAL_LIST_KEY = /^(movie|tv)-\d+$/;
 const LEGACY_LIST_KEY = /^\d+$/;
 
 /**
@@ -294,7 +433,8 @@ export function planEnrichmentRelocation(
       itemsInPlace[key] = item;
       return;
     }
-    if (CANONICAL_LIST_KEY.test(key)) {
+    // Movies, shows and seasons stored under their canonical key move as they are.
+    if (isCanonicalListItemKey(key)) {
       itemsToMove[key] = item;
       removeFromListDocKeys.push(key);
       return;

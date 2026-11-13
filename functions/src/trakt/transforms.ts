@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase-admin/firestore';
 import { buildListItemKey } from '../shared/listItemKeys';
+import { buildSeasonEntryTitle, getTraktSeasonNumber } from './seasons';
 import type {
   TraktActivitiesGroup,
   TraktFavorite,
@@ -10,7 +11,14 @@ import type {
   TraktWatchlistItem,
 } from './types';
 
+export { buildSeasonEntryTitle, getTraktSeasonNumber };
+
 export const isListMediaType = (value: unknown): value is 'movie' | 'tv' => value === 'movie' || value === 'tv';
+
+/** Any media type a list entry can have: a movie, a show, or one season of a show. */
+export const isListEntryMediaType = (value: unknown): value is 'movie' | 'tv' | 'season' =>
+  isListMediaType(value) || value === 'season';
+
 
 export const isTimestampLike = (value: unknown): value is { toMillis: () => number } =>
   typeof value === 'object' && value !== null && typeof (value as { toMillis?: unknown }).toMillis === 'function';
@@ -150,6 +158,41 @@ export const shouldApplyRemoteManagedValue = (
   }
 
   return hasManagedFieldChanges(existingValue, remoteValue);
+};
+
+/**
+ * Show entries that an earlier sync created by folding a Trakt season into its show, and that
+ * the season's own entry now replaces. A local `tv-X` entry qualifies only when:
+ * - Trakt lists seasons of X but not X itself (no show entry, and no episode, which also counts
+ *   as the show), and
+ * - its `addedAt` is exactly the `listed_at` of one of those seasons, which is what folding
+ *   wrote. A show added in ShowSeek, or listed on Trakt as a show, has its own time.
+ */
+export const findFoldedSeasonShowKeys = (
+  remoteItems: Record<string, Record<string, unknown>>,
+  existingItems: Record<string, Record<string, unknown>>
+): string[] => {
+  const seasonTimesByShow = new Map<number, Set<number>>();
+  Object.values(remoteItems).forEach((item) => {
+    if (item?.media_type !== 'season' || typeof item.id !== 'number') return;
+    const addedAt = getComparableMillis(item.addedAt);
+    if (addedAt === null) return;
+    const times = seasonTimesByShow.get(item.id) ?? new Set<number>();
+    times.add(addedAt);
+    seasonTimesByShow.set(item.id, times);
+  });
+
+  const keys: string[] = [];
+  seasonTimesByShow.forEach((times, tvId) => {
+    const showKey = buildListItemKey('tv', tvId);
+    if (remoteItems[showKey]) return;
+    const localShow = existingItems[showKey];
+    const localAddedAt = localShow ? getComparableMillis(localShow.addedAt) : null;
+    if (localAddedAt !== null && times.has(localAddedAt)) {
+      keys.push(showKey);
+    }
+  });
+  return keys;
 };
 
 export const mergeManagedValue = (
@@ -314,11 +357,38 @@ export const transformRating = (traktRating: TraktRating): Record<string, unknow
   ) as Record<string, unknown>;
 };
 
-export const transformListItem = (
-  traktItem: TraktListItem
-): { addedAt: number; mediaType: 'movie' | 'tv'; title: string; tmdbId: number; traktId?: number } | null => {
+export interface TransformedListItem {
+  addedAt: number;
+  /** For a season, the show's TMDB ID is `tmdbId` and the season is `seasonNumber`. */
+  mediaType: 'movie' | 'tv' | 'season';
+  seasonNumber?: number;
+  /** The show's own title, for a season. */
+  showName?: string;
+  title: string;
+  tmdbId: number;
+  traktId?: number;
+}
+
+export const transformListItem = (traktItem: TraktListItem): TransformedListItem | null => {
   if (!traktItem) {
     return null;
+  }
+
+  const seasonNumber = getTraktSeasonNumber(traktItem);
+  if (seasonNumber !== undefined && traktItem.show) {
+    const showTmdbId = traktItem.show.ids?.tmdb;
+    if (!showTmdbId) {
+      return null;
+    }
+    const showName = traktItem.show.title;
+    return stripUndefinedDeep({
+      addedAt: toMillisOrNow(traktItem.listed_at),
+      mediaType: 'season',
+      seasonNumber,
+      showName,
+      title: buildSeasonEntryTitle(showName, seasonNumber),
+      tmdbId: showTmdbId,
+    }) as TransformedListItem;
   }
 
   let tmdbId: number | undefined;
@@ -350,18 +420,30 @@ export const transformListItem = (
     title,
     tmdbId,
     traktId,
-  }) as {
-    addedAt: number;
-    mediaType: 'movie' | 'tv';
-    title: string;
-    tmdbId: number;
-    traktId?: number;
-  };
+  }) as TransformedListItem;
 };
 
 export const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<string, unknown> | null => {
   if (!traktItem) {
     return null;
+  }
+
+  const seasonNumber = getTraktSeasonNumber(traktItem);
+  if (seasonNumber !== undefined && traktItem.show) {
+    const showTmdbId = traktItem.show.ids?.tmdb;
+    if (!showTmdbId) {
+      return null;
+    }
+    const title = buildSeasonEntryTitle(traktItem.show.title, seasonNumber);
+    return stripUndefinedDeep({
+      addedAt: toMillisOrNow(traktItem.listed_at),
+      id: showTmdbId,
+      media_type: 'season',
+      name: title,
+      season_number: seasonNumber,
+      show_name: traktItem.show.title,
+      title,
+    }) as Record<string, unknown>;
   }
 
   let tmdbId: number | undefined;
