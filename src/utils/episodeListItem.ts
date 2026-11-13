@@ -66,23 +66,54 @@ export const getEpisodeEntryDisplay = (
   };
 };
 
+/** TMDB's English stand-in for an episode it has no name for (also what enrichment saves). */
+const ENGLISH_PLACEHOLDER_NAME = /^episode\s+\d+$/i;
+
 /**
- * The fields of a saved episode entry that TMDB has since changed, or null when none has. An
- * episode is often saved before it airs, with a placeholder name ("Episode 5") and no air date,
- * still or runtime. Only fields TMDB now has a value for are returned, so a saved value is never
- * blanked. The combined title is left as saved: synced lists compare it, and cards show the
- * episode's own name.
+ * Whether a name is a stand-in rather than the episode's real name: TMDB's English "Episode N",
+ * or `localizedPlaceholder`, the same pattern in the app's language (e.g. "Episódio 12").
+ */
+export const isPlaceholderEpisodeName = (
+  name: string | null | undefined,
+  localizedPlaceholder?: string
+): boolean => {
+  const trimmed = name?.trim() ?? '';
+  if (!trimmed) return true;
+  if (ENGLISH_PLACEHOLDER_NAME.test(trimmed)) return true;
+  return (
+    !!localizedPlaceholder && trimmed.toLowerCase() === localizedPlaceholder.trim().toLowerCase()
+  );
+};
+
+/**
+ * The fields of a saved episode entry that TMDB has since filled in or changed, or null when
+ * none has. An episode is often saved before it airs, with a placeholder name ("Episode 5") and
+ * no air date, still or runtime. Only fields TMDB now has a value for are returned, so a saved
+ * value is never blanked.
+ *
+ * The name is fetched in the app's language while imports save TMDB's English one, so a real
+ * saved name is never replaced: only a missing or placeholder one, and only by a real name
+ * (`localizedPlaceholder` is this episode's placeholder in the app's language). Otherwise
+ * devices in different languages would keep rewriting it, or swap a real English name for an
+ * untranslated "Episódio 12". The combined title is left as saved: synced lists compare it, and
+ * cards show the episode's own name.
  */
 export const getEpisodeEntryRefresh = (
   saved: Pick<
     ListMediaItem,
     'episode_name' | 'release_date' | 'still_path' | 'episodeRuntimeMinutes'
   >,
-  episode: Pick<Episode, 'name' | 'air_date' | 'still_path'> & { runtime?: number | null }
+  episode: Pick<Episode, 'name' | 'air_date' | 'still_path'> & { runtime?: number | null },
+  localizedPlaceholder?: string
 ): Partial<ListMediaItem> | null => {
   const fields: Partial<ListMediaItem> = {};
   const name = episode.name?.trim();
-  if (name && name !== saved.episode_name) {
+  if (
+    name &&
+    name !== saved.episode_name &&
+    !isPlaceholderEpisodeName(name, localizedPlaceholder) &&
+    isPlaceholderEpisodeName(saved.episode_name, localizedPlaceholder)
+  ) {
     fields.episode_name = name;
   }
   if (episode.air_date && episode.air_date !== saved.release_date) {

@@ -5,6 +5,7 @@ import { getEpisodeEntryRefresh } from '@/src/utils/episodeListItem';
 import { findListItemByRef, getListItemKey, type ListItemRef } from '@/src/utils/listItemKeys';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * When an episode's screen opens, brings its saved list entries up to date with TMDB (name, air
@@ -28,6 +29,7 @@ export function useRefreshEpisodeListEntries({
   lists: UserList[] | undefined;
 }) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const userId = user && !user.isAnonymous ? user.uid : undefined;
   const refreshedKeyRef = useRef<string | null>(null);
@@ -44,9 +46,11 @@ export function useRefreshEpisodeListEntries({
     if (!itemKey || refreshedKeyRef.current === itemKey) return;
     refreshedKeyRef.current = itemKey;
 
+    // This episode's stand-in name in the app's language, which never replaces a real one.
+    const localizedPlaceholder = t('media.episodeNumber', { number: episodeNumber });
     const outdated = lists.flatMap((list) => {
       const saved = findListItemByRef(list.items, ref);
-      const fields = saved ? getEpisodeEntryRefresh(saved, episode) : null;
+      const fields = saved ? getEpisodeEntryRefresh(saved, episode, localizedPlaceholder) : null;
       return fields ? [{ list, fields }] : [];
     });
     if (outdated.length === 0) return;
@@ -89,5 +93,5 @@ export function useRefreshEpisodeListEntries({
         })
       );
     });
-  }, [episode, episodeNumber, lists, queryClient, seasonNumber, tvId, userId]);
+  }, [episode, episodeNumber, lists, queryClient, seasonNumber, t, tvId, userId]);
 }

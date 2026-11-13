@@ -4,6 +4,7 @@ import {
   buildEpisodeListItem,
   getEpisodeEntryDisplay,
   getEpisodeEntryRefresh,
+  isPlaceholderEpisodeName,
 } from '@/src/utils/episodeListItem';
 import { getListEntryDisplay } from '@/src/utils/listEntryDisplay';
 import {
@@ -288,6 +289,57 @@ describe('getEpisodeEntryRefresh', () => {
         { name: ' ', air_date: null, still_path: null, runtime: 50 }
       )
     ).toBeNull();
+  });
+
+  it("never replaces a real saved name, so other languages can't overwrite it", () => {
+    const saved = { episode_name: 'Phoenix', release_date: '2009-05-24', still_path: '/p.jpg' };
+    // A Portuguese device: TMDB has no translation, or a real translated name.
+    expect(
+      getEpisodeEntryRefresh(
+        saved,
+        { name: 'Episódio 12', air_date: '2009-05-24', still_path: '/p.jpg' },
+        'Episódio 12'
+      )
+    ).toBeNull();
+    expect(
+      getEpisodeEntryRefresh(
+        saved,
+        { name: 'Fénix', air_date: '2009-05-24', still_path: '/p.jpg' },
+        'Episódio 12'
+      )
+    ).toBeNull();
+  });
+
+  it('replaces an English or localized placeholder with a real name, never with another placeholder', () => {
+    const fetched = { name: 'Fénix', air_date: '2009-05-24', still_path: '/p.jpg' };
+    const savedAs = (episode_name: string) => ({
+      episode_name,
+      release_date: '2009-05-24',
+      still_path: '/p.jpg',
+    });
+
+    expect(getEpisodeEntryRefresh(savedAs('Episode 12'), fetched, 'Episódio 12')).toEqual({
+      episode_name: 'Fénix',
+    });
+    expect(getEpisodeEntryRefresh(savedAs('episódio 12'), fetched, 'Episódio 12')).toEqual({
+      episode_name: 'Fénix',
+    });
+    expect(
+      getEpisodeEntryRefresh(
+        savedAs('Episode 12'),
+        { ...fetched, name: 'Episódio 12' },
+        'Episódio 12'
+      )
+    ).toBeNull();
+  });
+
+  it('recognizes placeholder names', () => {
+    expect(isPlaceholderEpisodeName('Episode 7')).toBe(true);
+    expect(isPlaceholderEpisodeName('')).toBe(true);
+    expect(isPlaceholderEpisodeName(undefined)).toBe(true);
+    expect(isPlaceholderEpisodeName('Épisode 7', 'Épisode 7')).toBe(true);
+    expect(isPlaceholderEpisodeName('Episode 7: The Return')).toBe(false);
+    expect(isPlaceholderEpisodeName('Phoenix', 'Episódio 12')).toBe(false);
   });
 
   it('returns null when nothing changed', () => {
