@@ -486,6 +486,36 @@ describe('EpisodeDetailScreen', () => {
     });
   });
 
+  it("shows the list's own icon for one list and the multiple-lists icon only for several", () => {
+    const { Bookmark02Icon, CheckListIcon, Folder01Icon, PlusSignIcon } = jest.requireActual(
+      '@hugeicons/core-free-icons'
+    );
+    const buttonIcon = (screen: ReturnType<typeof render>) =>
+      screen
+        .getByTestId('episode-add-to-list-action')
+        .findAll((node: any) => node.props?.icon !== undefined)[0].props.icon;
+    const entry = { id: 10, media_type: 'episode', season_number: 1, episode_number: 2 };
+
+    mockLists = [{ id: 'watchlist', items: {} }];
+    const screen = render(<EpisodeDetailScreen />);
+    expect(buttonIcon(screen)).toBe(PlusSignIcon);
+
+    mockLists = [{ id: 'watchlist', items: { 'episode-10-1-2': entry } }];
+    screen.rerender(<EpisodeDetailScreen />);
+    expect(buttonIcon(screen)).toBe(Bookmark02Icon);
+
+    mockLists = [{ id: 'my-list', items: { 'episode-10-1-2': entry } }];
+    screen.rerender(<EpisodeDetailScreen />);
+    expect(buttonIcon(screen)).toBe(Folder01Icon);
+
+    mockLists = [
+      { id: 'watchlist', items: { 'episode-10-1-2': entry } },
+      { id: 'my-list', items: { 'episode-10-1-2': entry } },
+    ];
+    screen.rerender(<EpisodeDetailScreen />);
+    expect(buttonIcon(screen)).toBe(CheckListIcon);
+  });
+
   it('asks a guest to sign in instead of opening Add to List', () => {
     mockIsAccountRequired.mockReturnValueOnce(true);
     const { getByTestId } = render(<EpisodeDetailScreen />);

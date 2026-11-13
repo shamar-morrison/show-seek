@@ -63,3 +63,24 @@ export const MultipleListsIcon = CheckListIcon;
  * Default color for items in multiple lists
  */
 export const MULTIPLE_LISTS_COLOR = COLORS.success;
+
+/**
+ * What an add-to-list button shows for an entry held by `listIds`: that list's own icon and
+ * color when it's in one list (e.g. the heart in the accent color for Favorites), the
+ * multiple-lists icon only when it's in several, and null when it's in none (the button then
+ * shows its add icon). Every add-to-list button (movies, shows, seasons, episodes) uses this,
+ * so they can't drift apart.
+ */
+export const getListMembershipIcon = (
+  listIds: readonly string[],
+  accentColor: string = DEFAULT_ACCENT_COLOR
+): { icon: IconSvgElement; color: string } | null => {
+  if (listIds.length === 0) return null;
+  if (listIds.length === 1) {
+    return {
+      icon: getListIconComponent(listIds[0]),
+      color: getListColor(listIds[0], accentColor),
+    };
+  }
+  return { icon: MultipleListsIcon, color: MULTIPLE_LISTS_COLOR };
+};

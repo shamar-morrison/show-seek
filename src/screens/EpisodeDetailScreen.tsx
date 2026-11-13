@@ -58,6 +58,7 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { buildEpisodeListItem } from '@/src/utils/episodeListItem';
 import { parseEpisodeRouteParams } from '@/src/utils/episodeRouteParams';
+import { getListMembershipIcon } from '@/src/utils/listIcons';
 import { hasListItemByRef } from '@/src/utils/listItemKeys';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
@@ -69,7 +70,6 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Calendar03Icon,
-  CheckListIcon,
   Clock01Icon,
   FavouriteIcon,
   Image01Icon,
@@ -483,18 +483,25 @@ export default function EpisodeDetailScreen() {
     [episode, episodeNumber, season?.poster_path, seasonNumber, t, tvShow]
   );
 
-  const isEpisodeInAnyList = useMemo(
+  // The lists holding this episode, for the add-to-list button's icon.
+  const episodeListIds = useMemo(
     () =>
-      !!lists?.some((list) =>
-        hasListItemByRef(list.items, {
-          id: tvId,
-          media_type: 'episode',
-          season_number: seasonNumber,
-          episode_number: episodeNumber,
-        })
-      ),
+      (lists ?? [])
+        .filter((list) =>
+          hasListItemByRef(list.items, {
+            id: tvId,
+            media_type: 'episode',
+            season_number: seasonNumber,
+            episode_number: episodeNumber,
+          })
+        )
+        .map((list) => list.id),
     [episodeNumber, lists, seasonNumber, tvId]
   );
+  const isEpisodeInAnyList = episodeListIds.length > 0;
+  // Same icon rules as every add-to-list button: the list's own icon and color when the episode
+  // is in one list, the multiple-lists icon only when it's in several.
+  const episodeListMembershipIcon = getListMembershipIcon(episodeListIds, accentColor);
 
   // Entries saved before this episode aired get its name, air date, still and runtime.
   useRefreshEpisodeListEntries({ tvId, seasonNumber, episodeNumber, episode, lists });
@@ -689,9 +696,9 @@ export default function EpisodeDetailScreen() {
               >
                 <View style={styles.iconButton}>
                   <AppIcon
-                    icon={isEpisodeInAnyList ? CheckListIcon : PlusSignIcon}
+                    icon={episodeListMembershipIcon?.icon ?? PlusSignIcon}
                     size={24}
-                    color={isEpisodeInAnyList ? accentColor : COLORS.text}
+                    color={episodeListMembershipIcon?.color ?? COLORS.text}
                   />
                 </View>
               </TouchableOpacity>

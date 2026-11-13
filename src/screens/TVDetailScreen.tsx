@@ -63,12 +63,7 @@ import {
 } from '@/src/hooks/useReminders';
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { useTVReminderLogic } from '@/src/hooks/useTVReminderLogic';
-import {
-  getListColor,
-  getListIconComponent,
-  MULTIPLE_LISTS_COLOR,
-  MultipleListsIcon,
-} from '@/src/utils/listIcons';
+import { getListMembershipIcon } from '@/src/utils/listIcons';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { setReviewQueue, traktToReview, type QueuedReview } from '@/src/utils/reviewQueue';
@@ -133,18 +128,9 @@ export default function TVDetailScreen() {
   const { resolvePosterPath } = usePosterOverrides();
   const listIds = Object.keys(membership);
   const isInAnyList = listIds.length > 0;
-  const listIcon =
-    listIds.length === 1
-      ? getListIconComponent(listIds[0])
-      : isInAnyList
-        ? MultipleListsIcon
-        : undefined;
-  const listColor =
-    listIds.length === 1
-      ? getListColor(listIds[0], accentColor)
-      : isInAnyList
-        ? MULTIPLE_LISTS_COLOR
-        : undefined;
+  const listMembershipIcon = getListMembershipIcon(listIds, accentColor);
+  const listIcon = listMembershipIcon?.icon;
+  const listColor = listMembershipIcon?.color;
 
   // Reminder hooks
   const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(tvId, 'tv');
