@@ -190,6 +190,13 @@ export const needsMediaEnrichment = (item: Record<string, unknown> | undefined):
     return typeof item.season_number === 'number' &&
       (item.poster_path === undefined || item.season_name === undefined);
   }
+  // The same for an episode synced from Trakt: it has only its show and numbers, and
+  // enrichment always sets both fields.
+  if (item.media_type === 'episode') {
+    return typeof item.season_number === 'number' &&
+      typeof item.episode_number === 'number' &&
+      (item.poster_path === undefined || item.episode_name === undefined);
+  }
   return (
     (item.media_type === 'movie' || item.media_type === 'tv') &&
     (item.poster_path === undefined ||
@@ -226,7 +233,9 @@ export const createSeasonDetailsLookup = (
 ): SeasonDetailsLookup => {
   const seasonsByShow = new Map<number, number[]>();
   items.forEach((item) => {
-    if (item?.media_type !== 'season' || typeof item.id !== 'number') return;
+    // An episode is filled in from its season, so its season is looked up too.
+    if (item?.media_type !== 'season' && item?.media_type !== 'episode') return;
+    if (typeof item.id !== 'number') return;
     if (typeof item.season_number !== 'number') return;
     const seasons = seasonsByShow.get(item.id) ?? [];
     if (!seasons.includes(item.season_number)) seasons.push(item.season_number);
@@ -316,12 +325,54 @@ const enrichSeasonItem = async (
   };
 };
 
+/**
+ * Fills in an episode entry from its season's TMDB details: the season's poster (else the
+ * show's), the episode's name, still, rating, air date and runtime, and the show's genres. An
+ * episode TMDB doesn't have gets the show's details and an "Episode N" name, so it isn't looked
+ * up again. The title and show name are left as synced, so the next sync doesn't see a change.
+ */
+const enrichEpisodeItem = async (
+  item: Record<string, unknown>,
+  lookupSeason: SeasonDetailsLookup
+): Promise<Record<string, unknown>> => {
+  const tvId = item.id as number;
+  const seasonNumber = item.season_number as number;
+  const episodeNumber = item.episode_number as number;
+  const { season, show } = await lookupSeason(tvId, seasonNumber);
+  const episode = season?.episodes?.find((entry) => entry.episode_number === episodeNumber);
+  const runtime =
+    typeof episode?.runtime === 'number' && episode.runtime > 0 ? episode.runtime : undefined;
+  const airDate = episode?.air_date ?? '';
+
+  return {
+    ...item,
+    episode_name: episode?.name?.trim() || `Episode ${episodeNumber}`,
+    genre_ids: show ? getGenreIds(show) : (item.genre_ids ?? []),
+    poster_path: season?.poster_path ?? show?.poster_path ?? null,
+    still_path: episode?.still_path ?? null,
+    vote_average:
+      typeof episode?.vote_average === 'number' && episode.vote_average > 0
+        ? episode.vote_average
+        : (show?.vote_average ?? 0),
+    ...(item.release_date ? {} : { first_air_date: airDate, release_date: airDate }),
+    ...(item.show_name || !show?.name ? {} : { show_name: show.name }),
+    ...(runtime ? { episodeRuntimeMinutes: runtime, runtimeMinutes: runtime } : {}),
+  };
+};
+
 export const enrichMediaItem = async (
   item: Record<string, unknown>,
   lookupSeason?: SeasonDetailsLookup
 ): Promise<Record<string, unknown>> => {
   if (!item || typeof item.id !== 'number' || typeof item.media_type !== 'string') {
     return item;
+  }
+
+  if (item.media_type === 'episode') {
+    if (typeof item.season_number !== 'number' || typeof item.episode_number !== 'number') {
+      return item;
+    }
+    return enrichEpisodeItem(item, lookupSeason ?? createSeasonDetailsLookup([item]));
   }
 
   if (item.media_type === 'season') {

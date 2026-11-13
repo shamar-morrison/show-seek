@@ -9,6 +9,7 @@ import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
+import type { ListItemRef } from '@/src/utils/listItemKeys';
 import { getListItemRoute } from '@/src/utils/listItemRoutes';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { Route, router } from 'expo-router';
@@ -29,8 +30,13 @@ interface MediaCardProps<T extends MediaCardItem> {
   onLongPress?: (item: T) => void;
   /** Set when the card stands for one season of the show: it then opens that season. */
   seasonNumber?: number;
-  /** For a season card: "Season X", shown under the title in place of year and rating. */
-  seasonLabel?: string;
+  /** Set with `seasonNumber` when the card stands for one episode: it then opens that episode. */
+  episodeNumber?: number;
+  /**
+   * For a season or episode card: "Season X" or "S2E12 · Name", shown under the title in place
+   * of year and rating.
+   */
+  entryLabel?: string;
 }
 
 const isMovie = (item: MediaCardItem): item is Movie => {
@@ -55,18 +61,30 @@ function MediaCardComponent<T extends MediaCardItem>({
   posterPathOverride,
   onLongPress,
   seasonNumber,
-  seasonLabel,
+  episodeNumber,
+  entryLabel,
 }: MediaCardProps<T>) {
-  const isSeason = mediaType === 'tv' && seasonNumber !== undefined;
+  // The season or episode this card stands for, if it isn't the whole show.
+  const entryRef = useMemo<ListItemRef | null>(() => {
+    if (mediaType !== 'tv' || seasonNumber === undefined) return null;
+    return episodeNumber !== undefined
+      ? {
+          id: item.id,
+          media_type: 'episode',
+          season_number: seasonNumber,
+          episode_number: episodeNumber,
+        }
+      : { id: item.id, media_type: 'season', season_number: seasonNumber };
+  }, [episodeNumber, item.id, mediaType, seasonNumber]);
   const currentTab = useCurrentTab();
-  const { getListsForMedia } = useListMembership();
+  const { getListsForMedia, getListsForListItem } = useListMembership();
   const { preferences } = usePreferences();
   const { resolvePosterPath } = usePosterOverrides();
   const resolvedPosterPath = useMemo(
     () =>
       posterPathOverride ??
-      resolvePosterPath(isSeason ? 'season' : mediaType, item.id, item.poster_path),
-    [isSeason, item.id, item.poster_path, mediaType, posterPathOverride, resolvePosterPath]
+      resolvePosterPath(entryRef ? entryRef.media_type : mediaType, item.id, item.poster_path),
+    [entryRef, item.id, item.poster_path, mediaType, posterPathOverride, resolvePosterPath]
   );
 
   const posterUrl = useMemo(
@@ -79,23 +97,19 @@ function MediaCardComponent<T extends MediaCardItem>({
   );
 
   const listIds = showListBadge
-    ? isSeason
-      ? getListsForMedia(item.id, 'season', seasonNumber)
+    ? entryRef
+      ? getListsForListItem(entryRef)
       : getListsForMedia(item.id, mediaType)
     : [];
   const showBadge = listIds.length > 0;
 
   const handleNavigate = useCallback(() => {
     const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
-    const path = isSeason
-      ? getListItemRoute(basePath, {
-          id: item.id,
-          media_type: 'season',
-          season_number: seasonNumber,
-        })
+    const path = entryRef
+      ? getListItemRoute(basePath, entryRef)
       : `${basePath}/${mediaType}/${item.id}`;
     router.push(path as Route);
-  }, [currentTab, isSeason, item.id, mediaType, seasonNumber]);
+  }, [currentTab, entryRef, item.id, mediaType]);
 
   const handleCardLongPress = useCallback(() => {
     onLongPress?.(item);
@@ -131,10 +145,10 @@ function MediaCardComponent<T extends MediaCardItem>({
         <Text style={mediaCardStyles.title} numberOfLines={2}>
           {displayTitle}
         </Text>
-        {isSeason && seasonLabel ? (
+        {entryRef && entryLabel ? (
           <View style={mediaMetaStyles.yearRatingContainer}>
             <Text style={mediaMetaStyles.year} numberOfLines={1}>
-              {seasonLabel}
+              {entryLabel}
             </Text>
           </View>
         ) : (

@@ -1,9 +1,9 @@
 import type { ListMediaItem } from '@/src/services/ListService';
 
 /**
- * A list's entries with each season counted as its show, for features that work per show
- * (calendar, upcoming releases, where to watch). A show appears once however many of its
- * seasons are listed; when the show itself is listed, that entry is kept as is.
+ * A list's entries with each season and episode counted as its show, for features that work per
+ * show (calendar, upcoming releases, where to watch). A show appears once however many of its
+ * seasons and episodes are listed; when the show itself is listed, that entry is kept as is.
  */
 export function collapseSeasonsToShows<T extends ListMediaItem>(items: T[]): T[] {
   const listedShowIds = new Set(
@@ -13,7 +13,7 @@ export function collapseSeasonsToShows<T extends ListMediaItem>(items: T[]): T[]
   const result: T[] = [];
 
   items.forEach((item) => {
-    if (item.media_type !== 'season') {
+    if (item.media_type !== 'season' && item.media_type !== 'episode') {
       result.push(item);
       return;
     }
@@ -29,11 +29,15 @@ export function collapseSeasonsToShows<T extends ListMediaItem>(items: T[]): T[]
       name: showName,
       season_number: undefined,
       season_name: undefined,
-      // The season's air date and runtime aren't the show's.
+      episode_number: undefined,
+      episode_name: undefined,
+      still_path: undefined,
+      // The season's or episode's air date and runtime aren't the show's.
       release_date: '',
       first_air_date: '',
       runtimeMinutes: undefined,
       seasonRuntimeMinutes: undefined,
+      episodeRuntimeMinutes: undefined,
     });
   });
 

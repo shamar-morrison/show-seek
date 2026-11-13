@@ -1,6 +1,6 @@
 import { ListMediaItem } from '../services/ListService';
 
-export type MediaTypeFilter = 'all' | 'movie' | 'tv' | 'season';
+export type MediaTypeFilter = 'all' | 'movie' | 'tv' | 'season' | 'episode';
 
 export type GenreOperator = 'and' | 'or';
 
@@ -74,40 +74,65 @@ export function getSeasonMediaKey(tvId: number, seasonNumber: number): string {
   return `season:${tvId}:${seasonNumber}`;
 }
 
-/** The key for an entry in the ratings and runtimes maps (`season:{tvId}:{n}` for seasons). */
+export function getEpisodeMediaKey(
+  tvId: number,
+  seasonNumber: number,
+  episodeNumber: number
+): string {
+  return `episode:${tvId}:${seasonNumber}:${episodeNumber}`;
+}
+
+/**
+ * The key for an entry in the ratings and runtimes maps (`season:{tvId}:{n}` for seasons,
+ * `episode:{tvId}:{s}:{e}` for episodes).
+ */
 export function getListItemMediaKey(
-  item: Pick<ListMediaItem, 'id' | 'media_type' | 'season_number'>
+  item: Pick<ListMediaItem, 'id' | 'media_type' | 'season_number' | 'episode_number'>
 ): string {
   if (item.media_type === 'season') {
     return getSeasonMediaKey(item.id, item.season_number ?? -1);
+  }
+  if (item.media_type === 'episode') {
+    return getEpisodeMediaKey(item.id, item.season_number ?? -1, item.episode_number ?? -1);
   }
   return getMediaKey(item.media_type, item.id);
 }
 
 /**
- * The key a runtime lookup reports under, for an entry described by type, ID and season
- * number: the same key `getListItemMediaKey` gives the entry.
+ * The key a runtime lookup reports under, for an entry described by type, ID and season and
+ * episode numbers: the same key `getListItemMediaKey` gives the entry.
  */
 export function getUnstampedListItemRuntimeKey(item: {
   mediaType: ListMediaItem['media_type'];
   mediaId: number;
   seasonNumber?: number;
+  episodeNumber?: number;
 }): string {
   return getListItemMediaKey({
     id: item.mediaId,
     media_type: item.mediaType,
     season_number: item.seasonNumber,
+    episode_number: item.episodeNumber,
   });
 }
 
 /**
- * The runtime saved on an entry. A season only trusts `seasonRuntimeMinutes`: an app version
- * that predates seasons may have saved a wrong `runtimeMinutes` on it.
+ * The runtime saved on an entry. A season only trusts `seasonRuntimeMinutes` and an episode
+ * only `episodeRuntimeMinutes`: an app version that predates them may have saved a wrong
+ * `runtimeMinutes` on it.
  */
 export function getStoredListItemRuntime(
-  item: Pick<ListMediaItem, 'media_type' | 'runtimeMinutes' | 'seasonRuntimeMinutes'>
+  item: Pick<
+    ListMediaItem,
+    'media_type' | 'runtimeMinutes' | 'seasonRuntimeMinutes' | 'episodeRuntimeMinutes'
+  >
 ): number | undefined {
-  const minutes = item.media_type === 'season' ? item.seasonRuntimeMinutes : item.runtimeMinutes;
+  const minutes =
+    item.media_type === 'season'
+      ? item.seasonRuntimeMinutes
+      : item.media_type === 'episode'
+        ? item.episodeRuntimeMinutes
+        : item.runtimeMinutes;
   return minutes != null && minutes > 0 ? minutes : undefined;
 }
 

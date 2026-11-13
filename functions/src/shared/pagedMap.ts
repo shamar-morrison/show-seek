@@ -295,7 +295,7 @@ export function pickEntryToMakeRoom<T>(
 
 /** Keys pages may hold: canonical list item keys (never legacy numeric ones), episode keys. */
 export const isCanonicalListItemKey = (key: string): boolean =>
-  /^(?:(?:movie|tv)-\d+|season-\d+-\d+)$/.test(key);
+  /^(?:(?:movie|tv)-\d+|season-\d+-\d+|episode-\d+-\d+-\d+)$/.test(key);
 export const isEpisodeKey = (key: string): boolean => /^\d+_\d+$/.test(key);
 
 /** Every page number a document has, including the document itself (0). */

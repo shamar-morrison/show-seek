@@ -513,6 +513,9 @@
     "itemsRemoved": "{{count}} itens removidos",
     "itemsRemoved_one": "{{count}} item removido",
     "itemsRemoved_other": "{{count}} itens removidos",
+    "episodesSkipped": "{{count}} episódios não foram adicionados às listas que não aceitam episódios. Os episódios só podem ir para Pendentes e para listas personalizadas.",
+    "episodesSkipped_one": "{{count}} episódio não foi adicionado às listas que não aceitam episódios. Os episódios só podem ir para Pendentes e para listas personalizadas.",
+    "episodesSkipped_other": "{{count}} episódios não foram adicionados às listas que não aceitam episódios. Os episódios só podem ir para Pendentes e para listas personalizadas.",
     "removeRatings": "Remover avaliações",
     "removingRatingsTitle": "Removendo avaliações",
     "removingRatingsProgress": "Removendo avaliações {{current}} de {{total}}.",
@@ -828,7 +831,7 @@
     "autoAddToAlreadyWatched": "Adicionar auto a Já vistos",
     "autoAddToAlreadyWatchedDescription": "Adicionar automaticamente os filmes à sua lista Já vistos quando os avaliar ou marcar como vistos",
     "autoRemoveFromShouldWatch": "Remover auto de Pendentes",
-    "autoRemoveFromShouldWatchDescription": "Remover automaticamente os filmes da sua lista Pendentes quando os avaliar ou marcar como vistos",
+    "autoRemoveFromShouldWatchDescription": "Remover automaticamente os filmes da sua lista Pendentes quando os avaliar ou marcar como vistos, e os episódios quando os marcar como vistos",
     "quickMarkAsWatched": "Marcar rápido como visto",
     "quickMarkAsWatchedDescription": "Ignorar a seleção de data e usar a hora atual ao marcar filmes como vistos",
     "markPreviousEpisodes": "Marcar episódios anteriores",
@@ -1381,7 +1384,7 @@
       "checkinsTitle": "Histórico de visualização e progresso",
       "checkinsDescription": "Os check-ins adicionam visualizações de filmes, marcam séries como vistas quando suportado e atualizam o progresso dos episódios quando a linha pode ser associada corretamente.",
       "skipsTitle": "Os dados ignorados são apresentados",
-      "skipsDescription": "Pessoas, imagens e vídeos não suportados, linhas mal formadas, IDs do IMDb não resolvidos e episódios presentes em listas são ignorados e contabilizados no resumo final."
+      "skipsDescription": "Pessoas, imagens e vídeos não suportados, linhas mal formadas e IDs do IMDb não resolvidos são ignorados e contabilizados no resumo final. Os episódios presentes em listas são mantidos como episódios."
     },
     "howItWorks": {
       "selectTitle": "Escolha os seus ficheiros CSV exportados do IMDb",
@@ -1800,7 +1803,9 @@
       "uploadFailed": "Falha ao enviar o ficheiro zip. Verifique a sua ligação e tente novamente.",
       "tryAgain": "Tentar novamente",
       "backToSettings": "Voltar às Definições"
-    }
+    },
+    "tmdbRetryingSubtitle": "Não foi possível aceder ao TMDB para verificar os episódios de algumas das suas listas. Tudo o resto foi sincronizado, e o ShowSeek vai continuar a tentar automaticamente.",
+    "tmdbUnavailableMessage": "Não foi possível aceder ao TMDB para verificar os episódios de algumas das suas listas. Tudo o resto foi sincronizado. Tente sincronizar novamente mais tarde."
   },
   "homeCustomization": {
     "title": "Personalizar início",
@@ -1927,7 +1932,10 @@
     "year": "Ano"
   },
   "episodeDetail": {
-    "failedToLoad": "Falha ao carregar detalhes do episódio"
+    "failedToLoad": "Falha ao carregar detalhes do episódio",
+    "notFoundTitle": "Episódio não encontrado",
+    "notOnTmdb": "O TMDB já não tem este episódio. Pode ter sido removido ou renumerado.",
+    "goToShow": "Ir para a série"
   },
   "filters": {
     "anyRating": "Qualquer avaliação",

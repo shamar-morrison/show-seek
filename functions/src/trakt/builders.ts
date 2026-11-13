@@ -32,7 +32,8 @@ export const buildManagedListItemsMap = (
       return;
     }
 
-    // Movies, shows and seasons (keyed season-{tvId}-{n}); anything else is skipped.
+    // Movies, shows, seasons (season-{tvId}-{n}) and episodes (episode-{tvId}-{s}-{e});
+    // anything else is skipped.
     const itemKey = getListItemKey(item as Partial<ListItemRef>);
     if (!itemKey) {
       return;
@@ -92,6 +93,7 @@ export const buildCustomListItemsMap = (
       id: transformed.tmdbId,
       media_type: transformed.mediaType,
       season_number: transformed.seasonNumber,
+      episode_number: transformed.episodeNumber,
     });
     if (!itemKey) {
       continue;
@@ -103,12 +105,15 @@ export const buildCustomListItemsMap = (
         media_type: transformed.mediaType,
         title: transformed.title,
         traktId: transformed.traktId,
-        ...(transformed.mediaType === 'season'
+        ...(transformed.mediaType === 'season' || transformed.mediaType === 'episode'
           ? {
               name: transformed.title,
               season_number: transformed.seasonNumber,
               show_name: transformed.showName,
             }
+          : {}),
+        ...(transformed.mediaType === 'episode'
+          ? { episode_number: transformed.episodeNumber }
           : {}),
       },
       true

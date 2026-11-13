@@ -520,6 +520,9 @@
     "itemsRemoved": "{{count}} öğe kaldırıldı",
     "itemsRemoved_one": "{{count}} öğe kaldırıldı",
     "itemsRemoved_other": "{{count}} öğe kaldırıldı",
+    "episodesSkipped": "{{count}} bölüm, bölüm alamayan listelere eklenmedi. Bölümler yalnızca İzlenmeli listesine ve özel listelere eklenebilir.",
+    "episodesSkipped_one": "{{count}} bölüm, bölüm alamayan listelere eklenmedi. Bölümler yalnızca İzlenmeli listesine ve özel listelere eklenebilir.",
+    "episodesSkipped_other": "{{count}} bölüm, bölüm alamayan listelere eklenmedi. Bölümler yalnızca İzlenmeli listesine ve özel listelere eklenebilir.",
     "listsDeleted": "{{count}} liste silindi",
     "listsDeleted_one": "{{count}} liste silindi",
     "listsDeleted_other": "{{count}} liste silindi",
@@ -828,7 +831,7 @@
     "autoAddToAlreadyWatched": "Daha önce izlenenlere otomatik ekle",
     "autoAddToAlreadyWatchedDescription": "Film puanladığınızda veya izlendi olarak işaretlediğinizde filmleri otomatik olarak Daha Önce İzlenenler listenize ekler",
     "autoRemoveFromShouldWatch": "İzlenmeli listesinden otomatik kaldır",
-    "autoRemoveFromShouldWatchDescription": "Film puanladığınızda veya izlendi olarak işaretlediğinizde filmleri otomatik olarak İzlenmeli listenizden kaldırır",
+    "autoRemoveFromShouldWatchDescription": "Film puanladığınızda veya izlendi olarak işaretlediğinizde filmleri, izlendi olarak işaretlediğinizde de bölümleri otomatik olarak İzlenmeli listenizden kaldırır",
     "quickMarkAsWatched": "Hızlı izlendi olarak işaretle",
     "quickMarkAsWatchedDescription": "Filmleri izlendi olarak işaretlerken tarih seçme penceresini atlar ve geçerli saati kullanır",
     "showListIndicators": "Liste göstergelerini göster",
@@ -1381,7 +1384,7 @@
       "checkinsTitle": "İzleme geçmişi ve ilerleme",
       "checkinsDescription": "Kontrol kayıtları film izlemeleri ekler, desteklendiğinde dizileri izlendi olarak işaretler ve satır açıkça eşleştiğinde bölüm ilerlemesini günceller.",
       "skipsTitle": "Atlanan veriler bildirilir",
-      "skipsDescription": "Desteklenmeyen kişiler, görseller, videolar, hatalı satırlar, çözümlenmemiş IMDb kimlikleri ve liste bölümleri atlanır ve son özette sayılır."
+      "skipsDescription": "Desteklenmeyen kişiler, görseller, videolar, hatalı satırlar ve çözümlenmemiş IMDb kimlikleri atlanır ve son özette sayılır. Listelerdeki bölümler bölüm olarak korunur."
     },
     "howItWorks": {
       "selectTitle": "IMDb CSV dışa aktarımlarını seçin",
@@ -1800,7 +1803,9 @@
       "uploadFailed": "Zip arşivi yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",
       "tryAgain": "Tekrar Dene",
       "backToSettings": "Ayarlara Dön"
-    }
+    },
+    "tmdbRetryingSubtitle": "Bazı listelerinizdeki bölümleri kontrol etmek için TMDB'ye ulaşılamadı. Geri kalan her şey eşitlendi ve ShowSeek otomatik olarak denemeye devam edecek.",
+    "tmdbUnavailableMessage": "Bazı listelerinizdeki bölümleri kontrol etmek için TMDB'ye ulaşılamadı. Geri kalan her şey eşitlendi. Daha sonra yeniden eşitlemeyi deneyin."
   },
   "homeCustomization": {
     "title": "Ana sayfayı özelleştir",
@@ -2075,7 +2080,10 @@
     "year": "Yıl"
   },
   "episodeDetail": {
-    "failedToLoad": "Bölüm ayrıntıları yüklenemedi"
+    "failedToLoad": "Bölüm ayrıntıları yüklenemedi",
+    "notFoundTitle": "Bölüm bulunamadı",
+    "notOnTmdb": "TMDB'de bu bölüm artık yok. Kaldırılmış ya da yeniden numaralandırılmış olabilir.",
+    "goToShow": "Diziye git"
   },
   "filters": {
     "anyRating": "Tüm puanlar",

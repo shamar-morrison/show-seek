@@ -186,6 +186,50 @@ describe('DataExportService', () => {
     expect(getWrittenContent()).toContain('- **Breaking Bad · Specials** (Season)');
   });
 
+  it('exports episode list entries as episodes with their season and episode numbers', async () => {
+    (Sharing.isAvailableAsync as jest.Mock).mockResolvedValue(true);
+    const listDocs = {
+      docs: [
+        {
+          id: 'watchlist',
+          data: () => ({
+            name: 'Should Watch',
+            items: {
+              'episode-1396-2-12': {
+                id: 1396,
+                title: 'Breaking Bad · S2E12 · Phoenix',
+                media_type: 'episode',
+                season_number: 2,
+                episode_number: 12,
+                poster_path: null,
+                vote_average: 0,
+                release_date: '',
+              },
+            },
+          }),
+        },
+      ],
+    };
+    mockAuditedGetDocs
+      .mockResolvedValueOnce(listDocs)
+      .mockResolvedValueOnce({ docs: [] })
+      .mockResolvedValueOnce({ docs: [] });
+
+    await exportUserData('csv');
+    expect(getWrittenContent()).toContain(
+      'List: Should Watch,Breaking Bad · S2E12 · Phoenix,Episode,,,1396,2,12,'
+    );
+
+    (FileSystem.writeAsStringAsync as jest.Mock).mockClear();
+    mockAuditedGetDocs
+      .mockResolvedValueOnce(listDocs)
+      .mockResolvedValueOnce({ docs: [] })
+      .mockResolvedValueOnce({ docs: [] });
+
+    await exportUserData('markdown');
+    expect(getWrittenContent()).toContain('- **Breaking Bad · S2E12 · Phoenix** (Episode)');
+  });
+
   it('skips invalid legacy ratings during export instead of producing malformed rows', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     (Sharing.isAvailableAsync as jest.Mock).mockResolvedValueOnce(true);

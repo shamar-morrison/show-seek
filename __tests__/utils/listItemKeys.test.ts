@@ -4,9 +4,13 @@ import {
   getLegacyListItemKeyForRef,
   getListItemKey,
   getListItemRefCandidateKeys,
+  getListItemUiKey,
+  getListMembershipKey,
   getStoredListItemKeys,
+  isEpisodeListItemKey,
   isSeasonListItemKey,
   normalizeListItemsMap,
+  toListItemRef,
 } from '@/src/utils/listItemKeys';
 
 describe('listItemKeys utilities', () => {
@@ -175,5 +179,96 @@ describe('season list entries', () => {
     expect(isCanonicalListItemKey('movie-1')).toBe(true);
     expect(isCanonicalListItemKey('season-1396')).toBe(false);
     expect(isCanonicalListItemKey('1396')).toBe(false);
+  });
+});
+
+describe('episode list entries', () => {
+  const episode = {
+    id: 1396,
+    media_type: 'episode' as const,
+    season_number: 2,
+    episode_number: 12,
+    title: 'Breaking Bad · S2E12 · Phoenix',
+  };
+
+  it('keys an episode by show ID, season and episode number, including zeros', () => {
+    expect(getListItemKey(episode)).toBe('episode-1396-2-12');
+    expect(getListItemKey({ ...episode, season_number: 0, episode_number: 0 })).toBe(
+      'episode-1396-0-0'
+    );
+  });
+
+  it("can't key an episode without valid numbers", () => {
+    expect(getListItemKey({ id: 1396, media_type: 'episode', season_number: 2 })).toBeNull();
+    expect(getListItemKey({ id: 1396, media_type: 'episode', episode_number: 2 })).toBeNull();
+    expect(getListItemKey({ ...episode, episode_number: -1 })).toBeNull();
+    expect(getListItemKey({ ...episode, episode_number: 1.5 })).toBeNull();
+    expect(getListItemKey({ ...episode, id: 0 })).toBeNull();
+  });
+
+  it('never gives an episode a legacy numeric key', () => {
+    expect(getListItemRefCandidateKeys(episode)).toEqual(['episode-1396-2-12']);
+    expect(getLegacyListItemKeyForRef(episode)).toBeNull();
+  });
+
+  it("doesn't match the show, its season or a legacy entry with the same ID", () => {
+    const items = {
+      '1396': { id: 1396, media_type: 'tv' },
+      'tv-1396': { id: 1396, media_type: 'tv' },
+      'season-1396-2': { id: 1396, media_type: 'season', season_number: 2 },
+    };
+    expect(findListItemByRef(items, episode)).toBeUndefined();
+    expect(findListItemByRef({ 'episode-1396-2-12': episode }, episode)).toBe(episode);
+  });
+
+  it('keeps a show, its season and its episodes apart when normalizing', () => {
+    const normalized = normalizeListItemsMap({
+      'episode-1396-2-12': episode,
+      'episode-1396-2-13': { ...episode, episode_number: 13 },
+      'season-1396-2': { id: 1396, media_type: 'season', season_number: 2 },
+      'tv-1396': { id: 1396, media_type: 'tv', title: 'Breaking Bad' },
+    } as any);
+
+    expect(Object.keys(normalized).sort()).toEqual([
+      'episode-1396-2-12',
+      'episode-1396-2-13',
+      'season-1396-2',
+      'tv-1396',
+    ]);
+    expect(getStoredListItemKeys({ 'episode-1396-2-12': episode } as any)).toEqual({});
+  });
+
+  it('gives episodes their own membership and UI keys', () => {
+    expect(getListMembershipKey(episode)).toBe('1396-episode-2-12');
+    expect(getListMembershipKey({ id: 1396, media_type: 'episode', season_number: 2 })).toBeNull();
+    expect(getListItemUiKey(episode)).toBe('episode-1396-2-12');
+  });
+
+  it('recognizes episode keys as canonical page keys', () => {
+    expect(isEpisodeListItemKey('episode-1396-2-12')).toBe(true);
+    expect(isEpisodeListItemKey('episode-1396-2')).toBe(false);
+    expect(isCanonicalListItemKey('episode-1396-0-0')).toBe(true);
+    expect(isCanonicalListItemKey('episode-1396-2')).toBe(false);
+  });
+});
+
+describe('toListItemRef', () => {
+  it('keeps only the identifying fields of each kind of entry', () => {
+    expect(
+      toListItemRef({
+        id: 1396,
+        media_type: 'episode',
+        season_number: 2,
+        episode_number: 12,
+        title: 'Phoenix',
+      } as any)
+    ).toEqual({ id: 1396, media_type: 'episode', season_number: 2, episode_number: 12 });
+    expect(
+      toListItemRef({ id: 1396, media_type: 'season', season_number: 3, episode_number: 1 })
+    ).toEqual({ id: 1396, media_type: 'season', season_number: 3 });
+    expect(toListItemRef({ id: 7, media_type: 'movie', season_number: 1 })).toEqual({
+      id: 7,
+      media_type: 'movie',
+    });
   });
 });

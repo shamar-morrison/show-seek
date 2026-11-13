@@ -9,6 +9,11 @@ export type TraktSyncErrorCategory =
   | 'reauth_required'
   | 'storage_limit'
   | 'rate_limited'
+  /**
+   * TMDB couldn't be reached to check the numbering of Trakt episode entries. Only the list
+   * being checked waits; the rest of the sync goes on (see isRunFatalSyncError).
+   */
+  | 'tmdb_unavailable'
   | 'upstream_blocked'
   | 'upstream_unavailable';
 export type TraktOAuthFailureReason =
@@ -410,7 +415,14 @@ export interface TMDBShowDetails {
 /** A season's details from TMDB (`/tv/{id}/season/{n}`, or `season/{n}` appended to the show). */
 export interface TMDBSeasonDetails {
   air_date?: string | null;
-  episodes?: { runtime?: number | null }[];
+  episodes?: {
+    air_date?: string | null;
+    episode_number?: number;
+    name?: string;
+    runtime?: number | null;
+    still_path?: string | null;
+    vote_average?: number;
+  }[];
   name?: string;
   poster_path?: string | null;
   vote_average?: number;

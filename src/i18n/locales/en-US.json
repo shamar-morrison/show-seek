@@ -520,6 +520,9 @@
     "itemsRemoved": "{{count}} items removed",
     "itemsRemoved_one": "{{count}} item removed",
     "itemsRemoved_other": "{{count}} items removed",
+    "episodesSkipped": "{{count}} episodes weren't added to lists that can't hold episodes. Episodes can only go in Should Watch and custom lists.",
+    "episodesSkipped_one": "{{count}} episode wasn't added to lists that can't hold episodes. Episodes can only go in Should Watch and custom lists.",
+    "episodesSkipped_other": "{{count}} episodes weren't added to lists that can't hold episodes. Episodes can only go in Should Watch and custom lists.",
     "listsDeleted": "{{count}} lists deleted",
     "listsDeleted_one": "{{count}} list deleted",
     "listsDeleted_other": "{{count}} lists deleted",
@@ -828,7 +831,7 @@
     "autoAddToAlreadyWatched": "Auto-add to Already Watched",
     "autoAddToAlreadyWatchedDescription": "Automatically add movies to your Already Watched list when you rate or mark them as watched",
     "autoRemoveFromShouldWatch": "Auto-remove from Should Watch",
-    "autoRemoveFromShouldWatchDescription": "Automatically remove movies from your Should Watch list when you rate or mark them as watched",
+    "autoRemoveFromShouldWatchDescription": "Automatically remove movies from your Should Watch list when you rate or mark them as watched, and episodes when you mark them as watched",
     "quickMarkAsWatched": "Quick Mark as Watched",
     "quickMarkAsWatchedDescription": "Skip the date selection modal and use the current time when marking movies as watched",
     "showListIndicators": "Show list indicators",
@@ -1381,7 +1384,7 @@
       "checkinsTitle": "Watched history and progress",
       "checkinsDescription": "Check-ins add movie watches, mark shows watched where supported, and update episode progress when the row maps cleanly.",
       "skipsTitle": "Skipped data is reported",
-      "skipsDescription": "Unsupported people, images, videos, malformed rows, unresolved IMDb IDs, and list episodes are skipped and counted in the final summary."
+      "skipsDescription": "Unsupported people, images, videos, malformed rows and unresolved IMDb IDs are skipped and counted in the final summary. Episodes in lists are kept as episodes."
     },
     "howItWorks": {
       "selectTitle": "Pick your IMDb CSV exports",
@@ -1800,7 +1803,9 @@
       "uploadFailed": "Failed to upload the zip archive. Please verify your internet connection and try again.",
       "tryAgain": "Try Again",
       "backToSettings": "Back to Settings"
-    }
+    },
+    "tmdbRetryingSubtitle": "Couldn't reach TMDB to check the episodes in some of your lists. Everything else synced, and ShowSeek will keep trying automatically.",
+    "tmdbUnavailableMessage": "Couldn't reach TMDB to check the episodes in some of your lists. Everything else synced. Try syncing again later."
   },
   "homeCustomization": {
     "title": "Customize Home",
@@ -2075,7 +2080,10 @@
     "year": "Year"
   },
   "episodeDetail": {
-    "failedToLoad": "Failed to load episode details"
+    "failedToLoad": "Failed to load episode details",
+    "notFoundTitle": "Episode not found",
+    "notOnTmdb": "TMDB doesn't have this episode anymore. It may have been removed or renumbered.",
+    "goToShow": "Go to show"
   },
   "filters": {
     "anyRating": "Any rating",

@@ -2,10 +2,12 @@ import {
   getListItemKey,
   hasExistingListItem,
   type ListEntryMediaType,
+  type ListItemRef,
   type ListItemsMap,
 } from '@/functions/src/shared/listItemKeys';
 
 export {
+  buildEpisodeListItemKey,
   buildListItemKey,
   buildSeasonListItemKey,
   findListItemByRef,
@@ -16,6 +18,8 @@ export {
   getListItemKey,
   getListItemRefCandidateKeys,
   hasListItemByRef,
+  isEpisodeListItemKey,
+  isEpisodeListItemRef,
   isSeasonListItemKey,
   isSeasonListItemRef,
 } from '@/functions/src/shared/listItemKeys';
@@ -30,7 +34,21 @@ export interface ListItemLike {
   id: number;
   media_type: ListEntryMediaType;
   season_number?: number;
+  episode_number?: number;
 }
+
+/**
+ * The identifying fields of a list entry (or anything shaped like one), without its other
+ * fields. Seasons and episodes keep their numbers; movies and shows don't carry any.
+ */
+export const toListItemRef = (item: ListItemLike): ListItemRef => ({
+  id: item.id,
+  media_type: item.media_type,
+  ...(item.media_type === 'season' || item.media_type === 'episode'
+    ? { season_number: item.season_number }
+    : {}),
+  ...(item.media_type === 'episode' ? { episode_number: item.episode_number } : {}),
+});
 
 export const hasListItemInMap = hasExistingListItem;
 
@@ -105,15 +123,16 @@ export const normalizeListItemsMap = <T extends Partial<ListItemLike>>(
 };
 
 /**
- * A stable React key / selection key for a list entry. Two seasons of the same show share `id`
- * and must still get distinct keys, so this uses the storage key when there is one.
+ * A stable React key / selection key for a list entry. Seasons and episodes of the same show
+ * share `id` and must still get distinct keys, so this uses the storage key when there is one.
  */
 export const getListItemUiKey = (item: Partial<ListItemLike>): string =>
   getListItemKey(item) ?? `${item.media_type ?? 'unknown'}-${item.id ?? 'unknown'}`;
 
 /**
  * Membership-index key for an entry: `${id}-${media_type}` for movies and shows (unchanged),
- * `${tvId}-season-${seasonNumber}` for seasons. Null when the entry can't be keyed.
+ * `${tvId}-season-${seasonNumber}` for seasons, `${tvId}-episode-${seasonNumber}-${episodeNumber}`
+ * for episodes. Null when the entry can't be keyed.
  */
 export const getListMembershipKey = (
   item: Partial<ListItemLike> | null | undefined
@@ -124,6 +143,9 @@ export const getListMembershipKey = (
   }
   if (item.media_type === 'season' && getListItemKey(item)) {
     return `${item.id}-season-${item.season_number}`;
+  }
+  if (item.media_type === 'episode' && getListItemKey(item)) {
+    return `${item.id}-episode-${item.season_number}-${item.episode_number}`;
   }
   return null;
 };

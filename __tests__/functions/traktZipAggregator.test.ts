@@ -706,16 +706,28 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       expect(result.stats.ratings).toBe(4);
       expect(result.ratings).toHaveLength(4);
 
-      // 8 Watchlist Items:
+      // 9 Watchlist Items:
       // Movies (4): Moana 2, Star Trek Section 31, Gladiator II, The Substance
-      // Shows (3): Breaking Bad (folded from its two episode entries), Attack on Titan,
-      //   IT: Welcome to Derry
+      // Shows (2): Attack on Titan, IT: Welcome to Derry
       // Seasons (1): Breaking Bad Season 2 (kept as its own season entry)
-      expect(result.stats.watchlistItems).toBe(8);
-      expect(result.watchlist).toHaveLength(8);
+      // Episodes (2): Breaking Bad S2E12 "Phoenix" and S2E13 (kept as their own entries)
+      expect(result.stats.watchlistItems).toBe(9);
+      expect(result.watchlist).toHaveLength(9);
       expect(
         result.watchlist.find((item) => item.type === 'season')
       ).toMatchObject({ season: { number: 2 }, show: { ids: { tmdb: 1396 } } });
+      expect(
+        result.watchlist
+          .filter((item) => item.type === 'episode')
+          .map((item) => [item.show?.ids.tmdb, item.episode?.season, item.episode?.number])
+          .sort()
+      ).toEqual([
+        [1396, 2, 12],
+        [1396, 2, 13],
+      ]);
+      expect(result.watchlist.some((item) => item.type === 'show' && item.show?.ids.tmdb === 1396)).toBe(
+        false
+      );
 
       // 1 Favorite: Wake Up Dead Man (movie: 812583)
       expect(result.stats.favorites).toBe(1);
@@ -730,6 +742,11 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       // Check items in custom lists
       const traktShowsList = result.customLists.find((l) => l.list.ids.slug === 'trakt-shows');
       expect(traktShowsList?.items.length).toBeGreaterThan(0);
+      // The list's Breaking Bad episode keeps its own entry.
+      expect(traktShowsList?.items.find((item) => item.type === 'episode')).toMatchObject({
+        episode: { ids: { tmdb: 62103 }, number: 12, season: 2, title: 'Phoenix' },
+        show: { ids: { tmdb: 1396 } },
+      });
       const followMeList = result.customLists.find((l) => l.list.ids.slug === 'follow-me');
       expect(followMeList?.items.length).toBeGreaterThan(0);
 

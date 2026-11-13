@@ -35,6 +35,7 @@ const SYNC_ERROR_CATEGORIES = new Set<SyncErrorCategory>([
   'reauth_required',
   'storage_limit',
   'rate_limited',
+  'tmdb_unavailable',
   'upstream_blocked',
   'upstream_unavailable',
 ]);

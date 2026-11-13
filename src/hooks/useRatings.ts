@@ -2,7 +2,7 @@ import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useAuth } from '@/src/context/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { getSeasonMediaKey } from '@/src/utils/listFilters';
+import { getEpisodeMediaKey, getSeasonMediaKey } from '@/src/utils/listFilters';
 import { RatingItem, ratingService } from '../services/RatingService';
 
 const getRatingsQueryKey = (userId?: string) => ['ratings', userId] as const;
@@ -110,8 +110,10 @@ export const useRatings = () => {
 };
 
 /**
- * Movie and TV ratings keyed by `${mediaType}:${id}`, and season ratings keyed
- * `season:${tvShowId}:${seasonNumber}`, for filtering and sorting lists by the user's rating.
+ * Movie and TV ratings keyed by `${mediaType}:${id}`, season ratings keyed
+ * `season:${tvShowId}:${seasonNumber}` and episode ratings keyed
+ * `episode:${tvShowId}:${seasonNumber}:${episodeNumber}`, for filtering and sorting lists by the
+ * user's rating.
  *
  * Shares the `useRatings` cache (in memory and persisted on device) but never refreshes it:
  * a cached copy costs no reads, and only a device with no cached ratings loads them once.
@@ -142,6 +144,16 @@ export const useUserRatingMap = (enabled: boolean) => {
         typeof rating.seasonNumber === 'number'
       ) {
         map.set(getSeasonMediaKey(rating.tvShowId, rating.seasonNumber), rating.rating);
+      } else if (
+        rating.mediaType === 'episode' &&
+        typeof rating.tvShowId === 'number' &&
+        typeof rating.seasonNumber === 'number' &&
+        typeof rating.episodeNumber === 'number'
+      ) {
+        map.set(
+          getEpisodeMediaKey(rating.tvShowId, rating.seasonNumber, rating.episodeNumber),
+          rating.rating
+        );
       }
     });
     return map;
@@ -222,7 +234,10 @@ export const useRateMedia = () => {
       queryClient.setQueryData<RatingItem | null>(detailKey, optimisticRating);
 
       if (previousRatings) {
-        queryClient.setQueryData<RatingItem[]>(listKey, upsertRatingInList(previousRatings, optimisticRating));
+        queryClient.setQueryData<RatingItem[]>(
+          listKey,
+          upsertRatingInList(previousRatings, optimisticRating)
+        );
       }
 
       return {
@@ -252,7 +267,10 @@ export const useRateMedia = () => {
 
       const cachedRatings = queryClient.getQueryData<RatingItem[]>(listKey);
       if (cachedRatings) {
-        queryClient.setQueryData<RatingItem[]>(listKey, upsertRatingInList(cachedRatings, savedRating));
+        queryClient.setQueryData<RatingItem[]>(
+          listKey,
+          upsertRatingInList(cachedRatings, savedRating)
+        );
       }
     },
   });
@@ -286,7 +304,10 @@ export const useDeleteRating = () => {
       queryClient.setQueryData<RatingItem | null>(detailKey, null);
 
       if (previousRatings) {
-        queryClient.setQueryData<RatingItem[]>(listKey, removeRatingFromList(previousRatings, ratingId));
+        queryClient.setQueryData<RatingItem[]>(
+          listKey,
+          removeRatingFromList(previousRatings, ratingId)
+        );
       }
 
       return {
@@ -317,7 +338,10 @@ export const useDeleteRating = () => {
 
       const cachedRatings = queryClient.getQueryData<RatingItem[]>(listKey);
       if (cachedRatings) {
-        queryClient.setQueryData<RatingItem[]>(listKey, removeRatingFromList(cachedRatings, ratingId));
+        queryClient.setQueryData<RatingItem[]>(
+          listKey,
+          removeRatingFromList(cachedRatings, ratingId)
+        );
       }
     },
   });
@@ -332,7 +356,8 @@ export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episode
       ? getEpisodeRatingQueryKey(userId, tvShowId, seasonNumber, episodeNumber)
       : ['rating', userId, 'episode'],
     queryFn: () => ratingService.getEpisodeRating(tvShowId, seasonNumber, episodeNumber),
-    enabled: !!userId && !!tvShowId && Number.isFinite(seasonNumber) && Number.isFinite(episodeNumber),
+    enabled:
+      !!userId && !!tvShowId && Number.isFinite(seasonNumber) && Number.isFinite(episodeNumber),
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -429,7 +454,10 @@ export const useRateEpisode = () => {
       queryClient.setQueryData<RatingItem | null>(detailKey, optimisticRating);
 
       if (previousRatings) {
-        queryClient.setQueryData<RatingItem[]>(listKey, upsertRatingInList(previousRatings, optimisticRating));
+        queryClient.setQueryData<RatingItem[]>(
+          listKey,
+          upsertRatingInList(previousRatings, optimisticRating)
+        );
       }
 
       return {
@@ -469,7 +497,10 @@ export const useRateEpisode = () => {
 
       const cachedRatings = queryClient.getQueryData<RatingItem[]>(listKey);
       if (cachedRatings) {
-        queryClient.setQueryData<RatingItem[]>(listKey, upsertRatingInList(cachedRatings, savedRating));
+        queryClient.setQueryData<RatingItem[]>(
+          listKey,
+          upsertRatingInList(cachedRatings, savedRating)
+        );
       }
     },
   });
@@ -515,7 +546,10 @@ export const useDeleteEpisodeRating = () => {
       queryClient.setQueryData<RatingItem | null>(detailKey, null);
 
       if (previousRatings) {
-        queryClient.setQueryData<RatingItem[]>(listKey, removeRatingFromList(previousRatings, ratingId));
+        queryClient.setQueryData<RatingItem[]>(
+          listKey,
+          removeRatingFromList(previousRatings, ratingId)
+        );
       }
 
       return {
@@ -556,7 +590,10 @@ export const useDeleteEpisodeRating = () => {
 
       const cachedRatings = queryClient.getQueryData<RatingItem[]>(listKey);
       if (cachedRatings) {
-        queryClient.setQueryData<RatingItem[]>(listKey, removeRatingFromList(cachedRatings, ratingId));
+        queryClient.setQueryData<RatingItem[]>(
+          listKey,
+          removeRatingFromList(cachedRatings, ratingId)
+        );
       }
     },
   });
@@ -589,11 +626,7 @@ export const useRateSeason = () => {
         throw new Error('Please sign in to continue');
       }
 
-      const detailKey = getSeasonRatingQueryKey(
-        userId,
-        variables.tvShowId,
-        variables.seasonNumber
-      );
+      const detailKey = getSeasonRatingQueryKey(userId, variables.tvShowId, variables.seasonNumber);
       const listKey = getRatingsQueryKey(userId);
 
       await Promise.all([
@@ -628,11 +661,7 @@ export const useRateSeason = () => {
     onError: (_error, variables, context) => {
       if (!userId) return;
 
-      const detailKey = getSeasonRatingQueryKey(
-        userId,
-        variables.tvShowId,
-        variables.seasonNumber
-      );
+      const detailKey = getSeasonRatingQueryKey(userId, variables.tvShowId, variables.seasonNumber);
       const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
@@ -644,11 +673,7 @@ export const useRateSeason = () => {
     onSuccess: (savedRating, variables) => {
       if (!userId) return;
 
-      const detailKey = getSeasonRatingQueryKey(
-        userId,
-        variables.tvShowId,
-        variables.seasonNumber
-      );
+      const detailKey = getSeasonRatingQueryKey(userId, variables.tvShowId, variables.seasonNumber);
       const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData<RatingItem | null>(detailKey, savedRating);
@@ -670,23 +695,14 @@ export const useDeleteSeasonRating = () => {
   const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
-    mutationFn: ({
-      tvShowId,
-      seasonNumber,
-    }: {
-      tvShowId: number;
-      seasonNumber: number;
-    }) => ratingService.deleteSeasonRating(tvShowId, seasonNumber),
+    mutationFn: ({ tvShowId, seasonNumber }: { tvShowId: number; seasonNumber: number }) =>
+      ratingService.deleteSeasonRating(tvShowId, seasonNumber),
     onMutate: async (variables) => {
       if (!userId) {
         throw new Error('Please sign in to continue');
       }
 
-      const detailKey = getSeasonRatingQueryKey(
-        userId,
-        variables.tvShowId,
-        variables.seasonNumber
-      );
+      const detailKey = getSeasonRatingQueryKey(userId, variables.tvShowId, variables.seasonNumber);
       const listKey = getRatingsQueryKey(userId);
       const ratingId = `season-${variables.tvShowId}-${variables.seasonNumber}`;
 
@@ -715,11 +731,7 @@ export const useDeleteSeasonRating = () => {
     onError: (_error, variables, context) => {
       if (!userId) return;
 
-      const detailKey = getSeasonRatingQueryKey(
-        userId,
-        variables.tvShowId,
-        variables.seasonNumber
-      );
+      const detailKey = getSeasonRatingQueryKey(userId, variables.tvShowId, variables.seasonNumber);
       const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
@@ -731,11 +743,7 @@ export const useDeleteSeasonRating = () => {
     onSuccess: (_data, variables) => {
       if (!userId) return;
 
-      const detailKey = getSeasonRatingQueryKey(
-        userId,
-        variables.tvShowId,
-        variables.seasonNumber
-      );
+      const detailKey = getSeasonRatingQueryKey(userId, variables.tvShowId, variables.seasonNumber);
       const listKey = getRatingsQueryKey(userId);
       const ratingId = `season-${variables.tvShowId}-${variables.seasonNumber}`;
 

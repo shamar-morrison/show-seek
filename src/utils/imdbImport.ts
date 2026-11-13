@@ -380,11 +380,8 @@ function parseImdbImportFile(
           return;
         }
 
-        if (isEpisodeTitleType(rawTitleType)) {
-          Object.assign(stats, incrementSkippedStat(stats, 'unsupported_list_episode'));
-          return;
-        }
-
+        // Episode rows are sent too: they become episode entries (Should Watch for the
+        // watchlist, the matching custom list otherwise).
         const addedAt =
           parseImdbDateToMs(normalizedRow[NORMALIZED_HEADER_KEYS.created]) ??
           parseImdbDateToMs(normalizedRow[NORMALIZED_HEADER_KEYS.modified]) ??
@@ -466,13 +463,6 @@ function isClearlyUnsupportedNonTitleType(rawTitleType: string | null): boolean 
   return (
     normalized.includes('person') || normalized.includes('image') || normalized.includes('video')
   );
-}
-
-function isEpisodeTitleType(rawTitleType: string | null): boolean {
-  return String(rawTitleType ?? '')
-    .trim()
-    .toLowerCase()
-    .includes('episode');
 }
 
 function buildValidatedUtcTimestamp({

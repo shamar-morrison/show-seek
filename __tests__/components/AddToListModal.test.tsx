@@ -21,12 +21,10 @@ const mockAddMutateAsync = jest.fn();
 const mockRemoveMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
 const mockInvalidateQueries = jest.fn(async () => {});
-let latestCreateListModalProps:
-  | {
-      onSuccess?: (listId: string, listName: string) => void;
-      onCancel?: () => void;
-    }
-  | null = null;
+let latestCreateListModalProps: {
+  onSuccess?: (listId: string, listName: string) => void;
+  onCancel?: () => void;
+} | null = null;
 
 const mockQueryClient = {
   invalidateQueries: mockInvalidateQueries,
@@ -58,8 +56,10 @@ jest.mock('@/src/context/TraktContext', () => ({
 
 jest.mock('react-native', () => {
   const React = require('react');
-  const createComponent = (name: string) => ({ children, ...props }: any) =>
-    React.createElement(name, props, children);
+  const createComponent =
+    (name: string) =>
+    ({ children, ...props }: any) =>
+      React.createElement(name, props, children);
 
   const Pressable = ({ children, disabled, onPress, onLongPress, ...props }: any) =>
     React.createElement(
@@ -531,8 +531,7 @@ describe('AddToListModal (bulk mode)', () => {
     await waitFor(() => {
       expect(mockRemoveMutateAsync).toHaveBeenCalledWith({
         listId: 'favorites',
-        mediaId: selected.id,
-        mediaType: 'movie',
+        item: { id: selected.id, media_type: 'movie' },
       });
     });
 
@@ -545,6 +544,159 @@ describe('AddToListModal (bulk mode)', () => {
         queryKey: ['list-membership-index', 'test-user-id'],
         refetchType: 'active',
       });
+    });
+  });
+
+  describe('episode entries', () => {
+    const episode: Omit<ListMediaItem, 'addedAt'> = {
+      id: 1396,
+      title: 'Breaking Bad · S2E12 · Phoenix',
+      poster_path: '/season2.jpg',
+      media_type: 'episode',
+      season_number: 2,
+      episode_number: 12,
+      vote_average: 8.9,
+      release_date: '2009-05-24',
+    };
+    const defaultLists = () =>
+      ['watchlist', 'currently-watching', 'already-watched', 'favorites', 'dropped'].map(
+        (id, index) => ({ id, name: id, items: {}, createdAt: index })
+      );
+
+    it('offers an episode only Should Watch and custom lists', async () => {
+      mockListsState.data = [
+        ...defaultLists(),
+        { id: 'my-list', name: 'My List', items: {}, createdAt: 9, isCustom: true },
+      ];
+
+      const ref = createRef<AddToListModalRef>();
+      const { queryByTestId, getByTestId } = render(
+        <AddToListModal ref={ref} mediaItem={episode} />
+      );
+      await act(async () => {
+        await ref.current?.present();
+      });
+
+      expect(getByTestId('add-to-list-row-watchlist')).toBeTruthy();
+      expect(getByTestId('add-to-list-row-my-list')).toBeTruthy();
+      ['currently-watching', 'already-watched', 'favorites', 'dropped'].forEach((listId) => {
+        expect(queryByTestId(`add-to-list-row-${listId}`)).toBeNull();
+      });
+    });
+
+    it('still offers a list that already holds the episode, so it can be taken out', async () => {
+      mockListsState.data = defaultLists().map((list) =>
+        list.id === 'favorites'
+          ? { ...list, items: { 'episode-1396-2-12': createStoredItem(episode) } }
+          : list
+      );
+
+      const ref = createRef<AddToListModalRef>();
+      const { getByTestId } = render(<AddToListModal ref={ref} mediaItem={episode} />);
+      await act(async () => {
+        await ref.current?.present();
+      });
+
+      expect(getByTestId('add-to-list-row-favorites')).toBeTruthy();
+    });
+
+    it('keeps an episode in its source list when no chosen list can take it', async () => {
+      const onShowToast = jest.fn();
+      const movie = createMediaItem(7);
+      mockListsState.data = [
+        {
+          id: 'my-list',
+          name: 'My List',
+          items: {
+            'episode-1396-2-12': createStoredItem(episode),
+            'movie-7': createStoredItem(movie),
+          },
+          createdAt: 1,
+        },
+        ...defaultLists(),
+      ];
+
+      const ref = createRef<AddToListModalRef>();
+      const { getByTestId } = render(
+        <AddToListModal
+          ref={ref}
+          mediaItems={[episode, movie]}
+          sourceListId="my-list"
+          bulkAddMode="move"
+          onShowToast={onShowToast}
+        />
+      );
+      await act(async () => {
+        await ref.current?.present();
+      });
+
+      fireEvent.press(getByTestId('add-to-list-row-already-watched'));
+      await act(async () => {
+        fireEvent.press(getByTestId('add-to-list-save-button'));
+      });
+
+      await waitFor(() => {
+        expect(onShowToast).toHaveBeenCalledWith(
+          "1 episode wasn't added to lists that can't hold episodes. Episodes can only go in Should Watch and custom lists."
+        );
+      });
+      expect(mockAddMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockAddMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ listId: 'already-watched', mediaItem: movie })
+      );
+      expect(mockRemoveMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockRemoveMutateAsync).toHaveBeenCalledWith({
+        listId: 'my-list',
+        item: { id: 7, media_type: 'movie' },
+      });
+    });
+
+    it('moves an episode to the lists that can take it and says it skipped the others', async () => {
+      const onShowToast = jest.fn();
+      mockListsState.data = [
+        {
+          id: 'my-list',
+          name: 'My List',
+          items: { 'episode-1396-2-12': createStoredItem(episode) },
+          createdAt: 1,
+        },
+        ...defaultLists(),
+      ];
+
+      const ref = createRef<AddToListModalRef>();
+      const { getByTestId } = render(
+        <AddToListModal
+          ref={ref}
+          mediaItems={[episode]}
+          sourceListId="my-list"
+          bulkAddMode="move"
+          onShowToast={onShowToast}
+        />
+      );
+      await act(async () => {
+        await ref.current?.present();
+      });
+
+      fireEvent.press(getByTestId('add-to-list-row-watchlist'));
+      fireEvent.press(getByTestId('add-to-list-row-favorites'));
+      await act(async () => {
+        fireEvent.press(getByTestId('add-to-list-save-button'));
+      });
+
+      await waitFor(() => {
+        expect(mockRemoveMutateAsync).toHaveBeenCalledWith({
+          listId: 'my-list',
+          item: { id: 1396, media_type: 'episode', season_number: 2, episode_number: 12 },
+        });
+      });
+      expect(mockAddMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockAddMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ listId: 'watchlist' })
+      );
+      // Favorites can't take episodes, so that part of the move is reported.
+      expect(onShowToast).toHaveBeenCalledWith(
+        "1 episode wasn't added to lists that can't hold episodes. Episodes can only go in Should Watch and custom lists."
+      );
     });
   });
 

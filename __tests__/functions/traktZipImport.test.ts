@@ -909,6 +909,27 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       expect(fileDeleteCalls).toContain(storagePath);
     });
 
+    it('lets the user retry right away after a temporary TMDB failure', async () => {
+      const { TraktSyncError } = require('@/functions/src/trakt/types');
+      storageFiles.set(storagePath, { content: Buffer.from(''), exists: true });
+      mockFileDownloadOverride = jest
+        .fn()
+        .mockRejectedValueOnce(
+          new TraktSyncError('TMDB is temporarily unavailable.', 'upstream_unavailable', true)
+        );
+
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      const userDoc = store.get(`users/${userId}`) as any;
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        errorCategory: 'pre_flight',
+        status: 'failed',
+      });
+      expect('nextAllowedImportAt' in (userDoc?.traktZipImportStatus ?? {})).toBe(false);
+    });
+
     it('writes failed status with a usable error message when zip parsing throws, and cleans up storage', async () => {
       // Corrupted zip buffer (not a valid zip file)
       const corruptedBuffer = Buffer.from('this is not a zip file archive');

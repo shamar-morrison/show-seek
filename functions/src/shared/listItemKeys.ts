@@ -4,15 +4,21 @@ export type ListItemMediaType = 'movie' | 'tv';
 /**
  * Every kind of entry a list can hold. A season is stored with its show's TMDB ID as `id` plus
  * its `season_number`, and keyed `season-{tvId}-{seasonNumber}` (the same shape season ratings
- * use). It never has a legacy numeric key.
+ * use). An episode is stored the same way plus its `episode_number`, and keyed
+ * `episode-{tvId}-{seasonNumber}-{episodeNumber}` (the shape episode ratings use). Neither ever
+ * has a legacy numeric key.
  */
-export type ListEntryMediaType = ListItemMediaType | 'season';
+export type ListEntryMediaType = ListItemMediaType | 'season' | 'episode';
 
-/** The fields that identify a list entry. `season_number` is required when it's a season. */
+/**
+ * The fields that identify a list entry. `season_number` is required for a season and an
+ * episode; `episode_number` for an episode.
+ */
 export interface ListItemRef {
   id: number;
   media_type: ListEntryMediaType;
   season_number?: number;
+  episode_number?: number;
 }
 
 export type ListItemsMap<T> = Record<string, T>;
@@ -26,6 +32,17 @@ export const buildSeasonListItemKey = (tvId: number, seasonNumber: number): stri
 export const SEASON_LIST_ITEM_KEY_PATTERN = /^season-(\d+)-(\d+)$/;
 
 export const isSeasonListItemKey = (key: string): boolean => SEASON_LIST_ITEM_KEY_PATTERN.test(key);
+
+export const buildEpisodeListItemKey = (
+  tvId: number,
+  seasonNumber: number,
+  episodeNumber: number
+): string => `episode-${tvId}-${seasonNumber}-${episodeNumber}`;
+
+export const EPISODE_LIST_ITEM_KEY_PATTERN = /^episode-(\d+)-(\d+)-(\d+)$/;
+
+export const isEpisodeListItemKey = (key: string): boolean =>
+  EPISODE_LIST_ITEM_KEY_PATTERN.test(key);
 
 export const getLegacyListItemKey = (mediaId: number): string => String(mediaId);
 
@@ -48,8 +65,26 @@ export const isSeasonListItemRef = (
   isWholeNumber(ref.season_number);
 
 /**
+ * True for an episode entry with a usable show ID, season number and episode number (season 0
+ * and episode 0 included).
+ */
+export const isEpisodeListItemRef = (
+  ref: Partial<ListItemRef> | null | undefined
+): ref is ListItemRef & {
+  media_type: 'episode';
+  season_number: number;
+  episode_number: number;
+} =>
+  !!ref &&
+  ref.media_type === 'episode' &&
+  isWholeNumber(ref.id) &&
+  ref.id > 0 &&
+  isWholeNumber(ref.season_number) &&
+  isWholeNumber(ref.episode_number);
+
+/**
  * The canonical key an entry is stored under, or null when the entry can't be keyed (an
- * unknown media type, or a season without a valid season number).
+ * unknown media type, or a season or episode without valid numbers).
  */
 export const getListItemKey = (ref: Partial<ListItemRef> | null | undefined): string | null => {
   if (!ref || typeof ref.id !== 'number' || !Number.isInteger(ref.id)) {
@@ -61,13 +96,16 @@ export const getListItemKey = (ref: Partial<ListItemRef> | null | undefined): st
   if (isSeasonListItemRef(ref)) {
     return buildSeasonListItemKey(ref.id, ref.season_number);
   }
+  if (isEpisodeListItemRef(ref)) {
+    return buildEpisodeListItemKey(ref.id, ref.season_number, ref.episode_number);
+  }
   return null;
 };
 
 /**
  * Every key an entry may be stored under. Movies and shows may still sit under a legacy numeric
- * key; seasons never do, so a season must never touch the numeric key (that would hit the show,
- * or a movie with the same number).
+ * key; seasons and episodes never do, so they must never touch the numeric key (that would hit
+ * the show, or a movie with the same number).
  */
 export const getListItemRefCandidateKeys = (
   ref: Partial<ListItemRef> | null | undefined

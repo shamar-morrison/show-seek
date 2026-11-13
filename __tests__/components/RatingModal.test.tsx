@@ -101,7 +101,7 @@ describe('RatingModal', () => {
 
     await waitFor(() => {
       expect(mockRateMediaMutateAsync).toHaveBeenCalled();
-      expect(removeFromListSpy).toHaveBeenCalledWith('watchlist', 123, 'movie');
+      expect(removeFromListSpy).toHaveBeenCalledWith('watchlist', { id: 123, media_type: 'movie' });
     });
 
     await waitFor(() => {

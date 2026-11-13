@@ -46,6 +46,13 @@ import {
   TRAKT_TOKEN_REFRESH_THRESHOLD_MS,
 } from './constants';
 import { buildTaskDispatchOptions } from './enrichment';
+import {
+  createEpisodeNumberSession,
+  isTmdbUnavailableError,
+  prepareTraktEpisodeEntries,
+  type EpisodeNumberSession,
+} from './episodeNumbers';
+import { canHaveEpisodeListEntries } from '../episodeListRollout';
 import { emptyItemsSynced, getSyncSummaryMode } from './status';
 import {
   didActivityFieldChange,
@@ -71,6 +78,7 @@ import type {
   TraktIncrementalState,
   TraktLastActivities,
   TraktList,
+  TraktListItem,
   TraktRating,
   TraktTaskDispatchOptions,
   TraktUserDoc,
@@ -584,9 +592,14 @@ export const reconcileRatings = async (
 
 export const syncWatchlist = async (
   userId: string,
-  traktWatchlist: TraktWatchlistItem[]
+  traktWatchlist: TraktWatchlistItem[],
+  /** The run's shared TMDB lookups for episode numbering. */
+  episodeNumbers?: EpisodeNumberSession
 ): Promise<{ changedCount: number; itemCount: number; shouldEnrich: boolean }> => {
-  const remoteItems = buildWatchlistItemsMap(traktWatchlist);
+  // Episode entries take TMDB's numbering before they are keyed.
+  const remoteItems = buildWatchlistItemsMap(
+    await prepareTraktEpisodeEntries(userId, traktWatchlist, episodeNumbers)
+  );
   const result = await reconcileManagedList(
     userId,
     'watchlist',
@@ -643,11 +656,18 @@ export const reconcileCustomLists = async (
   username: string,
   traktLists: TraktList[],
   previousCustomLists: Record<string, TraktIncrementalCustomListState>,
-  bootstrap: boolean
+  bootstrap: boolean,
+  /** The run's shared TMDB lookups for episode numbering. */
+  episodeNumbers?: EpisodeNumberSession
 ): Promise<{
   changedCount: number;
   customLists: Record<string, TraktIncrementalCustomListState>;
   listsToEnrich: string[];
+  /**
+   * Set when TMDB couldn't be reached to check a list's episodes: those lists were left as they
+   * were and the others synced. The caller fails the run so it is retried.
+   */
+  lookupFailure?: TraktSyncError;
 }> => {
   const listsCollection = admin.firestore().collection('users').doc(userId).collection('lists');
   const localListsSnapshot = await listsCollection.get();
@@ -665,6 +685,7 @@ export const reconcileCustomLists = async (
   ) as Record<string, TraktIncrementalCustomListState>;
   const listsToEnrich: string[] = [];
   let changedCount = 0;
+  let lookupFailure: TraktSyncError | undefined;
 
   for (const traktList of traktLists) {
     const traktId = String(traktList.ids.trakt);
@@ -682,10 +703,24 @@ export const reconcileCustomLists = async (
     }
 
     const listItems = await getListItems(accessToken, username, traktList.ids.slug);
+    let preparedItems: TraktListItem[];
+    try {
+      preparedItems = await prepareTraktEpisodeEntries(userId, listItems, episodeNumbers);
+    } catch (error) {
+      if (!isTmdbUnavailableError(error)) {
+        throw error;
+      }
+      // TMDB couldn't check this list's episodes: leave the list as it is (never fold or drop
+      // confirmed episodes) and sync the others. Its saved state stays as it was, so the retry
+      // reads it again; it must stay listed, or the cleanup below would delete the list.
+      lookupFailure ??= error;
+      nextCustomLists[traktId] = previousState ?? { slug: traktList.ids.slug, updatedAt: '' };
+      continue;
+    }
     const result = await reconcileManagedList(
       userId,
       listId,
-      buildCustomListItemsMap(listItems),
+      buildCustomListItemsMap(preparedItems),
       {
         createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
         description: traktList.description || '',
@@ -724,6 +759,7 @@ export const reconcileCustomLists = async (
     changedCount,
     customLists: nextCustomLists,
     listsToEnrich: normalizeChangedListIds(listsToEnrich),
+    ...(lookupFailure ? { lookupFailure } : {}),
   };
 };
 
@@ -736,7 +772,12 @@ export const isRunFatalSyncError = (error: unknown): boolean => {
     return true;
   }
   if (error instanceof TraktSyncError) {
-    return error.category !== 'internal' && error.category !== 'storage_limit';
+    // A TMDB lookup only stops the list it was checking (see reconcileCustomLists).
+    return (
+      error.category !== 'internal' &&
+      error.category !== 'storage_limit' &&
+      error.category !== 'tmdb_unavailable'
+    );
   }
   return false;
 };
@@ -752,13 +793,16 @@ export const getSyncSteps = ({
   lastActivities,
   listsSchemaVersion,
   previousActivities,
+  targetListsSchemaVersion = TRAKT_LISTS_SCHEMA_VERSION,
 }: {
   bootstrap: boolean;
   lastActivities: TraktLastActivities;
   listsSchemaVersion: number | undefined;
+  /** The version this user's lists should be read at (see getTraktListsSchemaVersion). */
+  targetListsSchemaVersion?: number;
   previousActivities: TraktLastActivities | undefined;
 }) => {
-  const forceListResync = listsSchemaVersion !== TRAKT_LISTS_SCHEMA_VERSION;
+  const forceListResync = listsSchemaVersion !== targetListsSchemaVersion;
   return {
     forceListResync,
     shouldSyncCustomLists:
@@ -783,6 +827,14 @@ export const getSyncSteps = ({
   };
 };
 
+/**
+ * The lists schema version a user's lists are read at: the current one for users who can have
+ * episode list entries, 1 (seasons only) for everyone else, so they still get the one-time
+ * re-read once episodes roll out to them (see episodeListRollout).
+ */
+export const getTraktListsSchemaVersion = (userId: string): number =>
+  canHaveEpisodeListEntries(userId) ? TRAKT_LISTS_SCHEMA_VERSION : 1;
+
 export const syncTraktImport = async (
   userId: string,
   accessToken: string,
@@ -797,6 +849,7 @@ export const syncTraktImport = async (
   const summaryMode = getSyncSummaryMode(currentIncrementalState);
   const lastActivities = await getLastActivities(accessToken);
   const bootstrap = summaryMode === 'bootstrap';
+  const targetListsSchemaVersion = getTraktListsSchemaVersion(userId);
   const {
     forceListResync,
     shouldSyncCustomLists,
@@ -809,9 +862,12 @@ export const syncTraktImport = async (
     lastActivities,
     listsSchemaVersion: currentIncrementalState?.listsSchemaVersion,
     previousActivities: currentIncrementalState?.lastActivities,
+    targetListsSchemaVersion,
   });
   const listsToEnrich: string[] = [];
   let customListsState = currentIncrementalState?.customLists ?? {};
+  // One TMDB lookup budget and season cache for the watchlist and every list in this run.
+  const episodeNumbers = createEpisodeNumberSession();
   // A step that fails for a ShowSeek-side reason (e.g. a Firestore write) must not stop the
   // others from syncing. Trakt-side failures stop the run: every later step would hit them too.
   const stepFailures: unknown[] = [];
@@ -904,7 +960,7 @@ export const syncTraktImport = async (
   if (shouldSyncWatchlist) {
     try {
       const watchlist = await getWatchlist(accessToken);
-      const result = await syncWatchlist(userId, watchlist);
+      const result = await syncWatchlist(userId, watchlist, episodeNumbers);
       itemsSynced.watchlistItems =
         summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
       if (result.shouldEnrich) {
@@ -946,7 +1002,8 @@ export const syncTraktImport = async (
         userProfile.username,
         traktLists,
         currentIncrementalState?.customLists ?? {},
-        bootstrap || forceListResync
+        bootstrap || forceListResync,
+        episodeNumbers
       );
 
       itemsSynced.lists =
@@ -955,6 +1012,10 @@ export const syncTraktImport = async (
           : customListsResult.changedCount;
       customListsState = customListsResult.customLists;
       listsToEnrich.push(...customListsResult.listsToEnrich);
+      if (customListsResult.lookupFailure) {
+        // The other lists synced; the run fails at the end so the skipped ones are retried.
+        recordStepFailure(customListsResult.lookupFailure);
+      }
     } catch (error) {
       console.error('[TraktSync] Error during custom lists sync step (/users/{username}/lists):', {
         error,
@@ -977,7 +1038,7 @@ export const syncTraktImport = async (
       bootstrapCompletedAt: currentIncrementalState?.bootstrapCompletedAt ?? Timestamp.now(),
       customLists: customListsState,
       lastActivities,
-      listsSchemaVersion: TRAKT_LISTS_SCHEMA_VERSION,
+      listsSchemaVersion: targetListsSchemaVersion,
       schemaVersion: TRAKT_INCREMENTAL_SCHEMA_VERSION,
       updatedAt: Timestamp.now(),
     },

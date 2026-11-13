@@ -2,6 +2,7 @@ import { DEFAULT_MULTI_SELECT_ACTION_BAR_HEIGHT } from '@/src/components/library
 import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
+import { toListItemRef, type ListItemRef } from '@/src/utils/listItemKeys';
 import { maybeWarnTraktManagedListEdit } from '@/src/utils/traktManagedEdits';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,17 +11,15 @@ import { Alert } from 'react-native';
 interface UseListDetailMultiSelectActionsParams {
   sourceListId?: string;
   sourceListName: string;
-  selectedMediaItems: Array<Pick<ListMediaItem, 'id' | 'media_type' | 'season_number'>>;
+  selectedMediaItems: Array<
+    Pick<ListMediaItem, 'id' | 'media_type' | 'season_number' | 'episode_number'>
+  >;
   selectedCount: number;
   isSelectionMode: boolean;
   isRemoving: boolean;
   clearSelection: () => void;
   showToast: (message: string) => void;
-  removeItemFromSource: (
-    mediaId: number,
-    mediaType: ListMediaItem['media_type'],
-    seasonNumber?: number
-  ) => Promise<unknown>;
+  removeItemFromSource: (item: ListItemRef) => Promise<unknown>;
   isSearchActive: boolean;
   deactivateSearch: () => void;
   dismissListActionsModal: () => void;
@@ -110,7 +109,7 @@ export function useListDetailMultiSelectActions({
             try {
               for (const item of selectedMediaItems) {
                 try {
-                  await removeItemFromSource(item.id, item.media_type, item.season_number);
+                  await removeItemFromSource(toListItemRef(item));
                 } catch {
                   failed += 1;
                 } finally {

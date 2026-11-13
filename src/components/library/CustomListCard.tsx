@@ -43,7 +43,7 @@ export const CustomListCard = memo<CustomListCardProps>(
     const { itemCount, previewItems } = useMemo(() => {
       const items = list.items || {};
       const nextPreviewItems: Array<{
-        mediaType: 'movie' | 'tv' | 'season';
+        mediaType: 'movie' | 'tv' | 'season' | 'episode';
         seasonNumber?: number;
         mediaId: number;
         posterPath: string | null;

@@ -29,6 +29,7 @@ import type {
   TraktZipImportErrorCategory,
   TraktZipImportTaskPayload,
 } from './types';
+import { TraktSyncError } from './types';
 import { TraktZipCorruptArchiveError, TraktZipSizeLimitError, parseTraktZipBuffer } from './zipParser';
 import { syncTraktZipImport } from './zipSync';
 
@@ -710,8 +711,12 @@ export const runTraktZipImportHandler = async (
         ? error.message
         : 'An error occurred while importing your Trakt archive.';
 
+    // A file problem, or a temporary TMDB failure while checking episode numbers (nothing the
+    // user did), doesn't start the import cooldown: the user can try again right away.
     const errorCategory: TraktZipImportErrorCategory =
-      error instanceof TraktZipSizeLimitError || error instanceof TraktZipCorruptArchiveError
+      error instanceof TraktZipSizeLimitError ||
+      error instanceof TraktZipCorruptArchiveError ||
+      (error instanceof TraktSyncError && error.retryable)
         ? 'pre_flight'
         : 'in_flight';
 

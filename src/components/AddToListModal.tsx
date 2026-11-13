@@ -1,9 +1,9 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
-import { hasListItemByRef } from '@/src/utils/listItemKeys';
+import { hasListItemByRef, toListItemRef } from '@/src/utils/listItemKeys';
 import { maybeWarnTraktManagedListEdit } from '@/src/utils/traktManagedEdits';
-import { isDefaultList } from '@/src/constants/lists';
+import { canListHoldEntry, isDefaultList } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
@@ -247,13 +247,22 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       if (!lists) return [];
 
       const filteredLists =
-        isBulkMode && sourceListId ? lists.filter((list) => list.id !== sourceListId) : lists;
+        isBulkMode && sourceListId
+          ? lists.filter((list) => list.id !== sourceListId)
+          : mediaItem
+            ? // Only lists that can take this entry (episodes: Should Watch and custom lists),
+              // plus any list already holding it, so it can still be taken out of that one.
+              lists.filter(
+                (list) =>
+                  canListHoldEntry(list.id, mediaItem.media_type) || singleMembership[list.id]
+              )
+            : lists;
 
       return filteredLists.map((list) => ({
         ...list,
         itemCount: list.items ? Object.keys(list.items).length : 0,
       }));
-    }, [isBulkMode, lists, sourceListId]);
+    }, [isBulkMode, lists, mediaItem, singleMembership, sourceListId]);
 
     const filteredListsWithCounts = useMemo<ListWithCount[]>(() => {
       const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -403,9 +412,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           try {
             await removeMutation.mutateAsync({
               listId: list.id,
-              mediaId: mediaItem.id,
-              mediaType: mediaItem.media_type,
-              seasonNumber: mediaItem.season_number,
+              item: toListItemRef(mediaItem),
             });
           } catch (error) {
             failedOperations++;
@@ -476,12 +483,23 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
       let totalOperations = 0;
       let failedOperations = 0;
+      let skippedEpisodes = 0;
       let firstError: Error | null = null;
 
       for (const selectedMedia of bulkMediaItems) {
         let itemHadAddFailure = false;
+        // Whether the item is now in at least one target list. An item no target can take
+        // (an episode moved only to lists like Already Watched) stays in its source list.
+        let isInSomeTarget = false;
+        // Whether a chosen list couldn't take the item (an episode and Already Watched).
+        let wasSkippedForSomeTarget = false;
 
         for (const targetList of targetLists) {
+          if (!canListHoldEntry(targetList.id, selectedMedia.media_type)) {
+            wasSkippedForSomeTarget = true;
+            continue;
+          }
+          isInSomeTarget = true;
           const alreadyInTargetList = hasListItemByRef(targetList.items, selectedMedia);
           if (alreadyInTargetList) continue;
 
@@ -502,6 +520,14 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           }
         }
 
+        if (wasSkippedForSomeTarget) {
+          skippedEpisodes += 1;
+        }
+
+        if (!isInSomeTarget) {
+          continue;
+        }
+
         if (itemHadAddFailure) {
           continue;
         }
@@ -515,9 +541,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         try {
           await removeMutation.mutateAsync({
             listId: sourceListId,
-            mediaId: selectedMedia.id,
-            mediaType: selectedMedia.media_type,
-            seasonNumber: selectedMedia.season_number,
+            item: toListItemRef(selectedMedia),
           });
         } catch (error) {
           failedOperations++;
@@ -531,7 +555,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
       if (failedOperations === 0) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onShowToast?.(t('library.listsUpdated'));
+        onShowToast?.(
+          skippedEpisodes > 0
+            ? t('library.episodesSkipped', { count: skippedEpisodes })
+            : t('library.listsUpdated')
+        );
         didCompleteRef.current = true;
         await sheetRef.current?.dismiss();
         return;

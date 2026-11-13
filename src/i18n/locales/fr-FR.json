@@ -458,6 +458,9 @@
     "itemsRemoved": "{{count}} éléments retirés",
     "itemsRemoved_one": "{{count}} élément retiré",
     "itemsRemoved_other": "{{count}} éléments retirés",
+    "episodesSkipped": "{{count}} épisodes n'ont pas été ajoutés aux listes qui n'acceptent pas les épisodes. Les épisodes ne peuvent aller que dans À voir et dans les listes personnalisées.",
+    "episodesSkipped_one": "{{count}} épisode n'a pas été ajouté aux listes qui n'acceptent pas les épisodes. Les épisodes ne peuvent aller que dans À voir et dans les listes personnalisées.",
+    "episodesSkipped_other": "{{count}} épisodes n'ont pas été ajoutés aux listes qui n'acceptent pas les épisodes. Les épisodes ne peuvent aller que dans À voir et dans les listes personnalisées.",
     "removeRatings": "Supprimer les notes",
     "removingRatingsTitle": "Suppression des notes",
     "removingRatingsProgress": "Suppression des notes {{current}} sur {{total}}.",
@@ -828,7 +831,7 @@
     "autoAddToAlreadyWatched": "Ajout auto à Déjà vus",
     "autoAddToAlreadyWatchedDescription": "Ajouter automatiquement les films à votre liste Déjà vus lorsque vous les notez ou les marquez comme vus",
     "autoRemoveFromShouldWatch": "Retrait auto de À voir",
-    "autoRemoveFromShouldWatchDescription": "Retirer automatiquement les films de votre liste À voir lorsque vous les notez ou les marquez comme vus",
+    "autoRemoveFromShouldWatchDescription": "Retirer automatiquement les films de votre liste À voir lorsque vous les notez ou les marquez comme vus, et les épisodes lorsque vous les marquez comme vus",
     "quickMarkAsWatched": "Marquage rapide comme vu",
     "quickMarkAsWatchedDescription": "Ignorer la sélection de date et utiliser l'heure actuelle pour marquer les films comme vus",
     "copyInsteadOfMove": "Copier au lieu de déplacer",
@@ -1381,7 +1384,7 @@
       "checkinsTitle": "Historique de visionnage et progression",
       "checkinsDescription": "Les check-ins ajoutent des vues de films, marquent des séries comme vues lorsque c’est pris en charge et mettent à jour la progression des épisodes quand la ligne est correctement associée.",
       "skipsTitle": "Les données ignorées sont signalées",
-      "skipsDescription": "Les personnes, images et vidéos non prises en charge, les lignes mal formées, les ID IMDb introuvables et les épisodes présents dans des listes sont ignorés et comptabilisés dans le résumé final."
+      "skipsDescription": "Les personnes, images et vidéos non prises en charge, les lignes mal formées et les ID IMDb introuvables sont ignorés et comptabilisés dans le résumé final. Les épisodes présents dans des listes sont conservés en tant qu'épisodes."
     },
     "howItWorks": {
       "selectTitle": "Choisissez vos exports CSV IMDb",
@@ -1864,7 +1867,9 @@
       "uploadFailed": "Échec du téléversement du fichier zip. Veuillez vérifier votre connexion et réessayer.",
       "tryAgain": "Réessayer",
       "backToSettings": "Retour aux paramètres"
-    }
+    },
+    "tmdbRetryingSubtitle": "Impossible de joindre TMDB pour vérifier les épisodes de certaines de vos listes. Tout le reste a été synchronisé, et ShowSeek continuera d'essayer automatiquement.",
+    "tmdbUnavailableMessage": "Impossible de joindre TMDB pour vérifier les épisodes de certaines de vos listes. Tout le reste a été synchronisé. Réessayez plus tard."
   },
   "homeCustomization": {
     "title": "Personnaliser l'accueil",
@@ -2109,7 +2114,10 @@
     "year": "Année"
   },
   "episodeDetail": {
-    "failedToLoad": "Échec du chargement des détails de l'épisode"
+    "failedToLoad": "Échec du chargement des détails de l'épisode",
+    "notFoundTitle": "Épisode introuvable",
+    "notOnTmdb": "TMDB n'a plus cet épisode. Il a peut-être été supprimé ou renuméroté.",
+    "goToShow": "Voir la série"
   },
   "filters": {
     "anyRating": "Toute note",

@@ -48,32 +48,38 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
 
   const missingItems = useMemo<UnstampedListItem[]>(() => {
     if (!list?.items) return [];
-    return (
-      Object.entries(list.items)
-        // Skip incomplete entries (no id or type): there is nothing to look up for them.
-        .filter(
-          ([, item]) =>
-            typeof item?.id === 'number' &&
-            (item.media_type === 'movie' ||
-              item.media_type === 'tv' ||
-              (item.media_type === 'season' && typeof item.season_number === 'number')) &&
-            getStoredListItemRuntime(item) === undefined
-        )
-        .map(([itemKey, item]) => {
-          // Cached lists use normalized keys; saves must target the key the item is stored
-          // under (legacy items use their numeric id), or they create a stray entry.
-          const storedKey = list.storedItemKeys?.[itemKey] ?? itemKey;
-          return {
-            listId: list.id,
-            itemKey: storedKey,
-            page: list.overflowItemPages?.[storedKey] ?? 0,
-            mediaType: item.media_type,
-            mediaId: item.id,
-            seasonNumber: item.season_number,
-            addedAt: item.addedAt,
-          };
-        })
-    );
+    return Object.entries(list.items).flatMap(([itemKey, item]): UnstampedListItem[] => {
+      // Skip incomplete entries (no id or type, or a season or episode without its numbers):
+      // there is nothing to look up for them.
+      if (typeof item?.id !== 'number' || getStoredListItemRuntime(item) !== undefined) {
+        return [];
+      }
+      const mediaType = item.media_type;
+      const hasSeason = typeof item.season_number === 'number';
+      if (
+        mediaType !== 'movie' &&
+        mediaType !== 'tv' &&
+        !(mediaType === 'season' && hasSeason) &&
+        !(mediaType === 'episode' && hasSeason && typeof item.episode_number === 'number')
+      ) {
+        return [];
+      }
+      // Cached lists use normalized keys; saves must target the key the item is stored
+      // under (legacy items use their numeric id), or they create a stray entry.
+      const storedKey = list.storedItemKeys?.[itemKey] ?? itemKey;
+      return [
+        {
+          listId: list.id,
+          itemKey: storedKey,
+          page: list.overflowItemPages?.[storedKey] ?? 0,
+          mediaType,
+          mediaId: item.id,
+          seasonNumber: item.season_number,
+          episodeNumber: item.episode_number,
+          addedAt: item.addedAt,
+        },
+      ];
+    });
   }, [list]);
 
   // Lists cached before stored keys were tracked can't say where legacy items live, so
@@ -139,7 +145,9 @@ export function useListItemRuntimes(list: UserList | undefined, enabled: boolean
                   items[itemKey] =
                     item.media_type === 'season'
                       ? { ...item, runtimeMinutes: minutes, seasonRuntimeMinutes: minutes }
-                      : { ...item, runtimeMinutes: minutes };
+                      : item.media_type === 'episode'
+                        ? { ...item, runtimeMinutes: minutes, episodeRuntimeMinutes: minutes }
+                        : { ...item, runtimeMinutes: minutes };
                   changed = true;
                 }
               });

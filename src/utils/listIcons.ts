@@ -1,5 +1,5 @@
 import { DEFAULT_ACCENT_COLOR } from '@/src/constants/accentColors';
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, hexToRGBA } from '@/src/constants/theme';
 import {
   Bookmark02Icon,
   Cancel01Icon,
@@ -63,3 +63,39 @@ export const MultipleListsIcon = CheckListIcon;
  * Default color for items in multiple lists
  */
 export const MULTIPLE_LISTS_COLOR = COLORS.success;
+
+/**
+ * What an add-to-list button shows for an entry held by `listIds`: that list's own icon and
+ * color when it's in one list (e.g. the heart in the accent color for Favorites), the
+ * multiple-lists icon only when it's in several, and null when it's in none (the button then
+ * shows its add icon). Every add-to-list button (movies, shows, seasons, episodes) uses this,
+ * so they can't drift apart.
+ */
+export const getListMembershipIcon = (
+  listIds: readonly string[],
+  accentColor: string = DEFAULT_ACCENT_COLOR
+): { icon: IconSvgElement; color: string } | null => {
+  if (listIds.length === 0) return null;
+  if (listIds.length === 1) {
+    return {
+      icon: getListIconComponent(listIds[0]),
+      color: getListColor(listIds[0], accentColor),
+    };
+  }
+  return { icon: MultipleListsIcon, color: MULTIPLE_LISTS_COLOR };
+};
+
+/**
+ * The active background and border of an add-to-list button for an entry in lists: a tint of
+ * the color from getListMembershipIcon (the list's own color, or the multiple-lists color), as
+ * on movie and show pages. Undefined when the entry is in no list.
+ */
+export const getListMembershipTint = (
+  membershipIcon: { color: string } | null | undefined
+): { backgroundColor: string; borderColor: string } | undefined =>
+  membershipIcon
+    ? {
+        backgroundColor: hexToRGBA(membershipIcon.color, 0.15),
+        borderColor: hexToRGBA(membershipIcon.color, 0.5),
+      }
+    : undefined;

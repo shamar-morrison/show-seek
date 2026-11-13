@@ -26,6 +26,8 @@ export type SyncErrorCategory =
   | 'reauth_required'
   | 'storage_limit'
   | 'rate_limited'
+  /** TMDB couldn't be reached to check episodes in some lists; the rest of the sync went on. */
+  | 'tmdb_unavailable'
   | 'upstream_blocked'
   | 'upstream_unavailable';
 

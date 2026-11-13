@@ -58,12 +58,7 @@ import { getMarkableEpisodes } from '@/src/utils/episodeEligibility';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { buildSeasonListItem } from '@/src/utils/seasonListItem';
 import type { SeasonActionButtonId } from '@/src/utils/seasonActionOrder';
-import {
-  getListColor,
-  getListIconComponent,
-  MULTIPLE_LISTS_COLOR,
-  MultipleListsIcon,
-} from '@/src/utils/listIcons';
+import { getListMembershipIcon, getListMembershipTint } from '@/src/utils/listIcons';
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -1010,18 +1005,9 @@ export default function TVSeasonsScreen() {
         // in one list, the multiple-lists icon when it's in several.
         const seasonListIds = seasonListIdsByNumber.get(seasonData.season_number) ?? [];
         const isSeasonInAnyList = seasonListIds.length > 0;
-        const seasonListIcon =
-          seasonListIds.length === 1
-            ? getListIconComponent(seasonListIds[0])
-            : isSeasonInAnyList
-              ? MultipleListsIcon
-              : PlusSignIcon;
-        const seasonListColor =
-          seasonListIds.length === 1
-            ? getListColor(seasonListIds[0], accentColor)
-            : isSeasonInAnyList
-              ? MULTIPLE_LISTS_COLOR
-              : COLORS.white;
+        const seasonListMembershipIcon = getListMembershipIcon(seasonListIds, accentColor);
+        const seasonListIcon = seasonListMembershipIcon?.icon ?? PlusSignIcon;
+        const seasonListColor = seasonListMembershipIcon?.color ?? COLORS.white;
         const isOpeningSeasonNote = openingNoteSeasonNumber === seasonData.season_number;
         const displaySeasonUserRating = Number.isInteger(seasonUserRating)
           ? seasonUserRating.toString()
@@ -1190,10 +1176,7 @@ export default function TVSeasonsScreen() {
           list: (
             <TouchableOpacity
               key="list"
-              style={[
-                styles.seasonActionButton,
-                isSeasonInAnyList && styles.seasonActionButtonActive,
-              ]}
+              style={[styles.seasonActionButton, getListMembershipTint(seasonListMembershipIcon)]}
               onPress={() => handleOpenSeasonAddToList(seasonData)}
               activeOpacity={ACTIVE_OPACITY}
               accessibilityRole="button"

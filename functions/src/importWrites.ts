@@ -12,8 +12,15 @@ import {
   type ListItemChanges,
   type PagedList,
 } from './listPagesAdmin';
-import { buildListItemKey, getLegacyListItemKey, hasExistingListItem } from './shared/listItemKeys';
+import {
+  buildEpisodeListItemKey,
+  buildListItemKey,
+  getLegacyListItemKey,
+  hasExistingListItem,
+  hasListItemByRef,
+} from './shared/listItemKeys';
 import { createSinglePageLayout } from './shared/listPages';
+import { buildEpisodeEntryTitle } from './trakt/seasons';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_REQUEST_TIMEOUT_MS = 15_000;
@@ -58,8 +65,11 @@ export interface TmdbEpisodeResult {
   episode_number: number;
   id: number;
   name: string;
+  runtime?: number | null;
   season_number: number;
   show_id: number;
+  still_path?: string | null;
+  vote_average?: number;
 }
 
 export interface TmdbFindResponse {
@@ -72,6 +82,8 @@ export interface TmdbFindResponse {
 export interface TmdbTvDetails {
   first_air_date?: string;
   genre_ids?: number[];
+  /** What TMDB's details endpoint actually returns (`genre_ids` is only on list results). */
+  genres?: { id: number }[];
   id: number;
   name: string;
   poster_path: string | null;
@@ -81,7 +93,54 @@ export interface TmdbTvDetails {
 
 export type ResolvedListMedia =
   | { kind: 'movie'; value: TmdbMovieResult }
-  | { kind: 'tv'; value: TmdbTvResult };
+  | { kind: 'tv'; value: TmdbTvResult }
+  /** One episode of `show`. Only Should Watch and custom lists take episodes. */
+  | { kind: 'episode'; value: TmdbEpisodeResult; show: TmdbTvDetails };
+
+/** A whole movie or show (what ratings, watches and the file imports deal in). */
+export type ResolvedTitleMedia = Extract<ResolvedListMedia, { kind: 'movie' | 'tv' }>;
+
+/**
+ * The list entry for an episode, in the shape the app writes: keyed by the show's ID and the
+ * episode's numbers, with the show's genres and poster, a combined "Show · S2E12 · Name" title
+ * for app versions that predate episodes, and the episode's own name, still, rating, air date
+ * and runtime.
+ */
+const buildEpisodeListPayload = (
+  episode: TmdbEpisodeResult,
+  show: TmdbTvDetails,
+  addedAt: number
+): Record<string, unknown> => {
+  const episodeName = episode.name?.trim() ?? '';
+  // The same title the Trakt sync saves, so imported and synced entries match.
+  const title = buildEpisodeEntryTitle(
+    show.name,
+    episode.season_number,
+    episode.episode_number,
+    episodeName
+  );
+  const airDate = episode.air_date ?? '';
+  const runtime =
+    typeof episode.runtime === 'number' && episode.runtime > 0 ? episode.runtime : undefined;
+  return {
+    addedAt,
+    episode_name: episodeName,
+    episode_number: episode.episode_number,
+    first_air_date: airDate,
+    genre_ids: show.genre_ids ?? (show.genres ?? []).map((genre) => genre.id),
+    id: show.id,
+    media_type: 'episode',
+    name: title,
+    poster_path: show.poster_path ?? null,
+    release_date: airDate,
+    season_number: episode.season_number,
+    show_name: show.name,
+    still_path: episode.still_path ?? null,
+    title,
+    vote_average: episode.vote_average ?? 0,
+    ...(runtime ? { episodeRuntimeMinutes: runtime, runtimeMinutes: runtime } : {}),
+  };
+};
 
 export interface CachedListRecord {
   /** The list with its items merged across overflow pages. */
@@ -260,7 +319,10 @@ export async function ensureCustomList(
   return { created: true, listId: nextId };
 }
 
-/** Adds a movie/show to a list. Never replaces an existing membership; returns whether it wrote. */
+/**
+ * Adds a movie, show or episode to a list. Never replaces an existing membership; returns
+ * whether it wrote.
+ */
 export async function upsertListMembership(
   context: ImportWriteContext,
   listId: string,
@@ -273,6 +335,27 @@ export async function upsertListMembership(
     existingRecord?.ref ??
     context.db.collection('users').doc(context.userId).collection('lists').doc(listId);
   const list = existingRecord?.list ?? emptyPagedList(ref, null);
+
+  if (resolvedResult.kind === 'episode') {
+    const { show, value: episode } = resolvedResult;
+    const episodeRef = {
+      episode_number: episode.episode_number,
+      id: show.id,
+      media_type: 'episode' as const,
+      season_number: episode.season_number,
+    };
+    if (hasListItemByRef(list.items, episodeRef)) {
+      return false;
+    }
+    // Episodes never have a legacy numeric key, so nothing else is cleared.
+    return commitListMembership(context, listId, listName, ref, list, {
+      set: {
+        [buildEpisodeListItemKey(show.id, episode.season_number, episode.episode_number)]:
+          removeUndefined(buildEpisodeListPayload(episode, show, addedAt)),
+      },
+    });
+  }
+
   const mediaType = resolvedResult.kind === 'movie' ? 'movie' : 'tv';
   const itemKey = buildListItemKey(mediaType, resolvedResult.value.id);
   const legacyItemKey = getLegacyListItemKey(resolvedResult.value.id);
@@ -306,11 +389,22 @@ export async function upsertListMembership(
           vote_average: resolvedResult.value.vote_average ?? 0,
         };
 
-  // Large lists spill into overflow pages; the item goes wherever there's room.
-  const changes: ListItemChanges = {
+  return commitListMembership(context, listId, listName, ref, list, {
     set: { [itemKey]: removeUndefined(basePayload) },
     ...(legacyItemKey in list.items ? { delete: [legacyItemKey] } : {}),
-  };
+  });
+}
+
+/** Writes one membership change and keeps the cached list in step. Always returns true. */
+async function commitListMembership(
+  context: ImportWriteContext,
+  listId: string,
+  listName: string,
+  ref: FirebaseFirestore.DocumentReference,
+  list: PagedList,
+  changes: ListItemChanges
+): Promise<boolean> {
+  // Large lists spill into overflow pages; the item goes wherever there's room.
   const plan = planPagedListWrites(list, changes);
   const now = Date.now();
   const storedName = String(list.data.name ?? listName);
@@ -371,7 +465,7 @@ export async function insertDetailRatingIfAbsent(
 
 export async function upsertMovieOrTvRating(
   context: ImportWriteContext,
-  resolved: ResolvedListMedia,
+  resolved: ResolvedTitleMedia,
   rating: { ratedAt: number; rating: number },
   policy: RatingConflictPolicy
 ): Promise<boolean> {

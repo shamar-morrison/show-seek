@@ -1,4 +1,5 @@
 import type {
+  TraktEpisode,
   TraktFavorite,
   TraktIds,
   TraktList,
@@ -12,7 +13,7 @@ import type {
   TraktWatchedShow,
   TraktWatchlistItem,
 } from './types';
-import { getTraktSeasonNumber } from './seasons';
+import { getTraktEpisodeRef, getTraktSeasonNumber } from './seasons';
 
 /**
  * Deterministically constructs the Firestore watch document ID for an imported movie watch event.
@@ -685,6 +686,24 @@ const toAggregatedShow = (
   year: rawShow?.year ?? 0,
 });
 
+/** The episode of a raw Trakt list or watchlist entry, in the shape the live API returns. */
+const toAggregatedEpisode = (
+  rawEpisode: { ids?: Partial<TraktIds>; title?: string } | undefined,
+  seasonNumber: number,
+  episodeNumber: number
+): TraktEpisode => ({
+  ids: {
+    imdb: rawEpisode?.ids?.imdb,
+    slug: rawEpisode?.ids?.slug || `${seasonNumber}-${episodeNumber}`,
+    tmdb: rawEpisode?.ids?.tmdb,
+    trakt: rawEpisode?.ids?.trakt ?? 0,
+    tvdb: rawEpisode?.ids?.tvdb,
+  },
+  number: episodeNumber,
+  season: seasonNumber,
+  title: rawEpisode?.title?.trim() || '',
+});
+
 /**
  * Aggregates raw watchlist entries into valid, deduplicated TraktWatchlistItem[] items.
  */
@@ -748,7 +767,8 @@ export const aggregateWatchlist = (rawItems: RawWatchlistItem[]): TraktWatchlist
         continue;
       }
 
-      // A season keeps its own entry; episodes (and seasons without a number) count as the show.
+      // Seasons and episodes keep their own entries; ones without usable numbers count as the
+      // show.
       const seasonNumber = getTraktSeasonNumber(rawItem);
       if (seasonNumber !== undefined) {
         const seasonKey = `season-${showTmdbId}-${seasonNumber}`;
@@ -763,6 +783,28 @@ export const aggregateWatchlist = (rawItems: RawWatchlistItem[]): TraktWatchlist
               season: { ids: rawItem.season?.ids, number: seasonNumber },
               show: toAggregatedShow(rawItem.show, showTmdbId),
               type: 'season',
+            },
+            listedAtMs,
+          });
+        }
+        continue;
+      }
+
+      const episodeRef = getTraktEpisodeRef(rawItem);
+      if (episodeRef) {
+        const { seasonNumber: epSeason, episodeNumber } = episodeRef;
+        const episodeKey = `episode-${showTmdbId}-${epSeason}-${episodeNumber}`;
+        const existingEpisode = itemsByKey.get(episodeKey);
+        if (!existingEpisode || listedAtMs >= existingEpisode.listedAtMs) {
+          itemsByKey.set(episodeKey, {
+            item: {
+              episode: toAggregatedEpisode(rawItem.episode, epSeason, episodeNumber),
+              id: rawItem.id ?? showTmdbId,
+              listed_at: listedAtIso,
+              notes: rawItem.notes,
+              rank: rawItem.rank ?? 0,
+              show: toAggregatedShow(rawItem.show, showTmdbId),
+              type: 'episode',
             },
             listedAtMs,
           });
@@ -1004,7 +1046,32 @@ export const aggregateCustomLists = (
           continue;
         }
 
-        // Episodes (and seasons without a number) count as their show, as in the live sync.
+        const episodeRef = getTraktEpisodeRef(rawItem);
+        if (episodeRef) {
+          if (typeof showTmdbId !== 'number' || showTmdbId <= 0) {
+            continue;
+          }
+
+          const { seasonNumber: epSeason, episodeNumber } = episodeRef;
+          const key = `episode-${showTmdbId}-${epSeason}-${episodeNumber}`;
+          if (seenItemKeys.has(key)) {
+            continue;
+          }
+          seenItemKeys.add(key);
+
+          items.push({
+            episode: toAggregatedEpisode(rawItem.episode, epSeason, episodeNumber),
+            id: rawItem.id ?? showTmdbId,
+            listed_at: listedAtIso,
+            notes: rawItem.notes,
+            rank: rawItem.rank ?? items.length + 1,
+            show: toAggregatedShow(rawItem.show, showTmdbId),
+            type: 'episode',
+          });
+          continue;
+        }
+
+        // Episodes and seasons without usable numbers count as their show, as in the live sync.
         if (
           rawItem.type === 'show' ||
           rawItem.type === 'season' ||

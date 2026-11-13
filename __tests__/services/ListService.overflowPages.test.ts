@@ -242,7 +242,7 @@ describe('ListService overflow pages', () => {
       }),
     ]);
 
-    await listService.removeFromList('already-watched', 2, 'movie');
+    await listService.removeFromList('already-watched', { id: 2, media_type: 'movie' });
 
     expect(updateDoc).not.toHaveBeenCalled();
     expect(batches[0].update).toHaveBeenCalledWith(
@@ -262,7 +262,7 @@ describe('ListService overflow pages', () => {
       data: () => ({ pageCount: 1 }),
     });
 
-    await listService.removeFromList('watchlist', 5, 'movie');
+    await listService.removeFromList('watchlist', { id: 5, media_type: 'movie' });
 
     expect(getDoc).toHaveBeenCalledTimes(1);
     expect(batches[0].set.mock.calls.map(([ref]) => ref.path)).toEqual([
@@ -296,7 +296,7 @@ describe('ListService overflow pages', () => {
     // Cached data from before the page existed.
     listService.rememberListLayouts(USER, [pagedList({ items: itemsOf([1]) })]);
 
-    await listService.removeFromList('already-watched', 1, 'movie');
+    await listService.removeFromList('already-watched', { id: 1, media_type: 'movie' });
 
     expect(getDoc).not.toHaveBeenCalled();
     expect(batches[0].set.mock.calls.map(([ref]) => ref.path)).toEqual([
@@ -366,13 +366,13 @@ describe('ListService overflow pages', () => {
       callsite: 'test',
     });
     // ...a write lands meanwhile...
-    await listService.removeFromList('already-watched', 9, 'movie');
+    await listService.removeFromList('already-watched', { id: 9, media_type: 'movie' });
     // ...then the read completes with stale data.
     resolveRead({ exists: () => true, data: () => ({ name: 'Already Watched', items: itemsOf([1]) }) });
     await slowRead;
 
     batches = [];
-    await listService.removeFromList('already-watched', 1, 'movie');
+    await listService.removeFromList('already-watched', { id: 1, media_type: 'movie' });
     expect(batches[0].set.mock.calls.map(([ref]) => ref.path)).toEqual([
       `${LISTS}/already-watched/item_pages/1`,
     ]);
@@ -395,7 +395,7 @@ describe('ListService overflow pages', () => {
       queryKey: 'test',
       callsite: 'test',
     });
-    await listService.removeFromList('favorites', 7, 'movie');
+    await listService.removeFromList('favorites', { id: 7, media_type: 'movie' });
     resolveRead({
       exists: () => true,
       data: () => ({ name: 'Already Watched', items: itemsOf([1]), pageCount: 1 }),
@@ -405,7 +405,7 @@ describe('ListService overflow pages', () => {
     // The layout it read (with page 1) was kept, so the removal reaches page 1 without a read.
     (getDoc as jest.Mock).mockClear();
     batches = [];
-    await listService.removeFromList('already-watched', 2, 'movie');
+    await listService.removeFromList('already-watched', { id: 2, media_type: 'movie' });
     expect(getDoc).not.toHaveBeenCalled();
     expect(batches[0].set.mock.calls.map(([ref]) => ref.path)).toEqual([
       `${LISTS}/already-watched/item_pages/1`,
@@ -423,7 +423,7 @@ describe('ListService overflow pages', () => {
       overflowItemPages,
     });
     listService.rememberListLayouts(USER, [full]);
-    await listService.removeFromList('already-watched', 10_000, 'movie');
+    await listService.removeFromList('already-watched', { id: 10_000, media_type: 'movie' });
 
     // Cached data after the optimistic removal: the item is gone, the sizes are stale.
     const { 'movie-10000': _removed, ...remaining } = full.items;

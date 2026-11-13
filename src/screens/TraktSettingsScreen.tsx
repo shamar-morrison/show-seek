@@ -293,9 +293,14 @@ export default function TraktSettingsScreen() {
   const isRateLimited = syncStatus?.errorCategory === 'rate_limited';
   const isReauthRequired = syncStatus?.errorCategory === 'reauth_required';
   const isRetryingSync = syncStatus?.status === 'retrying';
+  // TMDB, not Trakt, held up the episodes in some lists; everything else synced.
+  const isTmdbUnavailable = syncStatus?.errorCategory === 'tmdb_unavailable';
   const getSyncErrorMessage = (fallback?: string) => {
     if (syncStatus?.errorCategory === 'storage_limit') {
       return getPreferredMessage('trakt.storageLimitMessage', fallback);
+    }
+    if (isTmdbUnavailable) {
+      return t('trakt.tmdbUnavailableMessage');
     }
 
     return fallback ?? t('trakt.firstImportFailedMessage');
@@ -448,7 +453,9 @@ export default function TraktSettingsScreen() {
             {isRetryingSync ? t('trakt.retryingTitle') : t('trakt.syncingTitle')}
           </Text>
           <Text style={styles.syncingSubtitle}>
-            {isRetryingSync ? t('trakt.retryingSubtitle') : t('trakt.syncingSubtitle')}
+            {isRetryingSync
+              ? t(isTmdbUnavailable ? 'trakt.tmdbRetryingSubtitle' : 'trakt.retryingSubtitle')
+              : t('trakt.syncingSubtitle')}
           </Text>
           <ActivityIndicator size="large" color={COLORS.trakt} style={styles.syncingSpinner} />
 

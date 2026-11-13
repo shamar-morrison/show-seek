@@ -1,4 +1,4 @@
-import { UserList } from '@/src/services/ListService';
+import type { ListMediaItem, UserList } from '@/src/services/ListService';
 
 /**
  * Premium limits for free users
@@ -28,6 +28,15 @@ export type DefaultListId = (typeof DEFAULT_LIST_IDS)[number];
 export const isDefaultList = (listId: string): boolean => {
   return DEFAULT_LIST_IDS.includes(listId as DefaultListId);
 };
+
+/**
+ * Whether a list can take an entry of this type. An episode can go in Should Watch and custom
+ * lists only: watched, watching, favorite and dropped are already covered for episodes by
+ * episode tracking and Favorite Episodes, or only make sense for a whole show. Every import
+ * that brings episodes (Trakt, IMDb) puts them in Should Watch or custom lists.
+ */
+export const canListHoldEntry = (listId: string, mediaType: ListMediaItem['media_type']): boolean =>
+  mediaType !== 'episode' || listId === 'watchlist' || !isDefaultList(listId);
 
 /**
  * Filter out default lists to get only custom lists

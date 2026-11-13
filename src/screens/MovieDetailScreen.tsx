@@ -82,12 +82,7 @@ import { collectionTrackingService } from '@/src/services/CollectionTrackingServ
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
-import {
-  getListColor,
-  getListIconComponent,
-  MULTIPLE_LISTS_COLOR,
-  MultipleListsIcon,
-} from '@/src/utils/listIcons';
+import { getListMembershipIcon } from '@/src/utils/listIcons';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { getRegionalReleaseDate, hasWatchProviders } from '@/src/utils/mediaUtils';
 import { setReviewQueue, traktToReview, type QueuedReview } from '@/src/utils/reviewQueue';
@@ -195,7 +190,7 @@ const tryAutoRemoveFromShouldWatch = async (params: {
 
   try {
     const { listService } = await import('@/src/services/ListService');
-    await listService.removeFromList('watchlist', movieId, 'movie');
+    await listService.removeFromList('watchlist', { id: movieId, media_type: 'movie' });
 
     console.log('[MovieDetailScreen] Auto-removed from Should Watch list:', movieTitle ?? movieId);
     return true;
@@ -266,18 +261,9 @@ export default function MovieDetailScreen() {
   const { resolvePosterPath } = usePosterOverrides();
   const listIds = Object.keys(membership);
   const isInAnyList = listIds.length > 0;
-  const listIcon =
-    listIds.length === 1
-      ? getListIconComponent(listIds[0])
-      : isInAnyList
-        ? MultipleListsIcon
-        : undefined;
-  const listColor =
-    listIds.length === 1
-      ? getListColor(listIds[0], accentColor)
-      : isInAnyList
-        ? MULTIPLE_LISTS_COLOR
-        : undefined;
+  const listMembershipIcon = getListMembershipIcon(listIds, accentColor);
+  const listIcon = listMembershipIcon?.icon;
+  const listColor = listMembershipIcon?.color;
 
   const {
     reminder,

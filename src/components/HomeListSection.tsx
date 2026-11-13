@@ -1,5 +1,5 @@
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
-import { getSeasonEntryDisplay } from '@/src/utils/seasonListItem';
+import { getListEntryDisplay } from '@/src/utils/listEntryDisplay';
 import { getListItemUiKey } from '@/src/utils/listItemKeys';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
@@ -272,13 +272,11 @@ function UserListSection({
         data={items}
         renderItem={({ item }) => {
           const posterPathOverride = resolvePosterPath(item.media_type, item.id, item.poster_path);
-          if (item.media_type === 'tv' || item.media_type === 'season') {
-            const isSeason = item.media_type === 'season';
-            // A season shows its show's name, then "Season X" under it.
-            const seasonDisplay = isSeason
-              ? getSeasonEntryDisplay(item, (number) => t('media.seasonNumber', { number }))
-              : null;
-            const showName = seasonDisplay ? seasonDisplay.title : item.name || item.title;
+          if (item.media_type !== 'movie') {
+            // A season or episode shows its show's name, then "Season X" or "S2E12 · Name".
+            const entryDisplay = getListEntryDisplay(item, t);
+            const isPartOfShow = item.media_type === 'season' || item.media_type === 'episode';
+            const showName = entryDisplay ? entryDisplay.title : item.name || item.title;
             const show: TVShow = {
               id: item.id,
               name: showName,
@@ -298,11 +296,13 @@ function UserListSection({
               <TVShowCard
                 show={show}
                 posterPathOverride={posterPathOverride}
-                seasonNumber={isSeason ? item.season_number : undefined}
-                seasonLabel={seasonDisplay?.seasonLabel}
-                // Long-press adds the show to lists; a season is managed from its own screen.
+                seasonNumber={isPartOfShow ? item.season_number : undefined}
+                episodeNumber={item.media_type === 'episode' ? item.episode_number : undefined}
+                entryLabel={entryDisplay?.label}
+                // Long-press adds the show to lists; a season or episode is managed from its
+                // own screen.
                 onLongPress={
-                  onMediaLongPress && !isSeason
+                  onMediaLongPress && !isPartOfShow
                     ? (selectedShow) => onMediaLongPress(selectedShow, 'tv')
                     : undefined
                 }

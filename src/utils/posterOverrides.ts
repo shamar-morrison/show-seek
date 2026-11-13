@@ -33,16 +33,16 @@ export function sanitizePosterOverrides(raw: unknown): Record<string, string> {
 
 /**
  * The poster to show: the user's chosen poster for a movie or show, else `fallbackPosterPath`.
- * Seasons have no poster override (and must never pick up their show's), so they always use
- * their own poster.
+ * Seasons and episodes have no poster override (and must never pick up their show's), so they
+ * always use their own saved poster.
  */
 export function resolvePosterPath(
   overrides: Record<string, string> | null | undefined,
-  mediaType: PosterOverrideMediaType | 'season',
+  mediaType: PosterOverrideMediaType | 'season' | 'episode',
   mediaId: number,
   fallbackPosterPath: string | null | undefined
 ): string | null {
-  if (mediaType === 'season') {
+  if (mediaType === 'season' || mediaType === 'episode') {
     return fallbackPosterPath ?? null;
   }
   const key = buildPosterOverrideKey(mediaType, mediaId);

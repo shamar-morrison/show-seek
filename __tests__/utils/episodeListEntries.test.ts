@@ -1,0 +1,371 @@
+import { canListHoldEntry } from '@/src/constants/lists';
+import type { ListMediaItem } from '@/src/services/ListService';
+import {
+  buildEpisodeListItem,
+  getEpisodeEntryDisplay,
+  getEpisodeEntryRefresh,
+  isPlaceholderEpisodeName,
+} from '@/src/utils/episodeListItem';
+import { getListEntryDisplay } from '@/src/utils/listEntryDisplay';
+import {
+  DEFAULT_WATCH_STATUS_FILTERS,
+  filterMediaItems,
+  getListItemMediaKey,
+  getStoredListItemRuntime,
+  getUnstampedListItemRuntimeKey,
+} from '@/src/utils/listFilters';
+import { getListItemRoute } from '@/src/utils/listItemRoutes';
+import { collapseSeasonsToShows } from '@/src/utils/listItemShows';
+import { compareListItemTitles, getItemRuntime, getItemUserRating } from '@/src/utils/listSort';
+import type { TFunction } from 'i18next';
+
+const item = (overrides: Partial<ListMediaItem>): ListMediaItem =>
+  ({
+    title: '',
+    poster_path: null,
+    vote_average: 0,
+    release_date: '',
+    addedAt: 0,
+    ...overrides,
+  }) as ListMediaItem;
+
+const movie = item({ id: 1, media_type: 'movie', title: 'Alien', runtimeMinutes: 117 });
+const show = item({ id: 1396, media_type: 'tv', title: 'Breaking Bad', genre_ids: [18] });
+const season = (n: number) =>
+  item({
+    id: 1396,
+    media_type: 'season',
+    season_number: n,
+    show_name: 'Breaking Bad',
+    title: `Breaking Bad · Season ${n}`,
+    genre_ids: [18],
+  });
+const episode = (s: number, e: number, overrides: Partial<ListMediaItem> = {}) =>
+  item({
+    id: 1396,
+    media_type: 'episode',
+    season_number: s,
+    episode_number: e,
+    show_name: 'Breaking Bad',
+    episode_name: `Episode ${e}`,
+    title: `Breaking Bad · S${s}E${e} · Episode ${e}`,
+    genre_ids: [18],
+    ...overrides,
+  });
+
+const t = ((key: string, options?: Record<string, unknown>) => {
+  if (key === 'media.seasonNumber') return `Season ${options?.number}`;
+  if (key === 'media.seasonEpisode') return `S${options?.season}E${options?.episode}`;
+  return key;
+}) as unknown as TFunction;
+
+describe('episode entry display', () => {
+  it("shows the show's name, then the episode code and name", () => {
+    expect(getListEntryDisplay(episode(2, 12, { episode_name: 'Phoenix' }), t)).toEqual({
+      title: 'Breaking Bad',
+      label: 'S2E12 · Phoenix',
+    });
+  });
+
+  it('shows the code alone when the episode name is not known', () => {
+    expect(
+      getEpisodeEntryDisplay(
+        { show_name: 'Breaking Bad', season_number: 0, episode_number: 3, episode_name: ' ' },
+        (s, e) => `S${s}E${e}`
+      )
+    ).toEqual({ title: 'Breaking Bad', episodeLabel: 'S0E3' });
+  });
+
+  it('falls back to the combined title when the show name is missing', () => {
+    const display = getListEntryDisplay(
+      episode(1, 1, { show_name: undefined, title: 'Breaking Bad · S1E1' }),
+      t
+    );
+    expect(display?.title).toBe('Breaking Bad · S1E1');
+  });
+
+  it('labels seasons too, and gives movies and shows no entry display', () => {
+    expect(getListEntryDisplay(season(2), t)).toEqual({
+      title: 'Breaking Bad',
+      label: 'Season 2',
+    });
+    expect(getListEntryDisplay(movie, t)).toBeNull();
+    expect(getListEntryDisplay(show, t)).toBeNull();
+  });
+});
+
+describe('episode entry routes', () => {
+  it('opens the episode screen', () => {
+    expect(getListItemRoute('/(tabs)/library', episode(2, 12))).toBe(
+      '/(tabs)/library/tv/1396/season/2/episode/12'
+    );
+    expect(getListItemRoute('/(tabs)/home', episode(0, 0))).toBe(
+      '/(tabs)/home/tv/1396/season/0/episode/0'
+    );
+  });
+
+  it("opens the show's seasons when the episode has no usable numbers", () => {
+    expect(getListItemRoute('/(tabs)/library', episode(2, 12, { episode_number: undefined }))).toBe(
+      '/(tabs)/library/tv/1396/seasons'
+    );
+  });
+});
+
+describe('episode list entries in filters and sort', () => {
+  it('keys each episode apart from its show and season', () => {
+    expect(getListItemMediaKey(episode(2, 12))).toBe('episode:1396:2:12');
+    expect(getListItemMediaKey(season(2))).toBe('season:1396:2');
+    expect(
+      getUnstampedListItemRuntimeKey({
+        mediaType: 'episode',
+        mediaId: 1396,
+        seasonNumber: 2,
+        episodeNumber: 12,
+      })
+    ).toBe('episode:1396:2:12');
+  });
+
+  it("only trusts an episode's own runtime field", () => {
+    expect(getStoredListItemRuntime(episode(1, 1, { runtimeMinutes: 58 }))).toBeUndefined();
+    expect(
+      getStoredListItemRuntime(episode(1, 1, { runtimeMinutes: 47, episodeRuntimeMinutes: 47 }))
+    ).toBe(47);
+    expect(getItemRuntime(episode(1, 2), new Map([['episode:1396:1:2', 48]]))).toBe(48);
+  });
+
+  it('uses the episode rating for rating sort and filters', () => {
+    const ratings = new Map([
+      ['episode:1396:2:12', 10],
+      ['tv:1396', 6],
+    ]);
+    expect(getItemUserRating(episode(2, 12), ratings)).toBe(10);
+    expect(
+      filterMediaItems(
+        [show, episode(2, 12), episode(2, 13)],
+        { ...DEFAULT_WATCH_STATUS_FILTERS, userRating: 8 },
+        { userRatings: ratings }
+      )
+    ).toEqual([episode(2, 12)]);
+  });
+
+  it('filters by the Episodes type, and genre filters keep episodes', () => {
+    const items = [movie, show, season(1), episode(1, 1)];
+    expect(
+      filterMediaItems(items, { ...DEFAULT_WATCH_STATUS_FILTERS, mediaType: 'episode' })
+    ).toEqual([episode(1, 1)]);
+    expect(filterMediaItems(items, { ...DEFAULT_WATCH_STATUS_FILTERS, genres: [18] })).toEqual([
+      show,
+      season(1),
+      episode(1, 1),
+    ]);
+  });
+
+  it('sorts the show first, then each season followed by its episodes in order', () => {
+    const sorted = [
+      episode(2, 10),
+      season(2),
+      movie,
+      episode(1, 3),
+      episode(2, 9),
+      show,
+      season(1),
+    ].sort((a, b) => compareListItemTitles(a, b, 1));
+    expect(sorted.map((entry) => entry.title)).toEqual([
+      'Alien',
+      'Breaking Bad',
+      'Breaking Bad · Season 1',
+      'Breaking Bad · S1E3 · Episode 3',
+      'Breaking Bad · Season 2',
+      'Breaking Bad · S2E9 · Episode 9',
+      'Breaking Bad · S2E10 · Episode 10',
+    ]);
+  });
+});
+
+describe('collapseSeasonsToShows with episodes', () => {
+  it('counts episodes as their show, once, without episode fields', () => {
+    const collapsed = collapseSeasonsToShows([
+      movie,
+      episode(1, 1, { episodeRuntimeMinutes: 47, still_path: '/still.jpg' }),
+      season(2),
+      episode(2, 12),
+    ]);
+
+    expect(collapsed).toHaveLength(2);
+    expect(collapsed[1]).toMatchObject({ id: 1396, media_type: 'tv', title: 'Breaking Bad' });
+    expect(collapsed[1].episode_number).toBeUndefined();
+    expect(collapsed[1].episode_name).toBeUndefined();
+    expect(collapsed[1].still_path).toBeUndefined();
+    expect(collapsed[1].episodeRuntimeMinutes).toBeUndefined();
+    expect(collapsed[1].release_date).toBe('');
+  });
+
+  it('keeps the listed show and drops its episodes', () => {
+    expect(collapseSeasonsToShows([episode(1, 1), show])).toEqual([show]);
+  });
+});
+
+describe('buildEpisodeListItem', () => {
+  const show = { id: 1396, name: 'Breaking Bad', poster_path: '/show.jpg', genres: [{ id: 18 }] };
+  const phoenix = {
+    season_number: 2,
+    episode_number: 12,
+    name: 'Phoenix',
+    still_path: '/phoenix.jpg',
+    air_date: '2009-05-24',
+    vote_average: 8.9,
+    runtime: 47,
+  };
+  const code = (s: number, e: number) => `S${s}E${e}`;
+
+  it("builds an entry with the show's ID and genres and the season's poster", () => {
+    expect(buildEpisodeListItem(show, phoenix, '/season2.jpg', code)).toEqual({
+      id: 1396,
+      media_type: 'episode',
+      season_number: 2,
+      episode_number: 12,
+      episode_name: 'Phoenix',
+      show_name: 'Breaking Bad',
+      title: 'Breaking Bad · S2E12 · Phoenix',
+      name: 'Breaking Bad · S2E12 · Phoenix',
+      poster_path: '/season2.jpg',
+      still_path: '/phoenix.jpg',
+      vote_average: 8.9,
+      release_date: '2009-05-24',
+      first_air_date: '2009-05-24',
+      genre_ids: [18],
+      runtimeMinutes: 47,
+      episodeRuntimeMinutes: 47,
+    });
+  });
+
+  it("falls back to the show's poster, and leaves out what TMDB doesn't have yet", () => {
+    const unaired = { ...phoenix, name: '', still_path: null, air_date: null, runtime: null };
+    const entry = buildEpisodeListItem(show, unaired, null, code);
+
+    expect(entry.poster_path).toBe('/show.jpg');
+    expect(entry.title).toBe('Breaking Bad · S2E12');
+    expect(entry.release_date).toBe('');
+    expect(entry).not.toHaveProperty('runtimeMinutes');
+    expect(entry).not.toHaveProperty('episodeRuntimeMinutes');
+  });
+});
+
+describe('getEpisodeEntryRefresh', () => {
+  const saved = {
+    episode_name: 'Episode 5',
+    release_date: '',
+    still_path: null,
+    episodeRuntimeMinutes: undefined,
+  };
+
+  it('returns the fields TMDB has since filled in', () => {
+    expect(
+      getEpisodeEntryRefresh(saved, {
+        name: 'Ozymandias',
+        air_date: '2013-09-15',
+        still_path: '/ozy.jpg',
+        runtime: 48,
+      })
+    ).toEqual({
+      episode_name: 'Ozymandias',
+      release_date: '2013-09-15',
+      first_air_date: '2013-09-15',
+      still_path: '/ozy.jpg',
+      runtimeMinutes: 48,
+      episodeRuntimeMinutes: 48,
+    });
+  });
+
+  it('never blanks a saved value or rewrites a known runtime', () => {
+    expect(
+      getEpisodeEntryRefresh(
+        {
+          episode_name: 'Ozymandias',
+          release_date: '2013-09-15',
+          still_path: '/ozy.jpg',
+          episodeRuntimeMinutes: 48,
+        },
+        { name: ' ', air_date: null, still_path: null, runtime: 50 }
+      )
+    ).toBeNull();
+  });
+
+  it("never replaces a real saved name, so other languages can't overwrite it", () => {
+    const saved = { episode_name: 'Phoenix', release_date: '2009-05-24', still_path: '/p.jpg' };
+    // A Portuguese device: TMDB has no translation, or a real translated name.
+    expect(
+      getEpisodeEntryRefresh(
+        saved,
+        { name: 'Episódio 12', air_date: '2009-05-24', still_path: '/p.jpg' },
+        'Episódio 12'
+      )
+    ).toBeNull();
+    expect(
+      getEpisodeEntryRefresh(
+        saved,
+        { name: 'Fénix', air_date: '2009-05-24', still_path: '/p.jpg' },
+        'Episódio 12'
+      )
+    ).toBeNull();
+  });
+
+  it('replaces an English or localized placeholder with a real name, never with another placeholder', () => {
+    const fetched = { name: 'Fénix', air_date: '2009-05-24', still_path: '/p.jpg' };
+    const savedAs = (episode_name: string) => ({
+      episode_name,
+      release_date: '2009-05-24',
+      still_path: '/p.jpg',
+    });
+
+    expect(getEpisodeEntryRefresh(savedAs('Episode 12'), fetched, 'Episódio 12')).toEqual({
+      episode_name: 'Fénix',
+    });
+    expect(getEpisodeEntryRefresh(savedAs('episódio 12'), fetched, 'Episódio 12')).toEqual({
+      episode_name: 'Fénix',
+    });
+    expect(
+      getEpisodeEntryRefresh(
+        savedAs('Episode 12'),
+        { ...fetched, name: 'Episódio 12' },
+        'Episódio 12'
+      )
+    ).toBeNull();
+  });
+
+  it('recognizes placeholder names', () => {
+    expect(isPlaceholderEpisodeName('Episode 7')).toBe(true);
+    expect(isPlaceholderEpisodeName('')).toBe(true);
+    expect(isPlaceholderEpisodeName(undefined)).toBe(true);
+    expect(isPlaceholderEpisodeName('Épisode 7', 'Épisode 7')).toBe(true);
+    expect(isPlaceholderEpisodeName('Episode 7: The Return')).toBe(false);
+    expect(isPlaceholderEpisodeName('Phoenix', 'Episódio 12')).toBe(false);
+  });
+
+  it('returns null when nothing changed', () => {
+    expect(
+      getEpisodeEntryRefresh(
+        { episode_name: 'Pilot', release_date: '2008-01-20', still_path: '/p.jpg' },
+        { name: 'Pilot', air_date: '2008-01-20', still_path: '/p.jpg', runtime: null }
+      )
+    ).toBeNull();
+  });
+});
+
+describe('canListHoldEntry', () => {
+  it('lets episodes go only in Should Watch and custom lists', () => {
+    expect(canListHoldEntry('watchlist', 'episode')).toBe(true);
+    expect(canListHoldEntry('my-list', 'episode')).toBe(true);
+    expect(canListHoldEntry('trakt_123', 'episode')).toBe(true);
+    ['currently-watching', 'already-watched', 'favorites', 'dropped'].forEach((listId) => {
+      expect(canListHoldEntry(listId, 'episode')).toBe(false);
+    });
+  });
+
+  it('lets every other entry go anywhere', () => {
+    ['movie', 'tv', 'season'].forEach((mediaType) => {
+      expect(canListHoldEntry('already-watched', mediaType as 'movie')).toBe(true);
+      expect(canListHoldEntry('favorites', mediaType as 'movie')).toBe(true);
+    });
+  });
+});
