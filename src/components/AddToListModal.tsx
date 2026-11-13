@@ -74,11 +74,12 @@ const ListItemRow = memo<{
   list: ListWithCount;
   isSelected: boolean;
   isSaving: boolean;
+  isDeleting: boolean;
   onToggle: (listId: string) => void;
   onDelete: (listId: string, listName: string) => void;
   allowDelete?: boolean;
 }>(
-  ({ list, isSelected, isSaving, onToggle, onDelete, allowDelete = true }) => {
+  ({ list, isSelected, isSaving, isDeleting, onToggle, onDelete, allowDelete = true }) => {
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
     const handlePress = useCallback(() => onToggle(list.id), [list.id, onToggle]);
@@ -91,10 +92,11 @@ const ListItemRow = memo<{
 
     return (
       <Pressable
-        style={styles.listItem}
+        style={[styles.listItem, isDeleting && styles.listItemDeleting]}
         onPress={handlePress}
         onLongPress={handleLongPress}
-        disabled={isSaving}
+        disabled={isSaving || isDeleting}
+        accessibilityState={{ busy: isDeleting, disabled: isSaving || isDeleting }}
         testID={`add-to-list-row-${list.id}`}
       >
         <View
@@ -109,9 +111,17 @@ const ListItemRow = memo<{
           <AppIcon icon={ListIcon} size={20} color={COLORS.textSecondary} />
         </View>
         <Text style={styles.listName}>{list.name}</Text>
-        <Text style={styles.itemCount}>
-          {list.itemCount} {t('common.item', { count: list.itemCount })}
-        </Text>
+        {isDeleting ? (
+          <ActivityIndicator
+            size="small"
+            color={COLORS.error}
+            testID={`add-to-list-row-deleting-${list.id}`}
+          />
+        ) : (
+          <Text style={styles.itemCount}>
+            {list.itemCount} {t('common.item', { count: list.itemCount })}
+          </Text>
+        )}
       </Pressable>
     );
   },
@@ -120,6 +130,7 @@ const ListItemRow = memo<{
     prev.list.itemCount === next.list.itemCount &&
     prev.isSelected === next.isSelected &&
     prev.isSaving === next.isSaving &&
+    prev.isDeleting === next.isDeleting &&
     prev.allowDelete === next.allowDelete
 );
 
@@ -155,6 +166,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const [operationError, setOperationError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [deletingListId, setDeletingListId] = useState<string | null>(null);
+    // Rows are memoized and keep a stale onDelete, so guard re-entry with a ref
+    const deletingListIdRef = useRef<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     const bulkMediaItems = mediaItems ?? [];
@@ -566,6 +580,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     }, [handleBulkSave, handleSingleSave, isBulkMode, isGuest, requireAccount, user]);
 
     const handleDeleteList = (listId: string, listName: string) => {
+      if (deletingListIdRef.current) return;
+
       if (isDefaultList(listId)) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(t('library.cannotDeleteTitle'), t('library.cannotDeleteDefaultLists'), [
@@ -584,6 +600,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
+            if (deletingListIdRef.current) return;
+            deletingListIdRef.current = listId;
+            setDeletingListId(listId);
             try {
               maybeWarnTraktManagedListEdit(
                 isTraktConnected,
@@ -608,6 +627,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 t('common.error'),
                 error instanceof Error ? error.message : t('errors.deleteFailed')
               );
+            } finally {
+              deletingListIdRef.current = null;
+              setDeletingListId(null);
             }
           },
         },
@@ -756,6 +778,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                     list={list}
                     isSelected={!!pendingSelections[list.id]}
                     isSaving={isSaving}
+                    isDeleting={deletingListId === list.id}
                     onToggle={handleToggleList}
                     onDelete={handleDeleteList}
                     allowDelete={!isBulkMode}
@@ -768,10 +791,10 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               style={[
                 styles.saveButton,
                 { backgroundColor: accentColor },
-                (!hasChanges || isSaving) && styles.saveButtonDisabled,
+                (!hasChanges || isSaving || !!deletingListId) && styles.saveButtonDisabled,
               ]}
               onPress={handleSave}
-              disabled={!hasChanges || isSaving}
+              disabled={!hasChanges || isSaving || !!deletingListId}
               testID="add-to-list-save-button"
             >
               {isSaving ? (
@@ -871,6 +894,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
+  },
+  listItemDeleting: {
+    opacity: 0.5,
   },
   checkbox: {
     width: 24,

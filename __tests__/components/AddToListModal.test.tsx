@@ -752,4 +752,53 @@ describe('AddToListModal (bulk mode)', () => {
     expect(onDismiss).not.toHaveBeenCalled();
   });
 
+  it('shows a deleting state on the row while a list deletion is in flight', async () => {
+    const { Alert } = require('react-native');
+    const selected = createMediaItem(1);
+    const deferred = createDeferred<void>();
+    mockDeleteMutateAsync.mockReturnValueOnce(deferred.promise);
+
+    mockListsState.data = [
+      { id: 'custom-1', name: 'My List', items: {}, createdAt: 1 },
+      { id: 'custom-2', name: 'Other List', items: {}, createdAt: 2 },
+    ];
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId, queryByTestId } = render(
+      <AddToListModal ref={ref} mediaItem={selected} />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(queryByTestId('add-to-list-row-deleting-custom-1')).toBeNull();
+
+    fireEvent(getByTestId('add-to-list-row-custom-1'), 'longPress');
+
+    const buttons = (Alert.alert as jest.Mock).mock.calls.at(-1)[2];
+    const deleteButton = buttons.find((b: any) => b.style === 'destructive');
+
+    let deletePromise: Promise<void>;
+    act(() => {
+      deletePromise = deleteButton.onPress();
+    });
+
+    expect(getByTestId('add-to-list-row-deleting-custom-1')).toBeTruthy();
+    expect(getByTestId('add-to-list-row-custom-1').props.disabled).toBe(true);
+    expect(getByTestId('add-to-list-save-button').props.disabled).toBe(true);
+
+    // A second delete cannot start while one is in flight
+    (Alert.alert as jest.Mock).mockClear();
+    fireEvent(getByTestId('add-to-list-row-custom-2'), 'longPress');
+    expect(Alert.alert).not.toHaveBeenCalled();
+
+    await act(async () => {
+      deferred.resolve();
+      await deletePromise!;
+    });
+
+    expect(mockDeleteMutateAsync).toHaveBeenCalledWith('custom-1');
+    expect(queryByTestId('add-to-list-row-deleting-custom-1')).toBeNull();
+  });
 });
