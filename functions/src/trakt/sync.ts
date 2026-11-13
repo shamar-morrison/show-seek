@@ -50,6 +50,7 @@ import {
   didActivityFieldChange,
   hasActivityGroupChanged,
   hasManagedFieldChanges,
+  findFoldedSeasonShowKeys,
   isListEntryMediaType,
   isListMediaType,
   isPlainObject,
@@ -230,6 +231,21 @@ export const reconcileManagedList = async (
     }
   });
 
+  // Show entries folded from a season by earlier syncs go, now that the season has its own entry.
+  const foldedShowKeys = options.removeFoldedSeasonShows
+    ? findFoldedSeasonShowKeys(remoteItems, existingItems)
+    : [];
+  foldedShowKeys.forEach((showKey) => {
+    itemDeletes.add(showKey);
+    const legacyKey = getLegacyListItemKeyForRef(existingItems[showKey] as Partial<ListItemRef>);
+    if (legacyKey && existingItemsRaw && legacyKey in existingItemsRaw) {
+      itemDeletes.add(legacyKey);
+    }
+    hasItemWrites = true;
+    changedMediaTypes.push('tv');
+    changedCount += 1;
+  });
+
   if (!preserveLocalItems) {
     Object.entries(existingItems).forEach(([existingKey, existingItem]) => {
       if (remoteItems[existingKey]) {
@@ -264,7 +280,11 @@ export const reconcileManagedList = async (
   const didRemoteChange =
     changedCount > 0 || (baseDataChanged && Boolean(options.countBaseDataChangesAsRemoteChange));
   const nextItemCount = preserveLocalItems
-    ? new Set([...Object.keys(existingItems), ...Object.keys(remoteItems)]).size
+    ? new Set(
+        [...Object.keys(existingItems), ...Object.keys(remoteItems)].filter(
+          (key) => !foldedShowKeys.includes(key)
+        )
+      ).size
     : Object.keys(remoteItems).length;
   const metadataChanged =
     existingMetadata.itemCount !== nextItemCount || Boolean(existingMetadata.needsEnrichment) !== nextNeedsEnrichment;
@@ -560,6 +580,7 @@ export const syncWatchlist = async (
     {
       preserveLocalItems: true,
       recencyField: 'addedAt',
+      removeFoldedSeasonShows: true,
     }
   );
 

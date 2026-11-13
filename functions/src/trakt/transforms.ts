@@ -160,6 +160,41 @@ export const shouldApplyRemoteManagedValue = (
   return hasManagedFieldChanges(existingValue, remoteValue);
 };
 
+/**
+ * Show entries that an earlier sync created by folding a Trakt season into its show, and that
+ * the season's own entry now replaces. A local `tv-X` entry qualifies only when:
+ * - Trakt lists seasons of X but not X itself (no show entry, and no episode, which also counts
+ *   as the show), and
+ * - its `addedAt` is exactly the `listed_at` of one of those seasons, which is what folding
+ *   wrote. A show added in ShowSeek, or listed on Trakt as a show, has its own time.
+ */
+export const findFoldedSeasonShowKeys = (
+  remoteItems: Record<string, Record<string, unknown>>,
+  existingItems: Record<string, Record<string, unknown>>
+): string[] => {
+  const seasonTimesByShow = new Map<number, Set<number>>();
+  Object.values(remoteItems).forEach((item) => {
+    if (item?.media_type !== 'season' || typeof item.id !== 'number') return;
+    const addedAt = getComparableMillis(item.addedAt);
+    if (addedAt === null) return;
+    const times = seasonTimesByShow.get(item.id) ?? new Set<number>();
+    times.add(addedAt);
+    seasonTimesByShow.set(item.id, times);
+  });
+
+  const keys: string[] = [];
+  seasonTimesByShow.forEach((times, tvId) => {
+    const showKey = buildListItemKey('tv', tvId);
+    if (remoteItems[showKey]) return;
+    const localShow = existingItems[showKey];
+    const localAddedAt = localShow ? getComparableMillis(localShow.addedAt) : null;
+    if (localAddedAt !== null && times.has(localAddedAt)) {
+      keys.push(showKey);
+    }
+  });
+  return keys;
+};
+
 export const mergeManagedValue = (
   existingValue: Record<string, unknown> | undefined,
   remoteValue: Record<string, unknown>

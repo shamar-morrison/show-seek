@@ -500,6 +500,11 @@ export interface ReconcileManagedListOptions {
   countBaseDataChangesAsRemoteChange?: boolean;
   preserveLocalItems?: boolean;
   recencyField?: string;
+  /**
+   * Remove show entries that earlier syncs made by folding a season into its show, now that the
+   * season has its own entry (see findFoldedSeasonShowKeys). For lists that keep local items.
+   */
+  removeFoldedSeasonShows?: boolean;
 }
 
 export interface StartTraktZipImportRequest {

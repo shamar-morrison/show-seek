@@ -7015,6 +7015,50 @@ describe('reconcileManagedList with season entries', () => {
   });
 });
 
+describe('watchlist cleanup of shows folded from seasons', () => {
+  it('removes the folded show and keeps everything else', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const seasonListedAt = new Date('2025-01-26T07:45:16.000Z').getTime();
+
+    const result = await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'watchlist',
+      {
+        'season-1396-2': {
+          addedAt: seasonListedAt,
+          id: 1396,
+          media_type: 'season',
+          season_number: 2,
+          title: 'Breaking Bad · Season 2',
+        },
+      },
+      { id: 'watchlist', name: 'Should Watch' },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/watchlist',
+        {
+          items: {
+            // Written by an earlier sync for Season 2: the show, at the season's time.
+            'tv-1396': { addedAt: seasonListedAt, id: 1396, media_type: 'tv', title: 'Breaking Bad' },
+            // Added in ShowSeek.
+            'movie-27205': { addedAt: 5, id: 27205, media_type: 'movie', title: 'Inception' },
+          },
+          metadata: { itemCount: 2, needsEnrichment: false },
+          name: 'Should Watch',
+        },
+        listSet
+      ),
+      { preserveLocalItems: true, recencyField: 'addedAt', removeFoldedSeasonShows: true }
+    );
+
+    const write = listSet.mock.calls[0][0];
+    expect(write.items['tv-1396']).toBe('FIELD_DELETE');
+    expect(write.items).not.toHaveProperty(['movie-27205']);
+    expect(write.items['season-1396-2']).toEqual(expect.objectContaining({ media_type: 'season' }));
+    expect(write.metadata.itemCount).toBe(2);
+    expect(result.didRemoteChange).toBe(true);
+  });
+});
+
 describe('enriching season entries', () => {
   const tmdbResponse = (body: unknown, status = 200) => ({
     headers: { get: () => null },

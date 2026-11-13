@@ -43,6 +43,7 @@ jest.mock(
 
 import { buildCustomListItemsMap } from '@/functions/src/trakt/builders';
 import {
+  findFoldedSeasonShowKeys,
   getTraktSeasonNumber,
   transformListItem,
   transformWatchlistItem,
@@ -235,5 +236,67 @@ describe('ZIP import aggregation with seasons', () => {
 
     expect(watchlist).toHaveLength(1);
     expect(watchlist[0].listed_at).toBe('2026-02-01T00:00:00.000Z');
+  });
+});
+
+describe('findFoldedSeasonShowKeys', () => {
+  const T1 = new Date('2025-01-26T07:45:16.000Z').getTime();
+  const T2 = new Date('2025-02-01T10:00:00.000Z').getTime();
+  const season = (tvId: number, n: number, addedAt: number) => ({
+    addedAt,
+    id: tvId,
+    media_type: 'season',
+    season_number: n,
+  });
+  const tv = (tvId: number, addedAt: unknown) => ({
+    addedAt,
+    id: tvId,
+    media_type: 'tv',
+    title: 'Show',
+  });
+
+  it('finds a show entry that an earlier sync folded from a season', () => {
+    expect(
+      findFoldedSeasonShowKeys(
+        { 'season-1396-2': season(1396, 2, T1), 'season-1396-3': season(1396, 3, T2) },
+        { 'tv-1396': tv(1396, T2) }
+      )
+    ).toEqual(['tv-1396']);
+  });
+
+  it('matches the time however it was stored', () => {
+    expect(
+      findFoldedSeasonShowKeys(
+        { 'season-1396-2': season(1396, 2, T1) },
+        { 'tv-1396': tv(1396, new Date(T1).toISOString()) }
+      )
+    ).toEqual(['tv-1396']);
+  });
+
+  it('keeps a show added in ShowSeek, at its own time', () => {
+    expect(
+      findFoldedSeasonShowKeys(
+        { 'season-1396-2': season(1396, 2, T1) },
+        { 'tv-1396': tv(1396, T1 + 1) }
+      )
+    ).toEqual([]);
+  });
+
+  it('keeps a show Trakt still lists itself (as a show, or through an episode)', () => {
+    expect(
+      findFoldedSeasonShowKeys(
+        { 'season-1396-2': season(1396, 2, T1), 'tv-1396': tv(1396, T1) },
+        { 'tv-1396': tv(1396, T1) }
+      )
+    ).toEqual([]);
+  });
+
+  it('leaves shows alone when Trakt lists none of their seasons', () => {
+    expect(
+      findFoldedSeasonShowKeys(
+        { 'season-1399-1': season(1399, 1, T1) },
+        { 'tv-1396': tv(1396, T1) }
+      )
+    ).toEqual([]);
   });
 });
