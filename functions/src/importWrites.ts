@@ -20,6 +20,7 @@ import {
   hasListItemByRef,
 } from './shared/listItemKeys';
 import { createSinglePageLayout } from './shared/listPages';
+import { buildEpisodeEntryTitle } from './trakt/seasons';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_REQUEST_TIMEOUT_MS = 15_000;
@@ -111,9 +112,13 @@ const buildEpisodeListPayload = (
   addedAt: number
 ): Record<string, unknown> => {
   const episodeName = episode.name?.trim() ?? '';
-  const title = [show.name, `S${episode.season_number}E${episode.episode_number}`, episodeName]
-    .filter(Boolean)
-    .join(' · ');
+  // The same title the Trakt sync saves, so imported and synced entries match.
+  const title = buildEpisodeEntryTitle(
+    show.name,
+    episode.season_number,
+    episode.episode_number,
+    episodeName
+  );
   const airDate = episode.air_date ?? '';
   const runtime =
     typeof episode.runtime === 'number' && episode.runtime > 0 ? episode.runtime : undefined;

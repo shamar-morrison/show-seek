@@ -1,6 +1,6 @@
 import { canHaveEpisodeListEntries } from '../episodeListRollout';
 import { fetchTMDBJson } from './client';
-import { getTraktEpisodeRef } from './seasons';
+import { getTraktEpisodeRef, isWholeNumber } from './seasons';
 import { TraktSyncError, type TraktIds } from './types';
 
 /** A TMDB season's episodes, as far as numbering needs them. */
@@ -56,9 +56,6 @@ interface TraktEpisodeEntry {
   show?: { ids?: Partial<TraktIds> } | null;
   type?: string;
 }
-
-const isWholeNumber = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

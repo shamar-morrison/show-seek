@@ -1,6 +1,7 @@
 /** Season and episode helpers shared by the Trakt sync and ZIP import. No Firebase dependencies. */
 
-const isWholeNumber = (value: unknown): value is number =>
+/** A whole number of 0 or more: a usable season or episode number. */
+export const isWholeNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
 /**
