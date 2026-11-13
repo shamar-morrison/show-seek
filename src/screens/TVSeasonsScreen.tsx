@@ -1145,7 +1145,8 @@ export default function TVSeasonsScreen() {
                 <View style={styles.seasonActionButtonContent}>
                   <AppIcon
                     icon={StarIcon}
-                    size={24}
+                    // Smaller beside the rating so it sits with the text; full size on its own.
+                    size={seasonUserRating > 0 ? 16 : 24}
                     color={seasonUserRating > 0 ? accentColor : COLORS.white}
                     fill={seasonUserRating > 0 ? accentColor : 'transparent'}
                   />
