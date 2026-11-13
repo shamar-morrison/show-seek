@@ -64,6 +64,52 @@ const item: ListMediaItem = {
 };
 
 describe('MediaListCard', () => {
+  it("shows a season as its show's name with the season under it and no rating", () => {
+    const { getByText, queryByText } = render(
+      <MediaListCard
+        item={{
+          ...item,
+          id: 1396,
+          media_type: 'season',
+          season_number: 5,
+          season_name: 'Season 5',
+          show_name: 'Game of Thrones',
+          title: 'Game of Thrones · Season 5',
+          vote_average: 8.4,
+        }}
+        onPress={jest.fn()}
+        movieLabel="Movie"
+        tvShowLabel="TV Show"
+      />
+    );
+
+    expect(getByText('Game of Thrones')).toBeTruthy();
+    expect(getByText('Season 5')).toBeTruthy();
+    expect(queryByText('8.4')).toBeNull();
+    expect(queryByText('TV Show')).toBeNull();
+  });
+
+  it("shows TMDB's name for specials", () => {
+    const { getByText } = render(
+      <MediaListCard
+        item={{
+          ...item,
+          id: 1396,
+          media_type: 'season',
+          season_number: 0,
+          season_name: 'Specials',
+          show_name: 'Game of Thrones',
+          title: 'Game of Thrones · Specials',
+        }}
+        onPress={jest.fn()}
+        movieLabel="Movie"
+        tvShowLabel="TV Show"
+      />
+    );
+
+    expect(getByText('Specials')).toBeTruthy();
+  });
+
   it('shows selection badge and check when selected in selection mode', () => {
     const { getByTestId } = render(
       <MediaListCard

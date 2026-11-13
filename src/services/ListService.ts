@@ -6,12 +6,16 @@ import { deleteDocWithPages } from '@/src/services/firestoreHelpers';
 import { LayoutReadToken, LayoutWriteTracker } from '@/src/services/layoutWriteTracker';
 import { requireSignedInUser, toFirestoreError } from '@/src/services/serviceSupport';
 import {
-  buildListItemKey,
   getLegacyListItemKey,
-  getListItemCandidateKeys,
+  getLegacyListItemKeyForRef,
+  getListItemKey,
+  getListItemRefCandidateKeys,
+  getListMembershipKey,
   getStoredListItemKeys,
   isRuntimeStampLeftover,
   normalizeListItemsMap,
+  type ListEntryMediaType,
+  type ListItemRef,
 } from '@/src/utils/listItemKeys';
 import {
   chooseListItemPage,
@@ -44,20 +48,39 @@ import {
 import { auth, db } from '../firebase/config';
 
 export interface ListMediaItem {
+  /** TMDB ID of the movie or show. For a season, the show's ID (see `season_number`). */
   id: number;
+  /**
+   * Display title. For a season, a combined "Show · Season" title, so app versions that
+   * predate seasons still show something sensible.
+   */
   title: string;
   poster_path: string | null;
-  media_type: 'movie' | 'tv';
+  media_type: ListEntryMediaType;
   vote_average: number;
   release_date: string;
   addedAt: number;
   genre_ids?: number[];
   /** Runtime in minutes, stamped at write time from TMDB (optional for legacy items) */
   runtimeMinutes?: number;
-  // TV show fields (optional, used when media_type is 'tv')
+  // TV show fields (optional, used when media_type is 'tv' or 'season')
   name?: string;
   first_air_date?: string;
+  // Season fields (set when media_type is 'season')
+  /** Season number within the show; 0 is specials. */
+  season_number?: number;
+  /** TMDB's name for the season, e.g. "Season 2" or "Specials". */
+  season_name?: string;
+  /** The show's own name, kept apart from the combined display title. */
+  show_name?: string;
+  /**
+   * A season's total runtime (sum of its episodes), written only by app versions that know
+   * seasons. Season code reads this rather than `runtimeMinutes`, which an older app version
+   * may have filled with a wrong value (it looks seasons up as movies).
+   */
+  seasonRuntimeMinutes?: number;
 }
+
 
 export interface UserList {
   id: string;
@@ -530,11 +553,11 @@ class ListService {
         const listItems = normalizeListItemsMap(record.items);
 
         Object.values(listItems).forEach((item) => {
-          if (!item || typeof item.id !== 'number' || !item.media_type) {
+          const key = getListMembershipKey(item);
+          if (!key) {
             return;
           }
 
-          const key = `${item.id}-${item.media_type}`;
           const existingListIds = index[key] || [];
           if (!existingListIds.includes(listId)) {
             existingListIds.push(listId);
@@ -579,8 +602,13 @@ class ListService {
         ...sanitizedItem,
         addedAt: Date.now(),
       } as ListMediaItem;
-      const itemKey = buildListItemKey(mediaItem.media_type, mediaItem.id);
-      const candidateKeys = getListItemCandidateKeys(mediaItem.media_type, mediaItem.id);
+      const itemKey = getListItemKey(mediaItem);
+      if (!itemKey) {
+        throw new Error('This item cannot be added to a list');
+      }
+      const candidateKeys = getListItemRefCandidateKeys(mediaItem);
+      // Seasons never have a legacy numeric key; clearing one would hit the show or a movie.
+      const legacyKey = getLegacyListItemKeyForRef(mediaItem);
       const now = Date.now();
 
       // Resolve the display name without clobbering stored custom names:
@@ -604,7 +632,7 @@ class ListService {
             listId,
             itemKey,
             itemToAdd,
-            mediaItem.id,
+            legacyKey,
             resolvedName,
             now,
             (stage) => {
@@ -638,7 +666,7 @@ class ListService {
             placement,
             itemKey,
             itemToAdd,
-            mediaItem.id,
+            legacyKey,
             resolvedName,
             now
           );
@@ -651,7 +679,7 @@ class ListService {
           placement,
           itemKey,
           itemToAdd,
-          mediaItem.id,
+          legacyKey,
           resolvedName,
           now
         );
@@ -691,7 +719,7 @@ class ListService {
     listId: string,
     itemKey: string,
     itemToAdd: ListMediaItem,
-    mediaId: number,
+    legacyKey: string | null,
     resolvedName: string | undefined,
     now: number,
     setStage: (stage: 'update' | 'fallback-create') => void
@@ -702,7 +730,7 @@ class ListService {
     // Fast path for existing lists: update without a read.
     const updateData: Record<string, unknown> = {
       [`items.${itemKey}`]: itemToAdd,
-      [`items.${getLegacyListItemKey(mediaId)}`]: deleteField(),
+      ...(legacyKey ? { [`items.${legacyKey}`]: deleteField() } : {}),
       updatedAt: now,
     };
     if (resolvedName) {
@@ -758,14 +786,14 @@ class ListService {
     placement: ListItemPlacement,
     itemKey: string,
     itemToAdd: ListMediaItem,
-    mediaId: number,
+    legacyKey: string | null,
     resolvedName: string | undefined,
     now: number
   ): Promise<void> {
     const listRef = this.getUserListRef(userId, listId);
     const pageRef = this.getListItemPageRef(userId, listId, placement.page);
     const listUpdate: Record<string, unknown> = {
-      [`items.${getLegacyListItemKey(mediaId)}`]: deleteField(),
+      ...(legacyKey ? { [`items.${legacyKey}`]: deleteField() } : {}),
       updatedAt: now,
     };
     if (resolvedName) {
@@ -838,17 +866,27 @@ class ListService {
   }
 
   /**
-   * Remove a media item from a specific list (from the list document and every overflow page)
+   * Remove a media item from a specific list (from the list document and every overflow page).
+   * A season needs its `seasonNumber`.
    */
-  async removeFromList(listId: string, mediaId: number, mediaType: 'movie' | 'tv') {
+  async removeFromList(
+    listId: string,
+    mediaId: number,
+    mediaType: ListEntryMediaType,
+    seasonNumber?: number
+  ) {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
       const user = requireSignedInUser();
 
       const listRef = this.getUserListRef(user.uid, listId);
-      const itemKey = buildListItemKey(mediaType, mediaId);
-      const legacyKey = getLegacyListItemKey(mediaId);
+      const ref: ListItemRef = { id: mediaId, media_type: mediaType, season_number: seasonNumber };
+      const itemKey = getListItemKey(ref);
+      if (!itemKey) {
+        throw new Error('This item cannot be removed from a list');
+      }
+      const legacyKey = getLegacyListItemKeyForRef(ref);
       const now = Date.now();
       const known = this.knownLayouts.get(this.layoutKey(user.uid, listId));
 
@@ -867,7 +905,7 @@ class ListService {
 
       const removal = {
         [`items.${itemKey}`]: deleteField(),
-        [`items.${legacyKey}`]: deleteField(),
+        ...(legacyKey ? { [`items.${legacyKey}`]: deleteField() } : {}),
         updatedAt: now,
       };
 
@@ -890,9 +928,9 @@ class ListService {
 
       this.layoutWrites.recordWrite(this.layoutKey(user.uid, listId));
       if (known) {
-        recordListItemRemoval(known.layout, (key) => known.keys.has(key), [itemKey, legacyKey]);
-        known.keys.delete(itemKey);
-        known.keys.delete(legacyKey);
+        const removedKeys = legacyKey ? [itemKey, legacyKey] : [itemKey];
+        recordListItemRemoval(known.layout, (key) => known.keys.has(key), removedKeys);
+        removedKeys.forEach((key) => known.keys.delete(key));
       }
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
@@ -905,6 +943,7 @@ class ListService {
         listId,
         mediaId,
         mediaType,
+        seasonNumber,
       });
       throw new Error(message);
     } finally {

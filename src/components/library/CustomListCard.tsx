@@ -43,7 +43,8 @@ export const CustomListCard = memo<CustomListCardProps>(
     const { itemCount, previewItems } = useMemo(() => {
       const items = list.items || {};
       const nextPreviewItems: Array<{
-        mediaType: 'movie' | 'tv';
+        mediaType: 'movie' | 'tv' | 'season';
+        seasonNumber?: number;
         mediaId: number;
         posterPath: string | null;
       }> = [];
@@ -62,6 +63,7 @@ export const CustomListCard = memo<CustomListCardProps>(
             mediaType: mediaItem.media_type,
             mediaId: mediaItem.id,
             posterPath: mediaItem.poster_path,
+            seasonNumber: mediaItem.season_number,
           });
         }
       }

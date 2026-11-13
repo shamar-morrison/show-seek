@@ -1,7 +1,7 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
-import { hasListItemInMap } from '@/src/utils/listItemKeys';
+import { hasListItemByRef } from '@/src/utils/listItemKeys';
 import { maybeWarnTraktManagedListEdit } from '@/src/utils/traktManagedEdits';
 import { isDefaultList } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -234,7 +234,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
       const membership: Record<string, boolean> = {};
       lists.forEach((list) => {
-        if (hasListItemInMap(list.items, mediaItem.media_type, mediaItem.id)) {
+        if (hasListItemByRef(list.items, mediaItem)) {
           membership[list.id] = true;
         }
       });
@@ -405,6 +405,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               listId: list.id,
               mediaId: mediaItem.id,
               mediaType: mediaItem.media_type,
+              seasonNumber: mediaItem.season_number,
             });
           } catch (error) {
             failedOperations++;
@@ -481,11 +482,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         let itemHadAddFailure = false;
 
         for (const targetList of targetLists) {
-          const alreadyInTargetList = hasListItemInMap(
-            targetList.items,
-            selectedMedia.media_type,
-            selectedMedia.id
-          );
+          const alreadyInTargetList = hasListItemByRef(targetList.items, selectedMedia);
           if (alreadyInTargetList) continue;
 
           totalOperations++;
@@ -520,6 +517,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             listId: sourceListId,
             mediaId: selectedMedia.id,
             mediaType: selectedMedia.media_type,
+            seasonNumber: selectedMedia.season_number,
           });
         } catch (error) {
           failedOperations++;

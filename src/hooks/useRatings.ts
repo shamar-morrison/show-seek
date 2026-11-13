@@ -2,6 +2,7 @@ import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useAuth } from '@/src/context/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { getSeasonMediaKey } from '@/src/utils/listFilters';
 import { RatingItem, ratingService } from '../services/RatingService';
 
 const getRatingsQueryKey = (userId?: string) => ['ratings', userId] as const;
@@ -109,7 +110,8 @@ export const useRatings = () => {
 };
 
 /**
- * Movie and TV ratings keyed by `${mediaType}:${id}`, for filtering lists by the user's rating.
+ * Movie and TV ratings keyed by `${mediaType}:${id}`, and season ratings keyed
+ * `season:${tvShowId}:${seasonNumber}`, for filtering and sorting lists by the user's rating.
  *
  * Shares the `useRatings` cache (in memory and persisted on device) but never refreshes it:
  * a cached copy costs no reads, and only a device with no cached ratings loads them once.
@@ -134,6 +136,12 @@ export const useUserRatingMap = (enabled: boolean) => {
     (query.data ?? []).forEach((rating) => {
       if (rating.mediaType === 'movie' || rating.mediaType === 'tv') {
         map.set(`${rating.mediaType}:${rating.id}`, rating.rating);
+      } else if (
+        rating.mediaType === 'season' &&
+        typeof rating.tvShowId === 'number' &&
+        typeof rating.seasonNumber === 'number'
+      ) {
+        map.set(getSeasonMediaKey(rating.tvShowId, rating.seasonNumber), rating.rating);
       }
     });
     return map;

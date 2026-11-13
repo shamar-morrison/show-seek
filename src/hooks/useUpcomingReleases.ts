@@ -1,4 +1,5 @@
 import { Reminder } from '@/src/types/reminder';
+import { collapseSeasonsToShows } from '@/src/utils/listItemShows';
 import { formatMonthYear } from '@/src/components/CustomDatePicker/utils';
 import { isDefaultList } from '@/src/constants/lists';
 import { useAuth } from '@/src/context/auth';
@@ -202,7 +203,8 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
       if (!TRACKED_DEFAULT_LIST_IDS.has(list.id) && isDefaultList(list.id)) {
         return;
       }
-      Object.values(list.items || {}).forEach((item) => {
+      // A listed season tracks its whole show, which appears once.
+      collapseSeasonsToShows(Object.values(list.items || {})).forEach((item) => {
         const titles = item.media_type === 'movie' ? movies : shows;
         const existing = titles.get(item.id);
         if (!existing) {

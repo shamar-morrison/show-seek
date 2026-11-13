@@ -1,6 +1,6 @@
 import { ListMediaItem } from '../services/ListService';
 
-export type MediaTypeFilter = 'all' | 'movie' | 'tv';
+export type MediaTypeFilter = 'all' | 'movie' | 'tv' | 'season';
 
 export type GenreOperator = 'and' | 'or';
 
@@ -68,6 +68,47 @@ export interface ListFilterContext {
 
 export function getMediaKey(mediaType: 'movie' | 'tv', id: number): string {
   return `${mediaType}:${id}`;
+}
+
+export function getSeasonMediaKey(tvId: number, seasonNumber: number): string {
+  return `season:${tvId}:${seasonNumber}`;
+}
+
+/** The key for an entry in the ratings and runtimes maps (`season:{tvId}:{n}` for seasons). */
+export function getListItemMediaKey(
+  item: Pick<ListMediaItem, 'id' | 'media_type' | 'season_number'>
+): string {
+  if (item.media_type === 'season') {
+    return getSeasonMediaKey(item.id, item.season_number ?? -1);
+  }
+  return getMediaKey(item.media_type, item.id);
+}
+
+/**
+ * The key a runtime lookup reports under, for an entry described by type, ID and season
+ * number: the same key `getListItemMediaKey` gives the entry.
+ */
+export function getUnstampedListItemRuntimeKey(item: {
+  mediaType: ListMediaItem['media_type'];
+  mediaId: number;
+  seasonNumber?: number;
+}): string {
+  return getListItemMediaKey({
+    id: item.mediaId,
+    media_type: item.mediaType,
+    season_number: item.seasonNumber,
+  });
+}
+
+/**
+ * The runtime saved on an entry. A season only trusts `seasonRuntimeMinutes`: an app version
+ * that predates seasons may have saved a wrong `runtimeMinutes` on it.
+ */
+export function getStoredListItemRuntime(
+  item: Pick<ListMediaItem, 'media_type' | 'runtimeMinutes' | 'seasonRuntimeMinutes'>
+): number | undefined {
+  const minutes = item.media_type === 'season' ? item.seasonRuntimeMinutes : item.runtimeMinutes;
+  return minutes != null && minutes > 0 ? minutes : undefined;
 }
 
 function matchesRuntime(minutes: number | undefined, filter: RuntimeFilter): boolean {
@@ -151,14 +192,11 @@ export function filterMediaItems<T extends ListMediaItem>(
       }
     }
 
-    const key = getMediaKey(item.media_type, item.id);
+    const key = getListItemMediaKey(item);
 
     // Runtime filter (stored runtime first, then runtimes found after load)
     if (filters.runtime !== 'any') {
-      const minutes =
-        item.runtimeMinutes != null && item.runtimeMinutes > 0
-          ? item.runtimeMinutes
-          : context.runtimes?.get(key);
+      const minutes = getStoredListItemRuntime(item) ?? context.runtimes?.get(key);
       if (!matchesRuntime(minutes, filters.runtime)) {
         return false;
       }

@@ -16,7 +16,7 @@ export type AnalyticsTVFrequency = 'every_episode' | 'season_premiere';
 
 export interface TrackAddToListParams {
   listKind: AnalyticsListKind;
-  mediaType: Extract<AnalyticsMediaType, 'movie' | 'tv'>;
+  mediaType: Extract<AnalyticsMediaType, 'movie' | 'tv' | 'season'>;
 }
 
 export interface TrackSaveRatingParams {

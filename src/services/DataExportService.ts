@@ -260,7 +260,7 @@ function generateMarkdown(data: ExportData): string {
       } else {
         items.forEach((item) => {
           const title = item.title || item.name || 'Unknown';
-          const type = item.media_type === 'movie' ? 'Movie' : 'TV';
+          const type = listItemTypeLabel(item.media_type);
           const added = formatDate(item.addedAt);
           md += `- **${title}** (${type})${added ? ` – added ${added}` : ''}\n`;
         });
@@ -390,6 +390,12 @@ function csvLine(row: CsvRow): string {
     .join(',');
 }
 
+function listItemTypeLabel(mediaType: ListMediaItem['media_type']): string {
+  if (mediaType === 'movie') return 'Movie';
+  if (mediaType === 'season') return 'Season';
+  return 'TV';
+}
+
 function generateCSV(data: ExportData): string {
   const { lists, enrichedRatings, favoritePersons, watchedShows, favoriteEpisodes, notes } = data;
   const rows: CsvRow[] = [];
@@ -400,9 +406,11 @@ function generateCSV(data: ExportData): string {
       rows.push({
         category: `List: ${list.name}`,
         title: item.title || item.name || 'Unknown',
-        type: item.media_type === 'movie' ? 'Movie' : 'TV',
+        type: listItemTypeLabel(item.media_type),
         date: formatDate(item.addedAt),
+        // For a season this is the show's TMDB ID, with the season number alongside.
         tmdbId: item.id,
+        season: item.media_type === 'season' ? item.season_number : undefined,
       });
     });
   });

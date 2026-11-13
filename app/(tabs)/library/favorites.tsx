@@ -1,4 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import { getListItemUiKey } from '@/src/utils/listItemKeys';
 import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
@@ -24,7 +25,12 @@ import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiS
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { ActiveFiltersBar } from '@/src/components/library/ActiveFiltersBar';
 import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
-import { compareMissingLast, getItemRuntime, getItemUserRating } from '@/src/utils/listSort';
+import {
+  compareMissingLast,
+  compareListItemTitles,
+  getItemRuntime,
+  getItemUserRating,
+} from '@/src/utils/listSort';
 import { useListItemRuntimes } from '@/src/hooks/useListItemRuntimes';
 import { useUserRatingMap } from '@/src/hooks/useRatings';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
@@ -163,11 +169,8 @@ export default function FavoritesScreen() {
             getItemRuntime(b, runtimes),
             direction
           );
-        case 'alphabetical': {
-          const titleA = (a.title || a.name || '').toLowerCase();
-          const titleB = (b.title || b.name || '').toLowerCase();
-          return titleA.localeCompare(titleB) * direction;
-        }
+        case 'alphabetical':
+          return compareListItemTitles(a, b, direction);
         default:
           return 0;
       }
@@ -195,11 +198,12 @@ export default function FavoritesScreen() {
   }, []);
 
   const removeSelectedItemFromList = useCallback(
-    (mediaId: number, mediaType: 'movie' | 'tv') =>
+    (mediaId: number, mediaType: ListMediaItem['media_type'], seasonNumber?: number) =>
       removeMutation.mutateAsync({
         listId: DEFAULT_LIST_IDS[3],
         mediaId,
         mediaType,
+        seasonNumber,
       }),
     [removeMutation]
   );
@@ -302,7 +306,7 @@ export default function FavoritesScreen() {
     [handleItemPress, handleLongPress, isItemSelected, isSelectionMode, movieLabel, tvShowLabel]
   );
 
-  const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
+  const keyExtractor = useCallback((item: ListMediaItem) => getListItemUiKey(item), []);
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;

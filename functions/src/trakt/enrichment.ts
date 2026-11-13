@@ -180,7 +180,8 @@ const getGenreIds = (details: { genre_ids?: number[]; genres?: { id: number }[] 
 export const needsMediaEnrichment = (item: Record<string, unknown> | undefined): boolean =>
   !!item &&
   typeof item.id === 'number' &&
-  typeof item.media_type === 'string' &&
+  // Only movies and shows are enriched; season entries are saved complete by the app.
+  (item.media_type === 'movie' || item.media_type === 'tv') &&
   (item.poster_path === undefined ||
     item.vote_average === undefined ||
     // Enrichment used to read genre_ids from TMDB details (which only return `genres`), so

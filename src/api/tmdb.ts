@@ -396,6 +396,8 @@ export interface Season {
   air_date: string | null;
   poster_path: string | null;
   overview: string;
+  /** TMDB's average rating for the season (season details and show details both include it). */
+  vote_average?: number;
 }
 
 export interface Episode {

@@ -9,6 +9,7 @@ import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
+import { getListItemRoute } from '@/src/utils/listItemRoutes';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { Route, router } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
@@ -26,6 +27,10 @@ interface MediaCardProps<T extends MediaCardItem> {
   showListBadge?: boolean;
   posterPathOverride?: string | null;
   onLongPress?: (item: T) => void;
+  /** Set when the card stands for one season of the show: it then opens that season. */
+  seasonNumber?: number;
+  /** For a season card: "Season X", shown under the title in place of year and rating. */
+  seasonLabel?: string;
 }
 
 const isMovie = (item: MediaCardItem): item is Movie => {
@@ -49,14 +54,19 @@ function MediaCardComponent<T extends MediaCardItem>({
   showListBadge = true,
   posterPathOverride,
   onLongPress,
+  seasonNumber,
+  seasonLabel,
 }: MediaCardProps<T>) {
+  const isSeason = mediaType === 'tv' && seasonNumber !== undefined;
   const currentTab = useCurrentTab();
   const { getListsForMedia } = useListMembership();
   const { preferences } = usePreferences();
   const { resolvePosterPath } = usePosterOverrides();
   const resolvedPosterPath = useMemo(
-    () => posterPathOverride ?? resolvePosterPath(mediaType, item.id, item.poster_path),
-    [item.id, item.poster_path, mediaType, posterPathOverride, resolvePosterPath]
+    () =>
+      posterPathOverride ??
+      resolvePosterPath(isSeason ? 'season' : mediaType, item.id, item.poster_path),
+    [isSeason, item.id, item.poster_path, mediaType, posterPathOverride, resolvePosterPath]
   );
 
   const posterUrl = useMemo(
@@ -68,15 +78,24 @@ function MediaCardComponent<T extends MediaCardItem>({
     [item, preferences?.showOriginalTitles]
   );
 
-  const listIds = showListBadge ? getListsForMedia(item.id, mediaType) : [];
+  const listIds = showListBadge
+    ? isSeason
+      ? getListsForMedia(item.id, 'season', seasonNumber)
+      : getListsForMedia(item.id, mediaType)
+    : [];
   const showBadge = listIds.length > 0;
 
   const handleNavigate = useCallback(() => {
-    const path = currentTab
-      ? `/(tabs)/${currentTab}/${mediaType}/${item.id}`
-      : `/${mediaType}/${item.id}`;
+    const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+    const path = isSeason
+      ? getListItemRoute(basePath, {
+          id: item.id,
+          media_type: 'season',
+          season_number: seasonNumber,
+        })
+      : `${basePath}/${mediaType}/${item.id}`;
     router.push(path as Route);
-  }, [currentTab, item.id, mediaType]);
+  }, [currentTab, isSeason, item.id, mediaType, seasonNumber]);
 
   const handleCardLongPress = useCallback(() => {
     onLongPress?.(item);
@@ -112,19 +131,27 @@ function MediaCardComponent<T extends MediaCardItem>({
         <Text style={mediaCardStyles.title} numberOfLines={2}>
           {displayTitle}
         </Text>
-        {showMeta && (
+        {isSeason && seasonLabel ? (
           <View style={mediaMetaStyles.yearRatingContainer}>
-            {releaseYear !== null && <Text style={mediaMetaStyles.year}>{releaseYear}</Text>}
-            {releaseYear !== null && hasVoteAverage && (
-              <Text style={mediaMetaStyles.separator}> • </Text>
-            )}
-            {hasVoteAverage && (
-              <>
-                <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
-              </>
-            )}
+            <Text style={mediaMetaStyles.year} numberOfLines={1}>
+              {seasonLabel}
+            </Text>
           </View>
+        ) : (
+          showMeta && (
+            <View style={mediaMetaStyles.yearRatingContainer}>
+              {releaseYear !== null && <Text style={mediaMetaStyles.year}>{releaseYear}</Text>}
+              {releaseYear !== null && hasVoteAverage && (
+                <Text style={mediaMetaStyles.separator}> • </Text>
+              )}
+              {hasVoteAverage && (
+                <>
+                  <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
+                </>
+              )}
+            </View>
+          )
         )}
       </View>
     </TouchableOpacity>

@@ -1,4 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { getSeasonEntryDisplay } from '@/src/utils/seasonListItem';
+import { useTranslation } from 'react-i18next';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -63,6 +65,13 @@ export const MediaListCard = memo<MediaListCardProps>(
       onLongPress: onLongPress ? handleLongPress : undefined,
     });
 
+    const { t } = useTranslation();
+    // A season shows its show's name, then "Season X" under it, with no rating.
+    const seasonDisplay =
+      item.media_type === 'season'
+        ? getSeasonEntryDisplay(item, (number) => t('media.seasonNumber', { number }))
+        : null;
+
     const year = item.release_date
       ? new Date(item.release_date).getFullYear()
       : item.first_air_date
@@ -107,24 +116,31 @@ export const MediaListCard = memo<MediaListCardProps>(
         </View>
         <View style={listCardStyles.info}>
           <Text style={styles.title} numberOfLines={2}>
-            {item.title || item.name}
+            {seasonDisplay ? seasonDisplay.title : item.title || item.name}
           </Text>
+          {seasonDisplay && (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {seasonDisplay.seasonLabel}
+            </Text>
+          )}
           {subtitle && (
             <Text style={styles.subtitle} numberOfLines={1}>
               {subtitle}
             </Text>
           )}
-          <View style={styles.metaContainer}>
-            {year && <Text style={metaTextStyles.secondary}>{year}</Text>}
-            {item.vote_average > 0 && year && <Text style={metaTextStyles.secondary}> • </Text>}
-            {item.vote_average > 0 && (
-              <View style={styles.tmdbRating}>
-                <AppIcon icon={StarIcon} size={12} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
-              </View>
-            )}
-          </View>
-          {item.media_type && !hideMediaType && (
+          {!seasonDisplay && (
+            <View style={styles.metaContainer}>
+              {year && <Text style={metaTextStyles.secondary}>{year}</Text>}
+              {item.vote_average > 0 && year && <Text style={metaTextStyles.secondary}> • </Text>}
+              {item.vote_average > 0 && (
+                <View style={styles.tmdbRating}>
+                  <AppIcon icon={StarIcon} size={12} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
+                </View>
+              )}
+            </View>
+          )}
+          {item.media_type && !hideMediaType && !seasonDisplay && (
             <Text style={styles.mediaType}>
               {item.media_type === 'movie' ? movieLabel : tvShowLabel}
             </Text>

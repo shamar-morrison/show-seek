@@ -364,3 +364,57 @@ describe('backfillRuntimes', () => {
     expect(getShowRuntime).toHaveBeenCalledTimes(5);
   });
 });
+
+describe('WatchTimeBackfill seasons', () => {
+  const seasonItem = (seasonNumber: number, tvId = 1396): UnstampedListItem => ({
+    listId: 'already-watched',
+    itemKey: `season-${tvId}-${seasonNumber}`,
+    mediaType: 'season',
+    mediaId: tvId,
+    seasonNumber,
+    addedAt: 1000,
+  });
+
+  it('looks seasons up as seasons, never as movies or the show', async () => {
+    const getSeasonRuntime = jest.fn(async (_tvId: number, n: number) => (n === 0 ? null : 300));
+    const getMovieRuntime = jest.fn(async () => 999);
+    const getShowRuntime = jest.fn(async () => 45);
+    const stamps: RuntimeStamps[] = [];
+
+    const result = await resolveMissingRuntimes([], [seasonItem(3), seasonItem(0)], {
+      getSeasonRuntime,
+      getMovieRuntime,
+      getShowRuntime,
+      stampRuntimes: (s) => stamps.push(s),
+    });
+
+    expect(getSeasonRuntime).toHaveBeenCalledWith(1396, 3);
+    expect(getSeasonRuntime).toHaveBeenCalledWith(1396, 0);
+    expect(getMovieRuntime).not.toHaveBeenCalled();
+    expect(getShowRuntime).not.toHaveBeenCalled();
+    expect(result.listItemMinutes.get('already-watched/season-1396-3')).toBe(300);
+    // Unknown season runtimes count 0 and are never saved.
+    expect(result.listItemMinutes.get('already-watched/season-1396-0')).toBe(0);
+    expect(stamps[0].itemsByList.get('already-watched')).toEqual(
+      new Map([['season-1396-3', 300]])
+    );
+  });
+
+  it("saves a season's runtime to the field season-aware versions read", async () => {
+    const { doc, updateDoc } = jest.requireMock('firebase/firestore');
+    (doc as jest.Mock).mockImplementation((_db: unknown, ...segments: string[]) => ({
+      path: segments.join('/'),
+    }));
+    (updateDoc as jest.Mock).mockClear().mockResolvedValue(undefined);
+
+    await resolveMissingRuntimes([], [seasonItem(2)], { getSeasonRuntime: async () => 420 });
+
+    expect(updateDoc).toHaveBeenCalledWith(
+      { path: 'users/test-user-id/lists/already-watched' },
+      {
+        'items.season-1396-2.runtimeMinutes': 420,
+        'items.season-1396-2.seasonRuntimeMinutes': 420,
+      }
+    );
+  });
+});

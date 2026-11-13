@@ -27,13 +27,13 @@ export interface WhatsNewAnnouncement {
  * strings in every locale. Set it to null to show nothing.
  */
 export const CURRENT_WHATS_NEW: WhatsNewAnnouncement | null = {
-  id: '2026-11-showly-import',
+  id: '2026-11-season-lists',
   sections: [
     {
-      id: 'showly-import',
-      titleKey: 'whatsNew.showlyImport.title',
-      descriptionKey: 'whatsNew.showlyImport.description',
-      visual: { type: 'image', source: require('@/assets/images/whats-new/showly-import.png') },
+      id: 'season-lists',
+      titleKey: 'whatsNew.seasonLists.title',
+      descriptionKey: 'whatsNew.seasonLists.description',
+      visual: { type: 'image', source: require('@/assets/images/whats-new/season-lists.png') },
     },
   ],
 };

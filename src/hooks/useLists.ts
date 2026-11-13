@@ -8,10 +8,12 @@ import {
 } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import {
-  buildListItemKey,
-  getLegacyListItemKey,
-  getListItemFromMap,
+  findListItemByRef,
+  getListItemKey,
+  getListMembershipKey,
+  getListItemRefCandidateKeys,
   hasListItemInMap,
+  type ListEntryMediaType,
 } from '@/src/utils/listItemKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -32,14 +34,14 @@ import {
   normalizeHomeScreenSelections,
 } from '../utils/homeScreenSelections';
 
-const getMediaMembershipKey = (mediaItem: Pick<ListMediaItem, 'id' | 'media_type'>) =>
-  `${mediaItem.id}-${mediaItem.media_type}`;
-
 const addListIdToMembershipIndex = (
   index: ListMembershipIndex,
-  mediaKey: string,
+  mediaKey: string | null,
   listId: string
 ): ListMembershipIndex => {
+  if (!mediaKey) {
+    return index;
+  }
   const existingListIds = index[mediaKey] || [];
   if (existingListIds.includes(listId)) {
     return index;
@@ -53,9 +55,12 @@ const addListIdToMembershipIndex = (
 
 const removeListIdFromMembershipIndex = (
   index: ListMembershipIndex,
-  mediaKey: string,
+  mediaKey: string | null,
   listId: string
 ): ListMembershipIndex => {
+  if (!mediaKey) {
+    return index;
+  }
   const existingListIds = index[mediaKey] || [];
   if (!existingListIds.length) {
     return index;
@@ -185,11 +190,12 @@ export const useAddToList = () => {
         ...mediaItem,
         addedAt: Date.now(),
       } as ListMediaItem;
+      const newItemKey = getListItemKey(mediaItem);
 
       let appliedListOptimisticUpdate = false;
       let appliedMembershipOptimisticUpdate = false;
 
-      if (hasHydratedListCache) {
+      if (hasHydratedListCache && newItemKey) {
         queryClient.setQueryData<UserList[]>(['lists', userId], (oldLists) => {
           if (!oldLists) {
             return oldLists;
@@ -211,7 +217,7 @@ export const useAddToList = () => {
               name: listName || list.name,
               items: {
                 ...list.items,
-                [buildListItemKey(mediaItem.media_type, mediaItem.id)]: newItem,
+                [newItemKey]: newItem,
               },
               updatedAt: Date.now(),
             };
@@ -228,7 +234,7 @@ export const useAddToList = () => {
             }
 
             appliedMembershipOptimisticUpdate = true;
-            return addListIdToMembershipIndex(oldIndex, getMediaMembershipKey(newItem), listId);
+            return addListIdToMembershipIndex(oldIndex, getListMembershipKey(newItem), listId);
           }
         );
       }
@@ -266,8 +272,9 @@ export const useAddToList = () => {
       // Record engagement for in-app review prompt
       void recordEngagement();
 
-      // Only prefetch for TV shows - movies already have release_date in the list item
-      if (mediaItem.media_type === 'tv') {
+      // Only prefetch for TV shows (a season tracks its show) - movies already have
+      // release_date in the list item
+      if (mediaItem.media_type === 'tv' || mediaItem.media_type === 'season') {
         void queryClient.prefetchQuery(calendarTvQueryOptions(mediaItem.id));
       }
 
@@ -298,14 +305,17 @@ export const useRemoveFromList = () => {
       listId,
       mediaId,
       mediaType,
+      seasonNumber,
     }: {
       listId: string;
       mediaId: number;
-      mediaType: 'movie' | 'tv';
-    }) => listService.removeFromList(listId, mediaId, mediaType),
+      mediaType: ListEntryMediaType;
+      /** Required when `mediaType` is 'season'. */
+      seasonNumber?: number;
+    }) => listService.removeFromList(listId, mediaId, mediaType, seasonNumber),
 
     // Optimistic update - immediately show the item as removed
-    onMutate: async ({ listId, mediaId, mediaType }) => {
+    onMutate: async ({ listId, mediaId, mediaType, seasonNumber }) => {
       if (!userId) {
         throw new Error('User must be logged in');
       }
@@ -327,13 +337,11 @@ export const useRemoveFromList = () => {
       ]);
       const hasHydratedMembershipCache =
         membershipQueryState?.status === 'success' && previousMembershipIndex !== undefined;
-      const targetItem = getListItemFromMap(
+      const ref = { id: mediaId, media_type: mediaType, season_number: seasonNumber };
+      const targetItem = findListItemByRef(
         previousLists?.find((list) => list.id === listId)?.items,
-        mediaType,
-        mediaId
-      ) as
-        | ListMediaItem
-        | undefined;
+        ref
+      ) as ListMediaItem | undefined;
 
       let appliedListOptimisticUpdate = false;
       let appliedMembershipOptimisticUpdate = false;
@@ -345,8 +353,9 @@ export const useRemoveFromList = () => {
           return oldLists.map((list) => {
             if (list.id === listId) {
               const remainingItems = { ...(list.items || {}) };
-              delete remainingItems[buildListItemKey(mediaType, mediaId)];
-              delete remainingItems[getLegacyListItemKey(mediaId)];
+              getListItemRefCandidateKeys(ref).forEach((key) => {
+                delete remainingItems[key];
+              });
               return {
                 ...list,
                 items: remainingItems,
@@ -368,7 +377,7 @@ export const useRemoveFromList = () => {
             appliedMembershipOptimisticUpdate = true;
             return removeListIdFromMembershipIndex(
               oldIndex,
-              getMediaMembershipKey({ id: mediaId, media_type: targetItem.media_type }),
+              getListMembershipKey({ ...ref, media_type: targetItem.media_type }),
               listId
             );
           }

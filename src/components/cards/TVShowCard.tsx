@@ -12,6 +12,10 @@ interface TVShowCardProps {
   /** Optional pre-resolved poster path to avoid stale list cells */
   posterPathOverride?: string | null;
   onLongPress?: (show: TVShow) => void;
+  /** Set when the card stands for one season of the show: it then opens that season. */
+  seasonNumber?: number;
+  /** For a season card: "Season X", shown under the title. */
+  seasonLabel?: string;
 }
 
 export const TVShowCard = memo<TVShowCardProps>(
@@ -22,6 +26,8 @@ export const TVShowCard = memo<TVShowCardProps>(
     showListBadge = true,
     posterPathOverride,
     onLongPress,
+    seasonNumber,
+    seasonLabel,
   }) => {
     return (
       <MediaCard
@@ -32,6 +38,8 @@ export const TVShowCard = memo<TVShowCardProps>(
         showListBadge={showListBadge}
         posterPathOverride={posterPathOverride}
         onLongPress={onLongPress}
+        seasonNumber={seasonNumber}
+        seasonLabel={seasonLabel}
       />
     );
   }

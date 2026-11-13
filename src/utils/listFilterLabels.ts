@@ -12,6 +12,7 @@ export const RATING_THRESHOLDS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 export function getMediaTypeLabel(t: TFunction, value: MediaTypeFilter): string {
   if (value === 'movie') return t('media.movies');
   if (value === 'tv') return t('media.tvShows');
+  if (value === 'season') return t('media.seasons');
   return t('library.allMedia');
 }
 

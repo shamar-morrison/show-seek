@@ -1,4 +1,6 @@
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
+import { getSeasonEntryDisplay } from '@/src/utils/seasonListItem';
+import { getListItemUiKey } from '@/src/utils/listItemKeys';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { LatestTrailersSection } from '@/src/components/LatestTrailersSection';
@@ -270,10 +272,16 @@ function UserListSection({
         data={items}
         renderItem={({ item }) => {
           const posterPathOverride = resolvePosterPath(item.media_type, item.id, item.poster_path);
-          if (item.media_type === 'tv') {
+          if (item.media_type === 'tv' || item.media_type === 'season') {
+            const isSeason = item.media_type === 'season';
+            // A season shows its show's name, then "Season X" under it.
+            const seasonDisplay = isSeason
+              ? getSeasonEntryDisplay(item, (number) => t('media.seasonNumber', { number }))
+              : null;
+            const showName = seasonDisplay ? seasonDisplay.title : item.name || item.title;
             const show: TVShow = {
               id: item.id,
-              name: item.name || item.title,
+              name: showName,
               poster_path: item.poster_path,
               vote_average: item.vote_average,
               vote_count: 0,
@@ -282,7 +290,7 @@ function UserListSection({
               overview: '',
               popularity: 0,
               backdrop_path: null,
-              original_name: item.name || item.title,
+              original_name: showName,
               original_language: 'en',
             };
 
@@ -290,8 +298,11 @@ function UserListSection({
               <TVShowCard
                 show={show}
                 posterPathOverride={posterPathOverride}
+                seasonNumber={isSeason ? item.season_number : undefined}
+                seasonLabel={seasonDisplay?.seasonLabel}
+                // Long-press adds the show to lists; a season is managed from its own screen.
                 onLongPress={
-                  onMediaLongPress
+                  onMediaLongPress && !isSeason
                     ? (selectedShow) => onMediaLongPress(selectedShow, 'tv')
                     : undefined
                 }
@@ -328,7 +339,7 @@ function UserListSection({
             />
           );
         }}
-        keyExtractor={(item) => `${item.media_type}-${item.id}`}
+        keyExtractor={(item) => getListItemUiKey(item)}
         extraData={listExtraData}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContent}

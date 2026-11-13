@@ -1,4 +1,6 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import { getListItemUiKey } from '@/src/utils/listItemKeys';
+import { getListItemRoute } from '@/src/utils/listItemRoutes';
 import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
@@ -25,7 +27,12 @@ import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiS
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { ActiveFiltersBar } from '@/src/components/library/ActiveFiltersBar';
 import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
-import { compareMissingLast, getItemRuntime, getItemUserRating } from '@/src/utils/listSort';
+import {
+  compareMissingLast,
+  compareListItemTitles,
+  getItemRuntime,
+  getItemUserRating,
+} from '@/src/utils/listSort';
 import { useListItemRuntimes } from '@/src/hooks/useListItemRuntimes';
 import { useUserRatingMap } from '@/src/hooks/useRatings';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
@@ -160,11 +167,8 @@ export default function WatchStatusDetailScreen() {
             getItemRuntime(b, runtimes),
             direction
           );
-        case 'alphabetical': {
-          const titleA = (a.title || a.name || '').toLowerCase();
-          const titleB = (b.title || b.name || '').toLowerCase();
-          return titleA.localeCompare(titleB) * direction;
-        }
+        case 'alphabetical':
+          return compareListItemTitles(a, b, direction);
         default:
           return 0;
       }
@@ -210,8 +214,8 @@ export default function WatchStatusDetailScreen() {
   }, []);
 
   const removeSelectedItemFromList = useCallback(
-    (mediaId: number, mediaType: 'movie' | 'tv') =>
-      removeMutation.mutateAsync({ listId: id, mediaId, mediaType }),
+    (mediaId: number, mediaType: ListMediaItem['media_type'], seasonNumber?: number) =>
+      removeMutation.mutateAsync({ listId: id, mediaId, mediaType, seasonNumber }),
     [id, removeMutation]
   );
 
@@ -270,11 +274,7 @@ export default function WatchStatusDetailScreen() {
     (item: ListMediaItem) => {
       setShuffleModalVisible(false);
       setTimeout(() => {
-        const route =
-          item.media_type === 'movie'
-            ? `/(tabs)/library/movie/${item.id}`
-            : `/(tabs)/library/tv/${item.id}`;
-        router.push(route as any);
+        router.push(getListItemRoute('/(tabs)/library', item) as any);
       }, 300);
     },
     [router]
@@ -370,7 +370,7 @@ export default function WatchStatusDetailScreen() {
     [handleItemPress, handleLongPress, isItemSelected, isSelectionMode]
   );
 
-  const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
+  const keyExtractor = useCallback((item: ListMediaItem) => getListItemUiKey(item), []);
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;

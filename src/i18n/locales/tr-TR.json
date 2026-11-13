@@ -1853,9 +1853,9 @@
   },
   "whatsNew": {
     "title": "ShowSeek'te neler yeni?",
-    "showlyImport": {
-      "title": "Showly'den içe aktarın",
-      "description": "Showly'den mi geçiyorsunuz? Premium ile dizilerinizi, izleme geçmişinizi, puanlarınızı ve listelerinizi getirin. Bu seçeneği Ayarlar > Entegrasyonlar bölümünde bulabilirsiniz."
+    "seasonLists": {
+      "title": "Sezonları listelere ekleyin",
+      "description": "Yalnızca bir sezon mu istiyorsunuz? Bir dizinin Sezonlar ve bölümler ekranında herhangi bir sezonda Listeye ekle'ye dokunarak onu listelerinizden birine kaydedin."
     }
   },
   "posterPicker": {

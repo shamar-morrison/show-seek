@@ -351,6 +351,64 @@ describe('useRemoveFromList', () => {
   });
 });
 
+describe('useRemoveFromList with seasons', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.user = { uid: 'test-user-id' };
+    mockRemoveFromList.mockResolvedValue(undefined);
+  });
+
+  it('removes only that season from the cache and membership index', async () => {
+    const client = createQueryClient();
+    const addedAt = Date.now();
+    client.setQueryData(
+      ['lists', 'test-user-id'],
+      [
+        {
+          id: 'watchlist',
+          name: 'Watchlist',
+          items: {
+            '1396': { id: 1396, media_type: 'tv', addedAt },
+            'season-1396-3': { id: 1396, media_type: 'season', season_number: 3, addedAt },
+            'season-1396-0': { id: 1396, media_type: 'season', season_number: 0, addedAt },
+          },
+        },
+      ]
+    );
+    client.setQueryData(['list-membership-index', 'test-user-id'], {
+      '1396-tv': ['watchlist'],
+      '1396-season-3': ['watchlist'],
+      '1396-season-0': ['watchlist'],
+    });
+    // Keep the optimistic result in place instead of refetching.
+    jest.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useRemoveFromList(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        listId: 'watchlist',
+        mediaId: 1396,
+        mediaType: 'season',
+        seasonNumber: 3,
+      });
+    });
+
+    expect(mockRemoveFromList).toHaveBeenCalledWith('watchlist', 1396, 'season', 3);
+    const lists = client.getQueryData<{ items: Record<string, unknown> }[]>([
+      'lists',
+      'test-user-id',
+    ]);
+    expect(Object.keys(lists![0].items).sort()).toEqual(['1396', 'season-1396-0']);
+    expect(client.getQueryData(['list-membership-index', 'test-user-id'])).toEqual({
+      '1396-tv': ['watchlist'],
+      '1396-season-0': ['watchlist'],
+    });
+  });
+});
+
 describe('useDeleteList', () => {
   beforeEach(() => {
     jest.clearAllMocks();

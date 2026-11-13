@@ -6730,6 +6730,10 @@ describe('Trakt list item enrichment', () => {
     expect(
       needsMediaEnrichment({ id: 1, media_type: 'movie', poster_path: '/p.jpg', vote_average: 7, genre_ids: [18] })
     ).toBe(false);
+    // Season entries are saved complete by the app and never enriched, even with no genres.
+    expect(
+      needsMediaEnrichment({ id: 1, media_type: 'season', season_number: 2, genre_ids: [] })
+    ).toBe(false);
   });
 
   it('reads genre ids from the genres TMDB details actually return', async () => {

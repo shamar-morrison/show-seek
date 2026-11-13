@@ -125,7 +125,8 @@ export async function getUserWatchlist(
         title: item.title || item.name || '',
         posterPath: item.poster_path || '',
         releaseDate: item.release_date || item.first_air_date || '',
-        mediaType: item.media_type,
+        // The widget only knows movies and shows; tapping it opens the list either way.
+        mediaType: item.media_type === 'season' ? ('tv' as const) : item.media_type,
       }));
 
     // Single object for cache and SharedPreferences so the two can never
