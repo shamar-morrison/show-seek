@@ -14,6 +14,8 @@ interface TVShowCardProps {
   onLongPress?: (show: TVShow) => void;
   /** Set when the card stands for one season of the show: it then opens that season. */
   seasonNumber?: number;
+  /** For a season card: "Season X", shown under the title. */
+  seasonLabel?: string;
 }
 
 export const TVShowCard = memo<TVShowCardProps>(
@@ -25,6 +27,7 @@ export const TVShowCard = memo<TVShowCardProps>(
     posterPathOverride,
     onLongPress,
     seasonNumber,
+    seasonLabel,
   }) => {
     return (
       <MediaCard
@@ -36,6 +39,7 @@ export const TVShowCard = memo<TVShowCardProps>(
         posterPathOverride={posterPathOverride}
         onLongPress={onLongPress}
         seasonNumber={seasonNumber}
+        seasonLabel={seasonLabel}
       />
     );
   }

@@ -63,7 +63,6 @@ export default function FavoritesScreen() {
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
-  const seasonLabel = t('media.season');
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -302,18 +301,9 @@ export default function FavoritesScreen() {
         isSelected={isItemSelected(item)}
         movieLabel={movieLabel}
         tvShowLabel={tvShowLabel}
-        seasonLabel={seasonLabel}
       />
     ),
-    [
-      handleItemPress,
-      handleLongPress,
-      isItemSelected,
-      isSelectionMode,
-      movieLabel,
-      tvShowLabel,
-      seasonLabel,
-    ]
+    [handleItemPress, handleLongPress, isItemSelected, isSelectionMode, movieLabel, tvShowLabel]
   );
 
   const keyExtractor = useCallback((item: ListMediaItem) => getListItemUiKey(item), []);

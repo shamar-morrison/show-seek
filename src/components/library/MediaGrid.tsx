@@ -1,4 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { getSeasonEntryDisplay } from '@/src/utils/seasonListItem';
+import { useTranslation } from 'react-i18next';
 import { getListItemUiKey } from '@/src/utils/listItemKeys';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
@@ -92,7 +94,13 @@ const MediaGridItem = memo<{
       [item.id, item.media_type, item.poster_path, resolvePosterPath]
     );
 
-    const displayTitle = item.title || item.name;
+    const { t } = useTranslation();
+    // A season shows its show's name, then "Season X" under it, with no rating.
+    const seasonDisplay =
+      item.media_type === 'season'
+        ? getSeasonEntryDisplay(item, (number) => t('media.seasonNumber', { number }))
+        : null;
+    const displayTitle = seasonDisplay ? seasonDisplay.title : item.title || item.name;
     const releaseDate = item.release_date || item.first_air_date;
     const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
 
@@ -137,17 +145,32 @@ const MediaGridItem = memo<{
           <Text style={mediaCardStyles.title} numberOfLines={1}>
             {displayTitle}
           </Text>
-          {(year || item.vote_average > 0) && (
+          {seasonDisplay ? (
             <View style={mediaMetaStyles.yearRatingContainer}>
-              {year && <Text style={mediaMetaStyles.year}>{year}</Text>}
-              {year && item.vote_average > 0 && <Text style={mediaMetaStyles.separator}> • </Text>}
-              {item.vote_average > 0 && (
-                <>
-                  <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
-                  <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
-                </>
-              )}
+              <Text style={mediaMetaStyles.year} numberOfLines={1}>
+                {seasonDisplay.seasonLabel}
+              </Text>
             </View>
+          ) : (
+            (year || item.vote_average > 0) && (
+              <View style={mediaMetaStyles.yearRatingContainer}>
+                {year && <Text style={mediaMetaStyles.year}>{year}</Text>}
+                {year && item.vote_average > 0 && (
+                  <Text style={mediaMetaStyles.separator}> • </Text>
+                )}
+                {item.vote_average > 0 && (
+                  <>
+                    <AppIcon
+                      icon={StarIcon}
+                      size={10}
+                      fill={COLORS.warning}
+                      color={COLORS.warning}
+                    />
+                    <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
+                  </>
+                )}
+              </View>
+            )
           )}
         </View>
       </Pressable>

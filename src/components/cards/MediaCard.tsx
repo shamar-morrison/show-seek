@@ -29,6 +29,8 @@ interface MediaCardProps<T extends MediaCardItem> {
   onLongPress?: (item: T) => void;
   /** Set when the card stands for one season of the show: it then opens that season. */
   seasonNumber?: number;
+  /** For a season card: "Season X", shown under the title in place of year and rating. */
+  seasonLabel?: string;
 }
 
 const isMovie = (item: MediaCardItem): item is Movie => {
@@ -53,6 +55,7 @@ function MediaCardComponent<T extends MediaCardItem>({
   posterPathOverride,
   onLongPress,
   seasonNumber,
+  seasonLabel,
 }: MediaCardProps<T>) {
   const isSeason = mediaType === 'tv' && seasonNumber !== undefined;
   const currentTab = useCurrentTab();
@@ -128,19 +131,27 @@ function MediaCardComponent<T extends MediaCardItem>({
         <Text style={mediaCardStyles.title} numberOfLines={2}>
           {displayTitle}
         </Text>
-        {showMeta && (
+        {isSeason && seasonLabel ? (
           <View style={mediaMetaStyles.yearRatingContainer}>
-            {releaseYear !== null && <Text style={mediaMetaStyles.year}>{releaseYear}</Text>}
-            {releaseYear !== null && hasVoteAverage && (
-              <Text style={mediaMetaStyles.separator}> • </Text>
-            )}
-            {hasVoteAverage && (
-              <>
-                <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
-              </>
-            )}
+            <Text style={mediaMetaStyles.year} numberOfLines={1}>
+              {seasonLabel}
+            </Text>
           </View>
+        ) : (
+          showMeta && (
+            <View style={mediaMetaStyles.yearRatingContainer}>
+              {releaseYear !== null && <Text style={mediaMetaStyles.year}>{releaseYear}</Text>}
+              {releaseYear !== null && hasVoteAverage && (
+                <Text style={mediaMetaStyles.separator}> • </Text>
+              )}
+              {hasVoteAverage && (
+                <>
+                  <AppIcon icon={StarIcon} size={10} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
+                </>
+              )}
+            </View>
+          )
         )}
       </View>
     </TouchableOpacity>

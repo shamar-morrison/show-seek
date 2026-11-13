@@ -76,7 +76,6 @@ export default function CustomListDetailScreen() {
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
-  const seasonLabel = t('media.season');
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -436,7 +435,6 @@ export default function CustomListDetailScreen() {
         isSelected={isItemSelected(item)}
         movieLabel={movieLabel}
         tvShowLabel={tvShowLabel}
-        seasonLabel={seasonLabel}
       />
     ),
     [handleItemPress, handleLongPress, isItemSelected, isSelectionMode]

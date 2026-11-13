@@ -57,3 +57,20 @@ export const buildSeasonListItem = (
     ...(runtime ? { runtimeMinutes: runtime, seasonRuntimeMinutes: runtime } : {}),
   };
 };
+
+/**
+ * How a season entry is shown on a card: the show's name as the title, and "Season X" (or
+ * TMDB's own name for specials, e.g. "Specials") on the line under it.
+ */
+export const getSeasonEntryDisplay = (
+  item: Partial<
+    Pick<ListMediaItem, 'show_name' | 'title' | 'name' | 'season_number' | 'season_name'>
+  >,
+  formatSeasonNumber: (seasonNumber: number) => string
+): { title: string; seasonLabel: string } => {
+  const showTitle = item.show_name || item.title || item.name || '';
+  const seasonNumber = item.season_number ?? 0;
+  const seasonLabel =
+    seasonNumber === 0 && item.season_name ? item.season_name : formatSeasonNumber(seasonNumber);
+  return { title: showTitle, seasonLabel };
+};

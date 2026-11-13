@@ -1,5 +1,9 @@
 import { getListItemRoute } from '@/src/utils/listItemRoutes';
-import { buildSeasonListItem, getSeasonRuntimeMinutes } from '@/src/utils/seasonListItem';
+import {
+  buildSeasonListItem,
+  getSeasonEntryDisplay,
+  getSeasonRuntimeMinutes,
+} from '@/src/utils/seasonListItem';
 
 const show = { id: 1396, name: 'Breaking Bad', poster_path: '/show.jpg', genres: [{ id: 18 }] };
 
@@ -67,5 +71,32 @@ describe('getListItemRoute', () => {
     expect(getListItemRoute('/(tabs)/home', { id: 2, media_type: 'season' })).toBe(
       '/(tabs)/home/tv/2/seasons'
     );
+  });
+});
+
+describe('getSeasonEntryDisplay', () => {
+  const format = (n: number) => `Season ${n}`;
+
+  it("shows the show's name with Season X under it", () => {
+    expect(
+      getSeasonEntryDisplay(
+        {
+          show_name: 'Avatar',
+          title: 'Avatar · Book One: Water',
+          season_number: 1,
+          season_name: 'Book One: Water',
+        },
+        format
+      )
+    ).toEqual({ title: 'Avatar', seasonLabel: 'Season 1' });
+  });
+
+  it("uses TMDB's name for specials", () => {
+    expect(
+      getSeasonEntryDisplay(
+        { show_name: 'Avatar', season_number: 0, season_name: 'Specials' },
+        format
+      )
+    ).toEqual({ title: 'Avatar', seasonLabel: 'Specials' });
   });
 });
