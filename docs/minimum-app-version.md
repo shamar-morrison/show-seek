@@ -30,6 +30,17 @@ don't contain the check. They are reached by OTA updates instead (every build sh
 
 ## Current level
 
-`APP_COMPATIBILITY_VERSION = 2`: list items and watched episodes can live in overflow pages
-(`item_pages`, `episode_pages`). Versions before this read only the first page of very large
-lists and long shows.
+`APP_COMPATIBILITY_VERSION = 3`: lists can hold seasons (`season-{tvId}-{n}`) and episodes
+(`episode-{tvId}-{s}-{e}`). Versions before this show them as the wrong title (an episode on a
+Home list opens a movie with the show's ID). Versions before seasons also delete the legacy
+numeric key `items.{tvId}` when removing one, which can remove a show or movie stored under it.
+
+Level 2: list items and watched episodes can live in overflow pages (`item_pages`,
+`episode_pages`). Versions before this read only the first page of very large lists and long
+shows.
+
+## History of the live minimum
+
+`config/app` didn't exist until level 3 shipped, so no version was ever blocked before then.
+Set it with the Firebase MCP (`firestore_update_document`) or the console, signed in to the
+`showseek-app-2025` project.

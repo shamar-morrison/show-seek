@@ -1,5 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
-import { getListItemUiKey } from '@/src/utils/listItemKeys';
+import { getListItemUiKey, type ListItemRef } from '@/src/utils/listItemKeys';
 import { getListItemRoute } from '@/src/utils/listItemRoutes';
 import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
@@ -214,8 +214,7 @@ export default function WatchStatusDetailScreen() {
   }, []);
 
   const removeSelectedItemFromList = useCallback(
-    (mediaId: number, mediaType: ListMediaItem['media_type'], seasonNumber?: number) =>
-      removeMutation.mutateAsync({ listId: id, mediaId, mediaType, seasonNumber }),
+    (item: ListItemRef) => removeMutation.mutateAsync({ listId: id, item }),
     [id, removeMutation]
   );
 

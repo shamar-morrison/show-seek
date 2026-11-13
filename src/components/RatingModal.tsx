@@ -350,7 +350,7 @@ export default function RatingModal({
 
         if (mediaType === 'movie' && shouldAutoRemoveFromShouldWatch && isInShouldWatch) {
           try {
-            await listService.removeFromList('watchlist', mediaId, mediaType);
+            await listService.removeFromList('watchlist', { id: mediaId, media_type: mediaType });
             didMutateLists = true;
             console.log('[RatingModal] Auto-removed from Should Watch list:', mediaId);
           } catch (autoRemoveError) {

@@ -13,7 +13,8 @@ import {
   getListMembershipKey,
   getListItemRefCandidateKeys,
   hasListItemInMap,
-  type ListEntryMediaType,
+  toListItemRef,
+  type ListItemRef,
 } from '@/src/utils/listItemKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -272,9 +273,9 @@ export const useAddToList = () => {
       // Record engagement for in-app review prompt
       void recordEngagement();
 
-      // Only prefetch for TV shows (a season tracks its show) - movies already have
-      // release_date in the list item
-      if (mediaItem.media_type === 'tv' || mediaItem.media_type === 'season') {
+      // Only prefetch for TV shows (a season or episode tracks its show) - movies already
+      // have release_date in the list item
+      if (mediaItem.media_type !== 'movie') {
         void queryClient.prefetchQuery(calendarTvQueryOptions(mediaItem.id));
       }
 
@@ -303,19 +304,15 @@ export const useRemoveFromList = () => {
   return useMutation({
     mutationFn: ({
       listId,
-      mediaId,
-      mediaType,
-      seasonNumber,
+      item,
     }: {
       listId: string;
-      mediaId: number;
-      mediaType: ListEntryMediaType;
-      /** Required when `mediaType` is 'season'. */
-      seasonNumber?: number;
-    }) => listService.removeFromList(listId, mediaId, mediaType, seasonNumber),
+      /** The entry to remove; a season or episode carries its numbers (see toListItemRef). */
+      item: ListItemRef;
+    }) => listService.removeFromList(listId, item),
 
     // Optimistic update - immediately show the item as removed
-    onMutate: async ({ listId, mediaId, mediaType, seasonNumber }) => {
+    onMutate: async ({ listId, item }) => {
       if (!userId) {
         throw new Error('User must be logged in');
       }
@@ -337,7 +334,7 @@ export const useRemoveFromList = () => {
       ]);
       const hasHydratedMembershipCache =
         membershipQueryState?.status === 'success' && previousMembershipIndex !== undefined;
-      const ref = { id: mediaId, media_type: mediaType, season_number: seasonNumber };
+      const ref = toListItemRef(item);
       const targetItem = findListItemByRef(
         previousLists?.find((list) => list.id === listId)?.items,
         ref

@@ -21,12 +21,10 @@ const mockAddMutateAsync = jest.fn();
 const mockRemoveMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
 const mockInvalidateQueries = jest.fn(async () => {});
-let latestCreateListModalProps:
-  | {
-      onSuccess?: (listId: string, listName: string) => void;
-      onCancel?: () => void;
-    }
-  | null = null;
+let latestCreateListModalProps: {
+  onSuccess?: (listId: string, listName: string) => void;
+  onCancel?: () => void;
+} | null = null;
 
 const mockQueryClient = {
   invalidateQueries: mockInvalidateQueries,
@@ -531,8 +529,7 @@ describe('AddToListModal (bulk mode)', () => {
     await waitFor(() => {
       expect(mockRemoveMutateAsync).toHaveBeenCalledWith({
         listId: 'favorites',
-        mediaId: selected.id,
-        mediaType: 'movie',
+        item: { id: selected.id, media_type: 'movie' },
       });
     });
 

@@ -74,12 +74,26 @@ export function getSeasonMediaKey(tvId: number, seasonNumber: number): string {
   return `season:${tvId}:${seasonNumber}`;
 }
 
-/** The key for an entry in the ratings and runtimes maps (`season:{tvId}:{n}` for seasons). */
+export function getEpisodeMediaKey(
+  tvId: number,
+  seasonNumber: number,
+  episodeNumber: number
+): string {
+  return `episode:${tvId}:${seasonNumber}:${episodeNumber}`;
+}
+
+/**
+ * The key for an entry in the ratings and runtimes maps (`season:{tvId}:{n}` for seasons,
+ * `episode:{tvId}:{s}:{e}` for episodes).
+ */
 export function getListItemMediaKey(
-  item: Pick<ListMediaItem, 'id' | 'media_type' | 'season_number'>
+  item: Pick<ListMediaItem, 'id' | 'media_type' | 'season_number' | 'episode_number'>
 ): string {
   if (item.media_type === 'season') {
     return getSeasonMediaKey(item.id, item.season_number ?? -1);
+  }
+  if (item.media_type === 'episode') {
+    return getEpisodeMediaKey(item.id, item.season_number ?? -1, item.episode_number ?? -1);
   }
   return getMediaKey(item.media_type, item.id);
 }

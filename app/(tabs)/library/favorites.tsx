@@ -1,5 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
-import { getListItemUiKey } from '@/src/utils/listItemKeys';
+import { getListItemUiKey, type ListItemRef } from '@/src/utils/listItemKeys';
 import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
@@ -198,13 +198,7 @@ export default function FavoritesScreen() {
   }, []);
 
   const removeSelectedItemFromList = useCallback(
-    (mediaId: number, mediaType: ListMediaItem['media_type'], seasonNumber?: number) =>
-      removeMutation.mutateAsync({
-        listId: DEFAULT_LIST_IDS[3],
-        mediaId,
-        mediaType,
-        seasonNumber,
-      }),
+    (item: ListItemRef) => removeMutation.mutateAsync({ listId: DEFAULT_LIST_IDS[3], item }),
     [removeMutation]
   );
 

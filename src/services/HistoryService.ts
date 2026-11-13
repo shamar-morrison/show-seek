@@ -534,6 +534,8 @@ class HistoryService {
               }
               return;
             }
+            // Episodes are left out of stats: their watches come from episode tracking.
+            if (item.media_type === 'episode') return;
             listItems.push({
               timestamp: addedAtMillis,
               genreIds: item.genre_ids,
@@ -779,8 +781,8 @@ class HistoryService {
     lists.forEach((list) => {
       if (list.items) {
         Object.values(list.items).forEach((item) => {
-          // Added-to-lists stats are split movies / TV; seasons are left out.
-          if (item.media_type === 'season') return;
+          // Added-to-lists stats are split movies / TV; seasons and episodes are left out.
+          if (item.media_type === 'season' || item.media_type === 'episode') return;
           const addedAtMillis = toMillis(item.addedAt);
           if (addedAtMillis !== null && addedAtMillis >= startOfMonth && addedAtMillis <= endOfMonth) {
             // Create a unique key for this media item
@@ -871,6 +873,8 @@ class HistoryService {
             }
             return;
           }
+          // Episodes are left out of stats: their watches come from episode tracking.
+          if (item.media_type === 'episode') return;
           alreadyWatchedMediaCount += 1;
           detailAlreadyWatchedRefs.push({ itemKey, mediaType: item.media_type });
           if (item.runtimeMinutes != null && item.runtimeMinutes > 0) {

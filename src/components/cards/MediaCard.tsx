@@ -59,7 +59,7 @@ function MediaCardComponent<T extends MediaCardItem>({
 }: MediaCardProps<T>) {
   const isSeason = mediaType === 'tv' && seasonNumber !== undefined;
   const currentTab = useCurrentTab();
-  const { getListsForMedia } = useListMembership();
+  const { getListsForMedia, getListsForListItem } = useListMembership();
   const { preferences } = usePreferences();
   const { resolvePosterPath } = usePosterOverrides();
   const resolvedPosterPath = useMemo(
@@ -80,7 +80,7 @@ function MediaCardComponent<T extends MediaCardItem>({
 
   const listIds = showListBadge
     ? isSeason
-      ? getListsForMedia(item.id, 'season', seasonNumber)
+      ? getListsForListItem({ id: item.id, media_type: 'season', season_number: seasonNumber })
       : getListsForMedia(item.id, mediaType)
     : [];
   const showBadge = listIds.length > 0;

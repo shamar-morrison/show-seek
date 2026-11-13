@@ -333,7 +333,10 @@ describe('useRemoveFromList', () => {
 
     await act(async () => {
       await expect(
-        result.current.mutateAsync({ listId: 'watchlist', mediaId: 1, mediaType: 'movie' })
+        result.current.mutateAsync({
+          listId: 'watchlist',
+          item: { id: 1, media_type: 'movie' },
+        })
       ).rejects.toThrow('Network error');
     });
 
@@ -390,13 +393,15 @@ describe('useRemoveFromList with seasons', () => {
     await act(async () => {
       await result.current.mutateAsync({
         listId: 'watchlist',
-        mediaId: 1396,
-        mediaType: 'season',
-        seasonNumber: 3,
+        item: { id: 1396, media_type: 'season', season_number: 3 },
       });
     });
 
-    expect(mockRemoveFromList).toHaveBeenCalledWith('watchlist', 1396, 'season', 3);
+    expect(mockRemoveFromList).toHaveBeenCalledWith('watchlist', {
+      id: 1396,
+      media_type: 'season',
+      season_number: 3,
+    });
     const lists = client.getQueryData<{ items: Record<string, unknown> }[]>([
       'lists',
       'test-user-id',

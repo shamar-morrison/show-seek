@@ -111,9 +111,13 @@ describe('useListDetailMultiSelectActions', () => {
     expect(showToast).toHaveBeenCalledWith('2 items removed');
     expect(clearSelection).toHaveBeenCalledTimes(1);
     expect(removeItemFromSource).toHaveBeenCalledTimes(2);
-    expect(removeItemFromSource).toHaveBeenNthCalledWith(1, 1, 'movie', undefined);
+    expect(removeItemFromSource).toHaveBeenNthCalledWith(1, { id: 1, media_type: 'movie' });
     // A season is removed by its number, including specials (season 0).
-    expect(removeItemFromSource).toHaveBeenNthCalledWith(2, 2, 'season', 0);
+    expect(removeItemFromSource).toHaveBeenNthCalledWith(2, {
+      id: 2,
+      media_type: 'season',
+      season_number: 0,
+    });
   });
 
   it('continues on failures and shows failure summary toast', async () => {

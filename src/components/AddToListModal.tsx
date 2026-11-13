@@ -1,7 +1,7 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
-import { hasListItemByRef } from '@/src/utils/listItemKeys';
+import { hasListItemByRef, toListItemRef } from '@/src/utils/listItemKeys';
 import { maybeWarnTraktManagedListEdit } from '@/src/utils/traktManagedEdits';
 import { isDefaultList } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_FAMILY, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -403,9 +403,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           try {
             await removeMutation.mutateAsync({
               listId: list.id,
-              mediaId: mediaItem.id,
-              mediaType: mediaItem.media_type,
-              seasonNumber: mediaItem.season_number,
+              item: toListItemRef(mediaItem),
             });
           } catch (error) {
             failedOperations++;
@@ -515,9 +513,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         try {
           await removeMutation.mutateAsync({
             listId: sourceListId,
-            mediaId: selectedMedia.id,
-            mediaType: selectedMedia.media_type,
-            seasonNumber: selectedMedia.season_number,
+            item: toListItemRef(selectedMedia),
           });
         } catch (error) {
           failedOperations++;

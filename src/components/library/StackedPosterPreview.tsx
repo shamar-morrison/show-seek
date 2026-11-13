@@ -7,11 +7,11 @@ import { StyleSheet, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
 export interface StackedPosterItem {
-  mediaType: 'movie' | 'tv' | 'season';
-  /** For a season, the show's ID. */
+  mediaType: 'movie' | 'tv' | 'season' | 'episode';
+  /** For a season or an episode, the show's ID. */
   mediaId: number;
   posterPath: string | null;
-  /** Set for seasons. */
+  /** Set for seasons and episodes. */
   seasonNumber?: number;
 }
 
@@ -47,19 +47,21 @@ export const StackedPosterPreview = memo<StackedPosterPreviewProps>(
     // Take up to 3 posters, keep media identity for override resolution.
     const displayItems = useMemo(() => items.slice(0, 3), [items]);
 
-    // A season shows its own poster. One saved without a poster gets it from TMDB: the
-    // season's poster, else the show's.
-    const seasonsMissingPosters = useMemo(
-      () =>
-        displayItems
-          .filter(
-            (item) =>
-              item.mediaType === 'season' && !item.posterPath && item.seasonNumber !== undefined
-          )
-          .map((item) => ({ tvId: item.mediaId, seasonNumber: item.seasonNumber as number })),
-      [displayItems]
-    );
-    const getSeasonPosterFallback = useSeasonPosterFallbacks(seasonsMissingPosters);
+  // A season or episode shows its own saved poster. One saved without a poster gets it from
+  // TMDB: the season's poster, else the show's.
+  const seasonsMissingPosters = useMemo(
+    () =>
+      displayItems
+        .filter(
+          (item) =>
+            (item.mediaType === 'season' || item.mediaType === 'episode') &&
+            !item.posterPath &&
+            item.seasonNumber !== undefined
+        )
+        .map((item) => ({ tvId: item.mediaId, seasonNumber: item.seasonNumber as number })),
+    [displayItems]
+  );
+  const getSeasonPosterFallback = useSeasonPosterFallbacks(seasonsMissingPosters);
 
     // If no posters at all, show a single placeholder
     const hasItems = displayItems.length > 0;
@@ -68,25 +70,24 @@ export const StackedPosterPreview = memo<StackedPosterPreviewProps>(
     const containerWidth = dimensions.width + 20;
     const containerHeight = dimensions.height + 12;
 
-    return (
-      <View style={[styles.container, { width: containerWidth, height: containerHeight }]}>
-        {(hasItems ? displayItems : [null]).map((stackItem, index) => {
-          // Reverse the render order so back posters are rendered first (underneath)
-          const reverseIndex = (hasItems ? displayItems.length : 1) - 1 - index;
-          const config = STACK_CONFIG[reverseIndex];
-          const resolvedPosterPath = !stackItem
-            ? null
-            : stackItem.mediaType === 'season'
-              ? stackItem.posterPath ||
-                (stackItem.seasonNumber !== undefined
-                  ? getSeasonPosterFallback({
-                      tvId: stackItem.mediaId,
-                      seasonNumber: stackItem.seasonNumber,
-                    })
-                  : null)
-              : resolvePosterPath(stackItem.mediaType, stackItem.mediaId, stackItem.posterPath);
-          const placeholderType =
-            stackItem?.mediaType === 'season' ? 'tv' : (stackItem?.mediaType ?? 'movie');
+  return (
+    <View style={[styles.container, { width: containerWidth, height: containerHeight }]}>
+      {(hasItems ? displayItems : [null]).map((stackItem, index) => {
+        // Reverse the render order so back posters are rendered first (underneath)
+        const reverseIndex = (hasItems ? displayItems.length : 1) - 1 - index;
+        const config = STACK_CONFIG[reverseIndex];
+        const resolvedPosterPath = !stackItem
+          ? null
+          : stackItem.mediaType === 'season' || stackItem.mediaType === 'episode'
+            ? stackItem.posterPath ||
+              (stackItem.seasonNumber !== undefined
+                ? getSeasonPosterFallback({
+                    tvId: stackItem.mediaId,
+                    seasonNumber: stackItem.seasonNumber,
+                  })
+                : null)
+            : resolvePosterPath(stackItem.mediaType, stackItem.mediaId, stackItem.posterPath);
+        const placeholderType = stackItem?.mediaType === 'movie' || !stackItem ? 'movie' : 'tv';
 
           return (
             <View

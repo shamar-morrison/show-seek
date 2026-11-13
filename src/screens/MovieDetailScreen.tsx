@@ -195,7 +195,7 @@ const tryAutoRemoveFromShouldWatch = async (params: {
 
   try {
     const { listService } = await import('@/src/services/ListService');
-    await listService.removeFromList('watchlist', movieId, 'movie');
+    await listService.removeFromList('watchlist', { id: movieId, media_type: 'movie' });
 
     console.log('[MovieDetailScreen] Auto-removed from Should Watch list:', movieTitle ?? movieId);
     return true;

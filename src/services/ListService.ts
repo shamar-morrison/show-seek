@@ -48,11 +48,14 @@ import {
 import { auth, db } from '../firebase/config';
 
 export interface ListMediaItem {
-  /** TMDB ID of the movie or show. For a season, the show's ID (see `season_number`). */
+  /**
+   * TMDB ID of the movie or show. For a season or an episode, the show's ID (see
+   * `season_number` and `episode_number`).
+   */
   id: number;
   /**
-   * Display title. For a season, a combined "Show · Season" title, so app versions that
-   * predate seasons still show something sensible.
+   * Display title. For a season, a combined "Show · Season" title; for an episode, a combined
+   * "Show · S1E2 · Name" title, so app versions that predate them still show something sensible.
    */
   title: string;
   poster_path: string | null;
@@ -63,15 +66,15 @@ export interface ListMediaItem {
   genre_ids?: number[];
   /** Runtime in minutes, stamped at write time from TMDB (optional for legacy items) */
   runtimeMinutes?: number;
-  // TV show fields (optional, used when media_type is 'tv' or 'season')
+  // TV show fields (optional, used when media_type is 'tv', 'season' or 'episode')
   name?: string;
   first_air_date?: string;
-  // Season fields (set when media_type is 'season')
+  // Season fields (set when media_type is 'season' or 'episode')
   /** Season number within the show; 0 is specials. */
   season_number?: number;
   /** TMDB's name for the season, e.g. "Season 2" or "Specials". */
   season_name?: string;
-  /** The show's own name, kept apart from the combined display title. */
+  /** The show's own name (seasons and episodes), kept apart from the combined display title. */
   show_name?: string;
   /**
    * A season's total runtime (sum of its episodes), written only by app versions that know
@@ -79,8 +82,19 @@ export interface ListMediaItem {
    * may have filled with a wrong value (it looks seasons up as movies).
    */
   seasonRuntimeMinutes?: number;
+  // Episode fields (set when media_type is 'episode')
+  /** Episode number within its season. */
+  episode_number?: number;
+  /** TMDB's name for the episode, e.g. "Phoenix". */
+  episode_name?: string;
+  /** The episode's still (16:9). Cards show `poster_path`, the season's or show's poster. */
+  still_path?: string | null;
+  /**
+   * The episode's runtime, written only by app versions that know episodes. Episode code reads
+   * this rather than `runtimeMinutes`, which an older app version may fill with a wrong value.
+   */
+  episodeRuntimeMinutes?: number;
 }
-
 
 export interface UserList {
   id: string;
@@ -866,27 +880,44 @@ class ListService {
   }
 
   /**
-   * Remove a media item from a specific list (from the list document and every overflow page).
-   * A season needs its `seasonNumber`.
+   * Remove an entry from a specific list (from the list document and every overflow page).
+   * A season needs its `season_number`; an episode its `season_number` and `episode_number`.
    */
-  async removeFromList(
-    listId: string,
-    mediaId: number,
-    mediaType: ListEntryMediaType,
-    seasonNumber?: number
-  ) {
+  async removeFromList(listId: string, item: ListItemRef) {
+    return this.removeManyFromList(listId, [item]);
+  }
+
+  /**
+   * Remove several entries from one list in a single write (the list document plus every
+   * overflow page). Throws without writing anything if any entry can't be keyed.
+   */
+  async removeManyFromList(listId: string, items: ListItemRef[]) {
+    if (items.length === 0) {
+      return;
+    }
+
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
       const user = requireSignedInUser();
 
       const listRef = this.getUserListRef(user.uid, listId);
-      const ref: ListItemRef = { id: mediaId, media_type: mediaType, season_number: seasonNumber };
-      const itemKey = getListItemKey(ref);
-      if (!itemKey) {
-        throw new Error('This item cannot be removed from a list');
-      }
-      const legacyKey = getLegacyListItemKeyForRef(ref);
+      const itemKeys = new Set<string>();
+      // Seasons and episodes never have a legacy numeric key; clearing one would hit the show
+      // or a movie with the same number.
+      const legacyKeys = new Set<string>();
+      items.forEach((item) => {
+        const itemKey = getListItemKey(item);
+        if (!itemKey) {
+          throw new Error('This item cannot be removed from a list');
+        }
+        itemKeys.add(itemKey);
+        const legacyKey = getLegacyListItemKeyForRef(item);
+        if (legacyKey) {
+          legacyKeys.add(legacyKey);
+        }
+      });
+      const removedKeys = [...itemKeys, ...legacyKeys];
       const now = Date.now();
       const known = this.knownLayouts.get(this.layoutKey(user.uid, listId));
 
@@ -896,18 +927,17 @@ class ListService {
           auditedGetDoc(listRef, {
             path: `users/${user.uid}/lists/${listId}`,
             queryKey: 'listById',
-            callsite: 'ListService.removeFromList',
+            callsite: 'ListService.removeManyFromList',
           }),
           timeout.promise,
         ]);
         pageCount = getListPageCount(snapshot.exists() ? snapshot.data() : undefined);
       }
 
-      const removal = {
-        [`items.${itemKey}`]: deleteField(),
-        ...(legacyKey ? { [`items.${legacyKey}`]: deleteField() } : {}),
-        updatedAt: now,
-      };
+      const removal: Record<string, unknown> = { updatedAt: now };
+      removedKeys.forEach((key) => {
+        removal[`items.${key}`] = deleteField();
+      });
 
       if (pageCount === 0) {
         await Promise.race([updateDoc(listRef, removal), timeout.promise]);
@@ -919,7 +949,10 @@ class ListService {
           .forEach((page) => {
             batch.set(
               this.getListItemPageRef(user.uid, listId, page),
-              { items: { [itemKey]: deleteField() }, updatedAt: now },
+              {
+                items: Object.fromEntries([...itemKeys].map((key) => [key, deleteField()])),
+                updatedAt: now,
+              },
               { merge: true }
             );
           });
@@ -928,7 +961,6 @@ class ListService {
 
       this.layoutWrites.recordWrite(this.layoutKey(user.uid, listId));
       if (known) {
-        const removedKeys = legacyKey ? [itemKey, legacyKey] : [itemKey];
         recordListItemRemoval(known.layout, (key) => known.keys.has(key), removedKeys);
         removedKeys.forEach((key) => known.keys.delete(key));
       }
@@ -936,14 +968,12 @@ class ListService {
       const message = getFirestoreErrorMessage(error);
       const firebaseCode = (error as { code?: string })?.code;
       const currentUserId = auth.currentUser?.uid ?? null;
-      console.error('[ListService] removeFromList error:', {
+      console.error('[ListService] removeManyFromList error:', {
         error,
         code: firebaseCode,
         userId: currentUserId,
         listId,
-        mediaId,
-        mediaType,
-        seasonNumber,
+        items,
       });
       throw new Error(message);
     } finally {

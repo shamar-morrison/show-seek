@@ -70,7 +70,7 @@ const MediaGridItem = memo<{
   itemWidth: number;
   itemHorizontalMargin: number;
   resolvePosterPath: (
-    mediaType: PosterOverrideMediaType | 'season',
+    mediaType: PosterOverrideMediaType | 'season' | 'episode',
     mediaId: number,
     fallbackPosterPath: string | null | undefined
   ) => string | null;

@@ -9,5 +9,8 @@
  * History:
  *   1 — before the version gate existed (no app build before 2 can check it).
  *   2 — list items and watched episodes can live in overflow pages.
+ *   3 — lists can hold seasons (`season-{tvId}-{n}`) and episodes (`episode-{tvId}-{s}-{e}`).
+ *       Older versions show them as the wrong title, and versions before seasons clear the
+ *       show's or a movie's legacy numeric key when removing one.
  */
-export const APP_COMPATIBILITY_VERSION = 2;
+export const APP_COMPATIBILITY_VERSION = 3;

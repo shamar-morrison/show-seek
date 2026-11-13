@@ -100,8 +100,61 @@ describe('useListMembership', () => {
 
     const audit = getFirestoreReadAuditReport();
     expect(audit.totalReads).toBe(6);
-    expect(audit.byCallsite.find((entry) => entry.name === 'ListService.getListMembershipIndex')?.reads)
-      .toBe(6);
+    expect(
+      audit.byCallsite.find((entry) => entry.name === 'ListService.getListMembershipIndex')?.reads
+    ).toBe(6);
+  });
+
+  it('finds seasons and episodes by their numbers, never by the show alone', async () => {
+    (collection as jest.Mock).mockReturnValue({ path: 'users/test-user-id/lists' });
+    (getDocs as jest.Mock).mockResolvedValue({
+      size: 1,
+      docs: [
+        {
+          id: 'custom-1',
+          data: () => ({
+            items: {
+              'episode-202-1-4': {
+                id: 202,
+                media_type: 'episode',
+                season_number: 1,
+                episode_number: 4,
+              },
+              'season-202-2': { id: 202, media_type: 'season', season_number: 2 },
+            },
+          }),
+        },
+      ],
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { result } = renderHook(() => useListMembership(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(
+        result.current.getListsForListItem({
+          id: 202,
+          media_type: 'episode',
+          season_number: 1,
+          episode_number: 4,
+        })
+      ).toEqual(['custom-1']);
+    });
+    expect(
+      result.current.getListsForListItem({ id: 202, media_type: 'season', season_number: 2 })
+    ).toEqual(['custom-1']);
+    expect(
+      result.current.getListsForListItem({
+        id: 202,
+        media_type: 'episode',
+        season_number: 1,
+        episode_number: 5,
+      })
+    ).toEqual([]);
+    expect(result.current.getListsForMedia(202, 'tv')).toEqual([]);
+    expect(result.current.isInAnyList(202, 'tv')).toBe(false);
   });
 
   it('does not fetch membership index when user preference is off', () => {

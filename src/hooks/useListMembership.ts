@@ -1,7 +1,12 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useAuth } from '@/src/context/auth';
 import { ListMembershipIndex, listService } from '@/src/services/ListService';
-import { getListMembershipKey, type ListEntryMediaType } from '@/src/utils/listItemKeys';
+import {
+  getListMembershipKey,
+  type ListEntryMediaType,
+  type ListItemMediaType,
+  type ListItemRef,
+} from '@/src/utils/listItemKeys';
 import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
@@ -55,33 +60,41 @@ export function useListMembership() {
     return map;
   }, [membershipIndex]);
 
-  // Check if a specific media item is in any list (only if preference is enabled)
+  // Check if a specific movie or show is in any list (only if preference is enabled)
   const isInAnyList = useCallback(
-    (mediaId: number, mediaType: ListEntryMediaType, seasonNumber?: number) => {
+    (mediaId: number, mediaType: ListItemMediaType) => {
       if (!showIndicators) return false;
-      const key = getListMembershipKey({
-        id: mediaId,
-        media_type: mediaType,
-        season_number: seasonNumber,
-      });
+      const key = getListMembershipKey({ id: mediaId, media_type: mediaType });
       return !!key && membershipSet.has(key);
     },
     [membershipSet, showIndicators]
   );
 
-  // Get list IDs that contain this media item (only if preference is enabled)
-  const getListsForMedia = useCallback(
-    (mediaId: number, mediaType: ListEntryMediaType, seasonNumber?: number): string[] => {
+  // List IDs holding any kind of entry: a movie, a show, a season or an episode (only if the
+  // preference is enabled). A season or episode needs its numbers (see toListItemRef).
+  const getListsForListItem = useCallback(
+    (item: ListItemRef): string[] => {
       if (!showIndicators) return [];
-      const key = getListMembershipKey({
-        id: mediaId,
-        media_type: mediaType,
-        season_number: seasonNumber,
-      });
+      const key = getListMembershipKey(item);
       return (key && membershipMap.get(key)) || [];
     },
     [membershipMap, showIndicators]
   );
 
-  return { isInAnyList, getListsForMedia, membershipSet, membershipMap, showIndicators };
+  // List IDs that contain this movie or show (only if preference is enabled). Seasons and
+  // episodes need their numbers, so they go through getListsForListItem; here they match nothing.
+  const getListsForMedia = useCallback(
+    (mediaId: number, mediaType: ListEntryMediaType): string[] =>
+      getListsForListItem({ id: mediaId, media_type: mediaType }),
+    [getListsForListItem]
+  );
+
+  return {
+    isInAnyList,
+    getListsForMedia,
+    getListsForListItem,
+    membershipSet,
+    membershipMap,
+    showIndicators,
+  };
 }
