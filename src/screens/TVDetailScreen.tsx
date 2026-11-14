@@ -1,4 +1,4 @@
-import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Season, type Video } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CreatorsSection } from '@/src/components/detail/CreatorsSection';
@@ -66,6 +66,8 @@ import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { useTVReminderLogic } from '@/src/hooks/useTVReminderLogic';
 import { getListMembershipIcon } from '@/src/utils/listIcons';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
+import { buildSeasonListItem } from '@/src/utils/seasonListItem';
+import type { ListMediaItem } from '@/src/services/ListService';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { setReviewQueue, traktToReview, type QueuedReview } from '@/src/utils/reviewQueue';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -73,7 +75,7 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { SquareArrowUpRightIcon } from '@hugeicons/core-free-icons';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, RefreshControl, Text, View } from 'react-native';
 
@@ -287,6 +289,39 @@ export default function TVDetailScreen() {
   const handleToast = useCallback((message: string) => {
     toastRef.current?.show(message);
   }, []);
+
+  // Long-pressing a season card adds that season to lists; other season actions live on the
+  // Seasons screen.
+  const seasonAddToListModalRef = useRef<AddToListModalRef>(null);
+  const [seasonForList, setSeasonForList] = useState<Omit<ListMediaItem, 'addedAt'> | null>(null);
+  const showForSeasonList = tvQuery.data;
+
+  const handleSeasonLongPress = useCallback(
+    (season: Season) => {
+      if (!showForSeasonList || isAccountRequired()) {
+        return;
+      }
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setSeasonForList(
+        buildSeasonListItem(
+          showForSeasonList,
+          season,
+          t('media.seasonNumber', { number: season.season_number })
+        )
+      );
+    },
+    [isAccountRequired, showForSeasonList, t]
+  );
+
+  // The modal reads its item when presented, so present it once the chosen season has rendered.
+  useEffect(() => {
+    if (seasonForList) {
+      void seasonAddToListModalRef.current?.present();
+    }
+  }, [seasonForList]);
+
+  const handleCloseSeasonAddToList = useCallback(() => setSeasonForList(null), []);
 
   const handleReminderPress = useCallback(() => {
     if (isAccountRequired()) {
@@ -626,6 +661,7 @@ export default function TVDetailScreen() {
                 tvShowId={tvId}
                 seasons={show.seasons.filter((s) => s.season_number > 0)}
                 onSeasonPress={handleSeasonsPress}
+                onSeasonLongPress={handleSeasonLongPress}
               />
               <SectionSeparator />
             </>
@@ -846,6 +882,16 @@ export default function TVDetailScreen() {
         </>
       )}
       <Toast ref={toastRef} />
+
+      {/* AddToListModal for a long-pressed season card */}
+      {seasonForList && (
+        <AddToListModal
+          ref={seasonAddToListModalRef}
+          mediaItem={seasonForList}
+          onShowToast={(message) => toastRef.current?.show(message)}
+          onDismiss={handleCloseSeasonAddToList}
+        />
+      )}
 
       {/* AddToListModal for long-pressed similar/recommended media */}
       {selectedSimilarMediaItem && (

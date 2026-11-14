@@ -10,6 +10,9 @@ const mockBack = jest.fn();
 const mockUseQuery = jest.fn();
 const mockFetchQuery = jest.fn();
 const mockIsAccountRequired = jest.fn(() => false);
+const mockSeasonsSectionProps = jest.fn();
+const mockAddToListModalProps = jest.fn();
+const mockAddToListPresent = jest.fn(async (_item: unknown) => {});
 const mockEnsureNoteLoadedForEdit = jest.fn();
 const mockNoteModalPresent = jest.fn();
 let mockUseMediaNoteValue: any = {
@@ -243,7 +246,14 @@ jest.mock('@/src/components/WatchHistoryActionsModal', () => {
 
 jest.mock('@/src/components/AddToListModal', () => {
   const React = require('react');
-  const AddToListModal = React.forwardRef((_props: any, _ref: any) => null);
+  const AddToListModal = React.forwardRef((props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      present: () => mockAddToListPresent(props.mediaItem),
+      dismiss: jest.fn(),
+    }));
+    mockAddToListModalProps(props);
+    return null;
+  });
   AddToListModal.displayName = 'AddToListModal';
   return {
     __esModule: true,
@@ -404,7 +414,12 @@ jest.mock('@/src/components/detail/RecommendationsSection', () => ({
   },
 }));
 jest.mock('@/src/components/detail/ReviewsSection', () => ({ ReviewsSection: () => null }));
-jest.mock('@/src/components/detail/SeasonsSection', () => ({ SeasonsSection: () => null }));
+jest.mock('@/src/components/detail/SeasonsSection', () => ({
+  SeasonsSection: (props: any) => {
+    mockSeasonsSectionProps(props);
+    return null;
+  },
+}));
 
 const mockUpNextSection = jest.fn();
 jest.mock('@/src/components/detail/UpNextEpisodeSection', () => ({
@@ -554,6 +569,62 @@ describe('TVDetailScreen', () => {
 
     expect(() => rerender(<TVDetailScreen />)).not.toThrow();
     expect(getByText('Loaded TV Overview')).toBeTruthy();
+  });
+
+  describe('season card long-press', () => {
+    const season = {
+      id: 22,
+      name: 'Season 2',
+      season_number: 2,
+      episode_count: 8,
+      air_date: '2024-03-01',
+      overview: '',
+      poster_path: '/season-2.jpg',
+      vote_average: 7.9,
+    };
+    const longPressSeason = () =>
+      act(() => {
+        mockSeasonsSectionProps.mock.lastCall?.[0].onSeasonLongPress(season);
+      });
+
+    beforeEach(() => {
+      Object.assign(mockShow, { seasons: [season] });
+    });
+
+    afterEach(() => {
+      Object.assign(mockShow, { seasons: [] });
+    });
+
+    it('opens Add to List with the season as a list entry', async () => {
+      render(<TVDetailScreen />);
+
+      await longPressSeason();
+
+      await waitFor(() => expect(mockAddToListPresent).toHaveBeenCalledTimes(1));
+      expect(mockAddToListPresent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 10,
+          media_type: 'season',
+          season_number: 2,
+          season_name: 'Season 2',
+          show_name: 'Loaded Show',
+          title: 'Loaded Show · Season 2',
+          poster_path: '/season-2.jpg',
+          genre_ids: [18],
+        })
+      );
+    });
+
+    it('asks a guest to sign in instead of opening Add to List', async () => {
+      mockIsAccountRequired.mockReturnValue(true);
+      render(<TVDetailScreen />);
+
+      await longPressSeason();
+
+      expect(mockIsAccountRequired).toHaveBeenCalled();
+      expect(mockAddToListPresent).not.toHaveBeenCalled();
+      mockIsAccountRequired.mockReturnValue(false);
+    });
   });
 
   it('navigates to poster picker on poster press', () => {

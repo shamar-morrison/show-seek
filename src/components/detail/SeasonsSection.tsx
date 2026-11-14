@@ -12,11 +12,13 @@ interface SeasonsSectionProps {
   tvShowId: number;
   seasons: Season[];
   onSeasonPress: (seasonNumber: number) => void;
+  /** Long-press on a season card, e.g. to add the season to a list. */
+  onSeasonLongPress?: (season: Season) => void;
   style?: ViewStyle;
 }
 
 export const SeasonsSection = memo<SeasonsSectionProps>(
-  ({ tvShowId, seasons, onSeasonPress, style }) => {
+  ({ tvShowId, seasons, onSeasonPress, onSeasonLongPress, style }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
     const { data: ratings } = useRatings();
@@ -62,6 +64,7 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
               season={item}
               userRating={seasonRatingsByNumber.get(item.season_number)}
               onPress={handleSeasonPress}
+              onLongPress={onSeasonLongPress}
             />
           )}
           showsHorizontalScrollIndicator={false}
@@ -71,9 +74,12 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
     );
   },
   (prevProps, nextProps) => {
-    // Custom comparison: check array length and first season ID
+    // Custom comparison: check array length and first season ID. onSeasonPress is left out (it's
+    // rebuilt every render and only uses the show ID); the long-press handler is compared so it
+    // never acts on a stale show or sign-in state.
     return (
       prevProps.tvShowId === nextProps.tvShowId &&
+      prevProps.onSeasonLongPress === nextProps.onSeasonLongPress &&
       prevProps.seasons.length === nextProps.seasons.length &&
       prevProps.seasons.every((s, i) => s.id === nextProps.seasons[i]?.id)
     );

@@ -20,71 +20,85 @@ interface SeasonCardProps {
   season: Season;
   userRating?: number;
   onPress: (seasonNumber: number) => void;
+  /** Long-press, e.g. to add the season to a list. */
+  onLongPress?: (season: Season) => void;
 }
 
-export const SeasonCard = memo<SeasonCardProps>(({ tvShowId, season, userRating, onPress }) => {
-  const { data: episodeTracking } = useShowEpisodeTracking(tvShowId);
+export const SeasonCard = memo<SeasonCardProps>(
+  ({ tvShowId, season, userRating, onPress, onLongPress }) => {
+    const { data: episodeTracking } = useShowEpisodeTracking(tvShowId);
 
-  // Calculate progress based on watched episodes for this season
-  const progress = useMemo(() => {
-    if (!episodeTracking?.episodes || season.episode_count === 0) {
-      return null;
-    }
+    // Calculate progress based on watched episodes for this season
+    const progress = useMemo(() => {
+      if (!episodeTracking?.episodes || season.episode_count === 0) {
+        return null;
+      }
 
-    // Count watched episodes for this season
-    const watchedCount = Object.keys(episodeTracking.episodes).filter((key) => {
-      const [seasonNum] = key.split('_').map(Number);
-      return seasonNum === season.season_number;
-    }).length;
+      // Count watched episodes for this season
+      const watchedCount = Object.keys(episodeTracking.episodes).filter((key) => {
+        const [seasonNum] = key.split('_').map(Number);
+        return seasonNum === season.season_number;
+      }).length;
 
-    // For now, use total episode count as aired count
-    // (We can't determine unaired episodes without fetching full episode details)
-    const percentage = season.episode_count > 0 ? (watchedCount / season.episode_count) * 100 : 0;
+      // For now, use total episode count as aired count
+      // (We can't determine unaired episodes without fetching full episode details)
+      const percentage = season.episode_count > 0 ? (watchedCount / season.episode_count) * 100 : 0;
 
-    return {
-      watchedCount,
-      totalCount: season.episode_count,
-      percentage,
-    };
-  }, [episodeTracking, season.season_number, season.episode_count]);
+      return {
+        watchedCount,
+        totalCount: season.episode_count,
+        percentage,
+      };
+    }, [episodeTracking, season.season_number, season.episode_count]);
 
-  const handlePress = useCallback(() => {
-    onPress(season.season_number);
-  }, [season.season_number, onPress]);
+    const handlePress = useCallback(() => {
+      onPress(season.season_number);
+    }, [season.season_number, onPress]);
 
-  return (
-    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={ACTIVE_OPACITY}>
-      <View style={styles.posterWrapper}>
-        <MediaImage
-          source={{
-            uri: getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small),
-          }}
-          style={styles.poster}
-          contentFit="cover"
-        />
-        {userRating && userRating > 0 ? (
-          <RatingBadge rating={userRating} size="small" style={styles.ratingBadge} />
-        ) : null}
-      </View>
-      <Text style={styles.title} numberOfLines={1}>
-        {season.name}
-      </Text>
-      <Text style={styles.episodeCount} numberOfLines={1}>
-        {season.episode_count} {season.episode_count === 1 ? 'Episode' : 'Episodes'}
-      </Text>
-      {progress && progress.watchedCount > 0 && (
-        <View style={styles.progressContainer}>
-          <ProgressBar
-            current={progress.watchedCount}
-            total={progress.totalCount}
-            height={4}
-            showLabel={true}
+    const handleLongPress = useCallback(() => {
+      onLongPress?.(season);
+    }, [season, onLongPress]);
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={handlePress}
+        onLongPress={onLongPress ? handleLongPress : undefined}
+        activeOpacity={ACTIVE_OPACITY}
+        testID={`season-card-${season.season_number}`}
+      >
+        <View style={styles.posterWrapper}>
+          <MediaImage
+            source={{
+              uri: getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small),
+            }}
+            style={styles.poster}
+            contentFit="cover"
           />
+          {userRating && userRating > 0 ? (
+            <RatingBadge rating={userRating} size="small" style={styles.ratingBadge} />
+          ) : null}
         </View>
-      )}
-    </TouchableOpacity>
-  );
-});
+        <Text style={styles.title} numberOfLines={1}>
+          {season.name}
+        </Text>
+        <Text style={styles.episodeCount} numberOfLines={1}>
+          {season.episode_count} {season.episode_count === 1 ? 'Episode' : 'Episodes'}
+        </Text>
+        {progress && progress.watchedCount > 0 && (
+          <View style={styles.progressContainer}>
+            <ProgressBar
+              current={progress.watchedCount}
+              total={progress.totalCount}
+              height={4}
+              showLabel={true}
+            />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+);
 
 SeasonCard.displayName = 'SeasonCard';
 

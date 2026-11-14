@@ -111,6 +111,19 @@ describe('SeasonCard', () => {
     expect(mockOnPress).toHaveBeenCalledWith(3);
   });
 
+  it('calls onLongPress with the season when long-pressed', () => {
+    const season = createMockSeason({ season_number: 3 });
+    const onLongPress = jest.fn();
+    const { getByTestId } = render(
+      <SeasonCard tvShowId={123} season={season} onPress={mockOnPress} onLongPress={onLongPress} />
+    );
+
+    fireEvent(getByTestId('season-card-3'), 'longPress');
+
+    expect(onLongPress).toHaveBeenCalledWith(season);
+    expect(mockOnPress).not.toHaveBeenCalled();
+  });
+
   it('should render the poster image', () => {
     const season = createMockSeason({ poster_path: '/test-poster.jpg' });
     const { getByTestId } = render(
