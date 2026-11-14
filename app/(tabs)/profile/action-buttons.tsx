@@ -316,6 +316,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     minWidth: 16,
     textAlign: 'right',
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   resetButton: {
     alignItems: 'center',

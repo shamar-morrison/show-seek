@@ -475,6 +475,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   resultTitleRow: {
     alignItems: 'center',
@@ -495,6 +496,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   scrollContent: {
     gap: SPACING.l,

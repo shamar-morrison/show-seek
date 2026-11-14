@@ -34,6 +34,8 @@ export const modalHeaderStyles = StyleSheet.create({
     fontSize: FONT_SIZE.l,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
+    // Wrap beside the header's buttons (e.g. close) instead of pushing them off.
+    flexShrink: 1,
   },
 });
 

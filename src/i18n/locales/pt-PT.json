@@ -538,7 +538,10 @@
   },
   "rating": {
     "title": "Avaliar",
-    "rateThis": "Avaliar este {{type}}",
+    "rateMovie": "Avaliar este filme",
+    "rateTvShow": "Avaliar esta série",
+    "rateSeason": "Avaliar esta temporada",
+    "rateEpisode": "Avaliar este episódio",
     "yourRating": "A sua avaliação",
     "tapToRate": "Toque numa estrela para avaliar",
     "rated": "Avaliação: {{rating}}/10",

@@ -538,7 +538,10 @@
   },
   "rating": {
     "title": "Rate",
-    "rateThis": "Rate this {{type}}",
+    "rateMovie": "Rate this Movie",
+    "rateTvShow": "Rate this TV Show",
+    "rateSeason": "Rate this Season",
+    "rateEpisode": "Rate this Episode",
     "yourRating": "Your Rating",
     "tapToRate": "Tap a star to rate",
     "rated": "Rated {{rating}}/10",

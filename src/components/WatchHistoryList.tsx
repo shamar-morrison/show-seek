@@ -212,6 +212,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.medium,
     color: COLORS.textSecondary,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   ordinalText: {
     fontSize: FONT_SIZE.l,

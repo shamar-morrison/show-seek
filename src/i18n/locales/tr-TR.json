@@ -538,7 +538,10 @@
   },
   "rating": {
     "title": "Puanla",
-    "rateThis": "Bu {{type}} için puan ver",
+    "rateMovie": "Bu filme puan ver",
+    "rateTvShow": "Bu diziye puan ver",
+    "rateSeason": "Bu sezona puan ver",
+    "rateEpisode": "Bu bölüme puan ver",
     "yourRating": "Puanınız",
     "tapToRate": "Puan vermek için bir yıldıza dokun",
     "rated": "{{rating}}/10 olarak puanlandı",

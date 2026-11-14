@@ -86,6 +86,31 @@ describe('RatingModal', () => {
     expect(getByText('2.5/10')).toBeTruthy();
   });
 
+  it('titles the modal with a whole sentence for each type, so articles agree with the noun', () => {
+    const { getByText, rerender } = render(<RatingModal {...defaultProps} initialRating={0} />);
+    expect(getByText('Rate this Movie')).toBeTruthy();
+    expect(getByText('Tap a star to rate')).toBeTruthy();
+
+    rerender(<RatingModal {...defaultProps} mediaType="tv" initialRating={0} />);
+    expect(getByText('Rate this TV Show')).toBeTruthy();
+
+    rerender(
+      <RatingModal
+        {...defaultProps}
+        initialRating={0}
+        seasonData={{
+          tvShowId: 101,
+          seasonNumber: 2,
+          seasonName: 'Season 2',
+          tvShowName: 'Season Show',
+          posterPath: null,
+          airDate: '2025-01-01',
+        }}
+      />
+    );
+    expect(getByText('Rate this Season')).toBeTruthy();
+  });
+
   it('auto-removes from should watch when movie is rated and preference is enabled', async () => {
     const { getByText } = render(
       <RatingModal

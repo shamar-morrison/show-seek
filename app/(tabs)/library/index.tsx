@@ -279,7 +279,7 @@ export default function LibraryScreen() {
         />
       ) : (
         <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>{t('tabs.library')}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{t('tabs.library')}</Text>
           <View style={styles.headerActions}>
             <HeaderIconButton onPress={activateSearch} testID="library-search-button">
               <AppIcon icon={Search01Icon} size={22} color={COLORS.text} />
@@ -324,6 +324,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xxl,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
+    // One line that shrinks to fit (long words in some languages) instead of breaking.
+    flexShrink: 1,
+    marginRight: SPACING.s,
   },
   headerActions: {
     flexDirection: 'row',

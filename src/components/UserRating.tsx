@@ -50,6 +50,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   description: {
     color: COLORS.textSecondary,

@@ -153,6 +153,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.l,
     color: COLORS.text,
     fontFamily: FONT_FAMILY.medium,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   colorStatus: {
     width: 32,

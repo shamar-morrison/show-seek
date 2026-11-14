@@ -753,6 +753,7 @@ const styles = StyleSheet.create({
   detailText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   section: {
     paddingHorizontal: SPACING.l,
@@ -842,5 +843,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
     marginLeft: SPACING.s,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
 });

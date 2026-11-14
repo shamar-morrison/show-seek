@@ -39,5 +39,6 @@ const styles = StyleSheet.create({
   text: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
 });

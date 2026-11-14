@@ -423,7 +423,7 @@ export default function DiscoverScreen() {
     <>
       <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t('tabs.discover')}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{t('tabs.discover')}</Text>
           <View style={styles.headerActions}>
             <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'list' ? (
@@ -557,6 +557,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xxl,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
+    // One line that shrinks to fit (long words in some languages) instead of breaking.
+    flexShrink: 1,
+    marginRight: SPACING.s,
   },
   headerActions: {
     flexDirection: 'row',

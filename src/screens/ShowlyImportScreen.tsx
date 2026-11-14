@@ -451,6 +451,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   primaryButton: {
     alignItems: 'center',

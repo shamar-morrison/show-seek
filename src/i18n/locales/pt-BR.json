@@ -127,7 +127,7 @@
     "discover": "Descobrir",
     "search": "Buscar",
     "library": "Biblioteca",
-    "profile": "Configurações"
+    "profile": "Ajustes"
   },
   "home": {
     "title": "Início",
@@ -538,7 +538,10 @@
   },
   "rating": {
     "title": "Avaliar",
-    "rateThis": "Avaliar este {{type}}",
+    "rateMovie": "Avaliar este filme",
+    "rateTvShow": "Avaliar esta série",
+    "rateSeason": "Avaliar esta temporada",
+    "rateEpisode": "Avaliar este episódio",
     "yourRating": "Sua avaliação",
     "tapToRate": "Toque em uma estrela para avaliar",
     "rated": "Avaliação: {{rating}}/10",

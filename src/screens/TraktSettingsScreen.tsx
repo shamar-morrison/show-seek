@@ -1186,6 +1186,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.error,
     marginBottom: SPACING.s,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   errorText: {
     fontSize: FONT_SIZE.s,
@@ -1216,6 +1217,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.warning,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   enrichmentDescription: {
     fontSize: FONT_SIZE.s,
@@ -1243,6 +1245,7 @@ const styles = StyleSheet.create({
   enrichedText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.success,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   zipImportCard: {
     alignItems: 'center',
@@ -1276,6 +1279,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   zipImportCardSubtitle: {
     color: COLORS.textSecondary,

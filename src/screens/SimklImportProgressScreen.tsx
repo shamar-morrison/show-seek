@@ -533,6 +533,7 @@ const styles = StyleSheet.create({
   progressChunks: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   progressFill: {
     borderRadius: BORDER_RADIUS.round,
@@ -574,6 +575,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: FONT_SIZE.m,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   resultTitleRow: {
     alignItems: 'center',

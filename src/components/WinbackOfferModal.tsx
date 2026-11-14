@@ -431,6 +431,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   timerContainer: {
     flexDirection: 'row',
@@ -449,6 +450,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   timerCountdown: {
     fontSize: FONT_SIZE.s,
@@ -459,6 +461,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.error,
     fontFamily: FONT_FAMILY.bold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   buttonContainer: {
     width: '100%',

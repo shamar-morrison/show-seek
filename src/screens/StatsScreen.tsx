@@ -213,7 +213,9 @@ export default function StatsScreen() {
         {/* Overview Section */}
         <View style={styles.section}>
           <View style={styles.sectionTitleRow}>
-            <Text style={sectionTitleStyles.title}>{t('stats.last6MonthsOverview')}</Text>
+            <Text style={[sectionTitleStyles.title, styles.sectionTitleText]}>
+              {t('stats.last6MonthsOverview')}
+            </Text>
             {showRefreshIndicator && (
               <ActivityIndicator
                 size="small"
@@ -350,6 +352,9 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     marginBottom: SPACING.m,
   },
+  sectionTitleText: {
+    flexShrink: 1, // wrap beside the refresh indicator instead of pushing it off
+  },
   ledgerDivider: {
     height: 1,
     marginVertical: SPACING.s,
@@ -370,6 +375,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.text,
     textAlign: 'center',
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   watchTimeValue: {
     fontSize: FONT_SIZE.xl,
@@ -448,6 +454,7 @@ const styles = StyleSheet.create({
   },
   comparisonText: {
     fontSize: FONT_SIZE.xs,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   monthLedgerDivider: {
     height: 1,
@@ -474,6 +481,7 @@ const styles = StyleSheet.create({
   monthStatLabel: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   monthWatchTimeRow: {
     flexDirection: 'row',

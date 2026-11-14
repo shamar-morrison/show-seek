@@ -412,6 +412,7 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   imdbHeroLogo: {
     height: 28,

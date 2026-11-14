@@ -290,12 +290,14 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     lineHeight: 16,
     color: COLORS.textSecondary,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   exampleNext: {
     fontSize: FONT_SIZE.xs,
     lineHeight: 16,
     color: COLORS.text,
     fontFamily: FONT_FAMILY.medium,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   note: {
     fontSize: FONT_SIZE.s,
