@@ -11,12 +11,13 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
-import { UserPreferences } from '@/src/types/preferences';
+import { resolveContinueWatchingFrom, UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
 import {
   DragDropVerticalIcon,
   Layout01Icon,
   MapPinIcon,
+  NextIcon,
   PaintBoardIcon,
   TranslateIcon,
 } from '@hugeicons/core-free-icons';
@@ -26,14 +27,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from './ActionButton';
 
 /** Stored (not rendered) category keys for content items. */
-export type ContentCategoryKey = 'localization' | 'appearance';
+export type ContentCategoryKey = 'localization' | 'appearance' | 'listAndWatchBehavior';
 
 export type ContentItemId =
   | 'language'
   | 'region'
   | 'accentColor'
   | 'defaultLaunchScreen'
-  | 'actionButtons';
+  | 'actionButtons'
+  | 'continueWatchingFrom';
 
 export interface ContentConfigItem {
   /** Stable id (also used as the search/scroll id) */
@@ -76,6 +78,12 @@ export const CONTENT_ITEMS: ContentConfigItem[] = [
     descKey: 'actionButtons.description',
     category: 'appearance',
   },
+  {
+    id: 'continueWatchingFrom',
+    titleKey: 'continueWatchingFrom.title',
+    descKey: 'continueWatchingFrom.description',
+    category: 'listAndWatchBehavior',
+  },
 ];
 
 export interface ContentSettingsSectionProps {
@@ -95,6 +103,8 @@ export interface ContentSettingsSectionProps {
   onLaunchScreenPress: () => void;
   /** Handler for the action buttons order button press */
   onActionButtonsPress: () => void;
+  /** Handler for the Continue Watching From button press */
+  onContinueWatchingFromPress: () => void;
   /** Whether to show section title (default: true) */
   showTitle?: boolean;
   /** Id of the item to briefly highlight (e.g. from profile search) */
@@ -115,6 +125,7 @@ export function ContentSettingsSection({
   onColorPress,
   onLaunchScreenPress,
   onActionButtonsPress,
+  onContinueWatchingFromPress,
   showTitle = true,
   highlightedId = null,
   registerItemLayout,
@@ -273,6 +284,28 @@ export function ContentSettingsSection({
             badge={
               <View style={styles.languageBadge}>
                 <Text style={styles.languageBadgeText}>{getDefaultLaunchScreenLabel()}</Text>
+              </View>
+            }
+          />
+        );
+      case 'continueWatchingFrom':
+        return (
+          <ActionButton
+            icon={NextIcon}
+            label={t('continueWatchingFrom.title')}
+            description={t('continueWatchingFrom.description')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onContinueWatchingFromPress();
+            }}
+            badge={
+              <View style={styles.languageBadge}>
+                <Text style={styles.languageBadgeText}>
+                  {resolveContinueWatchingFrom(preferences?.continueWatchingFrom) ===
+                  'after-furthest'
+                    ? t('continueWatchingFrom.afterFurthest.short')
+                    : t('continueWatchingFrom.firstUnwatched.short')}
+                </Text>
               </View>
             }
           />

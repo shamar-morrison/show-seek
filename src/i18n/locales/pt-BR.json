@@ -2552,5 +2552,23 @@
   },
   "imageViewer": {
     "download": "Baixar"
+  },
+  "continueWatchingFrom": {
+    "title": "Continuar assistindo a partir de",
+    "description": "Escolha qual episódio o Progresso de visualização sugere quando você pulou algum.",
+    "firstUnwatched": {
+      "label": "Primeiro episódio não assistido",
+      "short": "Primeiro não assistido",
+      "description": "Sugere o episódio exibido mais antigo que você não assistiu, mesmo que tenha assistido aos seguintes. Nada que você pular fica para trás.",
+      "example": "Assistiu 1–4 e 6 → Próximo: Episódio 5"
+    },
+    "afterFurthest": {
+      "label": "Depois do episódio mais avançado",
+      "short": "Depois do mais avançado",
+      "description": "Sugere o episódio depois do mais avançado que você assistiu. Os episódios pulados continuam não assistidos, e o card da série mostra quantos você pulou.",
+      "example": "Assistiu 1–4 e 6 → Próximo: Episódio 7 · 1 pulado"
+    },
+    "note": "O progresso e o tempo restante sempre contam todos os episódios que você não assistiu, seja qual for a sua escolha.",
+    "updateError": "Falha ao atualizar esta configuração. Tente novamente."
   }
 }

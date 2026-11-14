@@ -2552,5 +2552,23 @@
   },
   "imageViewer": {
     "download": "Download"
+  },
+  "continueWatchingFrom": {
+    "title": "Continue Watching From",
+    "description": "Choose which episode Watch Progress suggests next when you've skipped one.",
+    "firstUnwatched": {
+      "label": "First unwatched episode",
+      "short": "First unwatched",
+      "description": "Suggests the earliest aired episode you haven't watched, even if you've watched later ones. Nothing you skip gets missed.",
+      "example": "Watched 1–4 and 6 → Next: Episode 5"
+    },
+    "afterFurthest": {
+      "label": "After your furthest episode",
+      "short": "After furthest",
+      "description": "Suggests the episode after the furthest one you've watched. Skipped episodes stay unwatched, and the show's card shows how many you skipped.",
+      "example": "Watched 1–4 and 6 → Next: Episode 7 · 1 skipped"
+    },
+    "note": "Progress and time left always count every episode you haven't watched, whichever you choose.",
+    "updateError": "Failed to update this setting. Please try again."
   }
 }

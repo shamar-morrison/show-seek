@@ -183,6 +183,15 @@ export default function ProfileLayout() {
                 }}
               />
               <Stack.Screen
+                name="continue-watching-from"
+                options={{
+                  headerShown: true,
+                  headerTitle: t('continueWatchingFrom.title'),
+                  headerStyle: { backgroundColor: COLORS.background },
+                  headerTintColor: COLORS.text,
+                }}
+              />
+              <Stack.Screen
                 name="action-buttons"
                 options={{
                   headerShown: true,
