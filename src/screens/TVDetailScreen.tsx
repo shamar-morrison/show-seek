@@ -46,7 +46,7 @@ import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useMoreTitles } from '@/src/hooks/useMoreTitles';
-import { useMediaLists } from '@/src/hooks/useLists';
+import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useCanCreateNote, useMediaNote } from '@/src/hooks/useNotes';
 import { useNotePress } from '@/src/hooks/useNotePress';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -54,6 +54,7 @@ import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
+import { useRefreshListItemRating } from '@/src/hooks/useRefreshListItemRating';
 import {
   useCanCreateReminder,
   useCancelReminder,
@@ -123,6 +124,8 @@ export default function TVDetailScreen() {
   } = useExternalRatings('tv', tvId);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId, 'tv');
+  // The same lists query useMediaLists reads, so no extra reads.
+  const { data: lists } = useLists();
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
   const { preferences } = usePreferences();
   const { resolvePosterPath } = usePosterOverrides();
@@ -158,6 +161,13 @@ export default function TVDetailScreen() {
     queryKey: ['tv', tvId],
     queryFn: () => tmdbApi.getTVShowDetails(tvId),
     enabled: !!tvId,
+  });
+
+  useRefreshListItemRating({
+    mediaType: 'tv',
+    mediaId: tvId,
+    rating: tvQuery.data?.vote_average,
+    lists,
   });
 
   const creditsQuery = useQuery({

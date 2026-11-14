@@ -64,6 +64,7 @@ import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
+import { useRefreshListItemRating } from '@/src/hooks/useRefreshListItemRating';
 import {
   useCanCreateReminder,
   useCancelReminder,
@@ -299,6 +300,13 @@ export default function MovieDetailScreen() {
     queryKey: ['movie', movieId],
     queryFn: () => tmdbApi.getMovieDetails(movieId),
     enabled: !!movieId,
+  });
+
+  useRefreshListItemRating({
+    mediaType: 'movie',
+    mediaId: movieId,
+    rating: movieQuery.data?.vote_average,
+    lists,
   });
 
   const creditsQuery = useQuery({

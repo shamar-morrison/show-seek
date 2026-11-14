@@ -144,6 +144,12 @@ jest.mock('@/src/hooks/useLists', () => ({
   useLists: () => ({ data: [], isLoading: false }),
 }));
 
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: { uid: 'user-1' },
+  }),
+}));
+
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   useShowEpisodeTracking: () => ({ data: { episodes: mockTrackingEpisodes }, isLoading: false }),
   useMarkShowAllEpisodesWatched: () => ({

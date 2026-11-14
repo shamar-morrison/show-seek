@@ -133,7 +133,8 @@ export const mockSyncFirestore = ({
   ratings,
   user,
 }: SyncFirestoreOptions) => {
-  const batchSet = jest.fn((_ref: unknown, data: unknown) => assertNoUndefined(data));
+  // Typed loosely, like the inline mocks it replaced: tests read written refs and data back.
+  const batchSet = jest.fn((_ref: any, data: any) => assertNoUndefined(data));
   const batchDelete = jest.fn();
   const batchCommit = jest.fn().mockResolvedValue(undefined);
   const runTransaction = jest.fn().mockResolvedValue(enrichmentQueue);
