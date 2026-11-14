@@ -32,6 +32,11 @@ export interface ActionButtonProps {
   isPremium?: boolean;
   /** Optional badge to show (e.g., for Trakt connected indicator) */
   badge?: React.ReactNode;
+  /**
+   * Where the badge goes: beside the label (default), or on its own line under it, for a
+   * badge too wide to share the label's line.
+   */
+  badgePlacement?: 'inline' | 'below';
   /** Optional short description shown under the label */
   description?: string;
   /** Optional testID for testing - defaults to 'action-button-{label-slug}' */
@@ -53,6 +58,7 @@ export function ActionButton({
   isPremiumFeature = false,
   isPremium = true,
   badge,
+  badgePlacement = 'inline',
   description,
   testID,
 }: ActionButtonProps) {
@@ -98,8 +104,13 @@ export function ActionButton({
             {label}
           </Text>
           {isPremiumFeature && !isPremium && <PremiumBadge />}
-          {badge}
+          {badgePlacement === 'inline' && badge}
         </View>
+        {badgePlacement === 'below' && !!badge && (
+          <View style={styles.actionButtonBadgeBelow} testID="action-button-badge-below">
+            {badge}
+          </View>
+        )}
         {!!description && <Text style={styles.actionButtonDescription}>{description}</Text>}
       </View>
     </TouchableOpacity>
@@ -133,6 +144,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.s,
   },
+  actionButtonBadgeBelow: {
+    flexDirection: 'row',
+    marginTop: SPACING.xs,
+    marginBottom: 2,
+  },
   actionButtonDescription: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
@@ -142,8 +158,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     fontFamily: FONT_FAMILY.medium,
-    // Wrap a long label rather than push a badge beside it off narrow screens.
-    flexShrink: 1,
   },
   actionButtonTextDanger: {
     color: COLORS.error,

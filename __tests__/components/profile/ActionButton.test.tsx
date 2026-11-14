@@ -101,6 +101,31 @@ describe('ActionButton', () => {
     expect(getByTestId('custom-badge')).toBeTruthy();
   });
 
+  it('keeps the badge beside the label by default, or puts it on its own line under it', () => {
+    const Badge = () => <Text testID="custom-badge">First unwatched</Text>;
+    const { getByTestId, queryByTestId, rerender, toJSON } = render(
+      <ActionButton label="Continue Watching From" onPress={mockOnPress} badge={<Badge />} />
+    );
+    expect(getByTestId('custom-badge')).toBeTruthy();
+    expect(queryByTestId('action-button-badge-below')).toBeNull();
+
+    rerender(
+      <ActionButton
+        label="Continue Watching From"
+        description="Which episode comes next"
+        onPress={mockOnPress}
+        badge={<Badge />}
+        badgePlacement="below"
+      />
+    );
+    const below = getByTestId('action-button-badge-below');
+    expect(below).toContainElement(getByTestId('custom-badge'));
+    // Title, then the badge, then the description.
+    const text = JSON.stringify(toJSON());
+    expect(text.indexOf('Continue Watching From')).toBeLessThan(text.indexOf('First unwatched'));
+    expect(text.indexOf('First unwatched')).toBeLessThan(text.indexOf('Which episode comes next'));
+  });
+
   describe('premium feature gating', () => {
     it('should show premium badge when isPremiumFeature=true and isPremium=false', () => {
       const { getByTestId } = render(

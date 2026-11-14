@@ -298,8 +298,10 @@ export function ContentSettingsSection({
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onContinueWatchingFromPress();
             }}
+            // The choice is too wide to share the title's line on narrow screens.
+            badgePlacement="below"
             badge={
-              <View style={styles.languageBadge}>
+              <View style={[styles.languageBadge, styles.badgeBelowTitle]}>
                 <Text style={styles.languageBadgeText}>
                   {resolveContinueWatchingFrom(preferences?.continueWatchingFrom) ===
                   'after-furthest'
@@ -340,6 +342,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.s,
     marginLeft: SPACING.s,
+  },
+  badgeBelowTitle: {
+    marginLeft: 0,
   },
   accentBadge: {
     flexDirection: 'row',
