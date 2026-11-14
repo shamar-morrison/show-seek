@@ -47,6 +47,7 @@ const mockT: any = (key: string, options?: any) => {
   if (key === 'watching.seriesComplete') return 'Series complete';
   if (key === 'watching.timeRemainingMinutes') return `${options?.count}m left`;
   if (key === 'watching.timeRemainingHoursMinutes') return `${options?.hours}h ${options?.minutes}m left`;
+  if (key === 'watching.skipped') return `${options?.count} skipped`;
   return key;
 };
 
@@ -150,5 +151,55 @@ describe('WatchingShowCard', () => {
     fireEvent.press(getByText('Test Show'));
     // Should route to show detail page
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/tv/101');
+  });
+
+  it('shows how many episodes were skipped next to the episode after the furthest one', () => {
+    const show: InProgressShow = {
+      ...baseShow,
+      skippedCount: 1,
+      nextEpisode: { kind: 'unwatched', season: 1, episode: 7, title: 'Episode 7' },
+    };
+
+    const { getByText, getByTestId } = render(<WatchingShowCard show={show} t={mockT} />);
+
+    expect(getByText(/S1E7 · Episode 7/)).toBeTruthy();
+    expect(getByTestId('watching-card-skipped')).toHaveTextContent(' · 1 skipped');
+
+    fireEvent.press(getByText('Test Show'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/tv/101/seasons?season=1');
+  });
+
+  it('keeps the skipped count on a show counted as complete', () => {
+    const show: InProgressShow = {
+      ...baseShow,
+      percentage: 80,
+      showEnded: true,
+      skippedCount: 2,
+      nextEpisode: { kind: 'complete' },
+    };
+
+    const { getByText, getByTestId } = render(<WatchingShowCard show={show} t={mockT} />);
+
+    expect(getByText('Series complete')).toBeTruthy();
+    expect(getByTestId('watching-card-skipped')).toHaveTextContent(' · 2 skipped');
+  });
+
+  it('shows no skipped count without skipped episodes, or for an unavailable show', () => {
+    const next = { kind: 'unwatched' as const, season: 1, episode: 3, title: 'Episode 3' };
+    const { queryByTestId, rerender } = render(
+      <WatchingShowCard show={{ ...baseShow, nextEpisode: next }} t={mockT} />
+    );
+    expect(queryByTestId('watching-card-skipped')).toBeNull();
+
+    rerender(<WatchingShowCard show={{ ...baseShow, skippedCount: 0, nextEpisode: next }} t={mockT} />);
+    expect(queryByTestId('watching-card-skipped')).toBeNull();
+
+    rerender(
+      <WatchingShowCard
+        show={{ ...baseShow, skippedCount: 3, isUnavailable: true, nextEpisode: null }}
+        t={mockT}
+      />
+    );
+    expect(queryByTestId('watching-card-skipped')).toBeNull();
   });
 });

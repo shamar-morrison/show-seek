@@ -2399,7 +2399,10 @@
     "removeFailed": "Falha ao remover a série",
     "unavailableTitle": "Série indisponível",
     "unavailableRemovePrompt": "Esta série não foi encontrada no TMDB. Deseja remover \"{{name}}\" do seu acompanhamento?",
-    "unavailableCannotRestore": "Séries indisponíveis não podem ser restauradas"
+    "unavailableCannotRestore": "Séries indisponíveis não podem ser restauradas",
+    "skipped": "{{count}} pulados",
+    "skipped_one": "{{count}} pulado",
+    "skipped_other": "{{count}} pulados"
   },
   "widgets": {
     "widgetType": "Tipo de widget",

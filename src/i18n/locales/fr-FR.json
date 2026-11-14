@@ -2469,7 +2469,10 @@
     "removeFailed": "Échec de la suppression de la série",
     "unavailableTitle": "Série non disponible",
     "unavailableRemovePrompt": "Cette série est introuvable sur TMDB. Voulez-vous retirer \"{{name}}\" de votre suivi ?",
-    "unavailableCannotRestore": "Les séries non disponibles ne peuvent pas être restaurées"
+    "unavailableCannotRestore": "Les séries non disponibles ne peuvent pas être restaurées",
+    "skipped": "{{count}} sautés",
+    "skipped_one": "{{count}} sauté",
+    "skipped_other": "{{count}} sautés"
   },
   "updateRequired": {
     "title": "Mise à jour requise",

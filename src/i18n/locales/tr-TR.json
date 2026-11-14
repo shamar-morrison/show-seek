@@ -2435,7 +2435,10 @@
     "removeFailed": "Dizi kaldırılamadı",
     "unavailableTitle": "Dizi Kullanılamıyor",
     "unavailableRemovePrompt": "Bu dizi TMDB'de bulunamadı. \"{{name}}\" dizisini takipten kaldırmak istiyor musunuz?",
-    "unavailableCannotRestore": "Kullanılamayan diziler geri yüklenemez"
+    "unavailableCannotRestore": "Kullanılamayan diziler geri yüklenemez",
+    "skipped": "{{count}} atlandı",
+    "skipped_one": "{{count}} atlandı",
+    "skipped_other": "{{count}} atlandı"
   },
   "mood": {
     "picker": "Ruh hali seçici",

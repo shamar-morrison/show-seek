@@ -145,13 +145,13 @@ export function WatchingShowCard({
           ) : null}
         </View>
 
-        <View style={styles.episodeInfo}>
+        <View style={[styles.episodeInfo, styles.episodeRow]}>
           {show.isUnavailable ? (
             <Text style={styles.unavailableSubtext} numberOfLines={1}>
               Show details unavailable on TMDB
             </Text>
           ) : (
-            <Text style={styles.episodeText} numberOfLines={1}>
+            <Text style={[styles.episodeText, styles.episodeTextShrink]} numberOfLines={1}>
               {show.nextEpisode?.kind === 'complete' ? (
                 <Text style={styles.episodeText}>{t('watching.seriesComplete')}</Text>
               ) : (
@@ -172,6 +172,14 @@ export function WatchingShowCard({
               )}
             </Text>
           )}
+          {/* Episodes left behind when continuing after the furthest one: kept visible, and
+              never truncated away by a long episode title. */}
+          {!show.isUnavailable && (show.skippedCount ?? 0) > 0 ? (
+            <Text style={styles.skippedText} numberOfLines={1} testID="watching-card-skipped">
+              {' · '}
+              {t('watching.skipped', { count: show.skippedCount })}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.progressContainer}>
@@ -255,6 +263,18 @@ const styles = StyleSheet.create({
   episodeText: {
     fontSize: 13,
     color: COLORS.textSecondary,
+  },
+  episodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  episodeTextShrink: {
+    flexShrink: 1,
+  },
+  skippedText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    flexShrink: 0,
   },
   seasonEpLabel: {
     fontFamily: FONT_FAMILY.semiBold,
