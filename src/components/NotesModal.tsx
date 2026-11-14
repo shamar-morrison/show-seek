@@ -200,13 +200,13 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
   return (
     <TrueSheet
       ref={sheetRef}
-      detents={[0.5]}
+      detents={['auto']}
       cornerRadius={BORDER_RADIUS.l}
       backgroundColor={COLORS.surface}
       onDidDismiss={handleDismiss}
       grabber={false}
     >
-      <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+      <GestureHandlerRootView style={[modalSheetStyles.content, styles.content, { width }]}>
         {/* Header */}
         <View style={modalHeaderStyles.header}>
           <View style={styles.headerLeft}>
@@ -281,6 +281,9 @@ NoteModal.displayName = 'NoteSheet';
 export default NoteModal;
 
 const styles = StyleSheet.create({
+  content: {
+    paddingBottom: SPACING.l,
+  },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
