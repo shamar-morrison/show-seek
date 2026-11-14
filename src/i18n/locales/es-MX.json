@@ -538,7 +538,10 @@
   },
   "rating": {
     "title": "Calificar",
-    "rateThis": "Calificar esta {{type}}",
+    "rateMovie": "Calificar esta película",
+    "rateTvShow": "Calificar esta serie",
+    "rateSeason": "Calificar esta temporada",
+    "rateEpisode": "Calificar este episodio",
     "yourRating": "Tu calificación",
     "tapToRate": "Toca una estrella para calificar",
     "rated": "Calificación: {{rating}}/10",

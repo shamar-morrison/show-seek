@@ -538,7 +538,10 @@
   },
   "rating": {
     "title": "Noter",
-    "rateThis": "Noter ce {{type}}",
+    "rateMovie": "Noter ce film",
+    "rateTvShow": "Noter cette série",
+    "rateSeason": "Noter cette saison",
+    "rateEpisode": "Noter cet épisode",
     "yourRating": "Votre note",
     "tapToRate": "Appuyez sur une étoile pour noter",
     "rated": "Noté {{rating}}/10",

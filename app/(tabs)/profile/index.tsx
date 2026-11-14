@@ -409,7 +409,7 @@ export default function ProfileScreen() {
               onLongPress={__DEV__ ? handleReadDiagnosticsPress : undefined}
               activeOpacity={1}
             >
-              <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+              <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{t('profile.title')}</Text>
             </TouchableOpacity>
             <View style={styles.headerActions}>
               <HeaderIconButton
@@ -526,6 +526,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xxl,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
+    // One line that shrinks to fit (long words in some languages) instead of breaking.
+    flexShrink: 1,
+    marginRight: SPACING.s,
   },
   headerActions: {
     flexDirection: 'row',

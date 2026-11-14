@@ -14,7 +14,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
@@ -61,11 +61,17 @@ export default function TabLayout() {
             paddingTop: 5,
             paddingBottom: insets.bottom,
           },
-          tabBarLabelStyle: {
-            fontSize: 12,
-            fontFamily: FONT_FAMILY.semiBold,
-            marginBottom: 4,
-          },
+          // One line that shrinks to fit the tab, so long translations aren't cut off.
+          tabBarLabel: ({ color, children }) => (
+            <Text
+              style={[styles.tabLabel, { color }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
+              {children}
+            </Text>
+          ),
           tabBarItemStyle: {
             justifyContent: 'center',
             paddingVertical: 4,
@@ -125,3 +131,15 @@ export default function TabLayout() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  tabLabel: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.semiBold,
+    marginBottom: 4,
+    // The tab's full width, so the label shrinks to fit it rather than overflowing.
+    alignSelf: 'stretch',
+    textAlign: 'center',
+    paddingHorizontal: 2,
+  },
+});

@@ -437,13 +437,14 @@ export default function RatingModal({
     return Number.isInteger(r) ? `${r}/10` : `${r.toFixed(1)}/10`;
   };
 
-  const rateTypeLabel = episodeData
-    ? t('media.episode')
+  // Whole sentences per type, so the article agrees with the noun in every language.
+  const rateTitle = episodeData
+    ? t('rating.rateEpisode')
     : seasonData
-      ? t('media.season')
+      ? t('rating.rateSeason')
       : mediaType === 'tv'
-        ? t('media.tvShow')
-        : t('media.movie');
+        ? t('rating.rateTvShow')
+        : t('rating.rateMovie');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
@@ -457,7 +458,7 @@ export default function RatingModal({
         <View style={modalLayoutStyles.card}>
           <View style={[modalHeaderStyles.header, styles.header]}>
             <Text style={modalHeaderStyles.title}>
-              {t('rating.rateThis', { type: rateTypeLabel })}
+              {rateTitle}
             </Text>
             <Pressable onPress={handleClose}>
               {({ pressed }) => (
@@ -495,7 +496,14 @@ export default function RatingModal({
           </View>
 
           <View style={styles.ratingTextContainer}>
-            <Text style={[styles.ratingScore, { color: accentColor }]}>{formatRating(rating)}</Text>
+            <Text
+              style={[styles.ratingScore, { color: accentColor }]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {formatRating(rating)}
+            </Text>
             {rating > 0 && <Text style={styles.ratingDescription}>{getRatingText(rating)}</Text>}
           </View>
 
@@ -580,13 +588,17 @@ const styles = StyleSheet.create({
   },
   ratingTextContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: SPACING.xl,
-    height: 50, // Fixed height to prevent jumping
+    // Room for either a two-line "tap to rate" hint or a score with its description, so the
+    // modal doesn't jump between them, and long translations aren't clipped.
+    minHeight: 64,
   },
   ratingScore: {
     fontSize: FONT_SIZE.xl,
     fontFamily: FONT_FAMILY.bold,
     marginBottom: SPACING.xs,
+    textAlign: 'center',
   },
   ratingDescription: {
     fontSize: FONT_SIZE.m,

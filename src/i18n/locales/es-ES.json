@@ -538,7 +538,10 @@
   },
   "rating": {
     "title": "Puntuar",
-    "rateThis": "Puntuar esta {{type}}",
+    "rateMovie": "Puntuar esta película",
+    "rateTvShow": "Puntuar esta serie",
+    "rateSeason": "Puntuar esta temporada",
+    "rateEpisode": "Puntuar este episodio",
     "yourRating": "Tu puntuación",
     "tapToRate": "Toca una estrella para puntuar",
     "rated": "Puntuación: {{rating}}/10",
