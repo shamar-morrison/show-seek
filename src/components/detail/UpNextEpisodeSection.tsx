@@ -56,7 +56,7 @@ export const UpNextEpisodeSection = memo<UpNextEpisodeSectionProps>(
           style={styles.still}
           contentFit="cover"
           placeholderType="tv"
-          placeholderBackgroundColor={COLORS.placeholderBackground}
+          placeholderBackgroundColor={COLORS.surfaceLight}
         />
         <View style={styles.info}>
           <Text style={[styles.upNextLabel, { color: accentColor }]}>{t('media.upNext')}</Text>
