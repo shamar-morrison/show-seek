@@ -24,6 +24,7 @@ import frFR from './locales/fr-FR.json';
 import ptBR from './locales/pt-BR.json';
 import ptPT from './locales/pt-PT.json';
 import trTR from './locales/tr-TR.json';
+import { buildLongestTranslations, LONGEST_TEXT_LANGUAGE } from './longestTranslations';
 
 // Map locale codes to their translation resources
 const resources = {
@@ -88,5 +89,15 @@ i18n.use(initReactI18next).init({
   // Use key as fallback if translation is missing (helpful for debugging)
   returnNull: false,
 });
+
+// Development builds: the "Longest text" test language, the longest translation of every key
+// (see longestTranslations.ts). Not a supported language, so nothing can select or save it.
+if (__DEV__) {
+  i18n.addResourceBundle(
+    LONGEST_TEXT_LANGUAGE,
+    'translation',
+    buildLongestTranslations(enUS, [frFR, esES, esMX, ptBR, ptPT, trTR])
+  );
+}
 
 export default i18n;
