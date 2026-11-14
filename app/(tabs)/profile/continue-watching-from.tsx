@@ -31,6 +31,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,15 +48,26 @@ const RADIO_SIZE = 20;
 
 export default function ContinueWatchingFromScreen() {
   const { t } = useTranslation();
-  const { preferences } = usePreferences();
+  const {
+    preferences,
+    isLoading: isLoadingPreferences,
+    error: preferencesError,
+    refetch: refetchPreferences,
+  } = usePreferences();
   const updatePreference = useUpdatePreference();
   const { accentColor } = useAccentColor();
   const [isUpdating, setIsUpdating] = useState<ContinueWatchingFrom | null>(null);
 
-  const current = resolveContinueWatchingFrom(preferences?.continueWatchingFrom);
+  // Until the saved preferences are read, they are only defaults: show no choice and allow
+  // none, or tapping the option that merely looks selected would save nothing.
+  const isChoiceKnown = !isLoadingPreferences && !preferencesError;
+  const current = isChoiceKnown
+    ? resolveContinueWatchingFrom(preferences?.continueWatchingFrom)
+    : null;
+  const isDisabled = isUpdating !== null || !isChoiceKnown;
 
   const handleSelect = async (value: ContinueWatchingFrom) => {
-    if (value === current) return;
+    if (!isChoiceKnown || value === current) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsUpdating(value);
@@ -73,7 +85,36 @@ export default function ContinueWatchingFromScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.options}>
+        {preferencesError ? (
+          <View style={styles.errorCard} testID="continue-watching-from-error">
+            <View style={styles.errorText}>
+              <Text style={styles.errorTitle}>{t('profile.unableToLoadPreferences')}</Text>
+              <Text style={styles.errorSubtitle}>{t('profile.checkConnection')}</Text>
+            </View>
+            <TouchableOpacity
+              testID="continue-watching-from-retry"
+              style={[
+                styles.retryButton,
+                { backgroundColor: accentColor },
+                isLoadingPreferences && styles.retryButtonDisabled,
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                refetchPreferences();
+              }}
+              activeOpacity={ACTIVE_OPACITY}
+              disabled={isLoadingPreferences}
+            >
+              {isLoadingPreferences ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        <View style={[styles.options, !isChoiceKnown && styles.optionsUnavailable]}>
           {CONTINUE_WATCHING_FROM_OPTIONS.map((option) => {
             const key = OPTION_KEYS[option];
             const isSelected = current === option;
@@ -84,7 +125,11 @@ export default function ContinueWatchingFromScreen() {
                 key={option}
                 testID={`continue-watching-from-option-${option}`}
                 accessibilityRole="radio"
-                accessibilityState={{ selected: isSelected, disabled: isUpdating !== null }}
+                accessibilityState={{
+                  selected: isSelected,
+                  disabled: isDisabled,
+                  busy: isLoadingPreferences,
+                }}
                 style={({ pressed }) => [
                   styles.option,
                   isSelected && {
@@ -94,7 +139,7 @@ export default function ContinueWatchingFromScreen() {
                   pressed && styles.optionPressed,
                 ]}
                 onPress={() => handleSelect(option)}
-                disabled={isUpdating !== null}
+                disabled={isDisabled}
               >
                 <View style={styles.radioSlot}>
                   {isLoading ? (
@@ -140,6 +185,45 @@ const styles = StyleSheet.create({
   },
   options: {
     gap: SPACING.m,
+  },
+  optionsUnavailable: {
+    opacity: 0.5,
+  },
+  errorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    padding: SPACING.m,
+    marginBottom: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+  },
+  errorText: {
+    flex: 1,
+  },
+  errorTitle: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.medium,
+    marginBottom: SPACING.xs,
+  },
+  errorSubtitle: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  retryButton: {
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  retryButtonText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  retryButtonDisabled: {
+    opacity: 0.6,
   },
   option: {
     flexDirection: 'row',

@@ -3,10 +3,18 @@ import { Alert } from 'react-native';
 import React from 'react';
 
 const mockMutateAsync = jest.fn();
+const mockRefetch = jest.fn();
 let mockPreferences: Record<string, unknown> | null = null;
+let mockIsLoading = false;
+let mockError: Error | null = null;
 
 jest.mock('@/src/hooks/usePreferences', () => ({
-  usePreferences: () => ({ preferences: mockPreferences }),
+  usePreferences: () => ({
+    preferences: mockPreferences,
+    isLoading: mockIsLoading,
+    error: mockError,
+    refetch: mockRefetch,
+  }),
   useUpdatePreference: () => ({ mutateAsync: mockMutateAsync }),
 }));
 jest.mock('@/src/context/AccentColorProvider', () => ({
@@ -26,6 +34,8 @@ describe('ContinueWatchingFromScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPreferences = null;
+    mockIsLoading = false;
+    mockError = null;
     mockMutateAsync.mockResolvedValue(undefined);
   });
 
@@ -92,5 +102,54 @@ describe('ContinueWatchingFromScreen', () => {
     );
     alertSpy.mockRestore();
     consoleSpy.mockRestore();
+  });
+
+  it('shows no choice and saves nothing until the saved preferences are read', async () => {
+    mockIsLoading = true;
+    mockPreferences = { continueWatchingFrom: 'first-unwatched' }; // only the defaults so far
+    const { getByTestId, queryByTestId } = render(<ContinueWatchingFromScreen />);
+
+    for (const id of [FIRST, AFTER]) {
+      expect(getByTestId(id).props.accessibilityState).toEqual(
+        expect.objectContaining({ selected: false, disabled: true, busy: true })
+      );
+    }
+    await act(async () => {
+      fireEvent.press(getByTestId(FIRST));
+      fireEvent.press(getByTestId(AFTER));
+    });
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+    expect(queryByTestId('continue-watching-from-error')).toBeNull();
+  });
+
+  it('offers a retry when the saved preferences could not be read', async () => {
+    mockError = new Error('offline');
+    const { getByTestId, getByText, rerender } = render(<ContinueWatchingFromScreen />);
+
+    expect(getByTestId('continue-watching-from-error')).toBeTruthy();
+    expect(getByText('Unable to load preferences')).toBeTruthy();
+    expect(getByTestId(AFTER).props.accessibilityState).toEqual(
+      expect.objectContaining({ selected: false, disabled: true })
+    );
+    await act(async () => {
+      fireEvent.press(getByTestId(AFTER));
+    });
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('continue-watching-from-retry'));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+
+    // Once read, the saved choice shows and can be changed.
+    mockError = null;
+    mockPreferences = { continueWatchingFrom: 'after-furthest' };
+    rerender(<ContinueWatchingFromScreen />);
+    expect(getByTestId(AFTER).props.accessibilityState.selected).toBe(true);
+    await act(async () => {
+      fireEvent.press(getByTestId(FIRST));
+    });
+    expect(mockMutateAsync).toHaveBeenCalledWith({
+      key: 'continueWatchingFrom',
+      value: 'first-unwatched',
+    });
   });
 });
