@@ -1,4 +1,4 @@
-import { hexToRGBA } from '@/src/constants/theme';
+import { COLORS, hexToRGBA } from '@/src/constants/theme';
 import {
   getListMembershipIcon,
   getListMembershipTint,
@@ -6,6 +6,7 @@ import {
 } from '@/src/utils/listIcons';
 import {
   Bookmark02Icon,
+  CheckCheckIcon,
   CheckListIcon,
   FavouriteIcon,
   Folder01Icon,
@@ -26,6 +27,13 @@ describe('getListMembershipIcon', () => {
       color: '#3b82f6',
     });
     expect(getListMembershipIcon(['my-list'], '#ff0000')?.icon).toBe(Folder01Icon);
+  });
+
+  it('shows the double check for an entry only in Already Watched', () => {
+    expect(getListMembershipIcon(['already-watched'], '#ff0000')).toEqual({
+      icon: CheckCheckIcon,
+      color: COLORS.success,
+    });
   });
 
   it('shows the multiple-lists icon only for an entry in several lists', () => {

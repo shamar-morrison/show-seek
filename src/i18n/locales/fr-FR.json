@@ -2007,9 +2007,9 @@
   },
   "whatsNew": {
     "title": "Quoi de neuf sur ShowSeek ?",
-    "episodeLists": {
-      "title": "Ajoutez des épisodes à vos listes",
-      "description": "Envie de garder un seul épisode ? Touchez Ajouter à une liste sur la page de n'importe quel épisode pour l'enregistrer dans À voir ou dans l'une de vos listes. Une fois marqué comme vu, il quitte À voir."
+    "continueWatchingFrom": {
+      "title": "Reprenez après votre épisode le plus avancé",
+      "description": "Vous sautez des épisodes ? La Progression du visionnage peut désormais reprendre à l'épisode qui suit le plus avancé que vous avez vu, et la carte de la série compte ceux que vous avez sautés. Activez l'option dans Paramètres › Contenu › Reprendre à partir de."
     }
   },
   "posterPicker": {

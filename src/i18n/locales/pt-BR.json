@@ -2255,9 +2255,9 @@
   },
   "whatsNew": {
     "title": "O que há de novo no ShowSeek?",
-    "episodeLists": {
-      "title": "Adicione episódios às listas",
-      "description": "Quer salvar um só episódio? Toque em Adicionar à lista na página de qualquer episódio para salvá-lo em Pendentes ou em uma das suas listas. Quando você o marcar como visto, ele sai de Pendentes."
+    "continueWatchingFrom": {
+      "title": "Continue depois do episódio mais avançado",
+      "description": "Pula episódios? O Progresso de visualização agora pode continuar a partir do episódio seguinte ao mais avançado que você assistiu, e o cartão da série mostra quantos você pulou. Ative em Configurações › Conteúdo › Continuar assistindo a partir de."
     }
   },
   "shuffle": {

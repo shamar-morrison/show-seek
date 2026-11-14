@@ -1859,9 +1859,9 @@
   },
   "whatsNew": {
     "title": "ShowSeek'te neler yeni?",
-    "episodeLists": {
-      "title": "Bölümleri listelere ekleyin",
-      "description": "Tek bir bölümü mü kaydetmek istiyorsunuz? Herhangi bir bölümün sayfasında Listeye ekle'ye dokunarak onu İzlenmeli listesine veya kendi listelerinizden birine kaydedin. İzlendi olarak işaretlediğinizde İzlenmeli listesinden çıkar."
+    "continueWatchingFrom": {
+      "title": "En ileri bölümünüzden devam edin",
+      "description": "Bölüm mü atlıyorsunuz? İzleme ilerlemesi artık izlediğiniz en ileri bölümden sonraki bölümden devam edebilir ve dizinin kartı atladığınız bölümleri sayar. Ayarlar › İçerik › İzlemeye nereden devam edilsin bölümünden açın."
     }
   },
   "posterPicker": {

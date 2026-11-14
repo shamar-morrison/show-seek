@@ -1859,9 +1859,9 @@
   },
   "whatsNew": {
     "title": "What's New in ShowSeek?",
-    "episodeLists": {
-      "title": "Add episodes to lists",
-      "description": "Want to save a single episode? Tap Add to List on any episode's page to save it to Should Watch or one of your own lists. Once you mark it watched, it leaves Should Watch."
+    "continueWatchingFrom": {
+      "title": "Continue from your furthest episode",
+      "description": "Skip around in a show? Watch Progress can now continue from the episode after the furthest one you've watched, and the show's card counts the ones you skipped. Turn it on in Settings › Content › Continue Watching From."
     }
   },
   "posterPicker": {

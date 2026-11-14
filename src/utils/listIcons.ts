@@ -3,11 +3,11 @@ import { COLORS, hexToRGBA } from '@/src/constants/theme';
 import {
   Bookmark02Icon,
   Cancel01Icon,
+  CheckCheckIcon,
   CheckListIcon,
   FavouriteIcon,
   Folder01Icon,
   PlayCircle02Icon,
-  Tick02Icon,
 } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react-native';
 
@@ -21,7 +21,7 @@ export const getListIconComponent = (listId: string): IconSvgElement => {
     case 'currently-watching':
       return PlayCircle02Icon;
     case 'already-watched':
-      return Tick02Icon;
+      return CheckCheckIcon;
     case 'favorites':
       return FavouriteIcon;
     case 'dropped':
