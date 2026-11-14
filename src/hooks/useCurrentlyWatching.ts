@@ -4,6 +4,7 @@ import { useAuth } from '@/src/context/auth';
 import i18n from '@/src/i18n';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
 import { InProgressShow, NextEpisodeState, WatchedEpisode } from '@/src/types/episodeTracking';
+import type { ContinueWatchingFrom } from '@/src/types/preferences';
 import { isTmdbDateOnOrBefore } from '@/src/utils/dateUtils';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
@@ -308,19 +309,46 @@ const getNextEpisodeAfter = (
 
 interface UnwatchedAiredScanResult {
   firstUnwatched: { season: number; episode: number } | null;
+  /** The first unwatched aired episode after `furthest` (the same as `firstUnwatched` without it). */
+  firstUnwatchedAfterFurthest: { season: number; episode: number } | null;
   unwatchedCount: number;
+  /** Unwatched aired episodes before `furthest`: the ones skipped (0 without it). */
+  skippedCount: number;
 }
+
+const isEpisodeBefore = (
+  season: number,
+  episode: number,
+  other: { seasonNumber: number; episodeNumber: number }
+): boolean =>
+  season < other.seasonNumber || (season === other.seasonNumber && episode < other.episodeNumber);
 
 const scanUnwatchedAiredEpisodes = (
   seasonCounts: Array<[number, number]>,
   lastAiredEpisode: { seasonNumber: number; episodeNumber: number },
   episodesMap: Record<string, WatchedEpisode>,
   seasonsData?: Map<number, SeasonDetails>,
-  isContinuous = false
+  isContinuous = false,
+  /** The furthest watched episode, to tell skipped episodes from the ones after it. */
+  furthest?: { seasonNumber: number; episodeNumber: number }
 ): UnwatchedAiredScanResult => {
   let firstUnwatched: { season: number; episode: number } | null = null;
+  let firstUnwatchedAfterFurthest: { season: number; episode: number } | null = null;
   let unwatchedCount = 0;
+  let skippedCount = 0;
   let priorCountsSum = 0;
+
+  const recordUnwatched = (season: number, episode: number) => {
+    if (!firstUnwatched) {
+      firstUnwatched = { season, episode };
+    }
+    unwatchedCount += 1;
+    if (furthest && isEpisodeBefore(season, episode, furthest)) {
+      skippedCount += 1;
+    } else if (!firstUnwatchedAfterFurthest) {
+      firstUnwatchedAfterFurthest = { season, episode };
+    }
+  };
 
   for (const [seasonNumber, count] of seasonCounts) {
     if (seasonNumber > lastAiredEpisode.seasonNumber) break;
@@ -347,10 +375,7 @@ const scanUnwatchedAiredEpisodes = (
         }
 
         if (!episodesMap[`${seasonNumber}_${ep.episode_number}`]) {
-          if (!firstUnwatched) {
-            firstUnwatched = { season: seasonNumber, episode: ep.episode_number };
-          }
-          unwatchedCount += 1;
+          recordUnwatched(seasonNumber, ep.episode_number);
         }
       }
     } else {
@@ -364,10 +389,7 @@ const scanUnwatchedAiredEpisodes = (
 
       for (let episodeNumber = startEpisode; episodeNumber <= maxEpisode; episodeNumber += 1) {
         if (!episodesMap[`${seasonNumber}_${episodeNumber}`]) {
-          if (!firstUnwatched) {
-            firstUnwatched = { season: seasonNumber, episode: episodeNumber };
-          }
-          unwatchedCount += 1;
+          recordUnwatched(seasonNumber, episodeNumber);
         }
       }
     }
@@ -375,7 +397,21 @@ const scanUnwatchedAiredEpisodes = (
     priorCountsSum += count;
   }
 
-  return { firstUnwatched, unwatchedCount };
+  return { firstUnwatched, firstUnwatchedAfterFurthest, unwatchedCount, skippedCount };
+};
+
+/** The episode Watch Progress suggests next under `mode`, among the scan's unwatched ones. */
+const pickNextUnwatched = (
+  scan: UnwatchedAiredScanResult,
+  mode: ContinueWatchingFrom
+): { season: number; episode: number } | null =>
+  mode === 'after-furthest' ? scan.firstUnwatchedAfterFurthest : scan.firstUnwatched;
+
+const EMPTY_SCAN: UnwatchedAiredScanResult = {
+  firstUnwatched: null,
+  firstUnwatchedAfterFurthest: null,
+  unwatchedCount: 0,
+  skippedCount: 0,
 };
 
 const isShowStillActive = (showDetails: TVShowDetails): boolean =>
@@ -391,7 +427,14 @@ const isShowStillActive = (showDetails: TVShowDetails): boolean =>
  * - Uses showDetails.episode_run_time for estimated time remaining
  * - React Query caches and deduplicates requests
  */
-export function useCurrentlyWatching() {
+/**
+ * @param options.continueWatchingFrom Which episode comes next when episodes were skipped
+ *   (default `first-unwatched`). It never changes progress or time remaining, which count
+ *   every unwatched aired episode.
+ */
+export function useCurrentlyWatching({
+  continueWatchingFrom = 'first-unwatched',
+}: { continueWatchingFrom?: ContinueWatchingFrom } = {}) {
   const { user } = useAuth();
   const userId = user && !user.isAnonymous ? user.uid : undefined;
 
@@ -481,16 +524,21 @@ export function useCurrentlyWatching() {
       );
 
       if (showLevelLastAiredEpisode) {
-        const { firstUnwatched } = scanUnwatchedAiredEpisodes(
-          seasonCounts,
-          showLevelLastAiredEpisode,
-          showInfo.trackingDoc.episodes,
-          undefined,
-          isContinuous
+        // Fetch the season of the episode that will come next, so it shows its real name.
+        const nextUnwatched = pickNextUnwatched(
+          scanUnwatchedAiredEpisodes(
+            seasonCounts,
+            showLevelLastAiredEpisode,
+            showInfo.trackingDoc.episodes,
+            undefined,
+            isContinuous,
+            furthestWatched
+          ),
+          continueWatchingFrom
         );
 
-        if (firstUnwatched) {
-          requestSeasonNumbers.add(firstUnwatched.season);
+        if (nextUnwatched) {
+          requestSeasonNumbers.add(nextUnwatched.season);
         } else if (nextEpisodeNumbers) {
           requestSeasonNumbers.add(nextEpisodeNumbers.season);
         }
@@ -512,7 +560,7 @@ export function useCurrentlyWatching() {
     });
 
     return queries;
-  }, [activeShowsWithInfo, showDetailsQueries]);
+  }, [activeShowsWithInfo, showDetailsQueries, continueWatchingFrom]);
 
   // 5. Fetch season details for relevant seasons only
   const seasonDetailsQueries = useQueries({
@@ -661,18 +709,22 @@ export function useCurrentlyWatching() {
         const showStillActive = isShowStillActive(showDetails);
         const showEnded = !showStillActive;
 
-        const {
-          firstUnwatched: firstUnwatchedAiredEpisode,
-          unwatchedCount: remainingAiredEpisodes,
-        } = lastAiredEpisode
+        const unwatchedScan = lastAiredEpisode
           ? scanUnwatchedAiredEpisodes(
               seasonCounts,
               lastAiredEpisode,
               trackingDoc.episodes,
               seasonsData,
-              isContinuous
+              isContinuous,
+              furthestWatched
             )
-          : { firstUnwatched: null, unwatchedCount: 0 };
+          : EMPTY_SCAN;
+        // Progress and time remaining count every unwatched aired episode, in either mode.
+        const remainingAiredEpisodes = unwatchedScan.unwatchedCount;
+        const firstUnwatchedAiredEpisode = pickNextUnwatched(unwatchedScan, continueWatchingFrom);
+        // Only after the furthest episode are earlier unwatched ones left behind as skipped.
+        const skippedCount =
+          continueWatchingFrom === 'after-furthest' ? unwatchedScan.skippedCount : 0;
 
         const hasWatchedAhead = episodesList.some((ep) => {
           if (!ep.episodeAirDate) return false;
@@ -781,6 +833,7 @@ export function useCurrentlyWatching() {
           timeRemaining,
           isHidden: metadata.hiddenFromProgress === true,
           showEnded,
+          skippedCount,
           lastWatchedEpisode: {
             season: furthestWatched.seasonNumber,
             episode: furthestWatched.episodeNumber,
@@ -803,6 +856,7 @@ export function useCurrentlyWatching() {
     showDetailsQueries,
     seasonDetailsQueries,
     seasonQueries,
+    continueWatchingFrom,
   ]);
 
   // Only show loading spinner on true initial load (no data at all from any source)

@@ -22,6 +22,25 @@ export type LaunchScreenRoute =
   | '/(tabs)/profile';
 
 /**
+ * Which episode Watch Progress suggests next when episodes were skipped:
+ * - `first-unwatched`: the earliest aired episode not watched yet (a skipped one comes first).
+ * - `after-furthest`: the first aired, unwatched episode after the furthest one watched (by
+ *   episode order); earlier unwatched episodes count as skipped.
+ */
+export type ContinueWatchingFrom = 'first-unwatched' | 'after-furthest';
+
+export const CONTINUE_WATCHING_FROM_OPTIONS: readonly ContinueWatchingFrom[] = [
+  'first-unwatched',
+  'after-furthest',
+];
+
+/** The stored value when valid, else the default (`first-unwatched`). */
+export const resolveContinueWatchingFrom = (value: unknown): ContinueWatchingFrom =>
+  CONTINUE_WATCHING_FROM_OPTIONS.includes(value as ContinueWatchingFrom)
+    ? (value as ContinueWatchingFrom)
+    : 'first-unwatched';
+
+/**
  * Configuration for a single list item on the home screen
  */
 export interface HomeScreenListItem {
@@ -46,6 +65,7 @@ export interface UserPreferences {
   hideUnreleasedContent: boolean; // Hide unreleased movies/TV shows from search/discover
   hideTalkShowsAndAwards: boolean; // Hide talk shows, late-night, news talk and award ceremonies from browse surfaces
   markPreviousEpisodesWatched: boolean; // Auto-mark previous episodes when marking an episode as watched
+  continueWatchingFrom?: ContinueWatchingFrom; // Watch Progress's next episode when episodes were skipped; unset = first-unwatched
   allowUnreleasedEpisodeWatches: boolean; // Allow marking future-dated episodes as watched
   hideTabLabels: boolean; // Hide labels on bottom tab bar, show only icons
   dataSaver: boolean; // Load lower resolution images to save data
@@ -72,6 +92,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   hideUnreleasedContent: false, // Off by default - show unreleased content
   hideTalkShowsAndAwards: true, // On by default - most users don't want talk/awards in browse surfaces
   markPreviousEpisodesWatched: false, // Off by default - only mark selected episode
+  continueWatchingFrom: 'first-unwatched', // Skipped episodes come up next by default
   allowUnreleasedEpisodeWatches: false, // Off by default - future episodes remain locked
   hideTabLabels: false, // Off by default - show labels
   dataSaver: false, // Off by default - load full quality images

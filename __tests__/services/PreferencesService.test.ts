@@ -86,4 +86,20 @@ describe('PreferencesService', () => {
     mockAuditedGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ preferences: {} }) });
     expect((await preferencesService.fetchPreferences('user-1')).use24HourTime).toBeUndefined();
   });
+
+  it('keeps where Watch Progress continues from, falling back to the first unwatched episode', async () => {
+    const continueWatchingFrom = async (value: unknown) => {
+      mockAuditedGetDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ preferences: value === undefined ? {} : { continueWatchingFrom: value } }),
+      });
+      return (await preferencesService.fetchPreferences('user-1')).continueWatchingFrom;
+    };
+
+    expect(await continueWatchingFrom('after-furthest')).toBe('after-furthest');
+    expect(await continueWatchingFrom('first-unwatched')).toBe('first-unwatched');
+    expect(await continueWatchingFrom(undefined)).toBe('first-unwatched');
+    expect(await continueWatchingFrom('latest')).toBe('first-unwatched');
+    expect(await continueWatchingFrom(true)).toBe('first-unwatched');
+  });
 });

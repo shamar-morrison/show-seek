@@ -1649,3 +1649,252 @@ describe('useCurrentlyWatching', () => {
   });
 });
 
+
+describe('useCurrentlyWatching continueWatchingFrom', () => {
+  beforeAll(() => {
+    notifyManager.setNotifyFunction((fn: () => void) => act(fn));
+  });
+
+  afterAll(() => {
+    notifyManager.setNotifyFunction((fn: () => void) => fn());
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-09T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const TV_ID = 900;
+
+  /** Watched episodes of season `season`, by episode number. */
+  const watched = (season: number, episodes: number[], airDate = '2026-01-01') =>
+    Object.fromEntries(
+      episodes.map((episode) => [
+        `${season}_${episode}`,
+        {
+          episodeId: season * 1000 + episode,
+          tvShowId: TV_ID,
+          seasonNumber: season,
+          episodeNumber: episode,
+          watchedAt: 1000 + episode,
+          episodeName: `S${season}E${episode} name`,
+          episodeAirDate: airDate,
+        },
+      ])
+    );
+
+  /** A show whose seasons each have `episodeCount` episodes, named `S{n}E{m} name`. */
+  const mockShow = ({
+    episodes,
+    seasons,
+    lastAired,
+    nextToAir = null,
+    status = 'Returning Series',
+  }: {
+    episodes: Record<string, unknown>;
+    seasons: number[];
+    lastAired: { season: number; episode: number };
+    nextToAir?: { season: number; episode: number; name: string } | null;
+    status?: string;
+  }) => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      { metadata: { tvShowName: 'Skipping Show', posterPath: null, lastUpdated: 5000 }, episodes },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: TV_ID,
+        status,
+        seasons: seasons.map((count, index) => ({
+          season_number: index + 1,
+          episode_count: count,
+          air_date: '2026-01-01',
+        })),
+        last_episode_to_air: {
+          season_number: lastAired.season,
+          episode_number: lastAired.episode,
+          air_date: '2026-03-01',
+        },
+        next_episode_to_air: nextToAir
+          ? {
+              season_number: nextToAir.season,
+              episode_number: nextToAir.episode,
+              name: nextToAir.name,
+              air_date: '2026-03-20',
+            }
+          : null,
+      })
+    );
+    mockGetSeasonDetails.mockImplementation(async (_tvId: number, season: number) =>
+      buildSeasonDetails(
+        Array.from({ length: seasons[season - 1] ?? 0 }, (_, index) => ({
+          season_number: season,
+          episode_number: index + 1,
+          name: `S${season}E${index + 1} name`,
+          air_date:
+            season < lastAired.season ||
+            (season === lastAired.season && index + 1 <= lastAired.episode)
+              ? '2026-02-01'
+              : '2026-03-20',
+        }))
+      )
+    );
+  };
+
+  const renderShow = async (continueWatchingFrom?: 'first-unwatched' | 'after-furthest') => {
+    const client = createQueryClient();
+    const { result } = renderHook(
+      () => useCurrentlyWatching(continueWatchingFrom ? { continueWatchingFrom } : undefined),
+      { wrapper: createWrapper(client) }
+    );
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.data).toHaveLength(1);
+      expect(result.current.data[0].nextEpisode).not.toBeNull();
+      if (result.current.data[0].nextEpisode?.kind === 'unwatched') {
+        expect(result.current.data[0].nextEpisode.title).toMatch(/ name$/);
+      }
+    });
+    return result.current.data[0];
+  };
+
+  it('suggests the skipped episode by default, and the one after the furthest when asked', async () => {
+    // Watched 1–4 and 6 of 10 aired episodes.
+    mockShow({
+      episodes: watched(1, [1, 2, 3, 4, 6]),
+      seasons: [10],
+      lastAired: { season: 1, episode: 10 },
+    });
+
+    const firstUnwatched = await renderShow();
+    expect(firstUnwatched).toEqual(
+      expect.objectContaining({
+        nextEpisode: { kind: 'unwatched', season: 1, episode: 5, title: 'S1E5 name' },
+        skippedCount: 0,
+        percentage: 50,
+        timeRemaining: 150,
+      })
+    );
+
+    const afterFurthest = await renderShow('after-furthest');
+    expect(afterFurthest).toEqual(
+      expect.objectContaining({
+        nextEpisode: { kind: 'unwatched', season: 1, episode: 7, title: 'S1E7 name' },
+        skippedCount: 1,
+        // Progress and time remaining still count the skipped episode.
+        percentage: 50,
+        timeRemaining: 150,
+      })
+    );
+  });
+
+  it('continues in a later season, fetching that season for the episode name', async () => {
+    mockShow({
+      episodes: { ...watched(1, [1, 2, 4, 5, 6, 7, 8, 9, 10]), ...watched(2, [1, 2]) },
+      seasons: [10, 10],
+      lastAired: { season: 2, episode: 10 },
+    });
+
+    expect((await renderShow('first-unwatched')).nextEpisode).toEqual({
+      kind: 'unwatched',
+      season: 1,
+      episode: 3,
+      title: 'S1E3 name',
+    });
+    expect(mockGetSeasonDetails).toHaveBeenCalledWith(TV_ID, 1);
+
+    mockGetSeasonDetails.mockClear();
+    const afterFurthest = await renderShow('after-furthest');
+    expect(afterFurthest.nextEpisode).toEqual({
+      kind: 'unwatched',
+      season: 2,
+      episode: 3,
+      title: 'S2E3 name',
+    });
+    expect(afterFurthest.skippedCount).toBe(1);
+    expect(mockGetSeasonDetails).toHaveBeenCalledWith(TV_ID, 2);
+  });
+
+  it('counts a still-airing show as caught up once nothing aired after the furthest episode', async () => {
+    mockShow({
+      episodes: watched(1, [1, 2, 4]),
+      seasons: [6],
+      lastAired: { season: 1, episode: 4 },
+      nextToAir: { season: 1, episode: 5, name: 'The Reckoning' },
+    });
+
+    expect((await renderShow()).nextEpisode).toEqual(
+      expect.objectContaining({ kind: 'unwatched', season: 1, episode: 3 })
+    );
+
+    expect(await renderShow('after-furthest')).toEqual(
+      expect.objectContaining({
+        nextEpisode: { kind: 'upcoming', season: 1, episode: 5, title: 'The Reckoning' },
+        skippedCount: 1,
+        percentage: 50,
+      })
+    );
+  });
+
+  it('counts an ended show as complete once its last episode is watched, keeping the skipped ones', async () => {
+    mockShow({
+      episodes: watched(1, [1, 2, 4, 5]),
+      seasons: [5],
+      lastAired: { season: 1, episode: 5 },
+      status: 'Ended',
+    });
+
+    expect((await renderShow()).nextEpisode).toEqual(
+      expect.objectContaining({ kind: 'unwatched', season: 1, episode: 3 })
+    );
+
+    expect(await renderShow('after-furthest')).toEqual(
+      expect.objectContaining({
+        nextEpisode: { kind: 'complete' },
+        skippedCount: 1,
+        percentage: 80,
+      })
+    );
+  });
+
+  it('treats every aired unwatched episode as skipped when the furthest one has not aired', async () => {
+    // Episode 5 was marked watched ahead of its air date; only 1–3 have aired.
+    mockShow({
+      episodes: { ...watched(1, [1]), ...watched(1, [5], '2026-03-20') },
+      seasons: [6],
+      lastAired: { season: 1, episode: 3 },
+      nextToAir: { season: 1, episode: 4, name: 'Episode Four' },
+    });
+
+    expect((await renderShow()).nextEpisode).toEqual(
+      expect.objectContaining({ kind: 'unwatched', season: 1, episode: 2 })
+    );
+
+    expect(await renderShow('after-furthest')).toEqual(
+      expect.objectContaining({
+        nextEpisode: expect.objectContaining({ kind: 'upcoming', season: 1, episode: 6 }),
+        skippedCount: 2,
+      })
+    );
+  });
+
+  it('reports nothing skipped without gaps, in either mode', async () => {
+    mockShow({
+      episodes: watched(1, [1, 2, 3]),
+      seasons: [6],
+      lastAired: { season: 1, episode: 6 },
+    });
+
+    const firstUnwatched = await renderShow();
+    const afterFurthest = await renderShow('after-furthest');
+
+    expect(afterFurthest).toEqual(firstUnwatched);
+    expect(afterFurthest.nextEpisode).toEqual(
+      expect.objectContaining({ kind: 'unwatched', season: 1, episode: 4 })
+    );
+    expect(afterFurthest.skippedCount).toBe(0);
+  });
+});

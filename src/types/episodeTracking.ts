@@ -117,6 +117,11 @@ export interface InProgressShow {
   isHidden: boolean;
   /** Whether the show has ended (status is 'Ended' or 'Canceled' with no future episodes) */
   showEnded: boolean;
+  /**
+   * Aired episodes left unwatched before the furthest watched one. Only counted when Watch
+   * Progress continues after the furthest episode; 0 otherwise (or for unavailable shows).
+   */
+  skippedCount?: number;
   /** Whether the show could not be found on TMDB (permanent 404) */
   isUnavailable?: boolean;
   lastWatchedEpisode: {
