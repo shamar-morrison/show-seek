@@ -139,7 +139,25 @@ export const createResponse = () => {
   return response;
 };
 
-export const createDocSnapshot = (path: string, data?: Record<string, unknown>) => ({
+/**
+ * A fresh copy of plain objects and arrays, so each document read returns new data the way an
+ * inline `data: () => ({ ... })` does. Other values (timestamps, mocks) are shared.
+ */
+export const cloneData = <T>(value: T): T => {
+  if (Array.isArray(value)) {
+    return value.map(cloneData) as T;
+  }
+
+  if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [key, cloneData(nestedValue)])
+    ) as T;
+  }
+
+  return value;
+};
+
+export const createDocSnapshot =(path: string, data?: Record<string, unknown>) => ({
   data: () => data,
   exists: data !== undefined,
   id: path.split('/').pop() ?? path,

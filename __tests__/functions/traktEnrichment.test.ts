@@ -39,11 +39,11 @@ import {
   needsMediaEnrichment,
   planEnrichmentRelocation,
   runTraktEnrichment,
-  runTraktSync,
   traktApi,
 } from '@/functions/src/trakt';
 import {
   assertNoUndefined,
+  cloneData,
   createResponse,
   DAY_MS,
   firestoreFn,
@@ -51,233 +51,194 @@ import {
   MockTimestamp,
   resetTraktMocks,
 } from './helpers/traktHarness';
+import {
+  connectedSyncUser,
+  FIRST_SYNC_ROUTES,
+  mockSyncFirestore,
+  mockTraktFetch,
+  runSyncTask,
+} from './helpers/traktSyncHarness';
 
 beforeEach(resetTraktMocks);
 
+/** Serves `userData` from the POST /enrich transaction and records its writes in `transactionSet`. */
+const mockEnrichTransaction = (userData: Record<string, unknown>, transactionSet: jest.Mock) => {
+  const userRef = {
+    collection: jest.fn((name: string) => {
+      if (name === 'lists') {
+        return {
+          get: jest.fn().mockResolvedValue({ docs: [] }),
+        };
+      }
+
+      if (name === 'traktEnrichmentRuns') {
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? 'enrich-1',
+            path: `users/user-1/traktEnrichmentRuns/${id ?? 'enrich-1'}`,
+          })),
+        };
+      }
+
+      throw new Error(`Unexpected subcollection ${name}`);
+    }),
+    path: 'users/user-1',
+  };
+
+  firestoreFn.mockImplementation(() => ({
+    collection: jest.fn((name: string) => {
+      if (name !== 'users') {
+        throw new Error(`Unexpected collection ${name}`);
+      }
+
+      return {
+        doc: jest.fn(() => userRef),
+      };
+    }),
+    runTransaction: jest.fn(async (callback: any) =>
+      callback({
+        get: jest.fn().mockResolvedValue({ data: () => cloneData(userData) }),
+        set: transactionSet,
+      })
+    ),
+  }));
+
+  return { userRef };
+};
+
+const postEnrich = async () => {
+  const response = createResponse();
+
+  await (traktApi as any)(
+    {
+      body: { includeEpisodes: true },
+      header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+      method: 'POST',
+      path: '/enrich',
+    },
+    response
+  );
+
+  return response;
+};
+
+/**
+ * Fakes Firestore for an enrichment run `run-1` over one list document holding `listData`.
+ * Batch writes are checked for undefined values.
+ */
+const mockEnrichmentRunFirestore = (
+  listData: Record<string, unknown>,
+  {
+    episodeTrackingGet = jest.fn().mockResolvedValue({ docs: [] }),
+    listSet = jest.fn().mockResolvedValue(undefined),
+  }: { episodeTrackingGet?: jest.Mock; listSet?: jest.Mock } = {}
+) => {
+  const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+  const batchCommit = jest.fn().mockResolvedValue(undefined);
+  const listRef = {
+    get: jest.fn().mockResolvedValue({
+      data: () => cloneData(listData),
+      exists: true,
+    }),
+    set: listSet,
+  };
+  const userRef = {
+    collection: jest.fn((name: string) => {
+      if (name === 'traktEnrichmentRuns') {
+        return {
+          doc: jest.fn((id: string) => ({
+            id,
+            path: `users/user-1/traktEnrichmentRuns/${id}`,
+          })),
+        };
+      }
+
+      if (name === 'lists') {
+        return {
+          doc: jest.fn(() => listRef),
+        };
+      }
+
+      if (name === 'episode_tracking') {
+        return {
+          get: episodeTrackingGet,
+        };
+      }
+
+      throw new Error(`Unexpected subcollection ${name}`);
+    }),
+    get: jest.fn().mockResolvedValue({
+      data: () => ({
+        traktEnrichmentStatus: {
+          runId: 'run-1',
+        },
+      }),
+      exists: true,
+    }),
+    path: 'users/user-1',
+  };
+
+  firestoreFn.mockImplementation(() => ({
+    batch: jest.fn(() => ({
+      commit: batchCommit,
+      set: batchSet,
+    })),
+    collection: jest.fn((name: string) => {
+      if (name !== 'users') {
+        throw new Error(`Unexpected collection ${name}`);
+      }
+
+      return {
+        doc: jest.fn(() => userRef),
+      };
+    }),
+  }));
+
+  return { batchCommit, batchSet, listRef };
+};
+
+/** A watchlist document with one movie TMDB has not filled in yet. */
+const unenrichedWatchlist = () => ({
+  items: {
+    '1': {
+      id: 1,
+      media_type: 'movie',
+      title: 'Movie',
+    },
+  },
+  metadata: {
+    needsEnrichment: true,
+  },
+});
+
+/** Runs the queued enrichment task `run-1` over the watchlist, without episodes. */
+const runEnrichmentTask = (retryReason?: string) =>
+  (runTraktEnrichment as any)({
+    data: { includeEpisodes: false, lists: ['watchlist'], runId: 'run-1', userId: 'user-1' },
+    retryCount: 0,
+    retryReason,
+  });
+
 describe('Trakt sync Firestore sanitization', () => {
   it('auto-queues post-sync enrichment without episode tracking scans', async () => {
-    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
-    const batchCommit = jest.fn().mockResolvedValue(undefined);
-    const listSet = jest.fn().mockResolvedValue(undefined);
-    const listsCollection = {
-      doc: jest.fn((id: string) => ({
-        id,
-        path: `users/user-1/lists/${id}`,
-        get: jest.fn().mockResolvedValue({
-          data: () => undefined,
-          exists: false,
-        }),
-        set: listSet,
-      })),
-      get: jest.fn().mockResolvedValue({ docs: [] }),
-    };
-    const userRef = {
-      collection: jest.fn((name: string) => {
-        if (name === 'traktSyncRuns') {
-          return {
-            doc: jest.fn((id: string) => ({
-              id,
-              path: `users/user-1/traktSyncRuns/${id}`,
-            })),
-          };
-        }
-
-        if (name === 'traktEnrichmentRuns') {
-          return {
-            doc: jest.fn((id = 'enrich-1') => ({
-              id,
-              path: `users/user-1/traktEnrichmentRuns/${id}`,
-            })),
-          };
-        }
-
-        if (name === 'lists') {
-          return listsCollection;
-        }
-
-        if (name === 'episode_tracking') {
-          return {
-            doc: jest.fn((id: string) => ({
-              id,
-              path: `users/user-1/episode_tracking/${id}`,
-            })),
-            get: jest.fn().mockResolvedValue({ docs: [] }),
-          };
-        }
-
-        if (name === 'ratings') {
-          return {
-            doc: jest.fn((id: string) => ({
-              id,
-              path: `users/user-1/ratings/${id}`,
-            })),
-            get: jest.fn().mockResolvedValue({ docs: [] }),
-          };
-        }
-
-        throw new Error(`Unexpected subcollection ${name}`);
-      }),
-      get: jest.fn().mockResolvedValue({
-        data: () => ({
-          traktAccessToken: 'token',
-          traktConnected: true,
-          traktSyncStatus: {
-            runId: 'run-1',
-          },
-          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
-        }),
-        exists: true,
-      }),
-      path: 'users/user-1',
-    };
-    const runTransaction = jest.fn().mockResolvedValue({
-      kind: 'queued',
-      status: {
-        includeEpisodes: false,
-        lists: ['already-watched', 'watchlist', 'favorites'],
-        runId: 'enrich-1',
-        userId: 'user-1',
+    const { runTransaction } = mockSyncFirestore({
+      enrichmentQueue: {
+        kind: 'queued',
+        status: {
+          includeEpisodes: false,
+          lists: ['already-watched', 'watchlist', 'favorites'],
+          runId: 'enrich-1',
+          userId: 'user-1',
+        },
       },
+      episodeTracking: {},
+      lists: {},
+      ratings: {},
+      user: connectedSyncUser(),
     });
+    mockTraktFetch(FIRST_SYNC_ROUTES);
 
-    firestoreFn.mockImplementation(() => ({
-      batch: jest.fn(() => ({
-        commit: batchCommit,
-        set: batchSet,
-      })),
-      collection: jest.fn((name: string) => {
-        if (name !== 'users') {
-          throw new Error(`Unexpected collection ${name}`);
-        }
-
-        return {
-          doc: jest.fn(() => userRef),
-        };
-      }),
-      runTransaction,
-    }));
-
-    (global.fetch as jest.Mock).mockImplementation((input: any) => {
-      const url = String(input);
-
-      if (url.includes('/users/settings')) {
-        return Promise.resolve({
-          json: jest.fn().mockResolvedValue({
-            user: {
-              ids: {
-                slug: 'tester',
-              },
-              name: 'Tester',
-              private: false,
-              username: 'tester',
-              vip: false,
-              vip_ep: false,
-            },
-          }),
-          ok: true,
-          status: 200,
-        });
-      }
-
-      if (url.includes('/sync/last_activities')) {
-        return Promise.resolve({
-          json: jest.fn().mockResolvedValue({}),
-          ok: true,
-          status: 200,
-        });
-      }
-
-      if (url.includes('/sync/watched/movies')) {
-        return Promise.resolve({
-          json: jest.fn().mockResolvedValue([
-            {
-              last_updated_at: '2024-01-01T00:00:00.000Z',
-              last_watched_at: '2024-01-01T00:00:00.000Z',
-              movie: {
-                ids: {
-                  slug: 'movie-1',
-                  tmdb: 101,
-                  trakt: 201,
-                },
-                title: 'Movie One',
-                year: 2024,
-              },
-              plays: 1,
-            },
-          ]),
-          ok: true,
-          status: 200,
-        });
-      }
-
-      if (url.includes('/sync/watchlist')) {
-        return Promise.resolve({
-          json: jest.fn().mockResolvedValue([
-            {
-              id: 1,
-              listed_at: '2024-01-02T00:00:00.000Z',
-              movie: {
-                ids: {
-                  slug: 'movie-2',
-                  tmdb: 102,
-                  trakt: 202,
-                },
-                title: 'Movie Two',
-                year: 2024,
-              },
-              type: 'movie',
-            },
-          ]),
-          ok: true,
-          status: 200,
-        });
-      }
-
-      if (url.includes('/sync/favorites')) {
-        return Promise.resolve({
-          json: jest.fn().mockResolvedValue([
-            {
-              id: 2,
-              listed_at: '2024-01-03T00:00:00.000Z',
-              movie: {
-                ids: {
-                  slug: 'movie-3',
-                  tmdb: 103,
-                  trakt: 203,
-                },
-                title: 'Movie Three',
-                year: 2024,
-              },
-              type: 'movie',
-            },
-          ]),
-          ok: true,
-          status: 200,
-        });
-      }
-
-      if (
-        url.includes('/sync/watched/shows') ||
-        url.includes('/sync/ratings') ||
-        url.includes('/users/tester/lists')
-      ) {
-        return Promise.resolve({
-          json: jest.fn().mockResolvedValue([]),
-          ok: true,
-          status: 200,
-        });
-      }
-
-      throw new Error(`Unexpected fetch URL ${url}`);
-    });
-
-    await expect(
-      (runTraktSync as any)({
-        data: { runId: 'run-1', userId: 'user-1' },
-        retryCount: 0,
-        retryReason: undefined,
-      })
-    ).resolves.toBeUndefined();
+    await expect(runSyncTask()).resolves.toBeUndefined();
 
     expect(runTransaction).toHaveBeenCalledTimes(1);
     expect(mockEnqueue).toHaveBeenCalledWith(
@@ -295,8 +256,9 @@ describe('Trakt sync Firestore sanitization', () => {
   });
 
   it('returns an existing active enrichment run instead of creating a duplicate', async () => {
-    const transactionGet = jest.fn().mockResolvedValue({
-      data: () => ({
+    const transactionSet = jest.fn();
+    const { userRef } = mockEnrichTransaction(
+      {
         traktEnrichmentStatus: {
           attempt: 2,
           counts: {
@@ -310,60 +272,11 @@ describe('Trakt sync Firestore sanitization', () => {
           runId: 'enrich-1',
           status: 'retrying',
         },
-      }),
-    });
-    const transactionSet = jest.fn();
-    const userRef = {
-      collection: jest.fn((name: string) => {
-        if (name === 'lists') {
-          return {
-            get: jest.fn().mockResolvedValue({ docs: [] }),
-          };
-        }
-
-        if (name === 'traktEnrichmentRuns') {
-          return {
-            doc: jest.fn((id?: string) => ({
-              id: id ?? 'enrich-1',
-              path: `users/user-1/traktEnrichmentRuns/${id ?? 'enrich-1'}`,
-            })),
-          };
-        }
-
-        throw new Error(`Unexpected subcollection ${name}`);
-      }),
-      path: 'users/user-1',
-    };
-
-    firestoreFn.mockImplementation(() => ({
-      collection: jest.fn((name: string) => {
-        if (name !== 'users') {
-          throw new Error(`Unexpected collection ${name}`);
-        }
-
-        return {
-          doc: jest.fn(() => userRef),
-        };
-      }),
-      runTransaction: jest.fn(async (callback: any) =>
-        callback({
-          get: transactionGet,
-          set: transactionSet,
-        })
-      ),
-    }));
-
-    const response = createResponse();
-
-    await (traktApi as any)(
-      {
-        body: { includeEpisodes: true },
-        header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
-        method: 'POST',
-        path: '/enrich',
       },
-      response
+      transactionSet
     );
+
+    const response = await postEnrich();
 
     expect(transactionSet).toHaveBeenCalledWith(
       userRef,
@@ -387,65 +300,10 @@ describe('Trakt sync Firestore sanitization', () => {
   it('writes a 24-hour cooldown when queueing a new enrichment run', async () => {
     const frozenNow = Date.UTC(2026, 2, 25, 12, 0, 0);
     const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozenNow);
-    const transactionGet = jest.fn().mockResolvedValue({
-      data: () => ({}),
-    });
     const transactionSet = jest.fn((_ref, data) => assertNoUndefined(data));
-    const userRef = {
-      collection: jest.fn((name: string) => {
-        if (name === 'lists') {
-          return {
-            get: jest.fn().mockResolvedValue({ docs: [] }),
-          };
-        }
+    mockEnrichTransaction({}, transactionSet);
 
-        if (name === 'traktEnrichmentRuns') {
-          return {
-            doc: jest.fn((id?: string) => ({
-              id: id ?? 'enrich-1',
-              path: `users/user-1/traktEnrichmentRuns/${id ?? 'enrich-1'}`,
-            })),
-          };
-        }
-
-        throw new Error(`Unexpected subcollection ${name}`);
-      }),
-      path: 'users/user-1',
-    };
-
-    firestoreFn.mockImplementation(() => ({
-      collection: jest.fn((name: string) => {
-        if (name !== 'users') {
-          throw new Error(`Unexpected collection ${name}`);
-        }
-
-        return {
-          doc: jest.fn(() => userRef),
-        };
-      }),
-      runTransaction: jest.fn(async (callback: any) =>
-        callback({
-          get: transactionGet,
-          set: transactionSet,
-        })
-      ),
-    }));
-
-    const response = createResponse();
-
-    try {
-      await (traktApi as any)(
-        {
-          body: { includeEpisodes: true },
-          header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
-          method: 'POST',
-          path: '/enrich',
-        },
-        response
-      );
-    } finally {
-      dateNowSpy.mockRestore();
-    }
+    const response = await postEnrich().finally(() => dateNowSpy.mockRestore());
 
     const userStatusWriteCall = transactionSet.mock.calls.find(
       ([_ref, data]) => data && typeof data === 'object' && 'traktEnrichmentStatus' in data
@@ -461,8 +319,9 @@ describe('Trakt sync Firestore sanitization', () => {
 
   it('keeps the manual enrichment cooldown after a completed run until the next allowed time', async () => {
     const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
-    const transactionGet = jest.fn().mockResolvedValue({
-      data: () => ({
+    const transactionSet = jest.fn();
+    mockEnrichTransaction(
+      {
         traktEnrichmentStatus: {
           completedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
           counts: {
@@ -477,60 +336,11 @@ describe('Trakt sync Firestore sanitization', () => {
           runId: 'completed-enrich-run',
           status: 'completed',
         },
-      }),
-    });
-    const transactionSet = jest.fn();
-    const userRef = {
-      collection: jest.fn((name: string) => {
-        if (name === 'lists') {
-          return {
-            get: jest.fn().mockResolvedValue({ docs: [] }),
-          };
-        }
-
-        if (name === 'traktEnrichmentRuns') {
-          return {
-            doc: jest.fn((id?: string) => ({
-              id: id ?? 'enrich-1',
-              path: `users/user-1/traktEnrichmentRuns/${id ?? 'enrich-1'}`,
-            })),
-          };
-        }
-
-        throw new Error(`Unexpected subcollection ${name}`);
-      }),
-      path: 'users/user-1',
-    };
-
-    firestoreFn.mockImplementation(() => ({
-      collection: jest.fn((name: string) => {
-        if (name !== 'users') {
-          throw new Error(`Unexpected collection ${name}`);
-        }
-
-        return {
-          doc: jest.fn(() => userRef),
-        };
-      }),
-      runTransaction: jest.fn(async (callback: any) =>
-        callback({
-          get: transactionGet,
-          set: transactionSet,
-        })
-      ),
-    }));
-
-    const response = createResponse();
-
-    await (traktApi as any)(
-      {
-        body: { includeEpisodes: true },
-        header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
-        method: 'POST',
-        path: '/enrich',
       },
-      response
+      transactionSet
     );
+
+    const response = await postEnrich();
 
     expect(transactionSet).not.toHaveBeenCalled();
     expect(mockEnqueue).not.toHaveBeenCalled();
@@ -544,77 +354,7 @@ describe('Trakt sync Firestore sanitization', () => {
   });
 
   it('schedules a delayed enrichment retry when TMDB returns Retry-After', async () => {
-    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
-    const batchCommit = jest.fn().mockResolvedValue(undefined);
-    const listRef = {
-      get: jest.fn().mockResolvedValue({
-        data: () => ({
-          items: {
-            '1': {
-              id: 1,
-              media_type: 'movie',
-              title: 'Movie',
-            },
-          },
-          metadata: {
-            needsEnrichment: true,
-          },
-        }),
-        exists: true,
-      }),
-      set: jest.fn().mockResolvedValue(undefined),
-    };
-    const userRef = {
-      collection: jest.fn((name: string) => {
-        if (name === 'traktEnrichmentRuns') {
-          return {
-            doc: jest.fn((id: string) => ({
-              id,
-              path: `users/user-1/traktEnrichmentRuns/${id}`,
-            })),
-          };
-        }
-
-        if (name === 'lists') {
-          return {
-            doc: jest.fn(() => listRef),
-          };
-        }
-
-        if (name === 'episode_tracking') {
-          return {
-            get: jest.fn().mockResolvedValue({ docs: [] }),
-          };
-        }
-
-        throw new Error(`Unexpected subcollection ${name}`);
-      }),
-      get: jest.fn().mockResolvedValue({
-        data: () => ({
-          traktEnrichmentStatus: {
-            runId: 'run-1',
-          },
-        }),
-        exists: true,
-      }),
-      path: 'users/user-1',
-    };
-
-    firestoreFn.mockImplementation(() => ({
-      batch: jest.fn(() => ({
-        commit: batchCommit,
-        set: batchSet,
-      })),
-      collection: jest.fn((name: string) => {
-        if (name !== 'users') {
-          throw new Error(`Unexpected collection ${name}`);
-        }
-
-        return {
-          doc: jest.fn(() => userRef),
-        };
-      }),
-    }));
+    const { batchCommit, batchSet, listRef } = mockEnrichmentRunFirestore(unenrichedWatchlist());
 
     (global.fetch as jest.Mock).mockResolvedValue({
       headers: {
@@ -624,13 +364,7 @@ describe('Trakt sync Firestore sanitization', () => {
       status: 429,
     });
 
-    await expect(
-      (runTraktEnrichment as any)({
-        data: { includeEpisodes: false, lists: ['watchlist'], runId: 'run-1', userId: 'user-1' },
-        retryCount: 0,
-        retryReason: 'rate-limited',
-      })
-    ).resolves.toBeUndefined();
+    await expect(runEnrichmentTask('rate-limited')).resolves.toBeUndefined();
 
     expect(batchCommit).toHaveBeenCalledTimes(2);
     expect(listRef.set).not.toHaveBeenCalled();
@@ -660,78 +394,7 @@ describe('Trakt sync Firestore sanitization', () => {
   });
 
   it('treats missing TMDB items as skips and still completes enrichment', async () => {
-    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
-    const batchCommit = jest.fn().mockResolvedValue(undefined);
-    const listSet = jest.fn().mockResolvedValue(undefined);
-    const listRef = {
-      get: jest.fn().mockResolvedValue({
-        data: () => ({
-          items: {
-            '1': {
-              id: 1,
-              media_type: 'movie',
-              title: 'Movie',
-            },
-          },
-          metadata: {
-            needsEnrichment: true,
-          },
-        }),
-        exists: true,
-      }),
-      set: listSet,
-    };
-    const userRef = {
-      collection: jest.fn((name: string) => {
-        if (name === 'traktEnrichmentRuns') {
-          return {
-            doc: jest.fn((id: string) => ({
-              id,
-              path: `users/user-1/traktEnrichmentRuns/${id}`,
-            })),
-          };
-        }
-
-        if (name === 'lists') {
-          return {
-            doc: jest.fn(() => listRef),
-          };
-        }
-
-        if (name === 'episode_tracking') {
-          return {
-            get: jest.fn().mockResolvedValue({ docs: [] }),
-          };
-        }
-
-        throw new Error(`Unexpected subcollection ${name}`);
-      }),
-      get: jest.fn().mockResolvedValue({
-        data: () => ({
-          traktEnrichmentStatus: {
-            runId: 'run-1',
-          },
-        }),
-        exists: true,
-      }),
-      path: 'users/user-1',
-    };
-
-    firestoreFn.mockImplementation(() => ({
-      batch: jest.fn(() => ({
-        commit: batchCommit,
-        set: batchSet,
-      })),
-      collection: jest.fn((name: string) => {
-        if (name !== 'users') {
-          throw new Error(`Unexpected collection ${name}`);
-        }
-
-        return {
-          doc: jest.fn(() => userRef),
-        };
-      }),
-    }));
+    const { batchCommit, listRef } = mockEnrichmentRunFirestore(unenrichedWatchlist());
 
     (global.fetch as jest.Mock).mockResolvedValue({
       headers: {
@@ -741,15 +404,9 @@ describe('Trakt sync Firestore sanitization', () => {
       status: 404,
     });
 
-    await expect(
-      (runTraktEnrichment as any)({
-        data: { includeEpisodes: false, lists: ['watchlist'], runId: 'run-1', userId: 'user-1' },
-        retryCount: 0,
-        retryReason: undefined,
-      })
-    ).resolves.toBeUndefined();
+    await expect(runEnrichmentTask()).resolves.toBeUndefined();
 
-    expect(listSet).toHaveBeenCalledWith(
+    expect(listRef.set).toHaveBeenCalledWith(
       expect.objectContaining({
         metadata: expect.objectContaining({
           needsEnrichment: false,
@@ -761,84 +418,21 @@ describe('Trakt sync Firestore sanitization', () => {
   });
 
   it('does not read episode tracking when includeEpisodes is false', async () => {
-    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
-    const batchCommit = jest.fn().mockResolvedValue(undefined);
-    const listSet = jest.fn().mockResolvedValue(undefined);
     const episodeTrackingGet = jest.fn().mockResolvedValue({ docs: [] });
-    const listRef = {
-      get: jest.fn().mockResolvedValue({
-        data: () => ({
-          items: {},
-          metadata: {
-            needsEnrichment: true,
-          },
-        }),
-        exists: true,
-      }),
-      set: listSet,
-    };
-    const userRef = {
-      collection: jest.fn((name: string) => {
-        if (name === 'traktEnrichmentRuns') {
-          return {
-            doc: jest.fn((id: string) => ({
-              id,
-              path: `users/user-1/traktEnrichmentRuns/${id}`,
-            })),
-          };
-        }
+    const { batchCommit, listRef } = mockEnrichmentRunFirestore(
+      {
+        items: {},
+        metadata: {
+          needsEnrichment: true,
+        },
+      },
+      { episodeTrackingGet }
+    );
 
-        if (name === 'lists') {
-          return {
-            doc: jest.fn(() => listRef),
-          };
-        }
-
-        if (name === 'episode_tracking') {
-          return {
-            get: episodeTrackingGet,
-          };
-        }
-
-        throw new Error(`Unexpected subcollection ${name}`);
-      }),
-      get: jest.fn().mockResolvedValue({
-        data: () => ({
-          traktEnrichmentStatus: {
-            runId: 'run-1',
-          },
-        }),
-        exists: true,
-      }),
-      path: 'users/user-1',
-    };
-
-    firestoreFn.mockImplementation(() => ({
-      batch: jest.fn(() => ({
-        commit: batchCommit,
-        set: batchSet,
-      })),
-      collection: jest.fn((name: string) => {
-        if (name !== 'users') {
-          throw new Error(`Unexpected collection ${name}`);
-        }
-
-        return {
-          doc: jest.fn(() => userRef),
-        };
-      }),
-    }));
-
-    await expect(
-      (runTraktEnrichment as any)({
-        data: { includeEpisodes: false, lists: ['watchlist'], runId: 'run-1', userId: 'user-1' },
-        retryCount: 0,
-        retryReason: undefined,
-      })
-    ).resolves.toBeUndefined();
+    await expect(runEnrichmentTask()).resolves.toBeUndefined();
 
     expect(episodeTrackingGet).not.toHaveBeenCalled();
-    expect(listSet).toHaveBeenCalledWith(
+    expect(listRef.set).toHaveBeenCalledWith(
       expect.objectContaining({
         metadata: expect.objectContaining({
           needsEnrichment: false,
