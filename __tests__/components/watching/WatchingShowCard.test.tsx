@@ -153,7 +153,7 @@ describe('WatchingShowCard', () => {
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/tv/101');
   });
 
-  it('shows how many episodes were skipped next to the episode after the furthest one', () => {
+  it('shows how many episodes were skipped on a line under the episode after the furthest one', () => {
     const show: InProgressShow = {
       ...baseShow,
       skippedCount: 1,
@@ -163,7 +163,7 @@ describe('WatchingShowCard', () => {
     const { getByText, getByTestId } = render(<WatchingShowCard show={show} t={mockT} />);
 
     expect(getByText(/S1E7 · Episode 7/)).toBeTruthy();
-    expect(getByTestId('watching-card-skipped')).toHaveTextContent(' · 1 skipped');
+    expect(getByTestId('watching-card-skipped')).toHaveTextContent(/^1 skipped$/);
 
     fireEvent.press(getByText('Test Show'));
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/tv/101/seasons?season=1');
@@ -181,7 +181,7 @@ describe('WatchingShowCard', () => {
     const { getByText, getByTestId } = render(<WatchingShowCard show={show} t={mockT} />);
 
     expect(getByText('Series complete')).toBeTruthy();
-    expect(getByTestId('watching-card-skipped')).toHaveTextContent(' · 2 skipped');
+    expect(getByTestId('watching-card-skipped')).toHaveTextContent(/^2 skipped$/);
   });
 
   it('shows no skipped count without skipped episodes, or for an unavailable show', () => {
