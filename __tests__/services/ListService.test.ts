@@ -633,6 +633,8 @@ describe('ListService', () => {
 
       expect([...result.updated].sort()).toEqual(['2', 'movie-1']);
       expect(result.missing).toEqual([]);
+      // Already shows as 8.0: nothing to write, but the cache can take the fresh value.
+      expect(result.current).toEqual(['tv-3']);
       expect(transaction.get).toHaveBeenCalledWith(mockDocRef);
       expect(transaction.update).toHaveBeenCalledTimes(1);
       expect(transaction.update).toHaveBeenCalledWith(mockDocRef, {
@@ -670,7 +672,7 @@ describe('ListService', () => {
           'movie-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
           'tv-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
         })
-      ).toEqual({ updated: [], missing: ['movie-1', 'tv-1'] });
+      ).toEqual({ updated: [], current: [], missing: ['movie-1', 'tv-1'] });
       expect(transaction.update).not.toHaveBeenCalled();
 
       transaction = withDocument(null);
@@ -678,7 +680,7 @@ describe('ListService', () => {
         await listService.updateListItemRatings('watchlist', 3, {
           'movie-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
         })
-      ).toEqual({ updated: [], missing: ['movie-1'] });
+      ).toEqual({ updated: [], current: [], missing: ['movie-1'] });
       expect(transaction.update).not.toHaveBeenCalled();
     });
 
@@ -696,13 +698,14 @@ describe('ListService', () => {
         'movie-3': { mediaType: 'movie', mediaId: 3, rating: 0 },
       });
 
-      expect(result).toEqual({ updated: [], missing: [] });
+      expect(result).toEqual({ updated: [], current: ['movie-1'], missing: [] });
       expect(transaction.update).not.toHaveBeenCalled();
     });
 
     it('does nothing without ratings, and reports failures', async () => {
       expect(await listService.updateListItemRatings('watchlist', 0, {})).toEqual({
         updated: [],
+        current: [],
         missing: [],
       });
       expect(runTransaction).not.toHaveBeenCalled();

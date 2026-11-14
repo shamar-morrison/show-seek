@@ -33,7 +33,11 @@ import {
   type ListPageLayout,
 } from '@/functions/src/shared/listPages';
 import { isCanonicalListItemKey, pickEntryToMakeRoom } from '@/functions/src/shared/pagedMap';
-import { getListRatingUpdate, type RatedListMediaType } from '@/src/utils/listItemRatings';
+import {
+  getListRatingUpdate,
+  toDisplayedRating,
+  type RatedListMediaType,
+} from '@/src/utils/listItemRatings';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
@@ -148,6 +152,11 @@ export interface ListItemRatingUpdate {
 export interface ListItemRatingsResult {
   /** Stored keys whose rating was saved. */
   updated: string[];
+  /**
+   * Stored keys whose stored rating already shows as the fresh one (e.g. saved meanwhile from
+   * another device), so nothing was written for them.
+   */
+  current: string[];
   /** Stored keys whose entry isn't in the document any more (removed or moved meanwhile). */
   missing: string[];
 }
@@ -1084,7 +1093,7 @@ class ListService {
   ): Promise<ListItemRatingsResult> {
     const storedKeys = Object.keys(ratings);
     if (storedKeys.length === 0) {
-      return { updated: [], missing: [] };
+      return { updated: [], current: [], missing: [] };
     }
     const timeout = createTimeoutWithCleanup(10000);
 
@@ -1101,7 +1110,7 @@ class ListService {
             ? (snapshot.data()?.items as Record<string, Partial<ListMediaItem>> | undefined)
             : undefined;
           const updates: Record<string, number> = {};
-          const result: ListItemRatingsResult = { updated: [], missing: [] };
+          const result: ListItemRatingsResult = { updated: [], current: [], missing: [] };
 
           storedKeys.forEach((storedKey) => {
             const { mediaType, mediaId, rating } = ratings[storedKey];
@@ -1114,6 +1123,11 @@ class ListService {
             if (update !== null) {
               updates[`items.${storedKey}.vote_average`] = update;
               result.updated.push(storedKey);
+            } else if (
+              typeof savedItem.vote_average === 'number' &&
+              toDisplayedRating(savedItem.vote_average) === toDisplayedRating(rating)
+            ) {
+              result.current.push(storedKey);
             }
           });
 
