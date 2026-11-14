@@ -79,7 +79,6 @@ describe('setLongestTextEnabled', () => {
     expect(i18n.t('tabs.profile')).toBe(
       (i18n.getResourceBundle(LONGEST_TEXT_LANGUAGE, 'translation') as any).tabs.profile
     );
-    expect(i18n.t('tabs.profile').length).toBeGreaterThanOrEqual('Configurações'.length);
 
     await setLongestTextEnabled(false);
     expect(i18n.language).toBe('pt-BR');

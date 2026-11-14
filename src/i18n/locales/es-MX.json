@@ -127,7 +127,7 @@
     "discover": "Descubrir",
     "search": "Buscar",
     "library": "Biblioteca",
-    "profile": "Configuración"
+    "profile": "Ajustes"
   },
   "home": {
     "title": "Inicio",
@@ -2349,8 +2349,8 @@
   "whereToWatch": {
     "title": "Dónde ver",
     "intro": "Selecciona una de tus listas y un servicio de streaming para ver qué está disponible para ver ahora.",
-    "selectList": "Selecciona una lista",
-    "selectService": "Selecciona servicio",
+    "selectList": "Elige una lista",
+    "selectService": "Elige un servicio",
     "selectListTitle": "Seleccionar una lista",
     "selectServiceTitle": "Seleccionar un servicio de streaming",
     "updatingAvailability": "Actualizando disponibilidad...",

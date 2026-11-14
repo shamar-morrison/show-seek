@@ -2419,8 +2419,8 @@
   "whereToWatch": {
     "title": "Où regarder",
     "intro": "Sélectionnez l'une de vos listes et un service de streaming pour voir ce qui est disponible dès maintenant.",
-    "selectList": "Sélectionner une liste",
-    "selectService": "Sélectionner un service",
+    "selectList": "Choisir une liste",
+    "selectService": "Choisir un service",
     "selectListTitle": "Sélectionner une liste",
     "selectServiceTitle": "Sélectionner un service de streaming",
     "updatingAvailability": "Mise à jour de la disponibilité...",
