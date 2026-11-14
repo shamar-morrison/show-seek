@@ -30,12 +30,17 @@ describe('ContinueWatchingFromScreen', () => {
   });
 
   it('explains each option, with an example of what comes next', () => {
-    const { getByText } = render(<ContinueWatchingFromScreen />);
+    const { getAllByText, getByText, queryByText } = render(<ContinueWatchingFromScreen />);
 
     expect(getByText('First unwatched episode')).toBeTruthy();
-    expect(getByText('Watched 1–4 and 6 → Next: Episode 5')).toBeTruthy();
+    expect(getByText('Next: Episode 5')).toBeTruthy();
     expect(getByText('After your furthest episode')).toBeTruthy();
-    expect(getByText('Watched 1–4 and 6 → Next: Episode 7 · 1 skipped')).toBeTruthy();
+    expect(getByText('Next: Episode 7 · 1 skipped')).toBeTruthy();
+    expect(getAllByText('Watched 1–4 and 6')).toHaveLength(2);
+    // The options speak for themselves: no subtitle above them.
+    expect(
+      queryByText("Choose which episode Watch Progress suggests next when you've skipped one.")
+    ).toBeNull();
     expect(
       getByText(
         "Progress and time left always count every episode you haven't watched, whichever you choose."

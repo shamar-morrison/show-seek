@@ -142,6 +142,8 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     fontFamily: FONT_FAMILY.medium,
+    // Wrap a long label rather than push a badge beside it off narrow screens.
+    flexShrink: 1,
   },
   actionButtonTextDanger: {
     color: COLORS.error,

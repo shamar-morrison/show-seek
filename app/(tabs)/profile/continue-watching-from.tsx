@@ -20,7 +20,7 @@ import {
   ContinueWatchingFrom,
   resolveContinueWatchingFrom,
 } from '@/src/types/preferences';
-import { Tick02Icon } from '@hugeicons/core-free-icons';
+import { ArrowRight02Icon } from '@hugeicons/core-free-icons';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +40,10 @@ const OPTION_KEYS: Record<ContinueWatchingFrom, 'firstUnwatched' | 'afterFurthes
   'first-unwatched': 'firstUnwatched',
   'after-furthest': 'afterFurthest',
 };
+
+/** The option label's line height; the radio is centered on that first line. */
+const LABEL_LINE_HEIGHT = 22;
+const RADIO_SIZE = 20;
 
 export default function ContinueWatchingFromScreen() {
   const { t } = useTranslation();
@@ -69,10 +73,8 @@ export default function ContinueWatchingFromScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.description}>{t('continueWatchingFrom.description')}</Text>
-
-        <View style={styles.optionsList}>
-          {CONTINUE_WATCHING_FROM_OPTIONS.map((option, index) => {
+        <View style={styles.options}>
+          {CONTINUE_WATCHING_FROM_OPTIONS.map((option) => {
             const key = OPTION_KEYS[option];
             const isSelected = current === option;
             const isLoading = isUpdating === option;
@@ -84,39 +86,42 @@ export default function ContinueWatchingFromScreen() {
                 accessibilityRole="radio"
                 accessibilityState={{ selected: isSelected, disabled: isUpdating !== null }}
                 style={({ pressed }) => [
-                  styles.optionItem,
-                  index < CONTINUE_WATCHING_FROM_OPTIONS.length - 1 && styles.optionDivider,
-                  isSelected && styles.optionItemSelected,
-                  pressed && styles.optionItemPressed,
+                  styles.option,
+                  isSelected && {
+                    borderColor: accentColor,
+                    backgroundColor: hexToRGBA(accentColor, 0.08),
+                  },
+                  pressed && styles.optionPressed,
                 ]}
                 onPress={() => handleSelect(option)}
                 disabled={isUpdating !== null}
               >
-                <View style={styles.optionInfo}>
-                  <Text style={[styles.optionLabel, isSelected && { color: accentColor }]}>
-                    {t(`continueWatchingFrom.${key}.label`)}
-                  </Text>
+                <View style={styles.radioSlot}>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color={accentColor} />
+                  ) : (
+                    <View style={[styles.radio, isSelected && { borderColor: accentColor }]}>
+                      {isSelected ? (
+                        <View style={[styles.radioDot, { backgroundColor: accentColor }]} />
+                      ) : null}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.optionText}>
+                  <Text style={styles.optionLabel}>{t(`continueWatchingFrom.${key}.label`)}</Text>
                   <Text style={styles.optionDescription}>
                     {t(`continueWatchingFrom.${key}.description`)}
                   </Text>
-                  <Text style={styles.optionExample}>
-                    {t(`continueWatchingFrom.${key}.example`)}
-                  </Text>
-                </View>
-
-                <View style={styles.optionStatus}>
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color={accentColor} />
-                  ) : isSelected ? (
-                    <View
-                      style={[
-                        styles.checkContainer,
-                        { backgroundColor: hexToRGBA(accentColor, 0.2) },
-                      ]}
-                    >
-                      <AppIcon icon={Tick02Icon} size={20} color={accentColor} />
-                    </View>
-                  ) : null}
+                  <View style={styles.example}>
+                    <Text style={styles.exampleWatched}>
+                      {t(`continueWatchingFrom.${key}.example.watched`)}
+                    </Text>
+                    <AppIcon icon={ArrowRight02Icon} size={14} color={COLORS.textSecondary} />
+                    <Text style={styles.exampleNext}>
+                      {t(`continueWatchingFrom.${key}.example.next`)}
+                    </Text>
+                  </View>
                 </View>
               </Pressable>
             );
@@ -133,76 +138,86 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: SPACING.l,
   },
-  description: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.l,
-    lineHeight: 22,
+  options: {
+    gap: SPACING.m,
   },
-  optionsList: {
+  option: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.m,
+    padding: SPACING.m,
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
-    overflow: 'hidden',
   },
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.l,
-  },
-  optionDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  optionItemSelected: {
-    backgroundColor: COLORS.surfaceLight,
-  },
-  optionItemPressed: {
+  optionPressed: {
     opacity: ACTIVE_OPACITY,
   },
-  optionInfo: {
+  radioSlot: {
+    width: RADIO_SIZE,
+    height: LABEL_LINE_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radio: {
+    width: RADIO_SIZE,
+    height: RADIO_SIZE,
+    borderRadius: RADIO_SIZE / 2,
+    borderWidth: 2,
+    borderColor: COLORS.textSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  optionText: {
     flex: 1,
-    marginRight: SPACING.m,
   },
   optionLabel: {
-    fontSize: FONT_SIZE.l,
+    fontSize: FONT_SIZE.m,
+    lineHeight: LABEL_LINE_HEIGHT,
     color: COLORS.text,
-    fontFamily: FONT_FAMILY.medium,
+    fontFamily: FONT_FAMILY.semiBold,
   },
   optionDescription: {
     fontSize: FONT_SIZE.s,
+    lineHeight: 20,
     color: COLORS.textSecondary,
-    lineHeight: 18,
     marginTop: SPACING.xs,
   },
-  optionExample: {
-    fontSize: FONT_SIZE.s,
+  example: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    columnGap: SPACING.s,
+    rowGap: SPACING.xs,
+    marginTop: SPACING.m,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  exampleWatched: {
+    fontSize: FONT_SIZE.xs,
+    lineHeight: 16,
+    color: COLORS.textSecondary,
+  },
+  exampleNext: {
+    fontSize: FONT_SIZE.xs,
+    lineHeight: 16,
     color: COLORS.text,
-    lineHeight: 18,
-    marginTop: SPACING.s,
-    opacity: 0.8,
-  },
-  optionStatus: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    fontFamily: FONT_FAMILY.medium,
   },
   note: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     marginTop: SPACING.l,
-    lineHeight: 18,
+    lineHeight: 20,
     textAlign: 'center',
-    opacity: 0.7,
   },
 });

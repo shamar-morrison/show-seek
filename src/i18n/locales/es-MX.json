@@ -2563,13 +2563,19 @@
       "label": "Primer episodio sin ver",
       "short": "Primero sin ver",
       "description": "Sugiere el primer episodio emitido que no has visto, aunque hayas visto otros posteriores. No se te pasa nada de lo que te saltes.",
-      "example": "Vistos 1–4 y 6 → Siguiente: Episodio 5"
+      "example": {
+        "watched": "Vistos 1–4 y 6",
+        "next": "Siguiente: Episodio 5"
+      }
     },
     "afterFurthest": {
       "label": "Después del episodio más avanzado",
       "short": "Después del más avanzado",
       "description": "Sugiere el episodio que sigue al más avanzado que has visto. Los episodios saltados siguen sin ver y la tarjeta de la serie muestra cuántos te saltaste.",
-      "example": "Vistos 1–4 y 6 → Siguiente: Episodio 7 · 1 saltado"
+      "example": {
+        "watched": "Vistos 1–4 y 6",
+        "next": "Siguiente: Episodio 7 · 1 saltado"
+      }
     },
     "note": "El progreso y el tiempo restante siempre cuentan todos los episodios que no has visto, elijas lo que elijas.",
     "updateError": "No se pudo actualizar este ajuste. Inténtalo de nuevo."

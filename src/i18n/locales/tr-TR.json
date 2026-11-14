@@ -2563,13 +2563,19 @@
       "label": "İzlenmemiş ilk bölüm",
       "short": "İzlenmemiş ilk",
       "description": "Sonraki bölümleri izlemiş olsanız bile, yayınlanmış ve izlemediğiniz en eski bölümü önerir. Atladığınız hiçbir şey gözden kaçmaz.",
-      "example": "1–4 ve 6 izlendi → Sonraki: 5. bölüm"
+      "example": {
+        "watched": "1–4 ve 6 izlendi",
+        "next": "Sonraki: 5. bölüm"
+      }
     },
     "afterFurthest": {
       "label": "En ileri bölümünüzden sonra",
       "short": "En ileriden sonra",
       "description": "İzlediğiniz en ileri bölümden sonrakini önerir. Atlanan bölümler izlenmemiş kalır ve dizinin kartı kaç bölüm atladığınızı gösterir.",
-      "example": "1–4 ve 6 izlendi → Sonraki: 7. bölüm · 1 atlandı"
+      "example": {
+        "watched": "1–4 ve 6 izlendi",
+        "next": "Sonraki: 7. bölüm · 1 atlandı"
+      }
     },
     "note": "Hangisini seçerseniz seçin, ilerleme ve kalan süre izlemediğiniz tüm bölümleri sayar.",
     "updateError": "Bu ayar güncellenemedi. Lütfen tekrar deneyin."

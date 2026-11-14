@@ -2563,13 +2563,19 @@
       "label": "Primeiro episódio por ver",
       "short": "Primeiro por ver",
       "description": "Sugere o episódio emitido mais antigo que ainda não viu, mesmo que tenha visto os seguintes. Nada do que saltar fica esquecido.",
-      "example": "Viu 1–4 e 6 → Próximo: Episódio 5"
+      "example": {
+        "watched": "Viu 1–4 e 6",
+        "next": "Próximo: Episódio 5"
+      }
     },
     "afterFurthest": {
       "label": "Depois do episódio mais avançado",
       "short": "Depois do mais avançado",
       "description": "Sugere o episódio a seguir ao mais avançado que viu. Os episódios saltados continuam por ver, e o cartão da série mostra quantos saltou.",
-      "example": "Viu 1–4 e 6 → Próximo: Episódio 7 · 1 saltado"
+      "example": {
+        "watched": "Viu 1–4 e 6",
+        "next": "Próximo: Episódio 7 · 1 saltado"
+      }
     },
     "note": "O progresso e o tempo restante contam sempre todos os episódios que não viu, seja qual for a sua escolha.",
     "updateError": "Falha ao atualizar esta definição. Tente novamente."
