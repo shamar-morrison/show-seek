@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     fontFamily: FONT_FAMILY.regular,
     color: COLORS.textSecondary,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   splitLabelCompact: {
     fontSize: FONT_SIZE.s,

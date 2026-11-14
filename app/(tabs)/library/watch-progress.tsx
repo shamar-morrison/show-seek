@@ -671,6 +671,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   hideButton: {
     flexDirection: 'row',
@@ -688,5 +689,6 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.s,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
 });

@@ -291,6 +291,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.semiBold,
     color: COLORS.white,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   buttonRow: {
     flexDirection: 'row',

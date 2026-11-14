@@ -523,10 +523,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.white,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   saveButtonText: {
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.bold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   disabledButton: {
     opacity: 0.5,

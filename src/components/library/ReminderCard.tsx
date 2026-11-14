@@ -239,6 +239,7 @@ const styles = StyleSheet.create({
   releaseDate: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   timingRow: {
     flexDirection: 'row',

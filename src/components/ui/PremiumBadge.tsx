@@ -35,5 +35,6 @@ const styles = StyleSheet.create({
   premiumBadgeText: {
     fontSize: FONT_SIZE.xs,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
 });

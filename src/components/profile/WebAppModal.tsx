@@ -89,6 +89,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.l,
     fontFamily: FONT_FAMILY.bold,
     color: COLORS.text,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   webAppModalDescription: {
     fontSize: FONT_SIZE.m,

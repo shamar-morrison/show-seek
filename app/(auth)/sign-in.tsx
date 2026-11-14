@@ -325,6 +325,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   termsText: {
     textAlign: 'center',

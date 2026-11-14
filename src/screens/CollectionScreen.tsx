@@ -559,6 +559,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
+    flexShrink: 1, // wrap within its row instead of pushing siblings off
   },
   percentageText: {
     fontSize: FONT_SIZE.s,
