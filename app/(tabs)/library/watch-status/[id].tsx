@@ -34,6 +34,7 @@ import {
   getItemUserRating,
 } from '@/src/utils/listSort';
 import { useListItemRuntimes } from '@/src/hooks/useListItemRuntimes';
+import { useRefreshListRatings } from '@/src/hooks/useRefreshListRatings';
 import { useUserRatingMap } from '@/src/hooks/useRatings';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
@@ -122,6 +123,8 @@ export default function WatchStatusDetailScreen() {
     done: runtimesDone,
     total: runtimesTotal,
   } = useListItemRuntimes(list, filterState.runtime !== 'any' || sortState.option === 'runtime');
+  // Brings recent titles' saved TMDB ratings up to date, at most once a day.
+  useRefreshListRatings(list);
 
   // Live count for the filter modal; hidden while it would be a guess.
   const getMatchCount = useCallback(

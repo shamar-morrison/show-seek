@@ -89,6 +89,10 @@ jest.mock('@/src/hooks/useListItemRuntimes', () => ({
   useListItemRuntimes: () => ({ runtimes: new Map(), isResolving: false, done: 0, total: 0 }),
 }));
 
+jest.mock('@/src/hooks/useRefreshListRatings', () => ({
+  useRefreshListRatings: () => undefined,
+}));
+
 jest.mock('@/src/hooks/useRatings', () => ({
   useUserRatingMap: () => ({ ratings: new Map(), isLoading: false }),
 }));

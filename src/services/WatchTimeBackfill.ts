@@ -207,7 +207,8 @@ function defaultStampRuntimes(stamps: RuntimeStamps): void {
   void Promise.allSettled(writes);
 }
 
-const isAbortError = (error: unknown): boolean => {
+/** A TMDB failure that should stop a batch of lookups: rate limited or timed out. */
+export const isAbortError = (error: unknown): boolean => {
   const status =
     (error as { status?: number })?.status ??
     (error as { response?: { status?: number } })?.response?.status;
