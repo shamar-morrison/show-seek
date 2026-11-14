@@ -594,6 +594,131 @@ describe('ListService', () => {
     });
   });
 
+  describe('updateListItemRatings', () => {
+    /** Runs the transaction against a document holding `items`; returns its spies. */
+    const withDocument = (items: Record<string, unknown> | null) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => items !== null,
+          data: () => (items === null ? undefined : { items }),
+        }),
+        update: jest.fn(),
+      };
+      (runTransaction as jest.Mock).mockImplementation(
+        async (_db: unknown, run: (tx: typeof transaction) => Promise<unknown>) => run(transaction)
+      );
+      return transaction;
+    };
+    const movie = (id: number, voteAverage?: number) => ({
+      id,
+      media_type: 'movie',
+      title: `Movie ${id}`,
+      ...(voteAverage === undefined ? {} : { vote_average: voteAverage }),
+    });
+
+    it('saves changed ratings in one write, by stored key, leaving the list untouched otherwise', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      const transaction = withDocument({
+        'movie-1': movie(1, 7.3),
+        '2': movie(2, 5),
+        'tv-3': { id: 3, media_type: 'tv', vote_average: 8 },
+      });
+
+      const result = await listService.updateListItemRatings('watchlist', 0, {
+        'movie-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
+        '2': { mediaType: 'movie', mediaId: 2, rating: 5.8 },
+        'tv-3': { mediaType: 'tv', mediaId: 3, rating: 8.04 },
+      });
+
+      expect([...result.updated].sort()).toEqual(['2', 'movie-1']);
+      expect(result.missing).toEqual([]);
+      expect(transaction.get).toHaveBeenCalledWith(mockDocRef);
+      expect(transaction.update).toHaveBeenCalledTimes(1);
+      expect(transaction.update).toHaveBeenCalledWith(mockDocRef, {
+        'items.movie-1.vote_average': 6.3,
+        'items.2.vote_average': 5.8,
+      });
+      expect(updateDoc).not.toHaveBeenCalled();
+    });
+
+    it('writes to the overflow page holding the entries', async () => {
+      (doc as jest.Mock).mockImplementation((_db: unknown, ...segments: string[]) => ({
+        path: segments.join('/'),
+      }));
+      const transaction = withDocument({ 'movie-1': movie(1, 7.3) });
+
+      await listService.updateListItemRatings('watchlist', 2, {
+        'movie-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
+      });
+
+      const [ref, updates] = transaction.update.mock.calls[0];
+      expect(ref.path).toContain('watchlist');
+      expect(ref.path).toMatch(/2$/);
+      expect(updates).toEqual({ 'items.movie-1.vote_average': 6.3 });
+    });
+
+    it('never writes to an entry that is gone, replaced, or on a missing page', async () => {
+      (doc as jest.Mock).mockReturnValue({ path: 'x' });
+
+      let transaction = withDocument({
+        'movie-2': movie(2, 7),
+        'tv-1': { id: 1, media_type: 'tv', vote_average: 7 },
+      });
+      expect(
+        await listService.updateListItemRatings('watchlist', 0, {
+          'movie-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
+          'tv-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
+        })
+      ).toEqual({ updated: [], missing: ['movie-1', 'tv-1'] });
+      expect(transaction.update).not.toHaveBeenCalled();
+
+      transaction = withDocument(null);
+      expect(
+        await listService.updateListItemRatings('watchlist', 3, {
+          'movie-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
+        })
+      ).toEqual({ updated: [], missing: ['movie-1'] });
+      expect(transaction.update).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when the stored rating already shows the same, is unset, or would become 0', async () => {
+      (doc as jest.Mock).mockReturnValue({ path: 'x' });
+      const transaction = withDocument({
+        'movie-1': movie(1, 6.31),
+        'movie-2': movie(2),
+        'movie-3': movie(3, 7),
+      });
+
+      const result = await listService.updateListItemRatings('watchlist', 0, {
+        'movie-1': { mediaType: 'movie', mediaId: 1, rating: 6.34 },
+        'movie-2': { mediaType: 'movie', mediaId: 2, rating: 6.3 },
+        'movie-3': { mediaType: 'movie', mediaId: 3, rating: 0 },
+      });
+
+      expect(result).toEqual({ updated: [], missing: [] });
+      expect(transaction.update).not.toHaveBeenCalled();
+    });
+
+    it('does nothing without ratings, and reports failures', async () => {
+      expect(await listService.updateListItemRatings('watchlist', 0, {})).toEqual({
+        updated: [],
+        missing: [],
+      });
+      expect(runTransaction).not.toHaveBeenCalled();
+
+      (doc as jest.Mock).mockReturnValue({ path: 'x' });
+      (runTransaction as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      await expect(
+        listService.updateListItemRatings('watchlist', 0, {
+          'movie-1': { mediaType: 'movie', mediaId: 1, rating: 6.3 },
+        })
+      ).rejects.toThrow();
+      consoleSpy.mockRestore();
+    });
+  });
+
   describe('removeManyFromList', () => {
     it('removes several entries in one write, clearing legacy keys only for movies and shows', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };

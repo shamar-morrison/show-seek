@@ -33,6 +33,7 @@ import {
   type ListPageLayout,
 } from '@/functions/src/shared/listPages';
 import { isCanonicalListItemKey, pickEntryToMakeRoom } from '@/functions/src/shared/pagedMap';
+import { getListRatingUpdate, type RatedListMediaType } from '@/src/utils/listItemRatings';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
@@ -136,6 +137,20 @@ interface KnownListLayout {
 }
 
 export type ListMembershipIndex = Record<string, string[]>;
+
+/** A fresh TMDB rating for the entry stored under some key of a list document or page. */
+export interface ListItemRatingUpdate {
+  mediaType: RatedListMediaType;
+  mediaId: number;
+  rating: number;
+}
+
+export interface ListItemRatingsResult {
+  /** Stored keys whose rating was saved. */
+  updated: string[];
+  /** Stored keys whose entry isn't in the document any more (removed or moved meanwhile). */
+  missing: string[];
+}
 
 export const DEFAULT_LISTS = [
   { id: 'watchlist', name: 'Should Watch' },
@@ -1045,6 +1060,72 @@ class ListService {
       ]);
     } catch (error) {
       console.error('[ListService] updateListItemFields error:', { error, listId, item });
+      throw new Error(getFirestoreErrorMessage(error));
+    } finally {
+      timeout.cancel();
+    }
+  }
+
+  /**
+   * Save fresh TMDB ratings onto entries of one list document (page 0) or overflow page, in one
+   * transaction: 1 read, and 1 write only when a rating changed. `ratings` is keyed by the key
+   * each entry is stored under (a legacy entry's numeric id).
+   *
+   * Each entry is checked against the stored document, not the cache: it must still be there,
+   * as the same title, with a stored rating the app would show differently (see
+   * `getListRatingUpdate`). Nothing is written for an entry removed meanwhile, since a field-path
+   * update would leave a partial entry. `addedAt` and the list's `updatedAt` are left alone, so a
+   * refresh doesn't make a list look recently changed.
+   */
+  async updateListItemRatings(
+    listId: string,
+    page: number,
+    ratings: Record<string, ListItemRatingUpdate>
+  ): Promise<ListItemRatingsResult> {
+    const storedKeys = Object.keys(ratings);
+    if (storedKeys.length === 0) {
+      return { updated: [], missing: [] };
+    }
+    const timeout = createTimeoutWithCleanup(10000);
+
+    try {
+      const user = requireSignedInUser();
+      const ref =
+        page > 0
+          ? this.getListItemPageRef(user.uid, listId, page)
+          : this.getUserListRef(user.uid, listId);
+      return await Promise.race([
+        runTransaction(db, async (transaction) => {
+          const snapshot = await transaction.get(ref);
+          const items = snapshot.exists()
+            ? (snapshot.data()?.items as Record<string, Partial<ListMediaItem>> | undefined)
+            : undefined;
+          const updates: Record<string, number> = {};
+          const result: ListItemRatingsResult = { updated: [], missing: [] };
+
+          storedKeys.forEach((storedKey) => {
+            const { mediaType, mediaId, rating } = ratings[storedKey];
+            const savedItem = items?.[storedKey];
+            if (!savedItem || savedItem.id !== mediaId || savedItem.media_type !== mediaType) {
+              result.missing.push(storedKey);
+              return;
+            }
+            const update = getListRatingUpdate(savedItem.vote_average, rating);
+            if (update !== null) {
+              updates[`items.${storedKey}.vote_average`] = update;
+              result.updated.push(storedKey);
+            }
+          });
+
+          if (result.updated.length > 0) {
+            transaction.update(ref, updates);
+          }
+          return result;
+        }),
+        timeout.promise,
+      ]);
+    } catch (error) {
+      console.error('[ListService] updateListItemRatings error:', { error, listId, page });
       throw new Error(getFirestoreErrorMessage(error));
     } finally {
       timeout.cancel();
