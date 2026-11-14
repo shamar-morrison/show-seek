@@ -115,7 +115,12 @@ jest.mock('@/src/hooks/useAccountRequired', () => ({
 }));
 
 jest.mock('@/src/hooks/useCurrentlyWatching', () => ({
-  useCurrentlyWatching: () => mockUseCurrentlyWatching(),
+  useCurrentlyWatching: (...args: unknown[]) => mockUseCurrentlyWatching(...args),
+}));
+
+let mockPreferences: Record<string, unknown> | null = null;
+jest.mock('@/src/hooks/usePreferences', () => ({
+  usePreferences: () => ({ preferences: mockPreferences }),
 }));
 
 jest.mock('@/src/hooks/useHeaderSearch', () => ({
@@ -232,6 +237,7 @@ describe('WatchProgressScreen', () => {
     mockIsAccountRequired.mockReturnValue(false);
     latestSortModalProps = null;
     latestOptionsSheetProps = null;
+    mockPreferences = null;
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     mockUseCurrentlyWatching.mockReturnValue({
@@ -254,6 +260,26 @@ describe('WatchProgressScreen', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('continues from the episode the saved setting picks, defaulting to the first unwatched one', async () => {
+    const { getByText, rerender } = render(<WatchProgressScreen />);
+    await waitFor(() => expect(getByText('Mock Show')).toBeTruthy());
+    expect(mockUseCurrentlyWatching).toHaveBeenLastCalledWith({
+      continueWatchingFrom: 'first-unwatched',
+    });
+
+    mockPreferences = { continueWatchingFrom: 'after-furthest' };
+    rerender(<WatchProgressScreen />);
+    expect(mockUseCurrentlyWatching).toHaveBeenLastCalledWith({
+      continueWatchingFrom: 'after-furthest',
+    });
+
+    mockPreferences = { continueWatchingFrom: 'something-else' };
+    rerender(<WatchProgressScreen />);
+    expect(mockUseCurrentlyWatching).toHaveBeenLastCalledWith({
+      continueWatchingFrom: 'first-unwatched',
+    });
   });
 
   it('shows inline updating indicator while background refetching', async () => {

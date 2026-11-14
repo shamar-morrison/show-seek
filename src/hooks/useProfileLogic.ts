@@ -274,6 +274,10 @@ export function useProfileLogic() {
     router.push('/(tabs)/profile/action-buttons' as any);
   }, [router]);
 
+  const handleContinueWatchingFromPress = useCallback(() => {
+    router.push('/(tabs)/profile/continue-watching-from' as any);
+  }, [router]);
+
   const handleTipsPress = useCallback(() => {
     router.push('/(tabs)/profile/tips' as any);
   }, [router]);
@@ -328,6 +332,7 @@ export function useProfileLogic() {
     handleColorPress,
     handleLaunchScreenPress,
     handleActionButtonsPress,
+    handleContinueWatchingFromPress,
     handleTipsPress,
     handleTraktPress,
     handleStremioPress,

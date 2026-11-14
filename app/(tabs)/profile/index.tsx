@@ -99,6 +99,7 @@ export default function ProfileScreen() {
     handleColorPress,
     handleLaunchScreenPress,
     handleActionButtonsPress,
+    handleContinueWatchingFromPress,
     handleTipsPress,
     handleTraktPress,
     handleStremioPress,
@@ -340,6 +341,9 @@ export default function ProfileScreen() {
             onColorPress={() => handleGuardedContentAction(handleColorPress)}
             onLaunchScreenPress={() => handleGuardedContentAction(handleLaunchScreenPress)}
             onActionButtonsPress={() => handleGuardedContentAction(handleActionButtonsPress)}
+            onContinueWatchingFromPress={() =>
+              handleGuardedContentAction(handleContinueWatchingFromPress)
+            }
             showTitle={false}
             highlightedId={highlightedId}
             registerItemLayout={registerItemLayout}

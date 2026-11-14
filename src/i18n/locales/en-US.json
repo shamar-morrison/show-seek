@@ -2435,7 +2435,10 @@
     "removeFailed": "Failed to remove show",
     "unavailableTitle": "Show Unavailable",
     "unavailableRemovePrompt": "This show could not be found on TMDB. Would you like to remove \"{{name}}\" from your tracking?",
-    "unavailableCannotRestore": "Unavailable shows cannot be restored"
+    "unavailableCannotRestore": "Unavailable shows cannot be restored",
+    "skipped": "{{count}} skipped",
+    "skipped_one": "{{count}} skipped",
+    "skipped_other": "{{count}} skipped"
   },
   "mood": {
     "picker": "Mood Picker",
@@ -2552,5 +2555,29 @@
   },
   "imageViewer": {
     "download": "Download"
+  },
+  "continueWatchingFrom": {
+    "title": "Continue Watching From",
+    "description": "Choose which episode Watch Progress suggests next when you've skipped one.",
+    "firstUnwatched": {
+      "label": "First unwatched episode",
+      "short": "First unwatched",
+      "description": "Suggests the earliest aired episode you haven't watched, even if you've watched later ones. Nothing you skip gets missed.",
+      "example": {
+        "watched": "Watched 1–4 and 6",
+        "next": "Next: Episode 5"
+      }
+    },
+    "afterFurthest": {
+      "label": "After your furthest episode",
+      "short": "After furthest",
+      "description": "Suggests the episode after the furthest one you've watched. Skipped episodes stay unwatched, and the show's card shows how many you skipped.",
+      "example": {
+        "watched": "Watched 1–4 and 6",
+        "next": "Next: Episode 7 · 1 skipped"
+      }
+    },
+    "note": "Progress and time left always count every episode you haven't watched, whichever you choose.",
+    "updateError": "Failed to update this setting. Please try again."
   }
 }

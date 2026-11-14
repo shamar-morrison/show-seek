@@ -25,10 +25,12 @@ import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import { useBulkSetHiddenFromProgress, useDeleteShowTracking } from '@/src/hooks/useEpisodeTracking';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { InProgressShow } from '@/src/types/episodeTracking';
+import { resolveContinueWatchingFrom } from '@/src/types/preferences';
 import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -70,7 +72,11 @@ export default function WatchProgressScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const insets = useSafeAreaInsets();
-  const { data, isLoading, isFetching, error, refresh } = useCurrentlyWatching();
+  const { preferences } = usePreferences();
+  const continueWatchingFrom = resolveContinueWatchingFrom(preferences?.continueWatchingFrom);
+  const { data, isLoading, isFetching, error, refresh } = useCurrentlyWatching({
+    continueWatchingFrom,
+  });
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const iconBadgeStyles = useIconBadgeStyles();

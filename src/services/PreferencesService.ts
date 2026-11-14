@@ -12,7 +12,11 @@ import { sanitizeProfileBackground } from '@/src/utils/profileBackground';
 import { raceWithTimeout } from '@/src/utils/timeout';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
+import {
+  DEFAULT_PREFERENCES,
+  resolveContinueWatchingFrom,
+  UserPreferences,
+} from '../types/preferences';
 
 class PreferencesService {
   private sanitizeGenreIds(value: unknown, fallback: number[]): number[] {
@@ -66,6 +70,7 @@ class PreferencesService {
       allowUnreleasedEpisodeWatches:
         data?.preferences?.allowUnreleasedEpisodeWatches ??
         DEFAULT_PREFERENCES.allowUnreleasedEpisodeWatches,
+      continueWatchingFrom: resolveContinueWatchingFrom(data?.preferences?.continueWatchingFrom),
       hideTabLabels: data?.preferences?.hideTabLabels ?? DEFAULT_PREFERENCES.hideTabLabels,
       dataSaver: data?.preferences?.dataSaver ?? DEFAULT_PREFERENCES.dataSaver,
       showOriginalTitles:

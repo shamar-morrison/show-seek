@@ -2435,7 +2435,10 @@
     "removeFailed": "Dizi kaldırılamadı",
     "unavailableTitle": "Dizi Kullanılamıyor",
     "unavailableRemovePrompt": "Bu dizi TMDB'de bulunamadı. \"{{name}}\" dizisini takipten kaldırmak istiyor musunuz?",
-    "unavailableCannotRestore": "Kullanılamayan diziler geri yüklenemez"
+    "unavailableCannotRestore": "Kullanılamayan diziler geri yüklenemez",
+    "skipped": "{{count}} atlandı",
+    "skipped_one": "{{count}} atlandı",
+    "skipped_other": "{{count}} atlandı"
   },
   "mood": {
     "picker": "Ruh hali seçici",
@@ -2552,5 +2555,29 @@
   },
   "imageViewer": {
     "download": "İndir"
+  },
+  "continueWatchingFrom": {
+    "title": "İzlemeye nereden devam edilsin",
+    "description": "Bir bölümü atladığınızda İzleme ilerlemesinin hangi bölümü önereceğini seçin.",
+    "firstUnwatched": {
+      "label": "İzlenmemiş ilk bölüm",
+      "short": "İzlenmemiş ilk",
+      "description": "Sonraki bölümleri izlemiş olsanız bile, yayınlanmış ve izlemediğiniz en eski bölümü önerir. Atladığınız hiçbir şey gözden kaçmaz.",
+      "example": {
+        "watched": "1–4 ve 6 izlendi",
+        "next": "Sonraki: 5. bölüm"
+      }
+    },
+    "afterFurthest": {
+      "label": "En ileri bölümünüzden sonra",
+      "short": "En ileriden sonra",
+      "description": "İzlediğiniz en ileri bölümden sonrakini önerir. Atlanan bölümler izlenmemiş kalır ve dizinin kartı kaç bölüm atladığınızı gösterir.",
+      "example": {
+        "watched": "1–4 ve 6 izlendi",
+        "next": "Sonraki: 7. bölüm · 1 atlandı"
+      }
+    },
+    "note": "Hangisini seçerseniz seçin, ilerleme ve kalan süre izlemediğiniz tüm bölümleri sayar.",
+    "updateError": "Bu ayar güncellenemedi. Lütfen tekrar deneyin."
   }
 }

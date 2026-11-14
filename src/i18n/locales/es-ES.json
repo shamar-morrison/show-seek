@@ -2399,7 +2399,10 @@
     "removeFailed": "Error al eliminar la serie",
     "unavailableTitle": "Serie no disponible",
     "unavailableRemovePrompt": "Esta serie no se pudo encontrar en TMDB. ¿Deseas eliminar \"{{name}}\" de tu seguimiento?",
-    "unavailableCannotRestore": "Las series no disponibles no se pueden restaurar"
+    "unavailableCannotRestore": "Las series no disponibles no se pueden restaurar",
+    "skipped": "{{count}} saltados",
+    "skipped_one": "{{count}} saltado",
+    "skipped_other": "{{count}} saltados"
   },
   "widgets": {
     "widgetType": "Tipo de widget",
@@ -2552,5 +2555,29 @@
   },
   "imageViewer": {
     "download": "Descargar"
+  },
+  "continueWatchingFrom": {
+    "title": "Continuar viendo desde",
+    "description": "Elige qué episodio te sugiere Progreso de visionado cuando te has saltado alguno.",
+    "firstUnwatched": {
+      "label": "Primer episodio sin ver",
+      "short": "Primero sin ver",
+      "description": "Sugiere el primer episodio emitido que no has visto, aunque hayas visto otros posteriores. No se te pasa nada de lo que te saltes.",
+      "example": {
+        "watched": "Vistos 1–4 y 6",
+        "next": "Siguiente: Episodio 5"
+      }
+    },
+    "afterFurthest": {
+      "label": "Después del episodio más avanzado",
+      "short": "Después del más avanzado",
+      "description": "Sugiere el episodio que sigue al más avanzado que has visto. Los episodios saltados siguen sin ver y la tarjeta de la serie muestra cuántos te has saltado.",
+      "example": {
+        "watched": "Vistos 1–4 y 6",
+        "next": "Siguiente: Episodio 7 · 1 saltado"
+      }
+    },
+    "note": "El progreso y el tiempo restante siempre cuentan todos los episodios que no has visto, elijas lo que elijas.",
+    "updateError": "No se pudo actualizar este ajuste. Inténtalo de nuevo."
   }
 }

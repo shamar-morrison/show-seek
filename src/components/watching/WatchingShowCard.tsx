@@ -172,6 +172,12 @@ export function WatchingShowCard({
               )}
             </Text>
           )}
+          {/* Episodes left behind when continuing after the furthest one, on their own line. */}
+          {!show.isUnavailable && (show.skippedCount ?? 0) > 0 ? (
+            <Text style={styles.skippedText} numberOfLines={1} testID="watching-card-skipped">
+              {t('watching.skipped', { count: show.skippedCount })}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.progressContainer}>
@@ -255,6 +261,11 @@ const styles = StyleSheet.create({
   episodeText: {
     fontSize: 13,
     color: COLORS.textSecondary,
+  },
+  skippedText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   seasonEpLabel: {
     fontFamily: FONT_FAMILY.semiBold,

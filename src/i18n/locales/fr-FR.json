@@ -2469,7 +2469,10 @@
     "removeFailed": "Échec de la suppression de la série",
     "unavailableTitle": "Série non disponible",
     "unavailableRemovePrompt": "Cette série est introuvable sur TMDB. Voulez-vous retirer \"{{name}}\" de votre suivi ?",
-    "unavailableCannotRestore": "Les séries non disponibles ne peuvent pas être restaurées"
+    "unavailableCannotRestore": "Les séries non disponibles ne peuvent pas être restaurées",
+    "skipped": "{{count}} sautés",
+    "skipped_one": "{{count}} sauté",
+    "skipped_other": "{{count}} sautés"
   },
   "updateRequired": {
     "title": "Mise à jour requise",
@@ -2552,5 +2555,29 @@
   },
   "imageViewer": {
     "download": "Télécharger"
+  },
+  "continueWatchingFrom": {
+    "title": "Reprendre à partir de",
+    "description": "Choisissez l'épisode que Progression du visionnage vous propose quand vous en avez sauté un.",
+    "firstUnwatched": {
+      "label": "Premier épisode non vu",
+      "short": "Premier non vu",
+      "description": "Propose le plus ancien épisode diffusé que vous n'avez pas vu, même si vous avez vu les suivants. Rien de ce que vous sautez n'est oublié.",
+      "example": {
+        "watched": "Vus 1–4 et 6",
+        "next": "Suivant : Épisode 5"
+      }
+    },
+    "afterFurthest": {
+      "label": "Après votre épisode le plus avancé",
+      "short": "Après le plus avancé",
+      "description": "Propose l'épisode qui suit le plus avancé que vous avez vu. Les épisodes sautés restent non vus, et la carte de la série indique combien vous en avez sauté.",
+      "example": {
+        "watched": "Vus 1–4 et 6",
+        "next": "Suivant : Épisode 7 · 1 sauté"
+      }
+    },
+    "note": "La progression et le temps restant comptent toujours chaque épisode que vous n'avez pas vu, quel que soit votre choix.",
+    "updateError": "Échec de la mise à jour de ce réglage. Veuillez réessayer."
   }
 }
