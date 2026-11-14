@@ -13,6 +13,7 @@ import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { useAddToList, useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { useSheetListHeight } from '@/src/hooks/useSheetListHeight';
 import { ListMediaItem, UserList } from '@/src/services/ListService';
+import { getListEntrySummary } from '@/src/utils/listEntryDisplay';
 import { getListIconComponent } from '@/src/utils/listIcons';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { useQueryClient } from '@tanstack/react-query';
@@ -179,6 +180,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         : isBulkMode
           ? t('library.moveToLists')
           : t('media.addToList');
+    // What's being added, under the title: "Inception", "Season 2 · Show" or "S2E5 · Show".
+    const entrySummary = !isBulkMode && mediaItem ? getListEntrySummary(mediaItem, t) : '';
 
     // Local state to track pending selections (toggled independently of Firebase)
     const [pendingSelections, setPendingSelections] = useState<Record<string, boolean>>({});
@@ -282,6 +285,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         return pendingSelections[listId] !== originalMembership;
       });
     }, [isBulkMode, pendingSelections]);
+    const isSaveDisabled = !hasChanges || isSaving || !!deletingListId;
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -730,7 +734,21 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             onLayout={onContentLayout}
           >
             <View style={modalHeaderStyles.header}>
-              <Text style={modalHeaderStyles.title}>{bulkHeaderTitle}</Text>
+              {entrySummary ? (
+                <View style={styles.headerText}>
+                  <Text style={modalHeaderStyles.title}>{bulkHeaderTitle}</Text>
+                  <Text
+                    style={styles.entrySummary}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    testID="add-to-list-entry-summary"
+                  >
+                    {entrySummary}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={modalHeaderStyles.title}>{bulkHeaderTitle}</Text>
+              )}
               {isBulkMode && (
                 <Text style={styles.subtitle}>
                   {t('library.selectedItemsCount', { count: bulkMediaItems.length })}
@@ -813,46 +831,45 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               />
             )}
 
-            <Pressable
-              style={[
-                styles.saveButton,
-                { backgroundColor: accentColor },
-                (!hasChanges || isSaving || !!deletingListId) && styles.saveButtonDisabled,
-              ]}
-              onPress={handleSave}
-              disabled={!hasChanges || isSaving || !!deletingListId}
-              testID="add-to-list-save-button"
-            >
-              {isSaving ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : (
-                <>
-                  <AppIcon
-                    icon={Tick02Icon}
-                    size={20}
-                    color={hasChanges ? COLORS.white : COLORS.textSecondary}
-                  />
-                  <Text
-                    style={[styles.saveButtonText, !hasChanges && styles.saveButtonTextDisabled]}
-                  >
-                    {t('common.saveChanges')}
-                  </Text>
-                </>
-              )}
-            </Pressable>
+            <View style={styles.actionRow}>
+              <Pressable
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: accentColor },
+                  isSaveDisabled && styles.buttonDisabled,
+                ]}
+                onPress={handleSave}
+                disabled={isSaveDisabled}
+                testID="add-to-list-save-button"
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <>
+                    <AppIcon icon={Tick02Icon} size={20} color={COLORS.white} />
+                    <Text style={styles.actionButtonText} numberOfLines={1}>
+                      {t('common.save')}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
 
-            <Pressable
-              style={[
-                styles.createListButton,
-                { backgroundColor: accentColor },
-                isSaving && styles.buttonDisabled,
-              ]}
-              onPress={handleCreateCustomListPress}
-              disabled={isSaving}
-            >
-              <AppIcon icon={PlusSignIcon} size={20} color={COLORS.white} />
-              <Text style={styles.createListText}>{t('library.createCustomList')}</Text>
-            </Pressable>
+              <Pressable
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: accentColor },
+                  isSaving && styles.buttonDisabled,
+                ]}
+                onPress={handleCreateCustomListPress}
+                disabled={isSaving}
+                testID="add-to-list-create-list-button"
+              >
+                <AppIcon icon={PlusSignIcon} size={20} color={COLORS.white} />
+                <Text style={styles.actionButtonText} numberOfLines={1}>
+                  {t('library.createList')}
+                </Text>
+              </Pressable>
+            </View>
 
             <Pressable
               style={[styles.manageListsButton, isSaving && styles.buttonDisabled]}
@@ -887,6 +904,15 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   subtitle: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  entrySummary: {
+    marginTop: SPACING.xs,
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
@@ -947,16 +973,25 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginLeft: SPACING.s,
   },
-  createListButton: {
+  // Save and Create List share a row; Manage Lists stays full width under it.
+  actionRow: {
+    flexDirection: 'row',
+    gap: SPACING.s,
+    marginTop: SPACING.m,
+  },
+  actionButton: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SPACING.s,
-    padding: SPACING.m,
     gap: SPACING.s,
+    paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.s,
     borderRadius: BORDER_RADIUS.m,
   },
-  createListText: {
+  actionButtonText: {
+    flexShrink: 1,
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontFamily: FONT_FAMILY.semiBold,
@@ -998,26 +1033,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     textAlign: 'center',
     fontFamily: FONT_FAMILY.semiBold,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.s,
-    marginTop: SPACING.m,
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  saveButtonDisabled: {
-    backgroundColor: COLORS.surfaceLight,
-  },
-  saveButtonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontFamily: FONT_FAMILY.semiBold,
-  },
-  saveButtonTextDisabled: {
-    color: COLORS.textSecondary,
   },
   buttonDisabled: {
     opacity: 0.5,

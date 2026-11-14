@@ -350,6 +350,58 @@ describe('AddToListModal (bulk mode)', () => {
     expect(getByText('Add to List')).toBeTruthy();
   });
 
+  it("shows what's being added under the title, on one truncated line", async () => {
+    mockListsState.data = [{ id: 'watchlist', name: 'Watchlist', items: {}, createdAt: 2 }];
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId } = render(
+      <AddToListModal
+        ref={ref}
+        mediaItem={{
+          id: 1396,
+          title: 'Breaking Bad · S2E12 · Phoenix',
+          show_name: 'Breaking Bad',
+          poster_path: null,
+          media_type: 'episode',
+          season_number: 2,
+          episode_number: 12,
+          vote_average: 8.9,
+          release_date: '2009-05-24',
+        }}
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    const summary = getByTestId('add-to-list-entry-summary');
+    expect(summary).toHaveTextContent('S2E12 · Breaking Bad');
+    expect(summary.props.numberOfLines).toBe(1);
+  });
+
+  it("doesn't show an entry line in bulk mode", async () => {
+    mockListsState.data = [
+      { id: 'watchlist', name: 'Watchlist', items: {}, createdAt: 1 },
+      { id: 'favorites', name: 'Favorites', items: {}, createdAt: 2 },
+    ];
+
+    const ref = createRef<AddToListModalRef>();
+    const { queryByTestId } = render(
+      <AddToListModal
+        ref={ref}
+        mediaItems={[createMediaItem(1), createMediaItem(2)]}
+        sourceListId="watchlist"
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(queryByTestId('add-to-list-entry-summary')).toBeNull();
+  });
+
   it('filters lists by search text and can clear the search', async () => {
     const selected = createMediaItem(2);
 
@@ -897,7 +949,7 @@ describe('AddToListModal (bulk mode)', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Create Custom List'));
+      fireEvent.press(getByText('Create List'));
     });
 
     expect(mockSheetDismiss).toHaveBeenCalled();

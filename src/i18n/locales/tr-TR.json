@@ -74,7 +74,6 @@
     "premium": "Premium",
     "readLess": "Daha az göster",
     "readMore": "Daha fazla oku",
-    "saveChanges": "Değişiklikleri kaydet",
     "tba": "Belirsiz",
     "unknown": "Bilinmiyor",
     "move": "Taşı"
@@ -495,7 +494,6 @@
     "limitReachedTitle": "Sınıra ulaşıldı",
     "customListLimitReached": "Ücretsiz kullanıcılar yalnızca {{count}} özel liste oluşturabilir. Sınırsız liste için Premium'a yükseltin!",
     "changesFailedToSave": "Değişiklikler kaydedilemedi",
-    "createCustomList": "Özel liste oluştur",
     "deleteListConfirmMessage": "Bu liste silinsin mi? Bu işlem geri alınamaz.",
     "failedToCreateList": "Liste oluşturulamadı",
     "filterLists": "Listeleri filtrele",

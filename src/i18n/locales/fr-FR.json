@@ -75,7 +75,6 @@
     "premium": "Premium",
     "readLess": "Lire moins",
     "readMore": "Lire plus",
-    "saveChanges": "Enregistrer les modifications",
     "tba": "À confirmer",
     "unknown": "Inconnu"
   },
@@ -518,7 +517,6 @@
     "limitReachedTitle": "Limite atteinte",
     "customListLimitReached": "Les utilisateurs gratuits peuvent créer seulement {{count}} listes personnalisées. Passez à Premium pour des listes illimitées !",
     "changesFailedToSave": "Impossible d'enregistrer les modifications",
-    "createCustomList": "Créer une liste personnalisée",
     "deleteListConfirmMessage": "Voulez-vous vraiment supprimer cette liste ? Cette action est irréversible.",
     "failedToCreateList": "Échec de la création de la liste",
     "filterLists": "Filtrer les listes",

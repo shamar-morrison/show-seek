@@ -1,6 +1,6 @@
 import type { ListMediaItem } from '@/src/services/ListService';
 import { getEpisodeEntryDisplay } from '@/src/utils/episodeListItem';
-import { getSeasonEntryDisplay } from '@/src/utils/seasonListItem';
+import { getSeasonEntryDisplay, SEASON_TITLE_SEPARATOR } from '@/src/utils/seasonListItem';
 import type { TFunction } from 'i18next';
 
 export interface ListEntryDisplay {
@@ -43,4 +43,42 @@ export const getListEntryDisplay = (
     return { title, label: episodeLabel };
   }
   return null;
+};
+
+/**
+ * One line naming an entry, to confirm what's being added: the title for a movie or a show,
+ * "Season 2 · Show" for a season, and "S2E5 · Show" for an episode. The part comes first so it
+ * stays visible when a long show name is cut off.
+ */
+export const getListEntrySummary = (
+  item: Partial<
+    Pick<
+      ListMediaItem,
+      | 'media_type'
+      | 'show_name'
+      | 'title'
+      | 'name'
+      | 'season_number'
+      | 'season_name'
+      | 'episode_number'
+    >
+  >,
+  t: TFunction
+): string => {
+  const ownTitle = item.title || item.name || '';
+  const showName = item.show_name?.trim();
+  // Entries saved without the show's name only have the combined title ("Show · Season 2"),
+  // which already says which part it is.
+  if ((item.media_type !== 'season' && item.media_type !== 'episode') || !showName) {
+    return ownTitle;
+  }
+
+  const part =
+    item.media_type === 'season'
+      ? getSeasonEntryDisplay(item, (number) => t('media.seasonNumber', { number })).seasonLabel
+      : t('media.seasonEpisode', {
+          season: item.season_number ?? 0,
+          episode: item.episode_number ?? 0,
+        });
+  return `${part}${SEASON_TITLE_SEPARATOR}${showName}`;
 };

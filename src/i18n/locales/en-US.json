@@ -74,7 +74,6 @@
     "premium": "Premium",
     "readLess": "Read less",
     "readMore": "Read more",
-    "saveChanges": "Save Changes",
     "tba": "TBA",
     "unknown": "Unknown",
     "move": "Move"
@@ -495,7 +494,6 @@
     "limitReachedTitle": "Limit Reached",
     "customListLimitReached": "Free users can only create {{count}} custom lists. Upgrade to Premium for unlimited lists!",
     "changesFailedToSave": "Changes failed to save",
-    "createCustomList": "Create Custom List",
     "deleteListConfirmMessage": "Are you sure you want to delete this list? This action cannot be undone.",
     "failedToCreateList": "Failed to create list",
     "filterLists": "Filter lists",
